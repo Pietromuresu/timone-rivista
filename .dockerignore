@@ -1,0 +1,40 @@
+.git
+.gitignore
+.github
+
+vendor
+node_modules
+
+.env
+.env.*
+!.env.example
+
+storage/framework/cache/*
+!storage/framework/cache/.gitignore
+storage/framework/sessions/*
+!storage/framework/sessions/.gitignore
+storage/framework/views/*
+!storage/framework/views/.gitignore
+storage/logs/*
+!storage/logs/.gitignore
+
+# Manifest di package discovery/config compilati in locale: contengono anche
+# i provider delle dev-dependency (es. laravel/pail) che "composer install
+# --no-dev" esclude dall'immagine — vanno rigenerati nel Dockerfile con la
+# vendor/ giusta (php artisan package:discover), mai copiati dall'host.
+bootstrap/cache/*.php
+
+database/*.sqlite
+
+public/build
+public/hot
+
+backups
+
+.phpunit.cache
+.phpunit.result.cache
+tests
+.claude
+
+*.md
+!README.md

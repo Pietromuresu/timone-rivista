@@ -1,0 +1,128 @@
+name: timone-rivista
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - storage_data:/var/www/html/storage/app
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks: [timone]
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: nginx_runtime
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    networks: [timone]
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    restart: unless-stopped
+    env_file: .env
+    command: php artisan queue:work redis --tries=3 --backoff=3 --sleep=1
+    volumes:
+      - storage_data:/var/www/html/storage/app
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks: [timone]
+
+  reverb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    restart: unless-stopped
+    env_file: .env
+    # legge REVERB_SERVER_HOST/REVERB_SERVER_PORT da .env (già 0.0.0.0:8080)
+    command: php artisan reverb:start
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks: [timone]
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-timone}
+      MYSQL_USER: ${MYSQL_USER:-timone}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?imposta MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?imposta MYSQL_ROOT_PASSWORD in .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [timone]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks: [timone]
+
+  adminer:
+    image: adminer:latest
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    ports:
+      - "8081:8080"
+    depends_on:
+      - mysql
+    networks: [timone]
+
+  # Non parte con `docker compose up` (profilo "tools"). Uso:
+  #   docker compose run --rm backup
+  backup:
+    image: mysql:8.4
+    profiles: ["tools"]
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      DB_HOST: mysql
+      DB_DATABASE: ${MYSQL_DATABASE:-timone}
+      DB_USERNAME: ${MYSQL_USER:-timone}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?imposta MYSQL_PASSWORD in .env}
+    volumes:
+      - ./docker/mysql/backup.sh:/backup.sh:ro
+      - ./backups:/backups
+    depends_on:
+      - mysql
+    networks: [timone]
+
+networks:
+  timone:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  storage_data:

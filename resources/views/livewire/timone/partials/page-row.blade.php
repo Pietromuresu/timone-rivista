@@ -1,8 +1,20 @@
 @php
     $latestFile = $page->files->first();
+    $dropEnabled = $dropEnabled ?? false;
 @endphp
-<li class="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-    <span class="w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200">
+<li
+    wire:key="page-{{ $page->id }}"
+    data-page-id="{{ $page->id }}"
+    tabindex="0"
+    @keydown.arrow-up.prevent="$wire.movePage({{ $page->id }}, {{ $page->position - 1 }})"
+    @keydown.arrow-down.prevent="$wire.movePage({{ $page->id }}, {{ $page->position + 1 }})"
+    @if ($dropEnabled)
+        x-on:dragover.prevent
+        x-on:drop.prevent="const cid = $event.dataTransfer.getData('text/content-id'); if (cid) { $wire.assignContent(parseInt(cid), {{ $page->id }}); }"
+    @endif
+    class="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+>
+    <span class="drag-handle w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200 cursor-grab" title="Trascina per riordinare">
         {{ $page->position }}
     </span>
 
@@ -10,14 +22,28 @@
         {{ $page->content_type->label() }}
     </span>
 
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0 flex flex-wrap items-center gap-3">
         @forelse ($page->contents as $content)
-            <span class="inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-200 mr-3">
+            <span wire:key="page-{{ $page->id }}-content-{{ $content->id }}" class="inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-200">
                 <span>{{ $content->type->value === 'articolo' ? '📄' : '📢' }}</span>
                 {{ $content->displayLabel() }}
-                @if ($page->contents->count() > 1)
-                    <span class="text-xs text-gray-400">({{ rtrim(rtrim(number_format($content->pivot->occupied_percentage, 1), '0'), '.') }}%)</span>
-                @endif
+                <input
+                    type="number"
+                    min="0.1"
+                    max="100"
+                    step="0.1"
+                    value="{{ $content->pivot->occupied_percentage }}"
+                    x-on:keydown.stop
+                    x-on:click.stop
+                    wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
+                    class="w-14 text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-1 py-0"
+                />
+                <button
+                    type="button"
+                    x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
+                    class="text-xs opacity-60 hover:opacity-100 hover:text-red-600"
+                    title="Rimuovi"
+                >✕</button>
             </span>
         @empty
             <span class="text-sm text-gray-400 italic">
@@ -26,8 +52,51 @@
         @endforelse
     </div>
 
-    <span class="text-xs shrink-0" title="{{ $latestFile?->original_name }}">
-        @if ($latestFile) 📎 PDF @endif
+    <span class="text-xs shrink-0 flex items-center gap-1">
+        <input
+            type="file"
+            id="page-file-input-{{ $page->id }}"
+            wire:model="pendingUploads.{{ $page->id }}"
+            accept="application/pdf"
+            class="hidden"
+        />
+
+        @if (! $latestFile)
+            <button
+                type="button"
+                x-on:click.stop="document.getElementById('page-file-input-{{ $page->id }}').click()"
+                wire:loading.attr="disabled"
+                wire:target="pendingUploads.{{ $page->id }}"
+                class="opacity-70 hover:opacity-100"
+                title="Carica PDF"
+            >📤</button>
+        @elseif ($latestFile->thumbnail_status === \App\Enums\ThumbnailStatus::Ready)
+            <a
+                href="{{ route('page-files.show', $latestFile) }}"
+                target="_blank"
+                rel="noopener"
+                x-on:click.stop
+                class="flex items-center gap-1"
+                title="{{ $latestFile->original_name }} — apri in una nuova scheda"
+            >
+                <img
+                    src="{{ route('page-files.thumbnail', $latestFile) }}"
+                    alt=""
+                    class="w-5 h-6 object-cover rounded border border-gray-300 dark:border-gray-600"
+                />
+            </a>
+        @elseif (in_array($latestFile->thumbnail_status, [\App\Enums\ThumbnailStatus::Pending, \App\Enums\ThumbnailStatus::Processing]))
+            <span title="Elaborazione thumbnail in corso...">⏳ PDF</span>
+        @else
+            <button
+                type="button"
+                x-on:click.stop="document.getElementById('page-file-input-{{ $page->id }}').click()"
+                class="text-red-600"
+                title="Generazione thumbnail fallita — clic per ricaricare"
+            >⚠️ PDF</button>
+        @endif
+
+        <span wire:loading wire:target="pendingUploads.{{ $page->id }}" class="italic">caricamento...</span>
     </span>
 
     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0 {{ $page->status->colorClasses() }}">

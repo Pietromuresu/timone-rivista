@@ -21,6 +21,26 @@
         </div>
     </div>
 
+    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Contenuti da assegnare ({{ $unassignedContents->count() }})
+        </h4>
+
+        @error('percentage')
+            <p class="text-xs text-red-600 dark:text-red-400 mb-2">{{ $message }}</p>
+        @enderror
+
+        @if ($unassignedContents->isEmpty())
+            <p class="text-xs italic text-gray-400">Tutti i contenuti sono stati assegnati.</p>
+        @else
+            <div class="flex flex-wrap gap-2">
+                @foreach ($unassignedContents as $content)
+                    @include('livewire.timone.partials.unassigned-content-chip', ['content' => $content])
+                @endforeach
+            </div>
+        @endif
+    </div>
+
     @if ($pages->isEmpty())
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
             <div class="p-12 text-center text-gray-400 dark:text-gray-500">
@@ -29,9 +49,13 @@
             </div>
         </div>
     @elseif ($viewMode === 'griglia')
-        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+        <div
+            x-sortable
+            @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
+            class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3"
+        >
             @foreach ($pages as $page)
-                @include('livewire.timone.partials.page-card', ['page' => $page])
+                @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true])
             @endforeach
         </div>
     @elseif ($viewMode === 'doppia')
@@ -40,7 +64,7 @@
                 <div class="flex justify-center gap-0.5">
                     @foreach ($spread as $page)
                         <div class="w-40 sm:w-48 {{ ! $loop->first ? 'border-l-2 border-gray-300 dark:border-gray-600' : '' }}">
-                            @include('livewire.timone.partials.page-card', ['page' => $page])
+                            @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => false])
                         </div>
                     @endforeach
                 </div>
@@ -48,9 +72,13 @@
         </div>
     @else
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-            <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+            <ul
+                x-sortable
+                @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
+                class="divide-y divide-gray-100 dark:divide-gray-700"
+            >
                 @foreach ($pages as $page)
-                    @include('livewire.timone.partials.page-row', ['page' => $page])
+                    @include('livewire.timone.partials.page-row', ['page' => $page, 'dropEnabled' => true])
                 @endforeach
             </ul>
         </div>

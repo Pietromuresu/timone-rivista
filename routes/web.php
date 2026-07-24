@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PageFileController;
 use App\Http\Controllers\ProfileController;
 use App\Livewire\Issues\Show as IssueShow;
 use App\Livewire\Magazines\Index as MagazineIndex;
@@ -20,6 +21,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/riviste/{magazine:slug}/numeri/{issue}', IssueShow::class)
         ->scopeBindings()
         ->name('issues.show');
+
+    Route::get('/page-files/{pageFile}', [PageFileController::class, 'show'])->name('page-files.show');
+    Route::get('/page-files/{pageFile}/thumbnail', [PageFileController::class, 'thumbnail'])->name('page-files.thumbnail');
 });
 
 Route::middleware('auth')->group(function () {
