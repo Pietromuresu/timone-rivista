@@ -14,13 +14,36 @@
     @endif
     class="relative flex flex-col aspect-[3/4] rounded-lg border-2 p-2 text-xs overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $page->content_type->colorClasses() }}"
 >
+    <template x-if="$store.pagePresence.editorFor({{ $page->id }})">
+        <span
+            class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white text-[8px] flex items-center justify-center ring-2 ring-white dark:ring-gray-800 uppercase animate-pulse z-10"
+            x-text="$store.pagePresence.editorFor({{ $page->id }}).name.substring(0, 2)"
+            :title="$store.pagePresence.editorFor({{ $page->id }}).name + ' sta modificando questa pagina'"
+        ></span>
+    </template>
+
     <div class="flex items-center justify-between gap-1">
         <span class="drag-handle cursor-grab font-semibold text-sm select-none" title="Trascina per riordinare">
             ⠿ {{ $page->position }}
         </span>
-        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium {{ $page->status->colorClasses() }}">
-            {{ $page->status->label() }}
-        </span>
+        @if ($dropEnabled)
+            <select
+                x-on:click.stop
+                x-on:keydown.stop
+                x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
+                x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
+                wire:change="changePageStatus({{ $page->id }}, $event.target.value)"
+                class="rounded text-[10px] font-medium border-none py-0.5 pl-1.5 pr-5 {{ $page->status->colorClasses() }}"
+            >
+                @foreach (\App\Enums\PageStatus::cases() as $status)
+                    <option value="{{ $status->value }}" @selected($status === $page->status)>{{ $status->label() }}</option>
+                @endforeach
+            </select>
+        @else
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium {{ $page->status->colorClasses() }}">
+                {{ $page->status->label() }}
+            </span>
+        @endif
     </div>
 
     <div class="flex-1 flex flex-col justify-center gap-1 mt-1 min-h-0">
@@ -37,6 +60,8 @@
                     value="{{ $content->pivot->occupied_percentage }}"
                     x-on:keydown.stop
                     x-on:click.stop
+                    x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
+                    x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
                     wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
                     class="w-9 shrink-0 text-[10px] rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-0.5 py-0"
                 />

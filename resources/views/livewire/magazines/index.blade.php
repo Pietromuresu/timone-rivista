@@ -5,6 +5,12 @@
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                     Le tue riviste
                 </h2>
+
+                @can('create', \App\Models\Magazine::class)
+                    <a href="{{ route('magazines.create') }}">
+                        <x-primary-button>+ Nuova rivista</x-primary-button>
+                    </a>
+                @endcan
             </div>
 
             @if ($magazines->isEmpty())

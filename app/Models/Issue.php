@@ -19,6 +19,7 @@ class Issue extends Model
         'status',
         'total_pages',
         'notes',
+        'reorder_version',
     ];
 
     protected function casts(): array
@@ -27,6 +28,7 @@ class Issue extends Model
             'issue_date' => 'date',
             'status' => IssueStatus::class,
             'total_pages' => 'integer',
+            'reorder_version' => 'integer',
         ];
     }
 
@@ -62,5 +64,26 @@ class Issue extends Model
     public function reorderLogs(): HasMany
     {
         return $this->hasMany(PageReorderLog::class);
+    }
+
+    /**
+     * Duplica solo la "struttura" (il tipo di ciascuna pagina — editoriale,
+     * pubblicità, mista, bianca) di un'issue precedente sulle pagine di
+     * questa issue, posizione per posizione, fino al minimo tra i due
+     * total_pages. Contenuti, stati e note **non** vengono copiati:
+     * questa issue è nuova, con contenuti assegnati da zero — solo il
+     * layout del timone (che pagine tenere per pubblicità/editoriale) si
+     * riusa, come da richiesta esplicita dello spec ("duplicazione
+     * struttura da numero precedente").
+     */
+    public function duplicateStructureFrom(self $source): void
+    {
+        $sourceTypes = $source->pages()->pluck('content_type', 'position');
+
+        foreach ($this->pages()->get() as $page) {
+            if ($sourceTypes->has($page->position)) {
+                $page->update(['content_type' => $sourceTypes[$page->position]]);
+            }
+        }
     }
 }

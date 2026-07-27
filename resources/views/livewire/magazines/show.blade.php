@@ -1,20 +1,28 @@
 <div>
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div>
-                <a href="{{ route('magazines.index') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                    &larr; Le tue riviste
-                </a>
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <a href="{{ route('magazines.index') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        &larr; Le tue riviste
+                    </a>
 
-                <div class="flex items-center gap-2 mt-2">
-                    <span class="inline-block w-3 h-3 rounded-full" style="background-color: {{ $magazine->color }}"></span>
-                    <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                        {{ $magazine->name }}
-                    </h2>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">
-                        &middot; {{ $magazine->periodicity->label() }}
-                    </span>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="inline-block w-3 h-3 rounded-full" style="background-color: {{ $magazine->color }}"></span>
+                        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                            {{ $magazine->name }}
+                        </h2>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            &middot; {{ $magazine->periodicity->label() }}
+                        </span>
+                    </div>
                 </div>
+
+                @can('create', \App\Models\Issue::class)
+                    <a href="{{ route('issues.create', $magazine) }}" class="shrink-0">
+                        <x-primary-button>+ Nuovo numero</x-primary-button>
+                    </a>
+                @endcan
             </div>
 
             @php

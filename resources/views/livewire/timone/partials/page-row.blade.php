@@ -18,6 +18,14 @@
         {{ $page->position }}
     </span>
 
+    <template x-if="$store.pagePresence.editorFor({{ $page->id }})">
+        <span
+            class="w-5 h-5 rounded-full bg-emerald-500 text-white text-[9px] flex items-center justify-center uppercase shrink-0 animate-pulse"
+            x-text="$store.pagePresence.editorFor({{ $page->id }}).name.substring(0, 2)"
+            :title="$store.pagePresence.editorFor({{ $page->id }}).name + ' sta modificando questa pagina'"
+        ></span>
+    </template>
+
     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0 {{ $page->content_type->colorClasses() }}">
         {{ $page->content_type->label() }}
     </span>
@@ -35,6 +43,8 @@
                     value="{{ $content->pivot->occupied_percentage }}"
                     x-on:keydown.stop
                     x-on:click.stop
+                    x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
+                    x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
                     wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
                     class="w-14 text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-1 py-0"
                 />
@@ -99,7 +109,16 @@
         <span wire:loading wire:target="pendingUploads.{{ $page->id }}" class="italic">caricamento...</span>
     </span>
 
-    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0 {{ $page->status->colorClasses() }}">
-        {{ $page->status->label() }}
-    </span>
+    <select
+        x-on:click.stop
+        x-on:keydown.stop
+        x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
+        x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
+        wire:change="changePageStatus({{ $page->id }}, $event.target.value)"
+        class="rounded text-xs font-medium shrink-0 border-none py-0.5 pl-2 pr-6 {{ $page->status->colorClasses() }}"
+    >
+        @foreach (\App\Enums\PageStatus::cases() as $status)
+            <option value="{{ $status->value }}" @selected($status === $page->status)>{{ $status->label() }}</option>
+        @endforeach
+    </select>
 </li>
