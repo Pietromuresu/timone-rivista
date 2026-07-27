@@ -86,6 +86,13 @@ class Grid extends Component
 
     public ?int $insertAtPosition = null;
 
+    /**
+     * Filtro testuale sul pannello "contenuti da assegnare" (titolo) — con
+     * pochi contenuti la lista si scorre a occhio, ma cresce insieme al
+     * numero e aveva bisogno di un modo per restringerla.
+     */
+    public string $contentSearch = '';
+
     protected const VIEW_MODES = ['griglia', 'doppia', 'lista'];
 
     public function mount(Issue $issue): void
@@ -389,6 +396,61 @@ class Grid extends Component
             return;
         }
 
+        $this->attachContentToPage($content, $page, 'percentage');
+    }
+
+    /**
+     * Estende un contenuto **già assegnato altrove** a una pagina
+     * aggiuntiva, individuata per posizione (non per id: più naturale da
+     * scrivere in un prompt dell'utente che non ha sotto mano l'id della
+     * pagina). Il modello supporta da sempre un contenuto su più pagine
+     * (`Content::pages()` è `belongsToMany`), ma finora non c'era alcun
+     * modo di *arrivarci* dall'interfaccia — il pannello "non assegnati"
+     * fa sparire un contenuto non appena ha una prima pagina, quindi non è
+     * più ri-trascinabile da lì. Questo metodo è il percorso alternativo:
+     * un pulsante "↗" sul contenuto già assegnato, non un secondo drag.
+     * Riusa la stessa logica di calcolo/percentuale/broadcast di
+     * assignContent() tramite attachContentToPage(), sotto la chiave di
+     * errore "extend" invece di "percentage" per non confondere i due
+     * pannelli nella UI se falliscono entrambi nello stesso render.
+     */
+    public function extendToPage(int $contentId, int $targetPosition): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $content = Content::with('advertisement')->findOrFail($contentId);
+
+        if ($content->issue_id !== $this->issue->id) {
+            return;
+        }
+
+        $targetPage = $this->issue->pages()->where('position', $targetPosition)->first();
+
+        if ($targetPage === null) {
+            $this->addError('extend', "Non esiste nessuna pagina in posizione {$targetPosition}.");
+
+            return;
+        }
+
+        if ($targetPage->contents()->where('content_id', $contentId)->exists()) {
+            $this->addError('extend', 'Il contenuto è già assegnato a quella pagina.');
+
+            return;
+        }
+
+        $this->attachContentToPage($content, $targetPage, 'extend');
+    }
+
+    /**
+     * Logica condivisa tra assignContent() ed extendToPage(): calcola la
+     * percentuale, verifica lo spazio disponibile, allega il contenuto e
+     * trasmette lo stesso evento ContentAssigned in entrambi i casi — dal
+     * punto di vista degli altri utenti collegati è la stessa identica
+     * cosa (un contenuto è comparso su una pagina), non ha senso avere due
+     * eventi diversi per come è arrivato lì.
+     */
+    private function attachContentToPage(Content $content, Page $page, string $errorKey): void
+    {
         $occupied = $page->contents()->pluck('occupied_percentage')->all();
 
         $percentage = $content->type === ContentType::Pubblicita
@@ -396,17 +458,17 @@ class Grid extends Component
             : PagePercentageAllocator::freeSpace($occupied);
 
         if (! PagePercentageAllocator::fits($occupied, $percentage)) {
-            $this->addError('percentage', 'Spazio insufficiente su questa pagina per assegnare il contenuto.');
+            $this->addError($errorKey, 'Spazio insufficiente su questa pagina per assegnare il contenuto.');
 
             return;
         }
 
-        $page->contents()->attach($contentId, ['occupied_percentage' => (string) $percentage]);
+        $page->contents()->attach($content->id, ['occupied_percentage' => (string) $percentage]);
 
         broadcast(new ContentAssigned(
             issueId: $this->issue->id,
             pageId: $page->id,
-            contentId: $contentId,
+            contentId: $content->id,
             percentage: $percentage,
             assignedByUserId: auth()->id(),
             assignedByUserName: auth()->user()->name,
@@ -477,6 +539,15 @@ class Grid extends Component
         // idem
     }
 
+    #[On('echo-presence:issue.{issue.id},ContentCreated')]
+    public function onContentCreated(): void
+    {
+        // Nessuno stato locale da aggiornare: il prossimo render() ripesca
+        // il nuovo contenuto tra i "non assegnati" dal database. Creato
+        // da App\Livewire\Timone\ContentCreate, un componente a sé — vedi
+        // "Decisioni architetturali da ricordare" in HANDOFF.md.
+    }
+
     /**
      * Hook automatico Livewire per la proprietà annidata "pendingUploads.{pageId}":
      * chiamato dopo che Livewire ha già salvato il file nello storage temporaneo.
@@ -533,12 +604,17 @@ class Grid extends Component
             ->with([
                 'contents.article',
                 'contents.advertisement',
+                // Solo per il badge "×N pagine" sul contenuto multipagina
+                // (vedi Grid::extendToPage()) — non serve altro che sapere
+                // quante pagine sono, non quali nello specifico.
+                'contents.pages:pages.id',
                 'files' => fn ($query) => $query->latest()->limit(1),
             ])
             ->get();
 
         $unassignedContents = $this->issue->unassignedContents()
             ->with(['article', 'advertisement'])
+            ->when($this->contentSearch !== '', fn ($query) => $query->where('title', 'like', '%'.$this->contentSearch.'%'))
             ->orderBy('created_at')
             ->get();
 

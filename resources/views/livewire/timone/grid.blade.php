@@ -267,16 +267,37 @@
         </p>
     </template>
 
+    @can('update', $issue)
+        <livewire:timone.content-create :issue="$issue" :key="'content-create-'.$issue->id" />
+    @endcan
+
+    <livewire:timone.page-file-history :issue="$issue" :key="'page-file-history-'.$issue->id" />
+
     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Contenuti da assegnare ({{ $unassignedContents->count() }})
-        </h4>
+        <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
+            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Contenuti da assegnare ({{ $unassignedContents->count() }})
+            </h4>
+
+            <input
+                type="search"
+                wire:model.live.debounce.300ms="contentSearch"
+                placeholder="Cerca per titolo..."
+                class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-2 py-1 w-48"
+            />
+        </div>
 
         @error('percentage')
             <p class="text-xs text-red-600 dark:text-red-400 mb-2">{{ $message }}</p>
         @enderror
 
-        @if ($unassignedContents->isEmpty())
+        @error('extend')
+            <p class="text-xs text-red-600 dark:text-red-400 mb-2">{{ $message }}</p>
+        @enderror
+
+        @if ($unassignedContents->isEmpty() && $contentSearch !== '')
+            <p class="text-xs italic text-gray-400">Nessun contenuto trovato per «{{ $contentSearch }}».</p>
+        @elseif ($unassignedContents->isEmpty())
             <p class="text-xs italic text-gray-400">Tutti i contenuti sono stati assegnati.</p>
         @else
             <div class="flex flex-wrap gap-2">

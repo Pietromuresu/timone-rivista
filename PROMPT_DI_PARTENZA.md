@@ -743,3 +743,40 @@ project/
 ## 20. Riferimento visivo
 
 Il file `timone_cartaceo_riferimento.jpg` allegato al progetto documenta il metodo cartaceo attualmente in uso (griglia numerata con annotazioni manuali) e resta il riferimento guida per la disposizione a doppie pagine della griglia digitale (§5).
+
+# Prompt 2 per Claude Code — Regole permanenti: documentazione continua e principi SOLID
+
+Copia tutto il testo da "## Regole permanenti" in poi e incollalo a Claude Code nella cartella del progetto (`timone-rivista`). A differenza degli altri prompt, questo non descrive un singolo compito da svolgere subito: è una regola di comportamento che deve valere per **tutte le sessioni future** su questo progetto. Se il tuo strumento lo consente, salvalo in un file che Claude Code legge automaticamente a ogni sessione (es. `CLAUDE.md` nella radice del progetto); altrimenti incollalo a inizio di ogni nuova sessione di lavoro.
+
+---
+
+## Regole permanenti per questo progetto
+
+Da questo momento in poi, ad ogni sessione di lavoro su questo progetto, rispetta sempre queste regole, oltre a quelle del compito specifico che ti verrà richiesto.
+
+### 1. Ogni azione va documentata, non solo il codice
+
+Per ogni modifica che fai — nuova funzionalità, fix, modifica di configurazione, decisione architetturale, scelta consapevole di non implementare qualcosa — aggiorna la documentazione pertinente **nella stessa sessione in cui fai la modifica**, non "alla fine" o "in una sessione dedicata dopo":
+
+- **File di handoff/stato del progetto** (quello con la cronologia delle fasi completate, tipo l'attuale documento di sessione): aggiungi una voce per ogni fase/modifica completata, con lo stesso livello di dettaglio già usato finora (cosa è stato fatto, perché, quali file coinvolti, quali test aggiunti, quali limiti/scelte consapevoli). Non riscrivere la cronologia esistente, aggiungici in coda.
+- **`README.md`/`MANUALE_UTENTE.md`**: se la modifica cambia qualcosa che l'utente finale vede o fa (nuova schermata, nuovo comando di avvio, nuovo comportamento), aggiorna subito la sezione pertinente. Se non sei sicuro se una modifica è "visibile all'utente", aggiornali comunque: è più economico un aggiornamento in più che una discrepanza silenziosa.
+- **Commenti nel codice**: ogni classe, metodo pubblico o blocco di logica non ovvia deve avere un commento che spiega il **perché**, non il **cosa** (il codice stesso dice cosa fa; il commento serve per le decisioni non ovvie — es. "usiamo ShouldBroadcastNow invece di ShouldBroadcast perché..."). Segui lo stile già presente nel progetto (i commenti/decisioni già documentati nel file di handoff sono un buon riferimento del livello di dettaglio atteso).
+- **Se scopri un bug, un limite, o prendi una scorciatoia consapevole**: documentalo subito dove si trova già la documentazione di quel tipo di informazione in questo progetto (es. sezione "Decisioni architetturali da ricordare" del file di handoff), anche se il compito che ti è stato assegnato non lo richiedeva esplicitamente. Non lasciare che queste informazioni restino solo nella tua risposta in chat: se non finiscono in un file, sono perse alla sessione successiva.
+
+Prima di dire che un compito è concluso, fai una verifica esplicita: "ho aggiornato tutta la documentazione pertinente?" — e se la risposta è no, completala prima di chiudere, non rimandarla.
+
+### 2. Segui i principi SOLID nel codice PHP/Laravel
+
+Applica concretamente, non solo a parole, i cinque principi SOLID a ogni nuova classe o refactoring:
+
+- **Single Responsibility**: ogni classe ha una sola ragione per cambiare. Continua il pattern già in uso nel progetto di estrarre la logica pura in classi dedicate sotto `App\Support` (come già fatto per il calcolo del carico pubblicitario, il riordino pagine, l'allocazione percentuali) invece di accumulare logica dentro i componenti Livewire — i componenti Livewire devono restare un livello sottile di orchestrazione (input utente → chiamata al servizio → aggiornamento stato), non contenere la logica di business stessa.
+- **Open/Closed**: quando aggiungi varianti di comportamento (nuovi tipi di contenuto, nuovi formati pubblicitari, nuovi stati pagina), preferisci estendere tramite enum/configurazione o nuove implementazioni di un'interfaccia esistente piuttosto che aggiungere `if`/`match` sparsi in più punti del codice che vanno modificati ogni volta che si aggiunge un caso.
+- **Liskov Substitution**: se introduci gerarchie o interfacce (es. tipi di contenuto, strategie di riordino), verifica che ogni implementazione concreta rispetti davvero il contratto atteso dall'interfaccia, senza sorprese per chi la usa.
+- **Interface Segregation**: se definisci interfacce/contratti tra classi, tienile piccole e specifiche per il consumatore, invece di un'unica interfaccia grande che pochi usano per intero.
+- **Dependency Inversion**: le classi di alto livello (componenti Livewire, controller) devono dipendere da astrazioni (interfacce, o classi `App\Support` con una responsabilità chiara) e non costruire direttamente dipendenze concrete complesse al loro interno — favorisci l'iniezione via container Laravel dove sensato, senza però ingegnerizzare eccessivamente parti semplici del progetto (SOLID è una guida, non un obbligo di creare un'interfaccia per ogni classe: applicalo dove riduce davvero accoppiamento e migliora la testabilità, come già fatto con le classi `App\Support` esistenti).
+
+Se in una sessione ti accorgi che del codice già scritto viola uno di questi principi in modo che comporterebbe rischi concreti (non solo teorici) — es. una classe che sta accumulando troppe responsabilità e sta diventando difficile da testare — segnalalo esplicitamente nella tua risposta e proponi un refactoring, invece di continuare ad aggiungere codice sopra una struttura che sai già problematica.
+
+### 3. Non sacrificare la velocità di consegna delle fasi per un'aderenza formale a SOLID
+
+Queste regole si aggiungono al modo di lavorare già stabilito (procedere a fasi, mostrare il risultato prima di passare alla successiva), non lo sostituiscono. Se applicare SOLID alla lettera in un punto specifico richiederebbe una complessità sproporzionata rispetto al beneficio per un progetto di queste dimensioni, dillo esplicitamente e motiva la scelta pragmatica presa — quella motivazione va comunque documentata secondo la regola 1 sopra

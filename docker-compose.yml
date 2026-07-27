@@ -10,11 +10,20 @@ services:
     env_file: .env
     volumes:
       - storage_data:/var/www/html/storage/app
+    healthcheck:
+      # Verifica che php-fpm sia davvero in ascolto sulla sua porta interna
+      # (9000), non solo che il container sia partito — nc fa parte di
+      # busybox, già presente nell'immagine php:8.2-fpm-alpine.
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9000"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
     depends_on:
       mysql:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     networks: [timone]
 
   nginx:
@@ -26,7 +35,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     networks: [timone]
 
   worker:
@@ -43,7 +53,7 @@ services:
       mysql:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     networks: [timone]
 
   reverb:
@@ -57,28 +67,42 @@ services:
     command: php artisan reverb:start
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "8080"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
     depends_on:
       mysql:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     networks: [timone]
 
   mysql:
     image: mysql:8.4
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-timone}
-      MYSQL_USER: ${MYSQL_USER:-timone}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?imposta MYSQL_PASSWORD in .env}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?imposta MYSQL_ROOT_PASSWORD in .env}
+      # Un'unica fonte per ciascun valore: MYSQL_DATABASE/USER/PASSWORD
+      # leggono le stesse chiavi DB_DATABASE/DB_USERNAME/DB_PASSWORD che
+      # Laravel usa per connettersi — impossibile impostarne una e
+      # dimenticare l'altra, perché non esiste più "l'altra": sono la
+      # stessa variabile letta due volte. MYSQL_ROOT_PASSWORD resta una
+      # variabile a sé (è davvero un'altra password, quella dell'utente
+      # "root" di MySQL, non quella dell'utente applicativo).
+      MYSQL_DATABASE: ${DB_DATABASE:-timone}
+      MYSQL_USER: ${DB_USERNAME:-timone}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?manca DB_PASSWORD in .env — esegui ./setup.sh, che la genera da solo, oppure impostala tu e rilancia}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?manca MYSQL_ROOT_PASSWORD in .env — esegui ./setup.sh, che la genera da solo, oppure impostala tu e rilancia}
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 30s
     networks: [timone]
 
   redis:
@@ -87,6 +111,11 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks: [timone]
 
   adminer:
@@ -97,7 +126,8 @@ services:
     ports:
       - "8081:8080"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks: [timone]
 
   # Non parte con `docker compose up` (profilo "tools"). Uso:
@@ -108,14 +138,15 @@ services:
     entrypoint: ["/bin/sh", "/backup.sh"]
     environment:
       DB_HOST: mysql
-      DB_DATABASE: ${MYSQL_DATABASE:-timone}
-      DB_USERNAME: ${MYSQL_USER:-timone}
-      DB_PASSWORD: ${MYSQL_PASSWORD:?imposta MYSQL_PASSWORD in .env}
+      DB_DATABASE: ${DB_DATABASE:-timone}
+      DB_USERNAME: ${DB_USERNAME:-timone}
+      DB_PASSWORD: ${DB_PASSWORD:?manca DB_PASSWORD in .env — esegui ./setup.sh, che la genera da solo, oppure impostala tu e rilancia}
     volumes:
       - ./docker/mysql/backup.sh:/backup.sh:ro
       - ./backups:/backups
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks: [timone]
 
 networks:

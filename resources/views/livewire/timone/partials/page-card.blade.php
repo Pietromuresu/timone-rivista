@@ -51,6 +51,9 @@
             <div wire:key="page-{{ $page->id }}-content-{{ $content->id }}" class="flex items-center gap-1 leading-tight">
                 <span class="truncate flex-1">
                     {{ $content->type->value === 'articolo' ? '📄' : '📢' }} {{ $content->displayLabel() }}
+                    @if ($content->pages->count() > 1)
+                        <span class="opacity-60" title="Contenuto presente su {{ $content->pages->count() }} pagine">×{{ $content->pages->count() }}</span>
+                    @endif
                 </span>
                 <input
                     type="number"
@@ -65,6 +68,12 @@
                     wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
                     class="w-9 shrink-0 text-[10px] rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-0.5 py-0"
                 />
+                <button
+                    type="button"
+                    x-on:click.stop="const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
+                    class="shrink-0 text-[10px] opacity-60 hover:opacity-100"
+                    title="Estendi questo contenuto a un'altra pagina"
+                >↗</button>
                 <button
                     type="button"
                     x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
@@ -123,6 +132,15 @@
         @endif
 
         <span wire:loading wire:target="pendingUploads.{{ $page->id }}" class="italic">caricamento...</span>
+
+        @if ($latestFile)
+            <button
+                type="button"
+                x-on:click.stop="$dispatch('open-modal', 'page-file-history'); $dispatch('show-file-history', { pageId: {{ $page->id }} })"
+                class="opacity-70 hover:opacity-100"
+                title="Storico PDF caricati"
+            >🕐</button>
+        @endif
 
         @if ($page->notes)
             <span title="{{ $page->notes }}">📝</span>

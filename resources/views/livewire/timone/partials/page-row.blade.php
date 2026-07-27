@@ -35,6 +35,9 @@
             <span wire:key="page-{{ $page->id }}-content-{{ $content->id }}" class="inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-200">
                 <span>{{ $content->type->value === 'articolo' ? '📄' : '📢' }}</span>
                 {{ $content->displayLabel() }}
+                @if ($content->pages->count() > 1)
+                    <span class="opacity-60" title="Contenuto presente su {{ $content->pages->count() }} pagine">×{{ $content->pages->count() }}</span>
+                @endif
                 <input
                     type="number"
                     min="0.1"
@@ -48,6 +51,12 @@
                     wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
                     class="w-14 text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-1 py-0"
                 />
+                <button
+                    type="button"
+                    x-on:click.stop="const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
+                    class="text-xs opacity-60 hover:opacity-100"
+                    title="Estendi questo contenuto a un'altra pagina"
+                >↗</button>
                 <button
                     type="button"
                     x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
@@ -107,6 +116,15 @@
         @endif
 
         <span wire:loading wire:target="pendingUploads.{{ $page->id }}" class="italic">caricamento...</span>
+
+        @if ($latestFile)
+            <button
+                type="button"
+                x-on:click.stop="$dispatch('open-modal', 'page-file-history'); $dispatch('show-file-history', { pageId: {{ $page->id }} })"
+                class="opacity-70 hover:opacity-100"
+                title="Storico PDF caricati"
+            >🕐</button>
+        @endif
     </span>
 
     <select
