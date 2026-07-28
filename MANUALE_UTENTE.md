@@ -14,9 +14,9 @@ La struttura è sempre: **rivista → numero → timone**.
 - Un **numero** (es. "Novembre 2026") è una singola uscita di quella rivista, con un numero di pagine deciso.
 - Il **timone** è la griglia delle pagine di un numero specifico: qui si fa il lavoro vero e proprio.
 
-Accedi da `http://localhost` (o l'indirizzo che ti è stato dato) con l'email e la password che ti sono state assegnate. Se non hai ancora un account, chiedi a un Admin di crearlo (vedi [§12](#12-gestire-gli-utenti-solo-admin)).
+Accedi da `http://localhost` (o l'indirizzo che ti è stato dato) con l'email e la password che ti sono state assegnate. Se non hai ancora un account, chiedi a un Admin di crearlo (vedi [§13](#13-gestire-gli-utenti-solo-admin)).
 
-Quello che vedi dipende dal tuo **ruolo** — riepilogo completo in [§13](#13-cosa-può-fare-ciascun-ruolo).
+Quello che vedi dipende dal tuo **ruolo** — riepilogo completo in [§14](#14-cosa-può-fare-ciascun-ruolo).
 
 ---
 
@@ -37,7 +37,7 @@ Clicca su un numero per aprirne il timone.
 La schermata del timone ha tre modalità, selezionabili in alto a destra:
 
 - **Griglia** — una card per pagina, la vista principale per lavorare.
-- **Doppia pagina** — le pagine affiancate come si vedrebbero sfogliando la rivista stampata (copertina da sola, poi coppie). Solo visualizzazione: qui non si trascina né si assegna nulla.
+- **Doppia pagina** — le pagine affiancate come si vedrebbero sfogliando la rivista stampata (copertina da sola, poi coppie). Puoi assegnare/rimuovere contenuti e cambiare lo stato pagina esattamente come in Griglia; l'unica cosa che manca è il trascinamento per riordinare (usa la tastiera o la [modalità scambio](#4-spostare-le-pagine) per riordinare da qui).
 - **Lista** — una riga per pagina, utile per scorrere velocemente un numero lungo.
 
 **Ogni card/riga mostra:**
@@ -55,22 +55,39 @@ La schermata del timone ha tre modalità, selezionabili in alto a destra:
 | ⚠️ PDF (rosso) | Generazione dell'anteprima fallita — clic per ricaricare il file |
 | 🕐 | Apre lo storico di tutti i PDF caricati su questa pagina (compare solo se ce n'è almeno uno) |
 | 📝 | La pagina ha una nota (passa il mouse per leggerla) |
+| 🔓 / 🔒 | Blocca/sblocca la pagina — vedi [§4bis](#4bis-bloccare-una-pagina) |
 
 Tutto si aggiorna da solo in tempo reale se un collega è collegato sullo stesso numero — non serve mai ricaricare la pagina. Se per qualche minuto non arrivano aggiornamenti (rete che taglia fuori i websocket), compare un avviso giallo: la pagina continua comunque ad aggiornarsi da sola, solo un po' più lentamente (ogni pochi secondi anziché all'istante).
+
+**Per stampare o condividere il timone**: bottone **"📄 Esporta PDF"** nella barra in alto — un foglio con tutte le pagine del numero, colori e stati come nell'interfaccia. Prima di scaricare puoi scegliere di includere le miniature dei PDF caricati, mostrare solo le pagine con pubblicità, o solo quelle non ancora approvate (non in stato "Revisionata"/"Ok stampa").
 
 ---
 
 ## 4. Spostare le pagine
 
-Solo in modalità **Griglia** e **Lista** (non in Doppia pagina).
+**Con il mouse (solo Griglia e Lista, non Doppia pagina):** trascina una pagina prendendola dalla maniglia ⠿ (il numero di posizione) e rilasciala nel punto desiderato. Le altre pagine si spostano di conseguenza — tutte le pagine intermedie slittano per fare spazio.
 
-**Con il mouse:** trascina una pagina prendendola dalla maniglia ⠿ (il numero di posizione) e rilasciala nel punto desiderato. Le altre pagine si spostano di conseguenza.
-
-**Da tastiera:** clicca una volta sulla card/riga per selezionarla (o raggiungila con Tab), poi:
-- in **Griglia**: freccia sinistra/destra;
+**Da tastiera (tutte e tre le modalità):** clicca una volta sulla card/riga per selezionarla (o raggiungila con Tab), poi:
+- in **Griglia**/**Doppia pagina**: freccia sinistra/destra;
 - in **Lista**: freccia su/giù.
 
-Se nel frattempo un collega ha spostato delle pagine e la tua vista non si è ancora aggiornata, lo spostamento viene rifiutato con un avviso invece di mescolare le posizioni in modo imprevedibile — la vista si allinea subito da sola e puoi riprovare.
+**Modalità scambio (bottone "🔀 Modalità scambio" in barra, funziona in tutte e tre le modalità, utile soprattutto in Doppia pagina che non supporta il trascinamento):** attivala, poi clicca una pagina (si evidenzia con un bordo colorato) e clicca una seconda pagina — si scambiano di posto direttamente, senza far slittare nient'altro. Un secondo click sulla stessa pagina annulla la selezione senza fare nulla. Utile per scambiare due pagine lontane tra loro senza dover trascinare attraverso tutto lo schermo. Contenuti, stato e PDF caricati restano legati alla pagina, non alla posizione: si "spostano" insieme ad essa.
+
+Se nel frattempo un collega ha spostato o scambiato delle pagine e la tua vista non si è ancora aggiornata, l'operazione viene rifiutata con un avviso invece di mescolare le posizioni in modo imprevedibile — la vista si allinea subito da sola e puoi riprovare.
+
+---
+
+## 4bis. Bloccare una pagina
+
+Bottone **🔓** su ogni card/riga (accanto allo stato) — clic per bloccarla, diventa **🔒**. Una pagina bloccata:
+
+- **non può essere spostata o scambiata di posto** (drag&drop, tastiera, modalità scambio: tutti rifiutati con un avviso);
+- **non può essere modificata**: niente cambio di stato, assegnazione/rimozione contenuti, modifica percentuale, caricamento di un nuovo PDF — tutti i controlli diventano di sola visualizzazione, in tutte e tre le modalità di vista;
+- **non può essere eliminata** riducendo il numero totale di pagine — se provi a ridurre e una delle pagine che verrebbero tolte è bloccata, l'operazione viene rifiutata (il bottone di conferma nel pannello "⚙️ Pagine totali" si disabilita da solo se questo succede).
+
+Per sbloccarla, clic sulla stessa icona (ora 🔒): torna 🔓 e la pagina è di nuovo modificabile normalmente. Utile per esempio per una pagina già mandata in stampa, che non deve più essere toccata per errore.
+
+**Limite da sapere**: il blocco impedisce di toccare *direttamente* la pagina bloccata, ma non impedisce che la sua *posizione* cambi come conseguenza indiretta se un'altra pagina viene spostata attraverso di essa (il riordino fa slittare tutte le pagine intermedie). Per spostamenti "puliti" attorno a una pagina bloccata, preferisci la [modalità scambio](#4-spostare-le-pagine), che coinvolge solo le due pagine scelte esplicitamente.
 
 ---
 
@@ -153,13 +170,25 @@ Solo dopo aver visto questo riepilogo puoi cliccare **"Conferma rimozione defini
 
 ---
 
-## 10. Consultare lo storico spostamenti
+## 10. Consultare lo storico spostamenti e la cronologia generale
 
 Bottone **"📜 Storico spostamenti"** nella barra del timone: apre un elenco degli ultimi 50 spostamenti di pagina fatti su questo numero, con chi li ha fatti, da quale posizione a quale, e quando.
 
+Bottone **"🕓 Cronologia"**, poco sotto la barra del timone: il registro di **tutto il resto** che succede su questo numero — cambi di stato pagina, contenuti creati/assegnati/rimossi/con percentuale modificata, PDF caricati, modifiche al numero di pagine totali, cambi della soglia di allarme pubblicitario. Ogni riga mostra chi ha fatto cosa e quando. Non si aggiorna da solo mentre resta aperto: chiudilo e riaprilo per vedere le voci più recenti.
+
 ---
 
-## 11. Creare una rivista / un numero, duplicare la struttura
+## 11. Avvisi automatici
+
+Se compare un riquadro **"⚠️ Avvisi"** sotto la barra del timone, il sistema ha notato qualcosa da controllare (non un errore bloccante, solo un promemoria):
+- una pagina già segnata come **Revisionata** o **Ok stampa** ma ancora **senza nessun contenuto assegnato**;
+- un contenuto assegnato a **pagine non consecutive** (es. pagina 3 e pagina 9) — a volte è voluto, ma vale la pena ricontrollare.
+
+Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone non ha nulla da segnalare, non si vede affatto. Il carico pubblicitario oltre soglia ([§8](#8-leggere-il-cruscotto-pubblicitario)) e il numero di pagine non multiplo di 4 hanno già i loro avvisi dedicati altrove nell'interfaccia.
+
+---
+
+## 12. Creare una rivista / un numero, duplicare la struttura
 
 **Nuova rivista** (solo Admin): dal riquadro "Le tue riviste", bottone "+ Nuova rivista". Nome, periodicità, colore identificativo, soglia di allarme pubblicitario (opzionale), note.
 
@@ -169,7 +198,7 @@ Bottone **"📜 Storico spostamenti"** nella barra del timone: apre un elenco de
 
 ---
 
-## 12. Gestire gli utenti (solo Admin)
+## 13. Gestire gli utenti (solo Admin)
 
 Voce **"Utenti"** in alto nel menu (visibile solo se sei Admin).
 
@@ -181,7 +210,7 @@ Non è ancora possibile eliminare un utente da qui.
 
 ---
 
-## 13. Cosa può fare ciascun ruolo
+## 14. Cosa può fare ciascun ruolo
 
 | Ruolo | Vede le riviste a cui ha accesso | Sposta pagine, assegna contenuti, cambia stati, carica PDF, modifica pagine totali | Crea numeri | Crea riviste | Gestisce utenti |
 |---|:---:|:---:|:---:|:---:|:---:|
@@ -192,4 +221,4 @@ Non è ancora possibile eliminare un utente da qui.
 
 > **Nota**: al momento **Commerciale** e **Sola lettura** si comportano esattamente allo stesso modo — entrambi possono solo consultare (griglia, cruscotto pubblicitario, export CSV/PDF) senza modificare nulla. Il ruolo Commerciale non ha ancora funzioni dedicate alla gestione della pubblicità: quando (e se) verranno aggiunte, questa tabella verrà aggiornata.
 
-Chi può solo consultare può comunque esportare il report del cruscotto pubblicitario in CSV/PDF ([§8](#8-leggere-il-cruscotto-pubblicitario)) — l'esportazione non richiede permessi di modifica.
+Chi può solo consultare può comunque esportare il report del cruscotto pubblicitario in CSV/PDF ([§8](#8-leggere-il-cruscotto-pubblicitario)) e il PDF completo del timone ([§3](#3-leggere-la-griglia-del-timone)) — l'esportazione non richiede permessi di modifica.

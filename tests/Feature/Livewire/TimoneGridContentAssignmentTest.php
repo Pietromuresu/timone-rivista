@@ -237,3 +237,50 @@ test('a content belonging to a different issue cannot be assigned', function () 
 
     Event::assertNotDispatched(ContentAssigned::class);
 });
+
+test('assigning a content updates the page content_type to match (regression)', function () {
+    Event::fake([ContentAssigned::class]);
+
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 1)->first();
+    expect($page->content_type->value)->toBe('bianca');
+
+    $article = Content::factory()->article()->create(['issue_id' => $issue->id]);
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->call('assignContent', $article->id, $page->id);
+
+    expect($page->fresh()->content_type->value)->toBe('editoriale');
+
+    // L'articolo appena assegnato ha preso tutto lo spazio libero (100% —
+    // "un articolo prende tutto lo spazio libero rimasto sulla pagina",
+    // comportamento consolidato del Punto 3): va ridotto per lasciare
+    // posto a una pubblicità e ottenere davvero una pagina mista.
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->call('updateContentPercentage', $page->id, $article->id, 75);
+
+    $ad = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Pubblicita]);
+    Advertisement::factory()->create(['content_id' => $ad->id, 'format' => AdFormat::UnQuartoPagina]);
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->call('assignContent', $ad->id, $page->id);
+
+    expect($page->fresh()->content_type->value)->toBe('mista');
+});
+
+test('unassigning the last content on a page reverts it to bianca (regression)', function () {
+    Event::fake([ContentUnassigned::class]);
+
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 1)->first();
+    $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
+    $page->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $page->update(['content_type' => \App\Enums\PageContentType::Editoriale]);
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->call('unassignContent', $content->id, $page->id);
+
+    expect($page->fresh()->content_type->value)->toBe('bianca');
+});

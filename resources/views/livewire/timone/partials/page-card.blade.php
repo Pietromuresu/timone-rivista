@@ -1,18 +1,29 @@
 @php
     $latestFile = $page->files->first();
     $dropEnabled = $dropEnabled ?? false;
+    $locked = $page->isLocked();
+    // dropEnabled riflette la modalità di vista (griglia/doppia sì, doppia
+    // sola lettura mai più dopo questa sessione — vedi HANDOFF.md); $locked
+    // riflette il blocco pagina (§6.6), ortogonale alla modalità di vista.
+    // Solo la combinazione delle due decide se la pagina è davvero editabile.
+    $interactive = $dropEnabled && ! $locked;
 @endphp
 <div
     wire:key="page-{{ $page->id }}"
     data-page-id="{{ $page->id }}"
     tabindex="0"
-    @keydown.arrow-left.prevent="$wire.movePage({{ $page->id }}, {{ $page->position - 1 }})"
-    @keydown.arrow-right.prevent="$wire.movePage({{ $page->id }}, {{ $page->position + 1 }})"
-    @if ($dropEnabled)
+    @unless ($locked)
+        @keydown.arrow-left.prevent="$wire.movePage({{ $page->id }}, {{ $page->position - 1 }})"
+        @keydown.arrow-right.prevent="$wire.movePage({{ $page->id }}, {{ $page->position + 1 }})"
+    @endunless
+    @if ($interactive)
         x-on:dragover.prevent
         x-on:drop.prevent="const cid = $event.dataTransfer.getData('text/content-id'); if (cid) { $wire.assignContent(parseInt(cid), {{ $page->id }}); }"
     @endif
-    class="relative flex flex-col aspect-[3/4] rounded-lg border-2 p-2 text-xs overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $page->content_type->colorClasses() }}"
+    @if ($swapMode && ! $locked)
+        x-on:click="$wire.selectForSwap({{ $page->id }})"
+    @endif
+    class="relative flex flex-col aspect-[3/4] rounded-lg border-2 p-2 text-xs overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $page->content_type->colorClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $swapSelectedPageId === $page->id ? 'ring-4 ring-indigo-500' : '' }}"
 >
     <template x-if="$store.pagePresence.editorFor({{ $page->id }})">
         <span
@@ -23,27 +34,44 @@
     </template>
 
     <div class="flex items-center justify-between gap-1">
-        <span class="drag-handle cursor-grab font-semibold text-sm select-none" title="Trascina per riordinare">
-            ⠿ {{ $page->position }}
-        </span>
-        @if ($dropEnabled)
-            <select
-                x-on:click.stop
-                x-on:keydown.stop
-                x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
-                x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
-                wire:change="changePageStatus({{ $page->id }}, $event.target.value)"
-                class="rounded text-[10px] font-medium border-none py-0.5 pl-1.5 pr-5 {{ $page->status->colorClasses() }}"
-            >
-                @foreach (\App\Enums\PageStatus::cases() as $status)
-                    <option value="{{ $status->value }}" @selected($status === $page->status)>{{ $status->label() }}</option>
-                @endforeach
-            </select>
+        @if ($locked)
+            <span class="font-semibold text-sm select-none" title="{{ $page->lockedBy ? 'Bloccata da '.$page->lockedBy->name : 'Pagina bloccata' }}">
+                🔒 {{ $page->position }}
+            </span>
         @else
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium {{ $page->status->colorClasses() }}">
-                {{ $page->status->label() }}
+            <span class="drag-handle cursor-grab font-semibold text-sm select-none" title="Trascina per riordinare">
+                ⠿ {{ $page->position }}
             </span>
         @endif
+
+        <div class="flex items-center gap-1">
+            @if ($interactive)
+                <select
+                    x-on:click.stop
+                    x-on:keydown.stop
+                    x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
+                    x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
+                    wire:change="changePageStatus({{ $page->id }}, $event.target.value)"
+                    class="rounded text-[10px] font-medium border-none py-0.5 pl-1.5 pr-5 {{ $page->status->colorClasses() }}"
+                >
+                    @foreach (\App\Enums\PageStatus::cases() as $status)
+                        <option value="{{ $status->value }}" @selected($status === $page->status)>{{ $status->label() }}</option>
+                    @endforeach
+                </select>
+            @else
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium {{ $page->status->colorClasses() }}">
+                    {{ $page->status->label() }}
+                </span>
+            @endif
+
+            <button
+                type="button"
+                wire:click="togglePageLock({{ $page->id }})"
+                x-on:click.stop
+                class="shrink-0 text-[10px] opacity-60 hover:opacity-100"
+                title="{{ $locked ? 'Sblocca pagina' : 'Blocca pagina (impedisce spostamento, eliminazione e modifiche)' }}"
+            >{{ $locked ? '🔒' : '🔓' }}</button>
+        </div>
     </div>
 
     <div class="flex-1 flex flex-col justify-center gap-1 mt-1 min-h-0">
@@ -55,31 +83,35 @@
                         <span class="opacity-60" title="Contenuto presente su {{ $content->pages->count() }} pagine">×{{ $content->pages->count() }}</span>
                     @endif
                 </span>
-                <input
-                    type="number"
-                    min="0.1"
-                    max="100"
-                    step="0.1"
-                    value="{{ $content->pivot->occupied_percentage }}"
-                    x-on:keydown.stop
-                    x-on:click.stop
-                    x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
-                    x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
-                    wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
-                    class="w-9 shrink-0 text-[10px] rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-0.5 py-0"
-                />
-                <button
-                    type="button"
-                    x-on:click.stop="const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
-                    class="shrink-0 text-[10px] opacity-60 hover:opacity-100"
-                    title="Estendi questo contenuto a un'altra pagina"
-                >↗</button>
-                <button
-                    type="button"
-                    x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
-                    class="shrink-0 text-[10px] opacity-60 hover:opacity-100 hover:text-red-600"
-                    title="Rimuovi"
-                >✕</button>
+                @if ($locked)
+                    <span class="shrink-0 text-[10px] opacity-60">{{ $content->pivot->occupied_percentage }}%</span>
+                @else
+                    <input
+                        type="number"
+                        min="0.1"
+                        max="100"
+                        step="0.1"
+                        value="{{ $content->pivot->occupied_percentage }}"
+                        x-on:keydown.stop
+                        x-on:click.stop
+                        x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
+                        x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
+                        wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
+                        class="w-9 shrink-0 text-[10px] rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-0.5 py-0"
+                    />
+                    <button
+                        type="button"
+                        x-on:click.stop="const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
+                        class="shrink-0 text-[10px] opacity-60 hover:opacity-100"
+                        title="Estendi questo contenuto a un'altra pagina"
+                    >↗</button>
+                    <button
+                        type="button"
+                        x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
+                        class="shrink-0 text-[10px] opacity-60 hover:opacity-100 hover:text-red-600"
+                        title="Rimuovi"
+                    >✕</button>
+                @endif
             </div>
         @empty
             <p class="italic opacity-60 text-center leading-tight">
@@ -98,14 +130,16 @@
         />
 
         @if (! $latestFile)
-            <button
-                type="button"
-                x-on:click.stop="document.getElementById('page-file-input-{{ $page->id }}').click()"
-                wire:loading.attr="disabled"
-                wire:target="pendingUploads.{{ $page->id }}"
-                class="opacity-70 hover:opacity-100"
-                title="Carica PDF"
-            >📤</button>
+            @unless ($locked)
+                <button
+                    type="button"
+                    x-on:click.stop="document.getElementById('page-file-input-{{ $page->id }}').click()"
+                    wire:loading.attr="disabled"
+                    wire:target="pendingUploads.{{ $page->id }}"
+                    class="opacity-70 hover:opacity-100"
+                    title="Carica PDF"
+                >📤</button>
+            @endunless
         @elseif ($latestFile->thumbnail_status === \App\Enums\ThumbnailStatus::Ready)
             <a
                 href="{{ route('page-files.show', $latestFile) }}"
@@ -122,6 +156,8 @@
             </a>
         @elseif (in_array($latestFile->thumbnail_status, [\App\Enums\ThumbnailStatus::Pending, \App\Enums\ThumbnailStatus::Processing]))
             <span title="Elaborazione thumbnail in corso...">⏳ PDF</span>
+        @elseif ($locked)
+            <span title="Generazione anteprima fallita — sblocca la pagina per ricaricare il file">⚠️ PDF</span>
         @else
             <button
                 type="button"

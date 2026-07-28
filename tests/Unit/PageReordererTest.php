@@ -64,3 +64,27 @@ test('moving an unknown page id throws', function () {
     expect(fn () => PageReorderer::move($positions, 999, 1))
         ->toThrow(InvalidArgumentException::class);
 });
+
+test('swapping two pages exchanges only their two positions', function () {
+    $positions = [10 => 1, 20 => 2, 30 => 3, 40 => 4];
+
+    $changes = PageReorderer::swap($positions, 20, 40);
+
+    expect($changes)->toBe([
+        20 => 4,
+        40 => 2,
+    ]);
+});
+
+test('swapping a page with itself produces no changes', function () {
+    $positions = [10 => 1, 20 => 2, 30 => 3];
+
+    expect(PageReorderer::swap($positions, 20, 20))->toBe([]);
+});
+
+test('swapping an unknown page id throws', function () {
+    $positions = [10 => 1, 20 => 2, 30 => 3];
+
+    expect(fn () => PageReorderer::swap($positions, 10, 999))
+        ->toThrow(InvalidArgumentException::class);
+});

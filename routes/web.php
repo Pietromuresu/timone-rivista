@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdDashboardExportController;
 use App\Http\Controllers\PageFileController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TimoneExportController;
 use App\Livewire\Issues\Create as IssueCreate;
 use App\Livewire\Issues\Show as IssueShow;
 use App\Livewire\Magazines\Create as MagazineCreate;
@@ -39,6 +40,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/riviste/{magazine:slug}/numeri/{issue}/export/carico-pubblicitario.pdf', [AdDashboardExportController::class, 'pdf'])
         ->scopeBindings()
         ->name('issues.export.ad-dashboard-pdf');
+
+    Route::get('/riviste/{magazine:slug}/numeri/{issue}/export/timone.pdf', [TimoneExportController::class, 'pdf'])
+        ->scopeBindings()
+        ->name('issues.export.timone-pdf');
 
     Route::get('/page-files/{pageFile}', [PageFileController::class, 'show'])->name('page-files.show');
     Route::get('/page-files/{pageFile}/thumbnail', [PageFileController::class, 'thumbnail'])->name('page-files.thumbnail');

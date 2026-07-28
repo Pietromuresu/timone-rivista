@@ -1,22 +1,35 @@
 @php
     $latestFile = $page->files->first();
     $dropEnabled = $dropEnabled ?? false;
+    $locked = $page->isLocked();
+    $interactive = $dropEnabled && ! $locked;
 @endphp
 <li
     wire:key="page-{{ $page->id }}"
     data-page-id="{{ $page->id }}"
     tabindex="0"
-    @keydown.arrow-up.prevent="$wire.movePage({{ $page->id }}, {{ $page->position - 1 }})"
-    @keydown.arrow-down.prevent="$wire.movePage({{ $page->id }}, {{ $page->position + 1 }})"
-    @if ($dropEnabled)
+    @unless ($locked)
+        @keydown.arrow-up.prevent="$wire.movePage({{ $page->id }}, {{ $page->position - 1 }})"
+        @keydown.arrow-down.prevent="$wire.movePage({{ $page->id }}, {{ $page->position + 1 }})"
+    @endunless
+    @if ($interactive)
         x-on:dragover.prevent
         x-on:drop.prevent="const cid = $event.dataTransfer.getData('text/content-id'); if (cid) { $wire.assignContent(parseInt(cid), {{ $page->id }}); }"
     @endif
-    class="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+    @if ($swapMode && ! $locked)
+        x-on:click="$wire.selectForSwap({{ $page->id }})"
+    @endif
+    class="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $swapSelectedPageId === $page->id ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : '' }}"
 >
-    <span class="drag-handle w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200 cursor-grab" title="Trascina per riordinare">
-        {{ $page->position }}
-    </span>
+    @if ($locked)
+        <span class="w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200" title="{{ $page->lockedBy ? 'Bloccata da '.$page->lockedBy->name : 'Pagina bloccata' }}">
+            🔒 {{ $page->position }}
+        </span>
+    @else
+        <span class="drag-handle w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200 cursor-grab" title="Trascina per riordinare">
+            {{ $page->position }}
+        </span>
+    @endif
 
     <template x-if="$store.pagePresence.editorFor({{ $page->id }})">
         <span
@@ -38,31 +51,35 @@
                 @if ($content->pages->count() > 1)
                     <span class="opacity-60" title="Contenuto presente su {{ $content->pages->count() }} pagine">×{{ $content->pages->count() }}</span>
                 @endif
-                <input
-                    type="number"
-                    min="0.1"
-                    max="100"
-                    step="0.1"
-                    value="{{ $content->pivot->occupied_percentage }}"
-                    x-on:keydown.stop
-                    x-on:click.stop
-                    x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
-                    x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
-                    wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
-                    class="w-14 text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-1 py-0"
-                />
-                <button
-                    type="button"
-                    x-on:click.stop="const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
-                    class="text-xs opacity-60 hover:opacity-100"
-                    title="Estendi questo contenuto a un'altra pagina"
-                >↗</button>
-                <button
-                    type="button"
-                    x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
-                    class="text-xs opacity-60 hover:opacity-100 hover:text-red-600"
-                    title="Rimuovi"
-                >✕</button>
+                @if ($locked)
+                    <span class="text-xs opacity-60">{{ $content->pivot->occupied_percentage }}%</span>
+                @else
+                    <input
+                        type="number"
+                        min="0.1"
+                        max="100"
+                        step="0.1"
+                        value="{{ $content->pivot->occupied_percentage }}"
+                        x-on:keydown.stop
+                        x-on:click.stop
+                        x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
+                        x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
+                        wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
+                        class="w-14 text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-1 py-0"
+                    />
+                    <button
+                        type="button"
+                        x-on:click.stop="const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
+                        class="text-xs opacity-60 hover:opacity-100"
+                        title="Estendi questo contenuto a un'altra pagina"
+                    >↗</button>
+                    <button
+                        type="button"
+                        x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
+                        class="text-xs opacity-60 hover:opacity-100 hover:text-red-600"
+                        title="Rimuovi"
+                    >✕</button>
+                @endif
             </span>
         @empty
             <span class="text-sm text-gray-400 italic">
@@ -81,14 +98,16 @@
         />
 
         @if (! $latestFile)
-            <button
-                type="button"
-                x-on:click.stop="document.getElementById('page-file-input-{{ $page->id }}').click()"
-                wire:loading.attr="disabled"
-                wire:target="pendingUploads.{{ $page->id }}"
-                class="opacity-70 hover:opacity-100"
-                title="Carica PDF"
-            >📤</button>
+            @unless ($locked)
+                <button
+                    type="button"
+                    x-on:click.stop="document.getElementById('page-file-input-{{ $page->id }}').click()"
+                    wire:loading.attr="disabled"
+                    wire:target="pendingUploads.{{ $page->id }}"
+                    class="opacity-70 hover:opacity-100"
+                    title="Carica PDF"
+                >📤</button>
+            @endunless
         @elseif ($latestFile->thumbnail_status === \App\Enums\ThumbnailStatus::Ready)
             <a
                 href="{{ route('page-files.show', $latestFile) }}"
@@ -106,6 +125,8 @@
             </a>
         @elseif (in_array($latestFile->thumbnail_status, [\App\Enums\ThumbnailStatus::Pending, \App\Enums\ThumbnailStatus::Processing]))
             <span title="Elaborazione thumbnail in corso...">⏳ PDF</span>
+        @elseif ($locked)
+            <span title="Generazione anteprima fallita — sblocca la pagina per ricaricare il file">⚠️ PDF</span>
         @else
             <button
                 type="button"
@@ -127,16 +148,30 @@
         @endif
     </span>
 
-    <select
+    @if ($locked)
+        <span class="rounded text-xs font-medium shrink-0 py-0.5 pl-2 pr-2 {{ $page->status->colorClasses() }}">
+            {{ $page->status->label() }}
+        </span>
+    @else
+        <select
+            x-on:click.stop
+            x-on:keydown.stop
+            x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
+            x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
+            wire:change="changePageStatus({{ $page->id }}, $event.target.value)"
+            class="rounded text-xs font-medium shrink-0 border-none py-0.5 pl-2 pr-6 {{ $page->status->colorClasses() }}"
+        >
+            @foreach (\App\Enums\PageStatus::cases() as $status)
+                <option value="{{ $status->value }}" @selected($status === $page->status)>{{ $status->label() }}</option>
+            @endforeach
+        </select>
+    @endif
+
+    <button
+        type="button"
+        wire:click="togglePageLock({{ $page->id }})"
         x-on:click.stop
-        x-on:keydown.stop
-        x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
-        x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
-        wire:change="changePageStatus({{ $page->id }}, $event.target.value)"
-        class="rounded text-xs font-medium shrink-0 border-none py-0.5 pl-2 pr-6 {{ $page->status->colorClasses() }}"
-    >
-        @foreach (\App\Enums\PageStatus::cases() as $status)
-            <option value="{{ $status->value }}" @selected($status === $page->status)>{{ $status->label() }}</option>
-        @endforeach
-    </select>
+        class="shrink-0 text-xs opacity-60 hover:opacity-100"
+        title="{{ $locked ? 'Sblocca pagina' : 'Blocca pagina (impedisce spostamento, eliminazione e modifiche)' }}"
+    >{{ $locked ? '🔒' : '🔓' }}</button>
 </li>

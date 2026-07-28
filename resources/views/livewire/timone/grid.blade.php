@@ -38,6 +38,60 @@
                 📜 Storico spostamenti
             </button>
 
+            <button
+                type="button"
+                wire:click="toggleSwapMode"
+                title="Scambia due pagine di posto con un click, senza trascinare — utile anche in modalità Doppia pagina, che non supporta il drag&drop"
+                @class([
+                    'px-3 py-1.5 rounded-lg border text-sm transition-colors',
+                    'bg-indigo-600 text-white border-indigo-600' => $swapMode,
+                    'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700' => ! $swapMode,
+                ])
+            >
+                🔀 Modalità scambio
+            </button>
+
+            {{-- Nessuna proprietà Livewire per questo pannello: è un form GET
+                 puro, non serve reattività server-side, solo mostrare/
+                 nascondere i filtri prima dello scaricamento diretto. --}}
+            <div x-data="{ open: false }" class="relative">
+                <button
+                    type="button"
+                    x-on:click="open = ! open"
+                    @class([
+                        'px-3 py-1.5 rounded-lg border text-sm transition-colors',
+                        'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700',
+                    ])
+                >
+                    📄 Esporta PDF
+                </button>
+
+                <form
+                    x-show="open"
+                    x-on:click.outside="open = false"
+                    method="GET"
+                    action="{{ route('issues.export.timone-pdf', [$issue->magazine, $issue]) }}"
+                    class="absolute z-10 mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 space-y-2 text-xs"
+                    style="display: none;"
+                >
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="withThumbnails" value="1" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500" />
+                        Includi le miniature PDF
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="onlyAds" value="1" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500" />
+                        Solo pagine con pubblicità
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="onlyUnapproved" value="1" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500" />
+                        Solo pagine non ancora approvate
+                    </label>
+                    <button type="submit" class="w-full mt-1 px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
+                        Scarica PDF
+                    </button>
+                </form>
+            </div>
+
             <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm">
                 @foreach (['griglia' => 'Griglia', 'doppia' => 'Doppia pagina', 'lista' => 'Lista'] as $mode => $label)
                     <button
@@ -55,6 +109,32 @@
             </div>
         </div>
     </div>
+
+    {{-- Componente a sé (bottone + pannello insieme, non separabili come
+         gli altri toggle qui sopra che sono proprietà di Grid.php) — la
+         propria riga, non incastrato nella toolbar. --}}
+    <livewire:timone.activity-log-panel :issue="$issue" :key="'activity-log-'.$issue->id" />
+
+    @if (! empty($automaticChecks['nonContiguousContents']) || ! empty($automaticChecks['approvedEmptyPages']))
+        <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs space-y-1">
+            <p class="font-medium text-amber-800 dark:text-amber-300">⚠️ Avvisi</p>
+
+            @foreach ($automaticChecks['nonContiguousContents'] as $flagged)
+                <p class="text-amber-700 dark:text-amber-400">
+                    «{{ $flagged['title'] }}» è su pagine non consecutive ({{ implode(', ', $flagged['positions']) }}) — verifica che sia voluto.
+                </p>
+            @endforeach
+
+            @if (! empty($automaticChecks['approvedEmptyPages']))
+                <p class="text-amber-700 dark:text-amber-400">
+                    {{ count($automaticChecks['approvedEmptyPages']) === 1 ? 'La pagina' : 'Le pagine' }}
+                    {{ implode(', ', $automaticChecks['approvedEmptyPages']) }}
+                    {{ count($automaticChecks['approvedEmptyPages']) === 1 ? 'è approvata' : 'sono approvate' }}
+                    ma senza contenuti assegnati.
+                </p>
+            @endif
+        </div>
+    @endif
 
     @if ($showPageCountEditor)
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
@@ -140,10 +220,17 @@
                         </div>
                     @endif
 
+                    @if ($pageCountImpact['lockedCount'] > 0)
+                        <p class="text-xs font-medium text-red-700 dark:text-red-400 mt-2">
+                            🔒 {{ $pageCountImpact['lockedCount'] }} di queste pagine sono bloccate: sbloccale prima di procedere, la riduzione verrà comunque rifiutata finché restano bloccate.
+                        </p>
+                    @endif
+
                     <button
                         type="button"
                         x-on:click="confirm('Ridurre le pagine a {{ $newTotalPages }}? L\'operazione non è reversibile.') && $wire.resizePages(true)"
-                        class="mt-3 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700"
+                        @disabled($pageCountImpact['lockedCount'] > 0)
+                        class="mt-3 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Conferma rimozione definitiva
                     </button>
@@ -261,6 +348,21 @@
         <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{{ $message }}</p>
     @enderror
 
+    @if ($swapMode)
+        <p class="text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-2">
+            🔀 Modalità scambio attiva:
+            @if ($swapSelectedPageId)
+                pagina selezionata — clicca un'altra pagina per scambiarle, o clicca di nuovo la stessa per annullare.
+            @else
+                clicca una pagina, poi un'altra: si scambiano di posto (contenuti, stato e file restano legati alla pagina).
+            @endif
+        </p>
+    @endif
+
+    @error('locked')
+        <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">🔒 {{ $message }}</p>
+    @enderror
+
     <template x-if="! $store.realtimeFallback.connected">
         <p class="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
             ⚠️ Aggiornamento in tempo reale non disponibile — la pagina si aggiorna automaticamente ogni pochi secondi.
@@ -317,7 +419,7 @@
         </div>
     @elseif ($viewMode === 'griglia')
         <div
-            x-sortable
+            x-sortable="$wire.swapMode"
             @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
             class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3"
         >
@@ -326,12 +428,20 @@
             @endforeach
         </div>
     @elseif ($viewMode === 'doppia')
+        {{-- Niente Sortable qui: le pagine sono annidate in due livelli
+             (apertura > pagina), Sortable richiede figli diretti dello
+             stesso contenitore per il drag&drop di riordino. La modalità
+             scambio (click, non drag) non ha questo limite ed è quindi
+             l'unico modo di riordinare le pagine da questa vista — oltre
+             alle frecce da tastiera, già supportate su ogni card. Il resto
+             (assegnazione contenuti, cambio stato) è invece pienamente
+             interattivo come nelle altre due modalità (dropEnabled true). --}}
         <div class="space-y-3">
             @foreach ($spreads as $spread)
                 <div class="flex justify-center gap-0.5">
                     @foreach ($spread as $page)
                         <div class="w-40 sm:w-48 {{ ! $loop->first ? 'border-l-2 border-gray-300 dark:border-gray-600' : '' }}">
-                            @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => false])
+                            @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true])
                         </div>
                     @endforeach
                 </div>
@@ -340,7 +450,7 @@
     @else
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
             <ul
-                x-sortable
+                x-sortable="$wire.swapMode"
                 @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
                 class="divide-y divide-gray-100 dark:divide-gray-700"
             >

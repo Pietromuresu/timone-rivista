@@ -20,6 +20,7 @@ class PageCountResizer
      *     delta: int,
      *     removedCount?: int,
      *     affectedPages?: list<array{position: int, contentCount: int, hasFiles: bool}>,
+     *     lockedCount?: int,
      * }
      */
     public static function impact(Collection $pages, int $currentTotal, int $newTotal): array
@@ -54,6 +55,7 @@ class PageCountResizer
             'delta' => $currentTotal - $newTotal,
             'removedCount' => $removedPages->count(),
             'affectedPages' => $affectedPages,
+            'lockedCount' => $removedPages->filter(fn ($page) => $page->isLocked())->count(),
         ];
     }
 }

@@ -9,15 +9,21 @@ use App\Enums\PageContentType;
 use App\Events\ContentAssigned;
 use App\Events\ContentUnassigned;
 use App\Events\IssuePageCountUpdated;
+use App\Events\PageLocked;
 use App\Events\PageMoved;
+use App\Events\PagesSwapped;
 use App\Events\PageStatusUpdated;
+use App\Events\PageUnlocked;
 use App\Jobs\GeneratePageFileThumbnail;
 use App\Models\Content;
 use App\Models\Issue;
 use App\Models\Page;
 use App\Models\PageFile;
 use App\Models\PageReorderLog;
+use App\Support\ActivityLogger;
 use App\Support\AdLoadCalculator;
+use App\Support\AutomaticChecks;
+use App\Support\PageContentTypeResolver;
 use App\Support\PageCountResizer;
 use App\Support\PagePercentageAllocator;
 use App\Support\PageReorderer;
@@ -93,6 +99,21 @@ class Grid extends Component
      */
     public string $contentSearch = '';
 
+    /**
+     * Modalità scambio (spec §6.2/§6.7): alternativa al drag&drop, utile
+     * soprattutto in modalità "doppia" (che non ha il riordino via
+     * trascinamento — vedi nota su PageSpreadBuilder). Attiva/disattivata
+     * dalla toolbar, funziona in tutte e tre le modalità di vista tramite
+     * un click sulla pagina invece che un drag: click sulla prima pagina
+     * la seleziona, click su una seconda le scambia di posto (contenuti,
+     * stato e file restano legati alla pagina, non alla posizione — si
+     * "spostano" insieme ad essa), un secondo click sulla stessa pagina
+     * annulla la selezione.
+     */
+    public bool $swapMode = false;
+
+    public ?int $swapSelectedPageId = null;
+
     protected const VIEW_MODES = ['griglia', 'doppia', 'lista'];
 
     public function mount(Issue $issue): void
@@ -150,6 +171,23 @@ class Grid extends Component
             return;
         }
 
+        if ($newTotal < $currentTotal) {
+            // Una pagina bloccata non può essere "eliminata" (spec §6.6) —
+            // controllato prima del gate su $confirmed, così il blocco
+            // vince a prescindere da dove si trovi l'utente nel flusso di
+            // conferma in due passaggi.
+            $hasLockedPageToRemove = $this->issue->pages()
+                ->where('position', '>', $newTotal)
+                ->whereNotNull('locked_at')
+                ->exists();
+
+            if ($hasLockedPageToRemove) {
+                $this->addError('locked', 'Alcune delle pagine da eliminare sono bloccate: sbloccale prima di ridurre il numero di pagine.');
+
+                return;
+            }
+        }
+
         if ($newTotal < $currentTotal && ! $confirmed) {
             return;
         }
@@ -163,6 +201,16 @@ class Grid extends Component
 
             $this->issue->update(['total_pages' => $newTotal]);
         });
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Issue',
+            entityId: $this->issue->id,
+            action: 'issue.page_count_changed',
+            description: "Numero totale di pagine cambiato da {$currentTotal} a {$newTotal}",
+            old: ['total_pages' => $currentTotal],
+            new: ['total_pages' => $newTotal],
+        );
 
         broadcast(new IssuePageCountUpdated(
             issueId: $this->issue->id,
@@ -234,8 +282,11 @@ class Grid extends Component
     {
         $this->authorize('update', $this->issue);
 
+        $oldThreshold = $this->issue->magazine->ad_threshold_percentage;
+
         if ($value === null || trim($value) === '') {
             $this->issue->magazine->update(['ad_threshold_percentage' => null]);
+            $this->logAdThresholdChange($oldThreshold, null);
 
             return;
         }
@@ -247,11 +298,29 @@ class Grid extends Component
         }
 
         $this->issue->magazine->update(['ad_threshold_percentage' => $threshold]);
+        $this->logAdThresholdChange($oldThreshold, $threshold);
+    }
+
+    private function logAdThresholdChange(?float $old, ?float $new): void
+    {
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Magazine',
+            entityId: $this->issue->magazine_id,
+            action: 'magazine.ad_threshold_changed',
+            description: 'Soglia di allarme pubblicitario cambiata da '.($old ?? 'nessuna').' a '.($new ?? 'nessuna'),
+            old: ['ad_threshold_percentage' => $old],
+            new: ['ad_threshold_percentage' => $new],
+        );
     }
 
     public function movePage(int $pageId, int $toPosition): void
     {
         $this->authorize('update', $this->issue);
+
+        if ($this->blockIfLocked(Page::find($pageId), 'spostata')) {
+            return;
+        }
 
         $conflict = false;
         $applied = null;
@@ -317,6 +386,16 @@ class Grid extends Component
             return;
         }
 
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Page',
+            entityId: $pageId,
+            action: 'page.moved',
+            description: "Pagina spostata dalla posizione {$applied['fromPosition']} alla {$applied['toPosition']}",
+            old: ['position' => $applied['fromPosition']],
+            new: ['position' => $applied['toPosition']],
+        );
+
         broadcast(new PageMoved(
             issueId: $this->issue->id,
             pageId: $pageId,
@@ -334,6 +413,138 @@ class Grid extends Component
         // qui serve solo riallineare la versione del lock ottimistico,
         // altrimenti un successivo movePage() di questo client verrebbe
         // rifiutato come conflitto anche se la sua vista è ormai aggiornata.
+        $this->reorderVersion = $this->issue->fresh()->reorder_version;
+    }
+
+    public function toggleSwapMode(): void
+    {
+        $this->swapMode = ! $this->swapMode;
+        $this->swapSelectedPageId = null;
+    }
+
+    /**
+     * Click su una pagina in modalità scambio: primo click la seleziona,
+     * click sulla stessa pagina la deseleziona, click su una pagina
+     * diversa esegue lo scambio e azzera la selezione. Nessun-op se la
+     * modalità scambio non è attiva (difesa anche lato server, non solo
+     * nascondendo il click handler lato UI).
+     */
+    public function selectForSwap(int $pageId): void
+    {
+        $this->authorize('update', $this->issue);
+
+        if (! $this->swapMode) {
+            return;
+        }
+
+        if ($this->blockIfLocked(Page::find($pageId), 'scambiata')) {
+            return;
+        }
+
+        if ($this->swapSelectedPageId === null) {
+            $this->swapSelectedPageId = $pageId;
+
+            return;
+        }
+
+        if ($this->swapSelectedPageId === $pageId) {
+            $this->swapSelectedPageId = null;
+
+            return;
+        }
+
+        $firstPageId = $this->swapSelectedPageId;
+        $this->swapSelectedPageId = null;
+
+        $this->swapPages($firstPageId, $pageId);
+    }
+
+    /**
+     * Scambia direttamente le posizioni di due pagine — a differenza di
+     * movePage() (che fa slittare tutte le pagine intermedie), qui SOLO
+     * le due pagine indicate cambiano posizione. Stesso lock ottimistico
+     * su `reorder_version` e stessa tecnica a offset temporaneo di
+     * movePage(), per non violare unique(issue_id, position).
+     */
+    private function swapPages(int $pageIdA, int $pageIdB): void
+    {
+        $conflict = false;
+        $applied = null;
+
+        DB::transaction(function () use ($pageIdA, $pageIdB, &$conflict, &$applied) {
+            $issue = Issue::whereKey($this->issue->id)->lockForUpdate()->first();
+
+            if ($issue->reorder_version !== $this->reorderVersion) {
+                $conflict = true;
+                $this->reorderVersion = $issue->reorder_version;
+
+                return;
+            }
+
+            $positions = $issue->pages()->pluck('position', 'id')->all();
+
+            if (! array_key_exists($pageIdA, $positions) || ! array_key_exists($pageIdB, $positions)) {
+                // Una delle due pagine non appartiene (più) a questa issue —
+                // guardia cross-issue, stesso principio già usato altrove.
+                return;
+            }
+
+            $changes = PageReorderer::swap($positions, $pageIdA, $pageIdB);
+
+            if ($changes === []) {
+                return;
+            }
+
+            $offset = count($positions);
+
+            foreach ($changes as $id => $newPosition) {
+                Page::whereKey($id)->update(['position' => $newPosition + $offset]);
+            }
+            foreach ($changes as $id => $newPosition) {
+                Page::whereKey($id)->update(['position' => $newPosition]);
+            }
+
+            $issue->increment('reorder_version');
+            $this->reorderVersion = $issue->reorder_version;
+
+            $applied = [
+                'positionA' => $positions[$pageIdA],
+                'positionB' => $positions[$pageIdB],
+            ];
+        });
+
+        if ($conflict) {
+            $this->addError('reorder', 'Il timone è stato aggiornato da un altro utente nel frattempo: la modifica non è stata applicata, la vista è ora aggiornata.');
+
+            return;
+        }
+
+        if ($applied === null) {
+            return;
+        }
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Page',
+            entityId: $pageIdA,
+            action: 'page.swapped',
+            description: "Pagine scambiate: posizione {$applied['positionA']} <-> posizione {$applied['positionB']}",
+            old: ['pageA' => $pageIdA, 'positionA' => $applied['positionA'], 'pageB' => $pageIdB, 'positionB' => $applied['positionB']],
+            new: ['pageA' => $pageIdA, 'positionA' => $applied['positionB'], 'pageB' => $pageIdB, 'positionB' => $applied['positionA']],
+        );
+
+        broadcast(new PagesSwapped(
+            issueId: $this->issue->id,
+            pageIdA: $pageIdA,
+            pageIdB: $pageIdB,
+            swappedByUserId: auth()->id(),
+            swappedByUserName: auth()->user()->name,
+        ))->toOthers();
+    }
+
+    #[On('echo-presence:issue.{issue.id},PagesSwapped')]
+    public function onPagesSwapped(): void
+    {
         $this->reorderVersion = $this->issue->fresh()->reorder_version;
     }
 
@@ -361,13 +572,28 @@ class Grid extends Component
             return;
         }
 
+        if ($this->blockIfLocked($page)) {
+            return;
+        }
+
         $newStatus = PageStatus::tryFrom($status);
 
         if ($newStatus === null || $newStatus === $page->status) {
             return;
         }
 
+        $oldStatus = $page->status;
         $page->update(['status' => $newStatus]);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Page',
+            entityId: $page->id,
+            action: 'page.status_changed',
+            description: "Stato della pagina {$page->position} cambiato da «{$oldStatus->label()}» a «{$newStatus->label()}»",
+            old: ['status' => $oldStatus->value],
+            new: ['status' => $newStatus->value],
+        );
 
         broadcast(new PageStatusUpdated(
             issueId: $this->issue->id,
@@ -383,6 +609,91 @@ class Grid extends Component
     {
         // Nessuno stato locale da aggiornare: il prossimo render() ripesca
         // lo stato aggiornato delle pagine dal database.
+    }
+
+    /**
+     * §6.6 dello spec: blocco pagina — impedisce spostamento, eliminazione,
+     * sovrascrittura o modifica di una pagina bloccata. Il nostro schema
+     * non ha permessi granulari `page.lock`/`page.edit` per pubblicazione
+     * (solo ruolo globale + accesso binario per rivista, stessa
+     * semplificazione già presa per la gestione utenti/ruoli) — bloccare/
+     * sbloccare richiede quindi la stessa ability `update` di ogni altra
+     * mutazione su questa issue, non un permesso a sé.
+     */
+    public function togglePageLock(int $pageId): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $page = Page::findOrFail($pageId);
+
+        if ($page->issue_id !== $this->issue->id) {
+            return;
+        }
+
+        if ($page->isLocked()) {
+            $page->update(['locked_at' => null, 'locked_by' => null]);
+
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Page',
+                entityId: $page->id,
+                action: 'page.unlocked',
+                description: "Pagina {$page->position} sbloccata",
+            );
+
+            broadcast(new PageUnlocked(
+                issueId: $this->issue->id,
+                pageId: $page->id,
+                unlockedByUserId: auth()->id(),
+                unlockedByUserName: auth()->user()->name,
+            ))->toOthers();
+
+            return;
+        }
+
+        $page->update(['locked_at' => now(), 'locked_by' => auth()->id()]);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Page',
+            entityId: $page->id,
+            action: 'page.locked',
+            description: "Pagina {$page->position} bloccata",
+        );
+
+        broadcast(new PageLocked(
+            issueId: $this->issue->id,
+            pageId: $page->id,
+            lockedByUserId: auth()->id(),
+            lockedByUserName: auth()->user()->name,
+        ))->toOthers();
+    }
+
+    #[On('echo-presence:issue.{issue.id},PageLocked')]
+    #[On('echo-presence:issue.{issue.id},PageUnlocked')]
+    public function onPageLockChanged(): void
+    {
+        // Nessuno stato locale da aggiornare: il prossimo render() ripesca
+        // locked_at/locked_by dal database.
+    }
+
+    /**
+     * Guardia condivisa da ogni mutazione che tocca direttamente una
+     * pagina (spostamento, scambio, cambio stato, assegnazione contenuti,
+     * upload file, eliminazione per riduzione pagine totali) — una pagina
+     * bloccata non può essere "spostata, eliminata, sovrascritta, o
+     * modificata" (spec §6.6). $verb è usato solo per personalizzare il
+     * messaggio d'errore (es. "spostata", "modificata").
+     */
+    private function blockIfLocked(?Page $page, string $verb = 'modificata'): bool
+    {
+        if ($page !== null && $page->isLocked()) {
+            $this->addError('locked', "La pagina {$page->position} è bloccata e non può essere {$verb}: sbloccala prima di procedere.");
+
+            return true;
+        }
+
+        return false;
     }
 
     public function assignContent(int $contentId, int $pageId): void
@@ -451,6 +762,10 @@ class Grid extends Component
      */
     private function attachContentToPage(Content $content, Page $page, string $errorKey): void
     {
+        if ($this->blockIfLocked($page)) {
+            return;
+        }
+
         $occupied = $page->contents()->pluck('occupied_percentage')->all();
 
         $percentage = $content->type === ContentType::Pubblicita
@@ -464,6 +779,16 @@ class Grid extends Component
         }
 
         $page->contents()->attach($content->id, ['occupied_percentage' => (string) $percentage]);
+        $this->syncPageContentType($page);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Content',
+            entityId: $content->id,
+            action: 'content.assigned',
+            description: "Contenuto «{$content->displayLabel()}» assegnato alla pagina {$page->position} ({$percentage}%)",
+            new: ['page_id' => $page->id, 'occupied_percentage' => $percentage],
+        );
 
         broadcast(new ContentAssigned(
             issueId: $this->issue->id,
@@ -473,6 +798,27 @@ class Grid extends Component
             assignedByUserId: auth()->id(),
             assignedByUserName: auth()->user()->name,
         ))->toOthers();
+    }
+
+    /**
+     * Bug reale scoperto in questa sessione: assegnare/rimuovere un
+     * contenuto non aggiornava mai `page.content_type` (il colore della
+     * card) — restava "bianca" per sempre su qualunque pagina toccata
+     * dall'interfaccia reale, mai un problema visibile nei dati demo solo
+     * perché il seeder imposta `content_type` a mano con un proprio
+     * helper mai usato dall'app vera. Richiamato dopo ogni attach/detach
+     * in questo componente, in modo che il colore resti sempre coerente
+     * con i contenuti effettivamente presenti — non solo al momento
+     * dell'assegnazione iniziale.
+     */
+    private function syncPageContentType(Page $page): void
+    {
+        $types = $page->contents()->pluck('type')->all();
+        $resolved = PageContentTypeResolver::resolve($types);
+
+        if ($resolved !== $page->content_type) {
+            $page->update(['content_type' => $resolved]);
+        }
     }
 
     public function updateContentPercentage(int $pageId, int $contentId, float $percentage): void
@@ -485,6 +831,10 @@ class Grid extends Component
             return;
         }
 
+        if ($this->blockIfLocked($page)) {
+            return;
+        }
+
         $others = $page->contents()->where('content_id', '!=', $contentId)->pluck('occupied_percentage')->all();
 
         if (! PagePercentageAllocator::fits($others, $percentage)) {
@@ -493,7 +843,19 @@ class Grid extends Component
             return;
         }
 
+        $oldPercentage = (float) $page->contents()->where('content_id', $contentId)->first()->pivot->occupied_percentage;
+
         $page->contents()->updateExistingPivot($contentId, ['occupied_percentage' => (string) $percentage]);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Content',
+            entityId: $contentId,
+            action: 'content.percentage_changed',
+            description: "Percentuale del contenuto sulla pagina {$page->position} cambiata da {$oldPercentage}% a {$percentage}%",
+            old: ['occupied_percentage' => $oldPercentage],
+            new: ['occupied_percentage' => $percentage],
+        );
 
         broadcast(new ContentAssigned(
             issueId: $this->issue->id,
@@ -515,7 +877,21 @@ class Grid extends Component
             return;
         }
 
+        if ($this->blockIfLocked($page)) {
+            return;
+        }
+
         $page->contents()->detach($contentId);
+        $this->syncPageContentType($page);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Content',
+            entityId: $contentId,
+            action: 'content.unassigned',
+            description: "Contenuto rimosso dalla pagina {$page->position}",
+            old: ['page_id' => $page->id],
+        );
 
         broadcast(new ContentUnassigned(
             issueId: $this->issue->id,
@@ -569,6 +945,10 @@ class Grid extends Component
             return;
         }
 
+        if ($this->blockIfLocked($page, 'sovrascritta')) {
+            return;
+        }
+
         validator(['pendingFile' => $file], [
             'pendingFile' => 'required|file|mimes:pdf|max:32768',
         ])->validate();
@@ -584,6 +964,15 @@ class Grid extends Component
             'size' => $file->getSize(),
             'thumbnail_status' => ThumbnailStatus::Pending,
         ]);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'PageFile',
+            entityId: $pageFile->id,
+            action: 'page.file_uploaded',
+            description: "PDF «{$pageFile->original_name}» caricato sulla pagina {$page->position}",
+            new: ['page_id' => $page->id, 'original_name' => $pageFile->original_name],
+        );
 
         GeneratePageFileThumbnail::dispatch($pageFile);
 
@@ -604,11 +993,14 @@ class Grid extends Component
             ->with([
                 'contents.article',
                 'contents.advertisement',
-                // Solo per il badge "×N pagine" sul contenuto multipagina
-                // (vedi Grid::extendToPage()) — non serve altro che sapere
-                // quante pagine sono, non quali nello specifico.
-                'contents.pages:pages.id',
+                // Per il badge "×N pagine" (Grid::extendToPage()) basterebbe
+                // solo l'id; la posizione serve in più ad
+                // App\Support\AutomaticChecks per segnalare i contenuti su
+                // pagine non contigue — stesso eager load riusato per
+                // entrambi, non vale la pena separarli.
+                'contents.pages:pages.id,pages.position',
                 'files' => fn ($query) => $query->latest()->limit(1),
+                'lockedBy:id,name',
             ])
             ->get();
 
@@ -635,6 +1027,7 @@ class Grid extends Component
             'adThreshold' => $this->issue->magazine->ad_threshold_percentage,
             'unassignedAdCount' => $unassignedContents->where('type', ContentType::Pubblicita)->count(),
             'pageCountImpact' => $pageCountImpact,
+            'automaticChecks' => AutomaticChecks::check($pages),
         ]);
     }
 }

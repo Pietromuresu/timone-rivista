@@ -11,6 +11,7 @@ use App\Models\Advertisement;
 use App\Models\Article;
 use App\Models\Content;
 use App\Models\Issue;
+use App\Support\ActivityLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
@@ -130,6 +131,15 @@ class ContentCreate extends Component
 
             return $content;
         });
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Content',
+            entityId: $content->id,
+            action: 'content.created',
+            description: "Contenuto «{$content->title}» creato (".($validated['type'] === 'articolo' ? 'articolo' : 'pubblicità').')',
+            new: ['type' => $validated['type'], 'title' => $content->title],
+        );
 
         broadcast(new ContentCreated(
             issueId: $this->issue->id,

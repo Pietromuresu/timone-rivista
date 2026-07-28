@@ -32,6 +32,30 @@ test('an invalid view mode is ignored', function () {
         ->assertSet('viewMode', 'griglia');
 });
 
+test('the doppia view mode renders editable status selects and content drop targets, not the static read-only markup', function () {
+    $issue = Issue::factory()->create(['total_pages' => 4]);
+
+    $html = Livewire::test(Grid::class, ['issue' => $issue])
+        ->call('setViewMode', 'doppia')
+        ->html();
+
+    expect($html)->toContain('wire:change="changePageStatus')
+        ->toContain('text/content-id');
+});
+
+test('the swap mode banner and page highlight appear only while swap mode is active', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 1)->first();
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->assertDontSee('Modalità scambio attiva')
+        ->call('toggleSwapMode')
+        ->assertSee('Modalità scambio attiva')
+        ->call('selectForSwap', $page->id)
+        ->assertSee('pagina selezionata');
+});
+
 test('a page shows the assigned content display label', function () {
     $issue = Issue::factory()->create(['total_pages' => 3]);
     $page = $issue->pages()->where('position', 2)->first();

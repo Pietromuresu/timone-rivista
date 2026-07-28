@@ -124,8 +124,14 @@ Alpine.store('realtimeFallback', {
     },
 });
 
-Alpine.directive('sortable', (el) => {
-    Sortable.create(el, {
+// L'espressione opzionale (es. x-sortable="$wire.swapMode") disabilita il
+// drag&drop reattivamente mentre resta vera — usata per la modalità
+// scambio, che sostituisce il drag con una selezione a click: tenere
+// Sortable attivo in contemporanea creerebbe due modi conflittuali di
+// riordinare (un mousedown sul drag-handle avvierebbe comunque un drag
+// invece della sola selezione).
+Alpine.directive('sortable', (el, { expression }, { effect, evaluateLater }) => {
+    const sortable = Sortable.create(el, {
         animation: 150,
         handle: '.drag-handle',
         onStart(evt) {
@@ -144,6 +150,11 @@ Alpine.directive('sortable', (el) => {
             }));
         },
     });
+
+    if (expression) {
+        const getDisabled = evaluateLater(expression);
+        effect(() => getDisabled((disabled) => sortable.option('disabled', !!disabled)));
+    }
 });
 
 Alpine.start();

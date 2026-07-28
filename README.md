@@ -53,13 +53,16 @@ Il percorso è sempre: **rivista → numero → timone**.
 - **Le tue riviste** (`/riviste`): elenco delle riviste a cui hai accesso, con il numero attualmente in lavorazione.
 - **Pagina rivista**: numeri attivi e archivio dei numeri chiusi; da qui si crea un nuovo numero.
 - **Timone** (la schermata principale, dentro un numero): la griglia delle pagine, in tre modalità intercambiabili — griglia a card, doppia pagina (come si vedrebbe sfogliando la rivista stampata), lista. Da qui:
-  - **si spostano le pagine** trascinandole (drag&drop) o da tastiera;
+  - **si spostano le pagine** trascinandole (drag&drop), da tastiera, oppure con la **modalità scambio** (due click per scambiare direttamente due pagine di posto, utile anche nella modalità Doppia pagina che non supporta il trascinamento);
   - **si creano nuovi articoli e pubblicità** dal bottone "+ Nuovo contenuto", e **si assegnano** trascinandoli dal pannello "contenuti da assegnare" sopra la griglia, regolando poi la percentuale di pagina occupata;
   - **si cambia lo stato** di ogni pagina (da assegnare → assegnata → in bozza → revisionata → ok stampa);
   - **si carica un PDF** su ogni pagina, con anteprima generata in automatico;
   - **si consulta il cruscotto pubblicitario**: percentuale di carico pubblicitario del numero, con soglia di allarme configurabile ed esportazione del report in CSV/PDF;
-  - **si consulta lo storico degli spostamenti** delle pagine;
-  - **si modifica il numero totale di pagine** anche a lavorazione avviata, con anteprima dell'impatto prima di confermare una riduzione.
+  - **si consulta lo storico degli spostamenti** delle pagine, e la **cronologia generale** di tutte le altre azioni (chi ha fatto cosa e quando);
+  - **si modifica il numero totale di pagine** anche a lavorazione avviata, con anteprima dell'impatto prima di confermare una riduzione;
+  - **si esporta il timone completo in PDF**, con filtri opzionali (solo pubblicità, solo pagine non approvate, con o senza miniature);
+  - **compaiono avvisi automatici** quando c'è qualcosa da controllare (una pagina già approvata ma ancora vuota, un contenuto su pagine non consecutive);
+  - **si blocca una pagina** (🔓/🔒) per impedirne spostamento, modifica o eliminazione — utile per una pagina già mandata in stampa.
 - **Gestione utenti** (`/utenti`, solo per chi ha ruolo Admin): creare account, cambiare ruolo, decidere a quali riviste ogni persona ha accesso.
 
 Tutto quello che fai è visibile in tempo reale anche ai colleghi collegati sullo stesso numero (un badge mostra chi sta modificando cosa), senza bisogno di ricaricare la pagina.
