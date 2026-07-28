@@ -6,7 +6,7 @@ Ultimo aggiornamento: 2026-07-28 (Punto 4, 5, 6 completati + gestione utenti/ruo
 
 Progetto Laravel 11 + Livewire 3 + Reverb + Tailwind, avviato da zero in questa stessa cartella (prima conteneva solo `timone_cartaceo_riferimento.jpg`, la foto del timone cartaceo usata come riferimento per il flat plan). Si procede **a fasi**, mostrando il risultato prima di passare alla successiva — approccio richiesto esplicitamente dall'utente, da mantenere anche nelle prossime sessioni.
 
-**Il primo commit git (`timone-first-commit`) è stato creato il 2026-07-23** — copre le fasi 1-3 sotto (fino al Punto 1). Punto 2, Punto 3, Docker e Punto 1bis (tutti completati il 2026-07-24) sono stati committati in un secondo commit alla fine di quella stessa giornata. Prima di qualsiasi operazione distruttiva, controllare sempre `git status`.
+**Cronologia commit** (sempre solo su richiesta esplicita dell'utente — mai commit/push automatici): `b80eba3` (2026-07-23, `timone-first-commit`, fasi 1-3 fino al Punto 1) → `d89be73` (2026-07-24, Punto 2/3, Docker, Punto 1bis) → `f703206` (2026-07-27, Punto 4-6 + gestione utenti/ruoli) → `bdf4835` (2026-07-27, Docker autonomo, documentazione utente, Laravel 12, creazione contenuti/storico PDF/pulizia file orfani/contenuti multipagina) → `ccccd03` (2026-07-28, esportazione PDF timone, cronologia generale, controlli automatici, doppia pagina interattiva/modalità scambio, blocco pagina — **ultimo commit, non ancora pushato**: `git status` segnala "ahead of origin/master by 1 commit", push va fatto solo se l'utente lo chiede esplicitamente con "push it" o equivalente). Prima di qualsiasi operazione distruttiva, controllare sempre `git status`.
 
 ## Fasi completate finora
 
@@ -271,7 +271,18 @@ Alla creazione: `Content` + (`Article` o `Advertisement`) in una singola transaz
 
 ## Roadmap rimanente (dallo spec originale)
 
-**Punto 2 (riordino pagine), Punto 3 (assegnazione contenuti), Docker e Punto 1bis (upload PDF) sono completati** — vedi sopra. Nessuna decisione ancora presa su quale punto funzionale affrontare dopo tra quelli elencati sotto.
+**Tutti i Punti 1-6 dello spec e la gestione utenti/ruoli sono completati** — vedi sopra e le sezioni datate più sotto. Delle 14 voci MVP elencate in §18, solo due restano parzialmente semplificate (non "da fare da zero", ma differenze consapevoli già in produzione, non ripensarle senza motivo): il punto 7 ("stati pagina configurabili") usa un enum PHP fisso (`PageStatus`), non una lista di stati modificabile da un admin; il punto 9 ("upload PDF/JPG con visualizzatore PDF.js") accetta solo PDF (non JPG) e apre il file con il visualizzatore nativo del browser, non un vero pdf.js embedded — entrambe scelte già documentate come pragmatiche altrove in questo file, non riprenderle a meno che l'utente non lo chieda esplicitamente. Il resto è nel bucket "Fasi successive" (§19 dello spec, esplicitamente rimandabile, non MVP):
+
+### Prossimi passi (per la prossima sessione)
+
+**Nessuna decisione ancora presa su quale voce affrontare dopo.** L'ultima volta l'utente ha scelto esplicitamente tra 4 opzioni proposte via domanda diretta (non "decidi tu"): ha scelto **blocco pagina** (fatto, 2026-07-28, vedi sezione dedicata sopra). Le altre 3 opzioni proposte in quella stessa domanda, ancora valide come punto di partenza per la prossima sessione:
+- **Selezione multipla e azioni di massa** (§6.4/§19) — selezionare più pagine insieme per applicare un'azione a tutte (es. cambio stato multiplo).
+- **Le altre voci di "Fasi successive"** (§19): gestione pubblicitaria estesa (posizioni, conflitti automatici), versioni nominate e confronto tra versioni del timone, commenti sulle pagine, notifiche (scadenze, materiale mancante — **richiede prima un concetto di scadenza nello schema**, non esiste ancora su `Content`/`Advertisement`), integrazione InDesign (esplicitamente "se richiesto in futuro" nello spec, non prioritaria).
+- **Decidi tu** — piena autonomia, come nelle sessioni precedenti quando l'utente l'ha concessa esplicitamente.
+
+Se la richiesta della prossima sessione è generica ("continua", "prosegui con lo sviluppo"), **non presumere quale di queste scegliere**: usare `AskUserQuestion` come nell'ultima occasione, non scegliere in autonomia a meno che l'utente non lo dica esplicitamente (es. "decidi tu").
+
+**Stato git**: ultimo commit `ccccd03` (2026-07-28), **non pushato** — `git status` risulterà "ahead of origin/master by 1 commit" finché l'utente non chiede esplicitamente "push it".
 
 **Vulnerabilità `composer audit` — risolte**, vedi sezione dedicata "Aggiornamento a Laravel 12" più sotto: serviva davvero un bump di major version (nessuna versione 11.x le risolveva), fatto con successo, tutto verificato (test, Docker, login reale).
 
