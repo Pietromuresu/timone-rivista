@@ -104,6 +104,75 @@ test('a mixed page sums ad and editorial shares independently from occupied_perc
         ->and($summary['confirmationBreakdown'])->toBe(['in_trattativa' => 1]);
 });
 
+// Fase 3 (§3): pubblicità "prenotate" — non presenti su nessuna pagina,
+// quindi mai nel loop su $pages sopra, passate a summarize() come secondo
+// argomento. fakeReservedAdvertisement() replica solo i campi letti da
+// Advertisement::occupiedPercentage() (format + eventuale override),
+// nessuna query/DB richiesta.
+
+function fakeReservedAdvertisement(AdFormat $format, AdConfirmationStatus $status, ?float $percentageOverride = null): Advertisement
+{
+    return new Advertisement([
+        'format' => $format,
+        'confirmation_status' => $status,
+        'occupied_percentage_override' => $percentageOverride,
+    ]);
+}
+
+test('a reservation contributes its format default percentage to the ad load even with no pages assigned', function () {
+    $reserved = new Collection([fakeReservedAdvertisement(AdFormat::PaginaIntera, AdConfirmationStatus::InTrattativa)]);
+
+    $summary = AdLoadCalculator::summarize(new Collection([
+        fakePageWithContents([fakeArticleContent(100)]),
+        fakePageWithContents([fakeArticleContent(100)]),
+    ]), $reserved);
+
+    // 1 pagina intera prenotata (100%) su 2 pagine totali = 50%.
+    expect($summary['totalPages'])->toBe(2)
+        ->and($summary['placedAdEquivalentPages'])->toBe(0.0)
+        ->and($summary['reservedAdEquivalentPages'])->toBe(1.0)
+        ->and($summary['adEquivalentPages'])->toBe(1.0)
+        ->and($summary['adLoadPercentage'])->toBe(50.0)
+        ->and($summary['reservedAdCount'])->toBe(1)
+        ->and($summary['assignedAdCount'])->toBe(0);
+});
+
+test('placed and reserved ad load add up together, kept separate for transparency', function () {
+    $pages = new Collection([
+        fakePageWithContents([fakeAdContent(100, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata)]),
+    ]);
+    $reserved = new Collection([fakeReservedAdvertisement(AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::InTrattativa)]);
+
+    $summary = AdLoadCalculator::summarize($pages, $reserved);
+
+    expect($summary['placedAdEquivalentPages'])->toBe(1.0)
+        ->and($summary['reservedAdEquivalentPages'])->toBe(0.5)
+        ->and($summary['adEquivalentPages'])->toBe(1.5)
+        ->and($summary['formatBreakdown'])->toBe([
+            'pagina_intera' => 1,
+            'mezza_pagina_orizzontale' => 1,
+        ]);
+});
+
+test('a manual percentage override on a reservation is respected, same as for a placed ad', function () {
+    $reserved = new Collection([fakeReservedAdvertisement(AdFormat::PaginaIntera, AdConfirmationStatus::Confermata, percentageOverride: 30.0)]);
+
+    $summary = AdLoadCalculator::summarize(new Collection, $reserved);
+
+    expect($summary['reservedAdEquivalentPages'])->toBe(0.3);
+});
+
+test('omitting the reserved advertisements argument keeps the previous behaviour unchanged', function () {
+    $pages = new Collection([fakePageWithContents([fakeAdContent(100, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata)])]);
+
+    $summary = AdLoadCalculator::summarize($pages);
+
+    expect($summary['adEquivalentPages'])->toBe(1.0)
+        ->and($summary['placedAdEquivalentPages'])->toBe(1.0)
+        ->and($summary['reservedAdEquivalentPages'])->toBe(0.0)
+        ->and($summary['reservedAdCount'])->toBe(0);
+});
+
 test('the format and confirmation breakdowns tally multiple ads of the same kind', function () {
     $pages = new Collection([
         fakePageWithContents([fakeAdContent(50, AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::Confermata)]),

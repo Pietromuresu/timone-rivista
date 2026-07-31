@@ -14,8 +14,14 @@ use App\Livewire\Users\Edit as UserEdit;
 use App\Livewire\Users\Index as UserIndex;
 use Illuminate\Support\Facades\Route;
 
+// Nessuna landing page pubblica: è uno strumento redazionale interno,
+// non un sito con una home page di marketing (a differenza dello
+// scaffold Breeze di default, mai personalizzato finché non scoperto
+// durante la sessione del 2026-07-29 — "welcome.blade.php" mostrava
+// ancora la pagina stock di Laravel). "/" porta dritto al login o,
+// se già autenticati, alla lista riviste.
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->to(auth()->check() ? route('dashboard') : route('login'));
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

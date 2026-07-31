@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Advertisement;
 use App\Models\Issue;
 use App\Models\Magazine;
 use App\Support\AdLoadCalculator;
@@ -33,10 +34,13 @@ class AdDashboardExportController extends Controller
 
             fputcsv($handle, ['Metrica', 'Valore']);
             fputcsv($handle, ['Pagine totali', $adLoad['totalPages']]);
-            fputcsv($handle, ['Pagine equivalenti pubblicità', $adLoad['adEquivalentPages']]);
+            fputcsv($handle, ['Pagine equivalenti pubblicità (assegnate + prenotate)', $adLoad['adEquivalentPages']]);
+            fputcsv($handle, ['di cui pagine equivalenti già assegnate', $adLoad['placedAdEquivalentPages']]);
+            fputcsv($handle, ['di cui pagine equivalenti prenotate', $adLoad['reservedAdEquivalentPages']]);
             fputcsv($handle, ['Pagine equivalenti editoriali', $adLoad['editorialEquivalentPages']]);
             fputcsv($handle, ['Carico pubblicitario %', $adLoad['adLoadPercentage']]);
             fputcsv($handle, ['Inserzioni assegnate', $adLoad['assignedAdCount']]);
+            fputcsv($handle, ['Inserzioni prenotate (non ancora assegnate)', $adLoad['reservedAdCount']]);
             fputcsv($handle, []);
 
             fputcsv($handle, ['Formato pubblicitario', 'Conteggio']);
@@ -85,7 +89,17 @@ class AdDashboardExportController extends Controller
             ->with(['contents.advertisement'])
             ->get();
 
-        return [$issue, AdLoadCalculator::summarize($pages)];
+        // Fase 3 (§3): le pubblicità prenotate (non ancora assegnate a una
+        // pagina) vanno incluse anche nel report esportato, stessa logica
+        // di Grid::render() — non condivisa in codice tra i due (il
+        // controller non ha accesso al componente Livewire, la query è
+        // breve e non vale la pena estrarla, stesso principio già seguito
+        // per l'esportazione del timone completo).
+        $reservedAdvertisements = Advertisement::whereHas(
+            'content', fn ($query) => $query->where('issue_id', $issue->id)->whereDoesntHave('pages')
+        )->get();
+
+        return [$issue, AdLoadCalculator::summarize($pages, $reservedAdvertisements)];
     }
 
     private function filename(Magazine $magazine, Issue $issue, string $extension): string

@@ -68,7 +68,9 @@ return [
         // Default Livewire (12MB) blocca i PDF di pagina stampa reali prima
         // ancora che il codice applicativo li validi — allineato a
         // docker/php/uploads.ini (upload_max_filesize/post_max_size).
-        'rules' => ['required', 'file', 'mimes:pdf', 'max:32768'], // 32MB
+        // Alzato da 32MB a 100MB il 2026-07-31 insieme a uploads.ini — PDF
+        // multipagina reali superavano facilmente 32MB, vedi HANDOFF.md.
+        'rules' => ['required', 'file', 'mimes:pdf', 'max:102400'], // 100MB
         'directory' => null,   // Example: 'tmp'                      | Default: 'livewire-tmp'
         'middleware' => null,  // Example: 'throttle:5,1'             | Default: 'throttle:60,1'
         'preview_mimes' => [   // Supported file types for temporary pre-signed file URLs...

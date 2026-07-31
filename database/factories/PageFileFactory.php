@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\FormatCheckStatus;
 use App\Enums\ThumbnailStatus;
 use App\Models\Page;
 use App\Models\PageFile;
@@ -29,6 +30,8 @@ class PageFileFactory extends Factory
             'original_name' => fake()->word().'.pdf',
             'size' => fake()->numberBetween(50_000, 20_000_000),
             'thumbnail_status' => ThumbnailStatus::Pending,
+            'pdf_page_number' => 1,
+            'format_check_status' => null,
         ];
     }
 
@@ -45,6 +48,24 @@ class PageFileFactory extends Factory
         return $this->state(fn () => [
             'thumbnail_status' => ThumbnailStatus::Failed,
             'thumbnail_path' => null,
+        ]);
+    }
+
+    public function formatMismatch(): static
+    {
+        return $this->state(fn () => [
+            'format_check_status' => FormatCheckStatus::Mismatch,
+            'measured_width_mm' => 220.0,
+            'measured_height_mm' => 280.0,
+        ]);
+    }
+
+    public function formatMatching(): static
+    {
+        return $this->state(fn () => [
+            'format_check_status' => FormatCheckStatus::Matching,
+            'measured_width_mm' => 216.0,
+            'measured_height_mm' => 276.0,
         ]);
     }
 }

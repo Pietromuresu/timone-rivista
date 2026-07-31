@@ -13,10 +13,15 @@ use App\Support\AutomaticChecks;
  * database, stesso stile "puro" già usato in AdLoadCalculatorTest.php e
  * PageCountResizerTest.php.
  */
-function fakeAutoCheckPage(int $position, array $contents = [], PageStatus $status = PageStatus::DaAssegnare): Page
+function fakeAutoCheckPage(int $position, array $contents = [], PageStatus $status = PageStatus::DaAssegnare, bool $hasFile = true): Page
 {
     $page = new Page(['position' => $position, 'status' => $status]);
     $page->setRelation('contents', new Collection($contents));
+    // Di default "ha un PDF" (non è quello sotto test nella maggior parte
+    // di questi casi): missingPdfPages() (Fase 2) verrebbe altrimenti
+    // segnalata su ogni pagina finta di questo file, sporcando assert che
+    // non la riguardano — vedi i test dedicati più sotto per $hasFile=false.
+    $page->setRelation('files', new Collection($hasFile ? [new \App\Models\PageFile] : []));
 
     return $page;
 }
@@ -45,7 +50,26 @@ test('no pages produce no warnings', function () {
     $result = AutomaticChecks::check(new Collection);
 
     expect($result['nonContiguousContents'])->toBe([])
-        ->and($result['approvedEmptyPages'])->toBe([]);
+        ->and($result['approvedEmptyPages'])->toBe([])
+        ->and($result['missingPdfPages'])->toBe([]);
+});
+
+test('an approved page with no pdf file at all is flagged as missing', function () {
+    $pages = new Collection([fakeAutoCheckPage(1, [], PageStatus::OkStampa, hasFile: false)]);
+
+    expect(AutomaticChecks::check($pages)['missingPdfPages'])->toBe([1]);
+});
+
+test('an approved page with a pdf file is not flagged as missing', function () {
+    $pages = new Collection([fakeAutoCheckPage(1, [], PageStatus::Revisionata, hasFile: true)]);
+
+    expect(AutomaticChecks::check($pages)['missingPdfPages'])->toBe([]);
+});
+
+test('a page still in progress without a pdf is not flagged as missing (too noisy otherwise)', function () {
+    $pages = new Collection([fakeAutoCheckPage(1, [], PageStatus::InBozza, hasFile: false)]);
+
+    expect(AutomaticChecks::check($pages)['missingPdfPages'])->toBe([]);
 });
 
 test('a content on contiguous pages is not flagged', function () {

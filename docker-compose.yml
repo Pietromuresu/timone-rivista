@@ -6,10 +6,27 @@ services:
       context: .
       dockerfile: Dockerfile
       target: app
+      args:
+        # Servono al bundle JS lato client (Echo/Pusher) generato da "npm
+        # run build" dentro lo stage node_builder — .env è escluso a priori
+        # dal contesto Docker (.dockerignore), quindi Vite non lo vedrebbe
+        # mai da solo: vanno passati esplicitamente come build arg, letti
+        # da Compose dallo stesso .env di root. Vedi nota nel Dockerfile.
+        VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
+        VITE_REVERB_HOST: ${VITE_REVERB_HOST:-localhost}
+        VITE_REVERB_PORT: ${VITE_REVERB_PORT:-8080}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-http}
     restart: unless-stopped
     env_file: .env
     volumes:
       - storage_data:/var/www/html/storage/app
+      # Bug scoperto il 2026-07-31: storage/logs NON era persistito, solo
+      # storage/app — ogni `docker compose up -d`/rebuild cancellava
+      # silenziosamente laravel.log, rendendo impossibile diagnosticare un
+      # errore reale segnalato dall'utente ("si blocca al caricamento") se
+      # nel frattempo il container era stato ricreato. Ora sopravvive ai
+      # riavvii, coerente con storage/app.
+      - storage_logs:/var/www/html/storage/logs
     healthcheck:
       # Verifica che php-fpm sia davvero in ascolto sulla sua porta interna
       # (9000), non solo che il container sia partito — nc fa parte di
@@ -31,6 +48,11 @@ services:
       context: .
       dockerfile: Dockerfile
       target: nginx_runtime
+      args:
+        VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
+        VITE_REVERB_HOST: ${VITE_REVERB_HOST:-localhost}
+        VITE_REVERB_PORT: ${VITE_REVERB_PORT:-8080}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-http}
     restart: unless-stopped
     ports:
       - "80:80"
@@ -44,11 +66,28 @@ services:
       context: .
       dockerfile: Dockerfile
       target: app
+      args:
+        # Servono al bundle JS lato client (Echo/Pusher) generato da "npm
+        # run build" dentro lo stage node_builder — .env è escluso a priori
+        # dal contesto Docker (.dockerignore), quindi Vite non lo vedrebbe
+        # mai da solo: vanno passati esplicitamente come build arg, letti
+        # da Compose dallo stesso .env di root. Vedi nota nel Dockerfile.
+        VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
+        VITE_REVERB_HOST: ${VITE_REVERB_HOST:-localhost}
+        VITE_REVERB_PORT: ${VITE_REVERB_PORT:-8080}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-http}
     restart: unless-stopped
     env_file: .env
     command: php artisan queue:work redis --tries=3 --backoff=3 --sleep=1
     volumes:
       - storage_data:/var/www/html/storage/app
+      # Bug scoperto il 2026-07-31: storage/logs NON era persistito, solo
+      # storage/app — ogni `docker compose up -d`/rebuild cancellava
+      # silenziosamente laravel.log, rendendo impossibile diagnosticare un
+      # errore reale segnalato dall'utente ("si blocca al caricamento") se
+      # nel frattempo il container era stato ricreato. Ora sopravvive ai
+      # riavvii, coerente con storage/app.
+      - storage_logs:/var/www/html/storage/logs
     depends_on:
       mysql:
         condition: service_healthy
@@ -61,6 +100,16 @@ services:
       context: .
       dockerfile: Dockerfile
       target: app
+      args:
+        # Servono al bundle JS lato client (Echo/Pusher) generato da "npm
+        # run build" dentro lo stage node_builder — .env è escluso a priori
+        # dal contesto Docker (.dockerignore), quindi Vite non lo vedrebbe
+        # mai da solo: vanno passati esplicitamente come build arg, letti
+        # da Compose dallo stesso .env di root. Vedi nota nel Dockerfile.
+        VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
+        VITE_REVERB_HOST: ${VITE_REVERB_HOST:-localhost}
+        VITE_REVERB_PORT: ${VITE_REVERB_PORT:-8080}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-http}
     restart: unless-stopped
     env_file: .env
     # legge REVERB_SERVER_HOST/REVERB_SERVER_PORT da .env (già 0.0.0.0:8080)
@@ -157,3 +206,4 @@ volumes:
   mysql_data:
   redis_data:
   storage_data:
+  storage_logs:

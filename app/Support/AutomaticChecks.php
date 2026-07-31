@@ -23,6 +23,7 @@ class AutomaticChecks
      * @return array{
      *     nonContiguousContents: list<array{title: string, positions: list<int>}>,
      *     approvedEmptyPages: list<int>,
+     *     missingPdfPages: list<int>,
      * }
      */
     public static function check(Collection $pages): array
@@ -30,6 +31,7 @@ class AutomaticChecks
         return [
             'nonContiguousContents' => self::nonContiguousContents($pages),
             'approvedEmptyPages' => self::approvedEmptyPages($pages),
+            'missingPdfPages' => self::missingPdfPages($pages),
         ];
     }
 
@@ -99,6 +101,36 @@ class AutomaticChecks
 
         return $pages
             ->filter(fn ($page) => in_array($page->status, $approvedStatuses, true) && $page->contents->isEmpty())
+            ->pluck('position')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Pagine già "Revisionata"/"Ok stampa" ma ancora senza nessun PDF
+     * caricato (Fase 2, §2.1: "ogni pagina del timone deve sempre avere un
+     * PDF associato per poter essere considerata pronta per la stampa").
+     * Deliberatamente ristretto alle pagine già in stato avanzato, non a
+     * *ogni* pagina senza PDF: durante il lavoro normale la maggior parte
+     * delle pagine non ha ancora un PDF definitivo, segnalarle tutte
+     * renderebbe il pannello "Avvisi" rumoroso e inutile fin dal primo
+     * giorno — coerente con lo stesso criterio già usato da
+     * approvedEmptyPages() qui sopra ("come può essere pronta una pagina
+     * ancora incompleta?"). Il blocco vero e proprio della transizione a
+     * PageStatus::OkStampa è in Grid::changePageStatus()/bulkChangeStatus(),
+     * non qui: questa classe resta pura/senza side-effect. Una pagina già
+     * OkStampa senza PDF può esistere solo per dati precedenti
+     * all'introduzione di questa regola (il guard blocca ogni nuova
+     * transizione) — comunque degna di un avviso.
+     *
+     * @return list<int>
+     */
+    private static function missingPdfPages(Collection $pages): array
+    {
+        $approvedStatuses = [PageStatus::Revisionata, PageStatus::OkStampa];
+
+        return $pages
+            ->filter(fn ($page) => in_array($page->status, $approvedStatuses, true) && $page->files->isEmpty())
             ->pluck('position')
             ->values()
             ->all();

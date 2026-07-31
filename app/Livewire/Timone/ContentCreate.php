@@ -52,6 +52,15 @@ class ContentCreate extends Component
 
     public string $format = 'pagina_intera';
 
+    /**
+     * Posizione di pagina preferita (Fase 3, §3) — puramente informativa,
+     * indicata al momento della prenotazione prima che esista una vera
+     * assegnazione. Tipizzata `string` per lo stesso motivo già
+     * documentato in Grid.php per i campi numerici opzionali: un campo
+     * `?int` andrebbe in errore su "" (stringa vuota, non è `null`).
+     */
+    public string $preferred_position = '';
+
     public ?string $occupied_percentage_override = null;
 
     public string $confirmation_status = 'in_trattativa';
@@ -70,7 +79,7 @@ class ContentCreate extends Component
         if ($this->showForm) {
             $this->reset([
                 'title', 'section_id', 'author', 'expected_length',
-                'client', 'agency', 'occupied_percentage_override', 'commercial_notes',
+                'client', 'agency', 'preferred_position', 'occupied_percentage_override', 'commercial_notes',
             ]);
             $this->type = 'articolo';
             $this->editorial_status = 'da_scrivere';
@@ -102,7 +111,9 @@ class ContentCreate extends Component
             'commercial_notes' => 'nullable|string|max:2000',
         ]);
 
-        $content = DB::transaction(function () use ($validated) {
+        $preferredPosition = $this->parsedPreferredPosition();
+
+        $content = DB::transaction(function () use ($validated, $preferredPosition) {
             $content = Content::create([
                 'issue_id' => $this->issue->id,
                 'section_id' => $validated['section_id'],
@@ -123,6 +134,7 @@ class ContentCreate extends Component
                     'client' => $validated['client'],
                     'agency' => $validated['agency'],
                     'format' => $validated['format'],
+                    'preferred_position' => $preferredPosition,
                     'occupied_percentage_override' => $validated['occupied_percentage_override'],
                     'confirmation_status' => $validated['confirmation_status'],
                     'commercial_notes' => $validated['commercial_notes'],
@@ -150,6 +162,21 @@ class ContentCreate extends Component
         ))->toOthers();
 
         $this->showForm = false;
+    }
+
+    /**
+     * Normalizza il campo testuale $preferred_position in un intero
+     * positivo valido, o null — stesso pattern già stabilito in
+     * Grid::parsedNewTotalPages() per i campi numerici opzionali "in corso
+     * di digitazione". Campo puramente informativo (§3): un valore non
+     * numerico viene semplicemente ignorato (nessuna preferenza), non
+     * vale la pena di un errore di validazione dedicato per questo.
+     */
+    private function parsedPreferredPosition(): ?int
+    {
+        $trimmed = trim($this->preferred_position);
+
+        return $trimmed !== '' && ctype_digit($trimmed) ? (int) $trimmed : null;
     }
 
     #[On('echo-presence:issue.{issue.id},ContentCreated')]

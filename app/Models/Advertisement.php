@@ -17,6 +17,7 @@ class Advertisement extends Model
         'client',
         'agency',
         'format',
+        'preferred_position',
         'occupied_percentage_override',
         'confirmation_status',
         'commercial_notes',
@@ -26,6 +27,7 @@ class Advertisement extends Model
     {
         return [
             'format' => AdFormat::class,
+            'preferred_position' => 'integer',
             'occupied_percentage_override' => 'decimal:2',
             'confirmation_status' => AdConfirmationStatus::class,
         ];

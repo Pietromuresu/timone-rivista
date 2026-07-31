@@ -8,7 +8,7 @@
         h1 { font-size: 16px; margin-bottom: 2px; }
         p.subtitle { color: #6b7280; margin-top: 0; margin-bottom: 16px; }
         table.page-grid { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
-        td.page-cell { width: 12.5%; vertical-align: top; border: 1px solid #9ca3af; border-radius: 3px; padding: 4px; }
+        td.page-cell { width: 12.5%; vertical-align: top; border-width: 2px; border-style: solid; border-radius: 3px; padding: 4px; }
         td.page-cell.empty-cell { border: none; }
         .position { font-weight: bold; }
         .status-badge { display: inline-block; padding: 1px 4px; border-radius: 2px; font-size: 7px; float: right; }
@@ -16,30 +16,24 @@
         .thumb { width: 100%; margin-top: 3px; border: 1px solid #d1d5db; }
         .empty { font-style: italic; color: #9ca3af; margin-top: 3px; }
         .meta { color: #9ca3af; font-size: 8px; margin-top: 30px; }
+        .legend { margin-bottom: 14px; }
+        .legend-group { margin-bottom: 4px; }
+        .legend-label { color: #6b7280; font-size: 8px; margin-right: 4px; }
+        .legend-swatch { display: inline-block; padding: 1px 6px; border-radius: 2px; font-size: 8px; margin-right: 4px; }
     </style>
 </head>
 <body>
-    @php
-        // Dompdf non esegue Tailwind (nessun build step lato server): stessa
-        // scelta già presa in exports/ad-dashboard.blade.php, colori scritti
-        // a mano qui invece di generare classi CSS che non verrebbero mai
-        // risolte. Valori scelti per corrispondere il più possibile alle
-        // classi Tailwind già usate nell'interfaccia (colorClasses() sugli
-        // enum PageContentType/PageStatus).
-        $typeColors = [
-            'editoriale' => ['bg' => '#dbeafe', 'text' => '#1e40af'],
-            'pubblicita' => ['bg' => '#fef3c7', 'text' => '#92400e'],
-            'mista' => ['bg' => '#f3e8ff', 'text' => '#6b21a8'],
-            'bianca' => ['bg' => '#f3f4f6', 'text' => '#6b7280'],
-        ];
-        $statusColors = [
-            'da_assegnare' => ['bg' => '#f3f4f6', 'text' => '#4b5563'],
-            'assegnata' => ['bg' => '#e0f2fe', 'text' => '#0369a1'],
-            'in_bozza' => ['bg' => '#fef9c3', 'text' => '#a16207'],
-            'revisionata' => ['bg' => '#ffedd5', 'text' => '#c2410c'],
-            'ok_stampa' => ['bg' => '#dcfce7', 'text' => '#15803d'],
-        ];
-    @endphp
+    {{--
+        Fase 4 (§4): un solo posto per i colori (App\Enums\PageContentType/
+        PageStatus, metodi hexColors()) invece della copia scritta a mano
+        che c'era prima qui — quella copia era "scelta per corrispondere il
+        più possibile" alle classi Tailwind, cioè poteva andare fuori
+        sincrono ad ogni ritocco della palette senza che nessuno se ne
+        accorgesse (Dompdf non esegue Tailwind, quindi non può leggere le
+        classi CSS: serve comunque una rappresentazione esadecimale a
+        parte, ma ora è la STESSA in entrambi i punti, non due copie
+        indipendenti).
+    --}}
 
     <h1>{{ $issue->magazine->name }} — {{ $issue->title }}</h1>
     <p class="subtitle">
@@ -50,6 +44,23 @@
         @endif
     </p>
 
+    <div class="legend">
+        <div class="legend-group">
+            <span class="legend-label">Tipo pagina:</span>
+            @foreach (\App\Enums\PageContentType::cases() as $type)
+                @php $hex = $type->hexColors(); @endphp
+                <span class="legend-swatch" style="background-color: {{ $hex['bg'] }}; color: {{ $hex['text'] }};">{{ $type->label() }}</span>
+            @endforeach
+        </div>
+        <div class="legend-group">
+            <span class="legend-label">Stato pagina:</span>
+            @foreach (\App\Enums\PageStatus::cases() as $status)
+                @php $hex = $status->hexColors(); @endphp
+                <span class="legend-swatch" style="background-color: {{ $hex['bg'] }}; color: {{ $hex['text'] }}; border: 1px solid {{ $hex['border'] }};">{{ $status->label() }}</span>
+            @endforeach
+        </div>
+    </div>
+
     @if ($totalPages === 0)
         <p class="empty">Nessuna pagina corrisponde ai filtri scelti.</p>
     @endif
@@ -59,11 +70,11 @@
             <tr>
                 @foreach ($row as $page)
                     @php
-                        $typeColor = $typeColors[$page->content_type->value];
-                        $statusColor = $statusColors[$page->status->value];
+                        $typeColor = $page->content_type->hexColors();
+                        $statusColor = $page->status->hexColors();
                         $latestFile = $page->files->first();
                     @endphp
-                    <td class="page-cell" style="background-color: {{ $typeColor['bg'] }};">
+                    <td class="page-cell" style="background-color: {{ $typeColor['bg'] }}; border-color: {{ $statusColor['border'] }};">
                         <span class="position" style="color: {{ $typeColor['text'] }};">{{ $page->position }}</span>
                         <span class="status-badge" style="background-color: {{ $statusColor['bg'] }}; color: {{ $statusColor['text'] }};">
                             {{ $page->status->label() }}

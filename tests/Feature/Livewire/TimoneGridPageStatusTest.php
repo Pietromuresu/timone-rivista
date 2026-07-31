@@ -6,6 +6,7 @@ use App\Events\PageStatusUpdated;
 use App\Livewire\Timone\Grid;
 use App\Models\Issue;
 use App\Models\Magazine;
+use App\Models\PageFile;
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
@@ -46,6 +47,9 @@ test('changing a page status dispatches a PageStatusUpdated broadcast event', fu
     $issue = issueWithPages();
     $user = editorForIssue($issue);
     $page = $issue->pages()->first();
+    // OkStampa richiede un PDF già caricato (Fase 2, §2.1) — non l'oggetto
+    // di questo test (verifica solo il broadcast), quindi ne aggiunge uno.
+    PageFile::factory()->for($page)->create();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('changePageStatus', $page->id, PageStatus::OkStampa->value);

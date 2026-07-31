@@ -43,6 +43,46 @@ test('the doppia view mode renders editable status selects and content drop targ
         ->toContain('text/content-id');
 });
 
+test('the doppia view mode wraps every page in a single flat sortable container, not one per spread', function () {
+    $issue = Issue::factory()->create(['total_pages' => 4]);
+
+    $html = Livewire::test(Grid::class, ['issue' => $issue])
+        ->call('setViewMode', 'doppia')
+        ->html();
+
+    // Bug originale: un x-sortable per apertura (coppia di pagine)
+    // rendeva trascinabile solo la coppia intera, non la singola pagina —
+    // ora è un unico contenitore per l'intera vista, come in griglia/lista.
+    expect(substr_count($html, 'x-sortable='))->toBe(1);
+
+    foreach ($issue->pages()->orderBy('position')->get() as $page) {
+        // Ogni pagina ha data-page-id due volte: sul wrapper che Sortable
+        // trascina davvero e sulla page-card interna (invariata).
+        expect(substr_count($html, 'data-page-id="'.$page->id.'"'))->toBe(2);
+    }
+});
+
+test('in doppia view mode only the second page of a spread pair gets the visual separator border', function () {
+    $issue = Issue::factory()->create(['total_pages' => 4]);
+    $pages = $issue->pages()->orderBy('position')->get()->values();
+
+    $html = Livewire::test(Grid::class, ['issue' => $issue])
+        ->call('setViewMode', 'doppia')
+        ->html();
+
+    $wrapperMarkup = function (string $html, int $pageId): string {
+        preg_match('/<div\s+data-page-id="'.$pageId.'"[^>]*>/', $html, $matches);
+
+        return $matches[0] ?? '';
+    };
+
+    // Aperture: [pagina 1] da sola (copertina), poi [pagina 2, pagina 3],
+    // poi [pagina 4] — solo la pagina 3 (seconda della coppia centrale)
+    // deve avere il bordo di separazione.
+    expect($wrapperMarkup($html, $pages[1]->id))->not->toContain('border-l-2')
+        ->and($wrapperMarkup($html, $pages[2]->id))->toContain('border-l-2');
+});
+
 test('the swap mode banner and page highlight appear only while swap mode is active', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);

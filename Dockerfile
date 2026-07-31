@@ -15,6 +15,25 @@ COPY public/ public/
 COPY vite.config.js ./
 COPY postcss.config.js tailwind.config.js ./
 
+# Le VITE_REVERB_* servono al bundle *client-side* (resources/js/echo.js
+# istanzia Echo/Pusher con questi valori) — Vite le legge da process.env
+# in fase di build ("npm run build" gira come subprocess, eredita
+# l'ambiente del container), non da un file .env: .env è escluso a
+# priori dal contesto Docker (.dockerignore), quindi senza questi ARG
+# Vite le sostituirebbe con `undefined` nel bundle finale. Bug reale
+# scoperto il 2026-07-29: Pusher lanciava "You must pass your app key"
+# in modo sincrono al caricamento della pagina, interrompendo l'intero
+# script `app.js` prima ancora di registrare Alpine — niente
+# drag&drop, badge presenza, aggiornamento in tempo reale lato client.
+ARG VITE_REVERB_APP_KEY
+ARG VITE_REVERB_HOST
+ARG VITE_REVERB_PORT
+ARG VITE_REVERB_SCHEME
+ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY \
+    VITE_REVERB_HOST=$VITE_REVERB_HOST \
+    VITE_REVERB_PORT=$VITE_REVERB_PORT \
+    VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
+
 RUN npm run build
 
 # ---------------------------------------------------------------------------

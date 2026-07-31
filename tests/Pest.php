@@ -74,3 +74,46 @@ function minimalValidPdfBytes(): string
     %%EOF
     PDF;
 }
+
+/**
+ * Converte millimetri in punti PDF (1pt = 1/72 pollice) — usato dai test
+ * di App\Support\PdfFormatChecker/PdfPageMeasurer per costruire fixture
+ * PDF con una dimensione mm nota, invece di lavorare a occhio in punti.
+ */
+function mmToPt(float $mm): float
+{
+    return round($mm / 25.4 * 72, 2);
+}
+
+/**
+ * PDF valido a più pagine, ciascuna con la propria MediaBox in punti —
+ * stesso stile "minimo ma valido" di minimalValidPdfBytes() sopra (xref
+ * volutamente incompleto, Ghostscript/Imagick lo ricostruiscono
+ * scansionando gli oggetti), esteso a N pagine invece di una sola. Usato
+ * dai test della Fase 2 (upload PDF multipagina, controllo formato) che
+ * richiedono ext-imagick — marcati `skip` altrimenti, stesso trattamento
+ * di GeneratePageFileThumbnailTest.
+ *
+ * @param  list<array{0: float, 1: float}>  $pageSizesPt  Una coppia [larghezza, altezza] in punti per ciascuna pagina
+ */
+function multiPagePdfBytes(array $pageSizesPt): string
+{
+    $firstPageObjNum = 3;
+    $kids = [];
+    $pageObjects = [];
+
+    foreach (array_values($pageSizesPt) as $i => [$width, $height]) {
+        $objNum = $firstPageObjNum + $i;
+        $kids[] = "{$objNum} 0 R";
+        $pageObjects[] = "{$objNum} 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 {$width} {$height}]/Resources<<>>>>endobj";
+    }
+
+    $kidsList = implode(' ', $kids);
+    $count = count($pageSizesPt);
+
+    return "%PDF-1.4\n"
+        ."1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+        ."2 0 obj<</Type/Pages/Kids[{$kidsList}]/Count {$count}>>endobj\n"
+        .implode("\n", $pageObjects)."\n"
+        ."xref\n0 1\ntrailer<</Size 1/Root 1 0 R>>\nstartxref\n0\n%%EOF";
+}

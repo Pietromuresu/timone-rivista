@@ -30,9 +30,12 @@
     <h2>Riepilogo</h2>
     <table>
         <tr><th>Pagine totali</th><td>{{ $adLoad['totalPages'] }}</td></tr>
-        <tr><th>Pagine equivalenti pubblicità</th><td>{{ $adLoad['adEquivalentPages'] }}</td></tr>
+        <tr><th>Pagine equivalenti pubblicità (assegnate + prenotate)</th><td>{{ $adLoad['adEquivalentPages'] }}</td></tr>
+        <tr><th>&nbsp;&nbsp;di cui già assegnate</th><td>{{ $adLoad['placedAdEquivalentPages'] }}</td></tr>
+        <tr><th>&nbsp;&nbsp;di cui prenotate</th><td>{{ $adLoad['reservedAdEquivalentPages'] }}</td></tr>
         <tr><th>Pagine equivalenti editoriali</th><td>{{ $adLoad['editorialEquivalentPages'] }}</td></tr>
         <tr><th>Inserzioni assegnate</th><td>{{ $adLoad['assignedAdCount'] }}</td></tr>
+        <tr><th>Inserzioni prenotate (non ancora assegnate)</th><td>{{ $adLoad['reservedAdCount'] }}</td></tr>
         <tr><th>Soglia allarme</th><td>{{ $adThreshold !== null ? $adThreshold.'%' : 'non impostata' }}</td></tr>
     </table>
 

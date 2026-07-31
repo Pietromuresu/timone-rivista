@@ -88,6 +88,11 @@
                         <x-input-error class="mt-1" :messages="$errors->get('occupied_percentage_override')" />
                     </div>
                     <div>
+                        <x-input-label for="preferred_position" value="Pagina preferita (opzionale)" />
+                        <x-text-input id="preferred_position" wire:model="preferred_position" type="number" min="1" placeholder="nessuna preferenza" class="mt-1 block w-full text-sm" />
+                        <p class="mt-1 text-xs text-gray-400">Solo indicativo: non assegna il contenuto da solo, ricordalo a chi compone il timone.</p>
+                    </div>
+                    <div>
                         <x-input-label for="confirmation_status" value="Stato commerciale" />
                         <select id="confirmation_status" wire:model="confirmation_status" class="mt-1 block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm">
                             @foreach ($confirmationStatuses as $confStatus)

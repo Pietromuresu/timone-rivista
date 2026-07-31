@@ -40,9 +40,34 @@ test('uploading a non pdf file is rejected', function () {
     $user = editorFor($issue);
     $page = $issue->pages()->where('position', 1)->first();
 
-    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+    $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->set("pendingUploads.{$page->id}", UploadedFile::fake()->create('sample.txt', 10, 'text/plain'))
-        ->assertHasErrors();
+        ->assertHasErrors(["pendingUploads.{$page->id}"]);
+
+    expect($component->html())->toContain('upload fallito');
+
+    expect(PageFile::where('page_id', $page->id)->exists())->toBeFalse();
+
+    Queue::assertNothingPushed();
+});
+
+test('uploading a pdf over the size limit shows a visible error instead of failing silently', function () {
+    // Bug scoperto il 2026-07-31: un upload respinto da Livewire (validazione
+    // "max" su pendingUploads) non mostrava nulla in UI prima di questo fix —
+    // lo spinner si fermava e l'utente vedeva la card tornare "vuota" senza
+    // alcuna spiegazione, indistinguibile da un blocco. Verifica che il
+    // messaggio d'errore sia ora presente nell'HTML renderizzato.
+    Queue::fake();
+
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 1)->first();
+
+    $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->set("pendingUploads.{$page->id}", UploadedFile::fake()->create('troppo-grande.pdf', 105000, 'application/pdf'))
+        ->assertHasErrors(["pendingUploads.{$page->id}"]);
+
+    expect($component->html())->toContain('upload fallito');
 
     expect(PageFile::where('page_id', $page->id)->exists())->toBeFalse();
 

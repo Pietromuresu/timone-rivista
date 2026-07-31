@@ -51,6 +51,19 @@
                 🔀 Modalità scambio
             </button>
 
+            <button
+                type="button"
+                wire:click="toggleSelectionMode"
+                title="Seleziona più pagine insieme per applicare un cambio di stato o un blocco/sblocco a tutte in una volta"
+                @class([
+                    'px-3 py-1.5 rounded-lg border text-sm transition-colors',
+                    'bg-indigo-600 text-white border-indigo-600' => $selectionMode,
+                    'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700' => ! $selectionMode,
+                ])
+            >
+                ☑️ Selezione multipla
+            </button>
+
             {{-- Nessuna proprietà Livewire per questo pannello: è un form GET
                  puro, non serve reattività server-side, solo mostrare/
                  nascondere i filtri prima dello scaricamento diretto. --}}
@@ -114,8 +127,109 @@
          gli altri toggle qui sopra che sono proprietà di Grid.php) — la
          propria riga, non incastrato nella toolbar. --}}
     <livewire:timone.activity-log-panel :issue="$issue" :key="'activity-log-'.$issue->id" />
+    <livewire:timone.ad-reservations :issue="$issue" :key="'ad-reservations-'.$issue->id" />
 
-    @if (! empty($automaticChecks['nonContiguousContents']) || ! empty($automaticChecks['approvedEmptyPages']))
+    {{-- Riepilogo di conflitto per un caricamento PDF multipagina (§2.1) in
+         attesa di conferma — nessuna scrittura è ancora avvenuta. Mostrato
+         come modale (non più un pannello inline) dal 2026-07-31: su una
+         griglia lunga il pannello poteva finire fuori dal viewport se
+         l'utente aveva scrollato oltre la pagina su cui ha caricato il
+         file, dando l'impressione che l'upload fosse "bloccato" mentre in
+         realtà il riepilogo era pronto ma invisibile. Aperta/chiusa da
+         Grid.php via dispatch('open-modal'/'close-modal', 'multipage-
+         upload-conflict') — stesso pattern già in uso per lo storico PDF
+         (vedi page-file-history.blade.php). --}}
+    <x-modal name="multipage-upload-conflict" maxWidth="lg">
+        @if ($multipageUploadConflict)
+            <div class="p-6 space-y-3">
+                <p class="font-medium text-lg text-gray-900 dark:text-gray-100">
+                    📄 Il PDF caricato sulla pagina {{ $multipageUploadConflict['initiatingPosition'] }} occupa {{ $multipageUploadConflict['totalPdfPages'] }} pagine.
+                </p>
+
+                @if ($multipageUploadConflict['availablePages'] < $multipageUploadConflict['totalPdfPages'])
+                    <p class="text-sm text-amber-700 dark:text-amber-400">
+                        Il numero finisce prima: solo {{ $multipageUploadConflict['availablePages'] }} pagine del timone sono disponibili da questo punto in poi — le pagine successive del PDF non verranno posizionate.
+                    </p>
+                @endif
+
+                @if (empty($multipageUploadConflict['conflictingPositions']))
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Nessuna delle pagine coinvolte ha già un PDF caricato: puoi procedere senza sovrascrivere nulla.</p>
+                    <button type="button" wire:click="confirmMultipageUpload(false)" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700">
+                        Occupa le {{ $multipageUploadConflict['totalPdfPages'] }} pagine
+                    </button>
+                @else
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        {{ count($multipageUploadConflict['conflictingPositions']) === 1 ? 'La pagina' : 'Le pagine' }}
+                        {{ implode(', ', $multipageUploadConflict['conflictingPositions']) }}
+                        {{ count($multipageUploadConflict['conflictingPositions']) === 1 ? 'risulta' : 'risultano' }}
+                        già occupata/e da un altro PDF.
+                    </p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="confirmMultipageUpload(false)"
+                            class="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-sm hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                        >
+                            Salta le pagine in conflitto
+                        </button>
+                        <button
+                            type="button"
+                            x-on:click="confirm('Sovrascrivere il PDF già presente su {{ implode(', ', $multipageUploadConflict['conflictingPositions']) }}? L\'operazione non è reversibile.') && $wire.confirmMultipageUpload(true)"
+                            class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700"
+                        >
+                            Sovrascrivi le pagine in conflitto
+                        </button>
+                    </div>
+                @endif
+
+                <button type="button" wire:click="cancelMultipageUpload" class="text-xs text-gray-500 dark:text-gray-400 underline">
+                    Annulla il caricamento
+                </button>
+            </div>
+        @endif
+    </x-modal>
+
+    {{-- Avanzamento reale del rendering miniature, aggregato su TUTTE le
+         pagine del numero ancora in coda/elaborazione (2026-07-31, non più
+         legato all'ultimo batch confermato — bug segnalato dall'utente: la
+         versione precedente teneva questo stato in una proprietà Livewire
+         effimera, persa ad ogni refresh della pagina). $thumbnailProgress
+         arriva da render() → App\Support\ThumbnailProgressEstimator,
+         ricalcolato da zero ogni volta da dati reali (stato in database,
+         tempo di orologio realmente trascorso) — identico prima e dopo un
+         refresh, mai un placeholder. Ogni card mostra anche la propria
+         stima individuale (vedi page-row.blade.php/page-card.blade.php),
+         questo banner è solo l'aggregato. Non bloccante: le pagine sono
+         già scritte in database, l'utente può continuare a lavorare. Si
+         aggiorna da solo ad ogni render (broadcast PageFileUploaded per
+         pagina, o pollRefresh() di fallback) e sparisce da solo quando non
+         resta più nessuna pagina in elaborazione. --}}
+    @if ($thumbnailProgress && ! $thumbnailProgressDismissed)
+        <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 text-xs space-y-1">
+            <div class="flex items-center justify-between gap-2">
+                <p class="font-medium text-indigo-800 dark:text-indigo-300">
+                    🖼️ {{ $thumbnailProgress['pending'] }} {{ $thumbnailProgress['pending'] === 1 ? 'pagina' : 'pagine' }} in elaborazione
+                    @if ($thumbnailProgress['remainingSeconds'] !== null)
+                        — circa {{ $thumbnailProgress['remainingSeconds'] }}s rimanenti in totale
+                    @else
+                        — stima non ancora disponibile
+                    @endif
+                </p>
+                <button type="button" wire:click="dismissThumbnailProgress" class="text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-200" title="Nascondi">✕</button>
+            </div>
+            {{-- Barra indeterminata, non una percentuale: non c'è un
+                 "totale del batch" fisso da cui calcolare una % reale (il
+                 conteggio può crescere con nuovi upload), quindi una barra
+                 a percentuale fissa sarebbe essa stessa un placeholder —
+                 questa mostra onestamente "lavoro in corso", non un
+                 progresso quantificato che non abbiamo. --}}
+            <div class="w-full bg-indigo-100 dark:bg-indigo-950 rounded h-1.5 overflow-hidden">
+                <div class="bg-indigo-600 h-1.5 w-1/3 animate-pulse"></div>
+            </div>
+        </div>
+    @endif
+
+    @if (! empty($automaticChecks['nonContiguousContents']) || ! empty($automaticChecks['approvedEmptyPages']) || ! empty($automaticChecks['missingPdfPages']))
         <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs space-y-1">
             <p class="font-medium text-amber-800 dark:text-amber-300">⚠️ Avvisi</p>
 
@@ -133,6 +247,15 @@
                     ma senza contenuti assegnati.
                 </p>
             @endif
+
+            @if (! empty($automaticChecks['missingPdfPages']))
+                <p class="text-amber-700 dark:text-amber-400">
+                    {{ count($automaticChecks['missingPdfPages']) === 1 ? 'La pagina' : 'Le pagine' }}
+                    {{ implode(', ', $automaticChecks['missingPdfPages']) }}
+                    {{ count($automaticChecks['missingPdfPages']) === 1 ? 'non ha' : 'non hanno' }}
+                    ancora un PDF caricato — non {{ count($automaticChecks['missingPdfPages']) === 1 ? 'può' : 'possono' }} essere segnata/e «Ok stampa» finché manca.
+                </p>
+            @endif
         </div>
     @endif
 
@@ -148,12 +271,12 @@
                         type="number"
                         min="0"
                         max="2000"
-                        wire:model.live="newTotalPages"
+                        wire:model.blur="newTotalPages"
                         class="mt-1 w-28 text-sm rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-2 py-1"
                     />
                 </div>
 
-                @if ($pageCountImpact['type'] === 'increase')
+                @if ($pageCountImpact && $pageCountImpact['type'] === 'increase')
                     <div>
                         <label for="insert-mode" class="block text-xs text-gray-500 dark:text-gray-400">Dove inserire le {{ $pageCountImpact['delta'] }} nuove pagine</label>
                         <select id="insert-mode" wire:model.live="insertMode" class="mt-1 text-sm rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-2 py-1">
@@ -183,15 +306,21 @@
                 @endif
             </div>
 
-            @if ($newTotalPages > 0 && $newTotalPages % 4 !== 0)
+            @error('pageCount')
+                <p class="text-xs text-red-600 dark:text-red-400">⚠️ {{ $message }}</p>
+            @enderror
+
+            @if ($newTotalPagesParsed === null)
+                <p class="text-xs text-red-600 dark:text-red-400">⚠️ Inserisci un numero di pagine valido (un intero da 0 a 2000).</p>
+            @elseif ($newTotalPagesParsed > 0 && $newTotalPagesParsed % 4 !== 0)
                 <p class="text-xs text-amber-600 dark:text-amber-400">⚠️ Non è un multiplo di 4 — consentito per i casi speciali, ma da verificare.</p>
             @endif
 
-            @if ($pageCountImpact['type'] === 'decrease')
+            @if ($pageCountImpact && $pageCountImpact['type'] === 'decrease')
                 <div class="text-sm border-t border-gray-100 dark:border-gray-700 pt-3">
                     <p class="text-gray-700 dark:text-gray-200">
                         Verranno eliminate <strong>{{ $pageCountImpact['removedCount'] }}</strong> pagine in coda
-                        (dalla posizione {{ $newTotalPages + 1 }} alla {{ $newTotalPages + $pageCountImpact['removedCount'] }}).
+                        (dalla posizione {{ $newTotalPagesParsed + 1 }} alla {{ $newTotalPagesParsed + $pageCountImpact['removedCount'] }}).
                     </p>
 
                     @if (empty($pageCountImpact['affectedPages']))
@@ -228,7 +357,7 @@
 
                     <button
                         type="button"
-                        x-on:click="confirm('Ridurre le pagine a {{ $newTotalPages }}? L\'operazione non è reversibile.') && $wire.resizePages(true)"
+                        x-on:click="confirm('Ridurre le pagine a {{ $newTotalPagesParsed }}? L\'operazione non è reversibile.') && $wire.resizePages(true)"
                         @disabled($pageCountImpact['lockedCount'] > 0)
                         class="mt-3 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -310,7 +439,8 @@
             </span>
             <span class="text-xs text-gray-500 dark:text-gray-400">
                 carico pubblicitario &middot;
-                {{ $adLoad['adEquivalentPages'] }} pagine equiv. pubblicità su {{ $adLoad['totalPages'] }} totali &middot;
+                {{ $adLoad['adEquivalentPages'] }} pagine equiv. pubblicità su {{ $adLoad['totalPages'] }} totali
+                ({{ $adLoad['placedAdEquivalentPages'] }} già assegnate + {{ $adLoad['reservedAdEquivalentPages'] }} prenotate) &middot;
                 {{ $adLoad['editorialEquivalentPages'] }} pagine equiv. editoriale
             </span>
             @if ($overThreshold)
@@ -362,6 +492,56 @@
     @error('locked')
         <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">🔒 {{ $message }}</p>
     @enderror
+
+    @error('pdfRequired')
+        <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">📄 {{ $message }}</p>
+    @enderror
+
+    @if ($selectionMode)
+        <div class="flex flex-wrap items-center gap-2 text-xs bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-2">
+            <span class="font-medium text-indigo-700 dark:text-indigo-300">
+                ☑️ {{ count($selectedPageIds) }} {{ count($selectedPageIds) === 1 ? 'pagina selezionata' : 'pagine selezionate' }}
+            </span>
+
+            <button type="button" wire:click="selectAllPages" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
+                Seleziona tutte
+            </button>
+            <button type="button" wire:click="clearSelection" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
+                Deseleziona tutte
+            </button>
+
+            @if (! empty($selectedPageIds))
+                <span class="w-px h-4 bg-indigo-300 dark:bg-indigo-700"></span>
+
+                <label class="flex items-center gap-1">
+                    Cambia stato in:
+                    <select
+                        x-data
+                        x-on:change="if ($event.target.value) { $wire.bulkChangeStatus($event.target.value); $event.target.value = ''; }"
+                        class="rounded border-indigo-300 dark:border-indigo-700 dark:bg-gray-900 text-xs py-1"
+                    >
+                        <option value="">Scegli...</option>
+                        @foreach (\App\Enums\PageStatus::cases() as $status)
+                            <option value="{{ $status->value }}">{{ $status->label() }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <button type="button" wire:click="bulkToggleLock(true)" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
+                    🔒 Blocca selezionate
+                </button>
+                <button type="button" wire:click="bulkToggleLock(false)" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
+                    🔓 Sblocca selezionate
+                </button>
+            @endif
+        </div>
+
+        @if ($bulkResultMessage)
+            <p class="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">
+                ✅ {{ $bulkResultMessage }}
+            </p>
+        @endif
+    @endif
 
     <template x-if="! $store.realtimeFallback.connected">
         <p class="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
@@ -421,30 +601,53 @@
         <div
             x-sortable="$wire.swapMode"
             @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
+            @block-dropped="$wire.moveSelectedBlock($event.detail.anchorPageId, $event.detail.newPosition)"
             class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3"
         >
             @foreach ($pages as $page)
-                @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true])
+                @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds])
             @endforeach
         </div>
     @elseif ($viewMode === 'doppia')
-        {{-- Niente Sortable qui: le pagine sono annidate in due livelli
-             (apertura > pagina), Sortable richiede figli diretti dello
-             stesso contenitore per il drag&drop di riordino. La modalità
-             scambio (click, non drag) non ha questo limite ed è quindi
-             l'unico modo di riordinare le pagine da questa vista — oltre
-             alle frecce da tastiera, già supportate su ogni card. Il resto
-             (assegnazione contenuti, cambio stato) è invece pienamente
-             interattivo come nelle altre due modalità (dropEnabled true). --}}
-        <div class="space-y-3">
-            @foreach ($spreads as $spread)
-                <div class="flex justify-center gap-0.5">
-                    @foreach ($spread as $page)
-                        <div class="w-40 sm:w-48 {{ ! $loop->first ? 'border-l-2 border-gray-300 dark:border-gray-600' : '' }}">
-                            @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true])
-                        </div>
-                    @endforeach
-                </div>
+        {{-- Ogni pagina resta un elemento Sortable a sé, figlio diretto
+             dello stesso contenitore usato da griglia/lista (non più
+             annidata in un div per apertura, il bug originario: Sortable
+             richiede figli diretti dello stesso contenitore per il
+             drag&drop di riordino, e prima ogni apertura aveva il proprio
+             div "flex justify-center", rendendo le pagine trascinabili
+             solo tra loro all'interno della stessa coppia). L'andata a
+             capo visiva tra un'apertura e la successiva è ora ottenuta con
+             un elemento "spacer" (flex-basis:100%) invece che con
+             l'annidamento: lo spacer non ha data-page-id, quindi il
+             filtro `draggable: '[data-page-id]'` in resources/js/app.js
+             lo esclude sia dal trascinamento sia dal calcolo dell'indice
+             di destinazione (Sortable conta solo gli elementi che
+             corrispondono al selettore). Risultato: si può trascinare una
+             singola pagina fuori da una coppia, dentro un'altra coppia, o
+             in una posizione che ne spacca una esistente — lato/posizione
+             si ricalcolano da soli al prossimo render() (PageSpreadBuilder
+             raggruppa sempre le pagine nell'ordine risultante). --}}
+        <div
+            x-sortable="$wire.swapMode"
+            @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
+            @block-dropped="$wire.moveSelectedBlock($event.detail.anchorPageId, $event.detail.newPosition)"
+            class="flex flex-wrap justify-center gap-x-0.5"
+        >
+            {{-- Niente gap-y sul contenitore: applicherebbe uno spazio
+                 verticale anche sopra/sotto la riga a lì-height dello
+                 spacer (raddoppiando la distanza tra due aperture) — un
+                 mt-3 su ogni pagina che apre una nuova apertura ottiene lo
+                 stesso risultato visivo di prima senza quell'effetto. --}}
+            @foreach ($spreads as $spreadIndex => $spread)
+                @foreach ($spread as $indexInSpread => $page)
+                    <div
+                        data-page-id="{{ $page->id }}"
+                        class="w-40 sm:w-48 {{ $spreadIndex > 0 ? 'mt-3' : '' }} {{ $indexInSpread > 0 ? 'border-l-2 border-gray-300 dark:border-gray-600' : '' }}"
+                    >
+                        @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds])
+                    </div>
+                @endforeach
+                <div class="basis-full h-0" aria-hidden="true"></div>
             @endforeach
         </div>
     @else
@@ -452,10 +655,11 @@
             <ul
                 x-sortable="$wire.swapMode"
                 @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
+                @block-dropped="$wire.moveSelectedBlock($event.detail.anchorPageId, $event.detail.newPosition)"
                 class="divide-y divide-gray-100 dark:divide-gray-700"
             >
                 @foreach ($pages as $page)
-                    @include('livewire.timone.partials.page-row', ['page' => $page, 'dropEnabled' => true])
+                    @include('livewire.timone.partials.page-row', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds])
                 @endforeach
             </ul>
         </div>

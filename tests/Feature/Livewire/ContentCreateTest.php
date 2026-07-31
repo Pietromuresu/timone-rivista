@@ -67,6 +67,51 @@ test('an editor can create an advertisement with format default percentage', fun
         ->and($content->advertisement->confirmation_status->value)->toBe('confermata');
 });
 
+test('an advertisement can be created with a preferred position, purely informational', function () {
+    Event::fake([ContentCreated::class]);
+
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+
+    Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
+        ->call('toggleForm')
+        ->set('type', 'pubblicita')
+        ->set('title', 'Pubblicità con preferenza')
+        ->set('client', 'Cliente Preferenza')
+        ->set('format', 'pagina_intera')
+        ->set('confirmation_status', 'in_trattativa')
+        ->set('preferred_position', '7')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $content = Content::where('title', 'Pubblicità con preferenza')->first();
+
+    expect($content->advertisement->preferred_position)->toBe(7)
+        ->and($content->isAssigned())->toBeFalse(); // solo informativo, non assegna davvero
+});
+
+test('a non-numeric preferred position is silently ignored instead of failing the whole form', function () {
+    Event::fake([ContentCreated::class]);
+
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+
+    Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
+        ->call('toggleForm')
+        ->set('type', 'pubblicita')
+        ->set('title', 'Pubblicità senza preferenza valida')
+        ->set('client', 'Cliente Senza Preferenza')
+        ->set('format', 'pagina_intera')
+        ->set('confirmation_status', 'in_trattativa')
+        ->set('preferred_position', 'abc')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $content = Content::where('title', 'Pubblicità senza preferenza valida')->first();
+
+    expect($content->advertisement->preferred_position)->toBeNull();
+});
+
 test('an advertisement with a manual percentage override stores it', function () {
     Event::fake([ContentCreated::class]);
 

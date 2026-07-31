@@ -148,3 +148,78 @@ test('a guest cannot resize pages', function () {
 
     expect($issue->fresh()->total_pages)->toBe(6);
 });
+
+// $newTotalPages è tipizzato `string`, non `int` (vedi Grid.php): un campo
+// tipato `int` andava in TypeError Livewire non appena l'utente svuotava o
+// digitava un carattere non numerico nell'input — riproducibile solo
+// impostando esplicitamente questi valori "intermedi" via ->set(), dato
+// che wire:model.blur non scrive ad ogni tasto ma solo al blur.
+
+test('typing an empty value for total pages does not crash and shows a controlled validation message instead', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->set('newTotalPages', '')
+        ->call('resizePages')
+        ->assertHasErrors('pageCount')
+        ->assertOk();
+
+    expect($issue->fresh()->total_pages)->toBe(6);
+});
+
+test('a non-numeric value for total pages is rejected with a controlled validation message, not an exception', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->set('newTotalPages', 'abc')
+        ->call('resizePages')
+        ->assertHasErrors('pageCount')
+        ->assertOk();
+
+    expect($issue->fresh()->total_pages)->toBe(6);
+});
+
+test('a negative value for total pages is rejected with a controlled validation message', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->set('newTotalPages', '-5')
+        ->call('resizePages')
+        ->assertHasErrors('pageCount')
+        ->assertOk();
+
+    expect($issue->fresh()->total_pages)->toBe(6);
+});
+
+test('progressively typing digits toward a valid total pages value never crashes the component', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+
+    $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->call('togglePageCountEditor');
+
+    foreach (['', '1', '12'] as $partial) {
+        $component->set('newTotalPages', $partial)->assertOk();
+    }
+});
+
+test('a valid total pages value still resizes correctly leaving content already assigned on kept pages untouched', function () {
+    Event::fake([IssuePageCountUpdated::class]);
+
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page2 = $issue->pages()->where('position', 2)->first();
+    $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
+    $page2->contents()->attach($content->id, ['occupied_percentage' => '100']);
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->set('newTotalPages', '8')
+        ->call('resizePages')
+        ->assertHasNoErrors();
+
+    expect($issue->fresh()->total_pages)->toBe(8)
+        ->and($page2->fresh()->contents()->count())->toBe(1);
+});
