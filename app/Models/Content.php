@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Content extends Model
@@ -18,13 +19,20 @@ class Content extends Model
         'section_id',
         'type',
         'title',
+        'archived_at',
     ];
 
     protected function casts(): array
     {
         return [
             'type' => ContentType::class,
+            'archived_at' => 'datetime',
         ];
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
     }
 
     public function issue(): BelongsTo
@@ -45,6 +53,17 @@ class Content extends Model
     public function advertisement(): HasOne
     {
         return $this->hasOne(Advertisement::class);
+    }
+
+    /**
+     * File allegati a questo contenuto (Fase 4.1) — non alla pagina, a
+     * differenza di Page::files()/PageFile: risolve il limite già segnalato
+     * in HANDOFF.md (Punto 5) di non poter distinguere quale contenuto di
+     * una pagina mista possiede davvero un PDF/immagine caricato.
+     */
+    public function files(): HasMany
+    {
+        return $this->hasMany(ContentFile::class)->latest();
     }
 
     /**

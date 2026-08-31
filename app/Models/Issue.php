@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\IssueStatus;
+use App\Enums\PageRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,8 @@ class Issue extends Model
         'magazine_id',
         'title',
         'issue_date',
+        'print_deadline_at',
+        'deadline_reminder_sent_at',
         'status',
         'total_pages',
         'notes',
@@ -26,6 +29,8 @@ class Issue extends Model
     {
         return [
             'issue_date' => 'date',
+            'print_deadline_at' => 'date',
+            'deadline_reminder_sent_at' => 'datetime',
             'status' => IssueStatus::class,
             'total_pages' => 'integer',
             'reorder_version' => 'integer',
@@ -58,7 +63,11 @@ class Issue extends Model
      */
     public function unassignedContents(): HasMany
     {
-        return $this->contents()->whereDoesntHave('pages');
+        // Fase 4.3: un contenuto archiviato non è "assegnabile" finché non
+        // viene ripristinato — resta comunque non-cancellato in database
+        // (a differenza di Grid::deleteUnassignedContent(), che è invece
+        // definitiva), semplicemente escluso da questo pannello.
+        return $this->contents()->whereDoesntHave('pages')->whereNull('archived_at');
     }
 
     public function reorderLogs(): HasMany
@@ -85,5 +94,26 @@ class Issue extends Model
                 $page->update(['content_type' => $sourceTypes[$page->position]]);
             }
         }
+    }
+
+    /**
+     * Numero di pagine mostrato all'utente (Fase 3.1) — SOLO per
+     * visualizzazione, mai usato per posizioni/ordinamento: total_pages
+     * resta l'unica fonte di verità per lo schema (unique(issue_id,
+     * position), PageReorderer, ecc.), il battente occupa comunque una
+     * posizione fisica sequenziale come qualunque altra pagina. Scelta
+     * pragmatica documentata in HANDOFF.md — un vero "fuori sequenza" per
+     * il battente romperebbe l'invariante di posizione in tutto il
+     * progetto per un guadagno solo cosmetico.
+     */
+    public function displayedTotalPages(): int
+    {
+        if ($this->magazine->battente_counted_in_total) {
+            return $this->total_pages;
+        }
+
+        $battenteCount = $this->pages()->where('role', PageRole::Battente->value)->count();
+
+        return $this->total_pages - $battenteCount;
     }
 }

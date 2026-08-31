@@ -21,6 +21,10 @@
                             Utenti
                         </x-nav-link>
                     @endcan
+
+                    <x-nav-link :href="route('documentation.show')" :active="request()->routeIs('documentation.show')">
+                        📖 Documentazione
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -82,6 +86,10 @@
                     Utenti
                 </x-responsive-nav-link>
             @endcan
+
+            <x-responsive-nav-link :href="route('documentation.show')" :active="request()->routeIs('documentation.show')">
+                📖 Documentazione
+            </x-responsive-nav-link>
         </div>
 
         <!-- Responsive Settings Options -->

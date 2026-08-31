@@ -16,13 +16,30 @@
                             &middot; {{ $magazine->periodicity->label() }}
                         </span>
                     </div>
+
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Redattore di riferimento:
+                        @if ($magazine->redattore)
+                            {{ $magazine->redattore->name }}
+                        @else
+                            <span class="italic">nessuno assegnato</span>
+                        @endif
+                    </p>
                 </div>
 
-                @can('create', \App\Models\Issue::class)
-                    <a href="{{ route('issues.create', $magazine) }}" class="shrink-0">
-                        <x-primary-button>+ Nuovo numero</x-primary-button>
-                    </a>
-                @endcan
+                <div class="flex items-center gap-2 shrink-0">
+                    @can('update', $magazine)
+                        <a href="{{ route('magazines.edit', $magazine) }}">
+                            <x-secondary-button>Modifica rivista</x-secondary-button>
+                        </a>
+                    @endcan
+
+                    @can('create', \App\Models\Issue::class)
+                        <a href="{{ route('issues.create', $magazine) }}">
+                            <x-primary-button>+ Nuovo numero</x-primary-button>
+                        </a>
+                    @endcan
+                </div>
             </div>
 
             @php

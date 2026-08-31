@@ -28,15 +28,33 @@
 
                 <div>
                     <x-input-label for="section_id" value="Rubrica (opzionale)" />
-                    <select id="section_id" wire:model="section_id" class="mt-1 block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm">
-                        <option value="">— Nessuna —</option>
-                        @foreach ($sections as $section)
-                            <option value="{{ $section->id }}">{{ $section->name }}</option>
-                        @endforeach
-                    </select>
+                    <div class="flex items-center gap-1 mt-1">
+                        <select id="section_id" wire:model="section_id" class="block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm">
+                            <option value="">— Nessuna —</option>
+                            @foreach ($sections as $section)
+                                <option value="{{ $section->id }}">{{ $section->name }}</option>
+                            @endforeach
+                        </select>
+                        @if ($section_id)
+                            <button type="button" wire:click="startEditSection({{ $section_id }})" title="Rinomina rubrica selezionata" class="shrink-0 px-2 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">✏️</button>
+                        @endif
+                        <button type="button" wire:click="startCreateSection" title="Nuova rubrica" class="shrink-0 px-2 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">➕</button>
+                    </div>
                     <x-input-error class="mt-1" :messages="$errors->get('section_id')" />
                 </div>
             </div>
+
+            @if ($showSectionForm)
+                <div class="flex items-end gap-2 p-2 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/20">
+                    <div class="flex-1">
+                        <x-input-label for="sectionName" :value="$editingSectionId ? 'Rinomina rubrica' : 'Nome nuova rubrica'" />
+                        <x-text-input id="sectionName" wire:model="sectionName" wire:keydown.enter.prevent="saveSection" type="text" class="mt-1 block w-full text-sm" />
+                        <x-input-error class="mt-1" :messages="$errors->get('sectionName')" />
+                    </div>
+                    <button type="button" wire:click="saveSection" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm">{{ $editingSectionId ? 'Salva' : 'Crea' }}</button>
+                    <button type="button" wire:click="cancelSectionForm" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm">Annulla</button>
+                </div>
+            @endif
 
             <div>
                 <x-input-label for="title" :value="$type === 'articolo' ? 'Titolo articolo' : 'Titolo/descrizione inserzione'" />
@@ -106,6 +124,13 @@
                     </div>
                 </div>
             @endif
+
+            <div>
+                <x-input-label for="file" value="Allega PDF/immagine (opzionale)" />
+                <input type="file" id="file" wire:model="file" accept=".pdf,image/*" class="mt-1 block w-full text-sm text-gray-600 dark:text-gray-300" />
+                <div wire:loading wire:target="file" class="mt-1 text-xs text-gray-400">Caricamento in corso…</div>
+                <x-input-error class="mt-1" :messages="$errors->get('file')" />
+            </div>
 
             <x-primary-button>Crea contenuto</x-primary-button>
         </form>

@@ -1,3 +1,28 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Fase 6.1: stile per il markdown di MANUALE_UTENTE.md renderizzato in
+ * resources/views/documentation/show.blade.php. Deve stare qui (non in un
+ * <style> inline nella vista): @apply è una direttiva PostCSS, valutata solo
+ * nei file che passano dalla pipeline Tailwind/Vite — un <style> scritto
+ * dentro un .blade.php non viene mai processato da PostCSS, resterebbe
+ * @apply letterale e invalido lato browser (nessuno stile applicato, bug
+ * scoperto scrivendo questa nota, non lasciato scoprire dall'utente).
+ */
+@layer components {
+    .manuale-content h1 { @apply text-2xl font-bold mt-2 mb-4 text-gray-900 dark:text-gray-100; }
+    .manuale-content h2 { @apply text-xl font-semibold mt-8 mb-3 text-gray-900 dark:text-gray-100 scroll-mt-20; }
+    .manuale-content h2:first-of-type { @apply mt-0; }
+    .manuale-content p { @apply mb-3 text-gray-700 dark:text-gray-300 leading-relaxed; }
+    .manuale-content ul, .manuale-content ol { @apply mb-3 ml-6 text-gray-700 dark:text-gray-300 list-disc space-y-1; }
+    .manuale-content ol { @apply list-decimal; }
+    .manuale-content code { @apply bg-gray-100 dark:bg-gray-700 text-pink-600 dark:text-pink-400 px-1 py-0.5 rounded text-sm; }
+    .manuale-content a { @apply text-indigo-600 dark:text-indigo-400 hover:underline; }
+    .manuale-content hr { @apply my-6 border-gray-200 dark:border-gray-600; }
+    .manuale-content strong { @apply font-semibold text-gray-900 dark:text-gray-100; }
+    .manuale-content .heading-permalink { @apply no-underline mr-1 text-gray-300 dark:text-gray-600 hover:text-gray-500; }
+    .manuale-content table { @apply w-full text-sm border-collapse mb-4; }
+    .manuale-content th, .manuale-content td { @apply border border-gray-200 dark:border-gray-600 px-2 py-1 text-left; }
+}

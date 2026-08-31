@@ -177,6 +177,116 @@ test('a pdf reaching past the end of the issue is capped to the pages actually a
     expect(PageFile::query()->count())->toBe(2);
 });
 
+test('shifting conflicting pages relocates their existing content instead of losing it, then writes the new pdf in place', function () {
+    $issue = reorderableIssue(); // total_pages = 6
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 2)->first();
+    $conflictingPage = $issue->pages()->where('position', 3)->first();
+    $existingFile = PageFile::factory()->for($conflictingPage)->create();
+    $existingContent = \App\Models\Content::factory()->create(['issue_id' => $issue->id, 'type' => \App\Enums\ContentType::Articolo]);
+    $conflictingPage->contents()->attach($existingContent->id, ['occupied_percentage' => 40]);
+    $conflictingPage->update(['notes' => 'nota originale']);
+
+    $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->set("pendingUploads.{$page->id}", UploadedFile::fake()->createWithContent('multi.pdf', multiPagePdfBytes([
+            [mmToPt(210), mmToPt(270)],
+            [mmToPt(210), mmToPt(270)],
+        ])));
+
+    $component->assertSet('multipageUploadConflict.conflictingPositions', [3]);
+    $component->call('confirmMultipageUploadWithShift');
+
+    // La pagina 3 originale è tornata bianca (il suo contenuto è
+    // "traslato dopo"), il PDF nuovo occupa posizione 2 e 3 come previsto.
+    expect($conflictingPage->fresh()->content_type)->toBe(\App\Enums\PageContentType::Bianca)
+        ->and($conflictingPage->fresh()->notes)->toBeNull()
+        ->and($conflictingPage->contents()->count())->toBe(0)
+        ->and(PageFile::where('page_id', $conflictingPage->id)->where('id', $existingFile->id)->exists())->toBeFalse()
+        ->and(PageFile::where('page_id', $page->id)->exists())->toBeTrue()
+        ->and(PageFile::where('page_id', $conflictingPage->id)->exists())->toBeTrue(); // il PDF nuovo, non il vecchio file
+
+    // Il totale pagine si è esteso di 1 (una sola pagina in conflitto): la
+    // nuova pagina bianca è inserita SUBITO DOPO l'intervallo occupato dal
+    // PDF (posizione 4, non in fondo al numero) — "sposta dopo" significa
+    // dopo il nuovo contenuto, non in coda a tutto il timone; le vecchie
+    // posizioni 4/5/6 slittano di conseguenza a 5/6/7.
+    $issue->refresh();
+    expect($issue->total_pages)->toBe(7);
+
+    $newPage = $issue->pages()->where('position', 4)->first();
+    expect($newPage)->not->toBeNull()
+        ->and($newPage->notes)->toBe('nota originale')
+        ->and($newPage->contents()->count())->toBe(1)
+        ->and($newPage->contents()->first()->pivot->occupied_percentage)->toEqualWithDelta(40, 0.01)
+        ->and(PageFile::where('page_id', $newPage->id)->where('id', $existingFile->id)->exists())->toBeTrue();
+});
+
+test('shifting when the conflict reaches the last page auto-expands total_pages, no gap is left', function () {
+    $issue = reorderableIssue(); // total_pages = 6
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 5)->first();
+    $conflictingPage = $issue->pages()->where('position', 6)->first();
+    PageFile::factory()->for($conflictingPage)->create();
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->set("pendingUploads.{$page->id}", UploadedFile::fake()->createWithContent('multi.pdf', multiPagePdfBytes([
+            [mmToPt(210), mmToPt(270)],
+            [mmToPt(210), mmToPt(270)],
+        ])))
+        ->call('confirmMultipageUploadWithShift');
+
+    $issue->refresh();
+    expect($issue->total_pages)->toBe(7)
+        ->and($issue->pages()->count())->toBe(7)
+        ->and($issue->pages()->pluck('position')->sort()->values()->all())->toBe([1, 2, 3, 4, 5, 6, 7]);
+});
+
+test('a locked conflicting page is never relocated by shift, and the new pdf skips that position', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 2)->first();
+    $lockedPage = $issue->pages()->where('position', 3)->first();
+    $lockedFile = PageFile::factory()->for($lockedPage)->create();
+    $lockedPage->update(['locked_at' => now(), 'locked_by' => $user->id, 'notes' => 'nota bloccata']);
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->set("pendingUploads.{$page->id}", UploadedFile::fake()->createWithContent('multi.pdf', multiPagePdfBytes([
+            [mmToPt(210), mmToPt(270)],
+            [mmToPt(210), mmToPt(270)],
+        ])))
+        ->call('confirmMultipageUploadWithShift');
+
+    // La pagina bloccata resta esattamente com'era (nota inclusa) e il suo
+    // file originale non si è spostato altrove — mai toccata da nessuna
+    // parte dell'operazione di shift, coerente con blockIfLocked() usato
+    // ovunque nel progetto.
+    expect($lockedPage->fresh()->notes)->toBe('nota bloccata')
+        ->and(PageFile::where('page_id', $page->id)->exists())->toBeTrue()
+        ->and(PageFile::where('id', $lockedFile->id)->first()->page_id)->toBe($lockedPage->id);
+});
+
+test('a guest cannot shift pages to resolve an upload conflict', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 2)->first();
+
+    $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->set("pendingUploads.{$page->id}", UploadedFile::fake()->createWithContent('multi.pdf', multiPagePdfBytes([
+            [mmToPt(210), mmToPt(270)],
+            [mmToPt(210), mmToPt(270)],
+        ])));
+
+    $conflict = $component->get('multipageUploadConflict');
+    $totalBefore = $issue->total_pages;
+
+    Livewire::test(Grid::class, ['issue' => $issue])
+        ->set('multipageUploadConflict', $conflict)
+        ->call('confirmMultipageUploadWithShift');
+
+    expect(PageFile::query()->count())->toBe(0)
+        ->and($issue->fresh()->total_pages)->toBe($totalBefore);
+});
+
 test('a guest cannot confirm a multi-page upload', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);

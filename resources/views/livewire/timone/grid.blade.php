@@ -14,6 +14,20 @@
         </h3>
 
         <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 text-xs" title="{{ $issue->deadline_reminder_sent_at ? 'Sollecito già inviato per questa scadenza' : '' }}">
+                <label for="print-deadline-{{ $issue->id }}" class="text-gray-500 dark:text-gray-400">📅 Scadenza stampa</label>
+                <input
+                    id="print-deadline-{{ $issue->id }}"
+                    type="date"
+                    value="{{ $issue->print_deadline_at?->toDateString() }}"
+                    wire:change="updatePrintDeadline($event.target.value)"
+                    class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-1 py-0.5"
+                />
+                @if ($issue->print_deadline_at && $issue->deadline_reminder_sent_at)
+                    <span class="text-emerald-600 dark:text-emerald-400" title="Sollecito già inviato al redattore per questa scadenza">✉️</span>
+                @endif
+            </div>
+
             <button
                 type="button"
                 wire:click="togglePageCountEditor"
@@ -178,6 +192,14 @@
                             class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700"
                         >
                             Sovrascrivi le pagine in conflitto
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="confirmMultipageUploadWithShift"
+                            title="Le pagine in conflitto vengono spostate subito dopo, nulla viene perso — il numero di pagine totali si estende automaticamente se necessario"
+                            class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700"
+                        >
+                            ↪️ Sposta le pagine esistenti dopo
                         </button>
                     </div>
                 @endif
@@ -497,6 +519,10 @@
         <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">📄 {{ $message }}</p>
     @enderror
 
+    @error('link')
+        <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">🔗 {{ $message }}</p>
+    @enderror
+
     @if ($selectionMode)
         <div class="flex flex-wrap items-center gap-2 text-xs bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-2">
             <span class="font-medium text-indigo-700 dark:text-indigo-300">
@@ -533,6 +559,17 @@
                 <button type="button" wire:click="bulkToggleLock(false)" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
                     🔓 Sblocca selezionate
                 </button>
+
+                {{-- Fase 2.3: "catena" di pagine — collegarle qui evita di
+                     dover rifare la selezione multipla ogni volta che si
+                     vuole spostarle insieme (vedi Grid::linkSelectedPages(),
+                     movePage() le riconosce e le sposta come blocco anche
+                     trascinando una sola pagina del gruppo). --}}
+                @if (count($selectedPageIds) >= 2)
+                    <button type="button" wire:click="linkSelectedPages" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
+                        🔗 Collega selezionate
+                    </button>
+                @endif
             @endif
         </div>
 
@@ -588,6 +625,32 @@
                 @endforeach
             </div>
         @endif
+
+        {{-- Fase 4.3: passa il mouse su un chip per archiviarlo (🗄️) o
+             eliminarlo (🗑️, doppia conferma) — gli archiviati riappaiono
+             solo qui, mai nel pannello sopra usato per il drag&drop. --}}
+        <button type="button" wire:click="$toggle('showArchivedContents')" class="mt-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            {{ $showArchivedContents ? '▾' : '▸' }} Contenuti archiviati
+        </button>
+
+        @if ($showArchivedContents)
+            <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                @if ($archivedContents->isEmpty())
+                    <p class="text-xs italic text-gray-400">Nessun contenuto archiviato.</p>
+                @else
+                    <div class="flex flex-wrap gap-2">
+                        @foreach ($archivedContents as $content)
+                            <div wire:key="archived-content-{{ $content->id }}" class="flex items-center gap-1.5 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 text-xs max-w-[220px] opacity-75">
+                                <span class="truncate" title="{{ $content->displayLabel() }}">{{ $content->displayLabel() }}</span>
+                                @can('update', $issue)
+                                    <button type="button" wire:click="unarchiveContent({{ $content->id }})" title="Ripristina" class="shrink-0 ml-auto text-gray-400 hover:text-emerald-600">↩️</button>
+                                @endcan
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        @endif
     </div>
 
     @if ($pages->isEmpty())
@@ -631,18 +694,35 @@
             x-sortable="$wire.swapMode"
             @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
             @block-dropped="$wire.moveSelectedBlock($event.detail.anchorPageId, $event.detail.newPosition)"
-            class="flex flex-wrap justify-center gap-x-0.5"
+            class="flex flex-wrap gap-x-0.5 mx-auto w-[20.125rem] sm:w-[24.125rem]"
         >
             {{-- Niente gap-y sul contenitore: applicherebbe uno spazio
                  verticale anche sopra/sotto la riga a lì-height dello
                  spacer (raddoppiando la distanza tra due aperture) — un
                  mt-3 su ogni pagina che apre una nuova apertura ottiene lo
-                 stesso risultato visivo di prima senza quell'effetto. --}}
+                 stesso risultato visivo di prima senza quell'effetto.
+
+                 Larghezza contenitore fissata a esattamente 2 pagine +
+                 gap-x-0.5 (invece di "justify-center" su un contenitore a
+                 piena larghezza): convenzione editoriale di stampa, la
+                 pagina 1 è sempre una pagina destra (nessuna pagina
+                 sinistra la precede) e, se il totale pagine è pari,
+                 l'ultima pagina resta sola a sinistra (nessuna destra
+                 successiva) — PageSpreadBuilder raggruppa già le pagine in
+                 questo modo (prima pagina da sola, poi coppie), qui basta
+                 allineare la prima apertura (singola) a destra con
+                 "ml-auto"; l'ultima apertura, se singola, resta a sinistra
+                 per il normale comportamento flex-start (nessuna classe
+                 extra necessaria) ora che "justify-center" non c'è più a
+                 ricentrarla. Senza un contenitore di larghezza fissa,
+                 "ml-auto"/l'allineamento flex-start di una singola pagina
+                 la spingerebbe ai bordi dello schermo invece che a
+                 fianco della "spina" delle aperture da due pagine. --}}
             @foreach ($spreads as $spreadIndex => $spread)
                 @foreach ($spread as $indexInSpread => $page)
                     <div
                         data-page-id="{{ $page->id }}"
-                        class="w-40 sm:w-48 {{ $spreadIndex > 0 ? 'mt-3' : '' }} {{ $indexInSpread > 0 ? 'border-l-2 border-gray-300 dark:border-gray-600' : '' }}"
+                        class="w-40 sm:w-48 {{ $spreadIndex > 0 ? 'mt-3' : '' }} {{ $indexInSpread > 0 ? 'border-l-2 border-gray-300 dark:border-gray-600' : '' }} {{ $spreadIndex === 0 && count($spread) === 1 ? 'ml-auto' : '' }}"
                     >
                         @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds])
                     </div>

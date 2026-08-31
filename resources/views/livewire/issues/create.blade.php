@@ -40,6 +40,13 @@
                     </div>
 
                     <div>
+                        <x-input-label for="print_deadline_at" value="Scadenza stampa (opzionale)" />
+                        <x-text-input id="print_deadline_at" wire:model="print_deadline_at" type="date" class="mt-1 block w-full" />
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Il redattore di riferimento della rivista riceverà una mail di sollecito quando la scadenza si avvicina.</p>
+                        <x-input-error class="mt-2" :messages="$errors->get('print_deadline_at')" />
+                    </div>
+
+                    <div>
                         <x-input-label for="total_pages" value="Numero totale di pagine" />
                         <x-text-input id="total_pages" wire:model.live="total_pages" type="number" min="0" max="2000" class="mt-1 block w-32" required />
                         <x-input-error class="mt-2" :messages="$errors->get('total_pages')" />

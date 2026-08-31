@@ -27,6 +27,36 @@ test('an editor with access can create an issue and its pages are auto-generated
         ->and($issue->pages()->pluck('content_type')->unique()->all())->toBe([PageContentType::Bianca]);
 });
 
+test('a print deadline can be set at creation', function () {
+    $magazine = Magazine::factory()->create();
+    $user = User::factory()->create(['role' => UserRole::Redattore]);
+    $user->magazines()->attach($magazine);
+
+    Livewire::actingAs($user)->test(Create::class, ['magazine' => $magazine])
+        ->set('title', 'Gennaio 2027')
+        ->set('total_pages', 8)
+        ->set('print_deadline_at', '2027-01-15')
+        ->call('save')
+        ->assertRedirect();
+
+    $issue = Issue::where('title', 'Gennaio 2027')->first();
+
+    expect($issue->print_deadline_at->toDateString())->toBe('2027-01-15');
+});
+
+test('an empty print deadline is stored as null', function () {
+    $magazine = Magazine::factory()->create();
+    $user = User::factory()->create(['role' => UserRole::Redattore]);
+    $user->magazines()->attach($magazine);
+
+    Livewire::actingAs($user)->test(Create::class, ['magazine' => $magazine])
+        ->set('title', 'Febbraio 2027')
+        ->set('total_pages', 8)
+        ->call('save');
+
+    expect(Issue::where('title', 'Febbraio 2027')->first()->print_deadline_at)->toBeNull();
+});
+
 test('an admin can create an issue on any magazine', function () {
     $magazine = Magazine::factory()->create();
     $admin = User::factory()->create(['role' => UserRole::Admin]);

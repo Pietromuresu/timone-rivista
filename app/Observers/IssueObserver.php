@@ -6,6 +6,7 @@ use App\Enums\PageContentType;
 use App\Enums\PageStatus;
 use App\Models\Issue;
 use App\Models\Page;
+use App\Support\PageRoleAssigner;
 
 class IssueObserver
 {
@@ -38,5 +39,11 @@ class IssueObserver
         }
 
         Page::insert($pages);
+
+        // Fase 3.1: la prima/ultima pagina appena create diventano
+        // Copertina1/Copertina4 (§4.3 dello spec) — Copertina2/Copertina3/
+        // Battente restano da assegnare a mano, nessuna posizione fissa le
+        // identifica in modo affidabile per ogni rivista.
+        PageRoleAssigner::syncCoverRoles($issue);
     }
 }

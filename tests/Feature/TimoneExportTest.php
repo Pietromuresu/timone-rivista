@@ -89,6 +89,44 @@ test('withThumbnails does not crash when a thumbnail is still processing', funct
     $response->assertOk();
 });
 
+test('the export renders a separate copertina/battente section before the internal pages', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $battente = $issue->pages()->where('position', 2)->first();
+    $battente->update(['role' => \App\Enums\PageRole::Battente->value]);
+
+    // Rendering diretto della vista Blade (bypassando Dompdf): verifica
+    // automatizzabile e veloce per CI di ciò che la verifica manuale con
+    // pdftotext su un vero PDF generato ha già confermato visivamente
+    // (vedi HANDOFF.md, Fase 3.1) — stesso identico partial, non un
+    // secondo template parallelo da tenere sincronizzato a mano.
+    $pages = $issue->pages()->orderBy('position')->with(['contents.article', 'contents.advertisement', 'files' => fn ($q) => $q->latest()->limit(1)])->get();
+    $coverPages = $pages->filter(fn ($p) => $p->role->isCoverSection());
+    $internalPages = $pages->reject(fn ($p) => $p->role->isCoverSection())->values();
+
+    $html = view('exports.timone', [
+        'issue' => $issue,
+        'coverPages' => $coverPages,
+        'pageRows' => $internalPages->chunk(8),
+        'totalPages' => $pages->count(),
+        'withThumbnails' => false,
+        'filtersApplied' => false,
+    ])->render();
+
+    expect($html)
+        ->toContain('Copertina &amp; battente')
+        ->toContain('Copertina (1ª)')
+        ->toContain('Battente')
+        ->toContain('Quarta di copertina')
+        ->toContain('Pagine interne');
+
+    // Le pagine di copertina non devono comparire una seconda volta nella
+    // griglia "Pagine interne" — split, non duplicazione.
+    $internePos = strpos($html, 'Pagine interne');
+    $internalSectionHtml = substr($html, $internePos);
+    expect($internalSectionHtml)->not->toContain('Battente (pag.');
+});
+
 test('a sola lettura user (read-only) can still export the timone pdf', function () {
     $issue = reorderableIssue();
     $user = User::factory()->create(['role' => UserRole::SolaLettura]);

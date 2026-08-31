@@ -2,6 +2,8 @@
 
 Guida per chi lavora sul timone ogni giorno: redattori, commerciali, grafici. Organizzata per "voglio fare X → ecco come": cerca la sezione che ti serve, non serve leggerlo tutto di fila.
 
+Questo stesso testo è consultabile anche **dentro l'applicazione**, senza uscire dal browser: voce **"📖 Documentazione"** nel menu in alto, visibile a qualunque utente loggato (nessun ruolo specifico richiesto — è materiale di aiuto, non un'azione che modifica dati).
+
 Per avviare l'applicazione la prima volta vedi invece [README.md](README.md).
 
 ---
@@ -37,8 +39,8 @@ Clicca su un numero per aprirne il timone.
 La schermata del timone ha tre modalità, selezionabili in alto a destra:
 
 - **Griglia** — una card per pagina, la vista principale per lavorare.
-- **Doppia pagina** — le pagine affiancate come si vedrebbero sfogliando la rivista stampata (copertina da sola, poi coppie). Puoi assegnare/rimuovere contenuti, cambiare lo stato pagina e trascinare per riordinare esattamente come in Griglia: ogni pagina resta trascinabile singolarmente anche dentro una coppia, sia per spostarla fuori sia per inserirne un'altra al suo posto (la coppia si ricompone da sola in base al nuovo ordine).
-- **Lista** — una riga per pagina, utile per scorrere velocemente un numero lungo.
+- **Doppia pagina** — le pagine affiancate come si vedrebbero sfogliando la rivista stampata (copertina da sola, poi coppie). La pagina 1 è sempre allineata a destra (nessuna pagina sinistra la precede) e, se il numero ha un totale pagine pari, l'ultima resta da sola allineata a sinistra — coerente con la convenzione editoriale di stampa. Puoi assegnare/rimuovere contenuti, cambiare lo stato pagina e trascinare per riordinare esattamente come in Griglia: ogni pagina resta trascinabile singolarmente anche dentro una coppia, sia per spostarla fuori sia per inserirne un'altra al suo posto (la coppia si ricompone da sola in base al nuovo ordine).
+- **Lista** — una riga per pagina, utile per scorrere velocemente un numero lungo. Ogni riga mostra anche un'etichetta **DX**/**SX**: pagina destra o sinistra secondo la convenzione di stampa (pagina 1 sempre a destra, poi alternanza) — la stessa usata per affiancare le pagine in Doppia pagina.
 
 **Ogni card/riga mostra:**
 
@@ -67,7 +69,7 @@ Tutto si aggiorna da solo in tempo reale se un collega è collegato sullo stesso
 
 ## 4. Spostare le pagine
 
-**Con il mouse (tutte e tre le modalità):** trascina una pagina prendendola dalla maniglia ⠿ (il numero di posizione) e rilasciala nel punto desiderato. Le altre pagine si spostano di conseguenza — tutte le pagine intermedie slittano per fare spazio. Con "☑️ Selezione multipla" attiva e più pagine selezionate, trascinarne una sposta **l'intera selezione insieme** come blocco unico — vedi [§6bis](#6bis-selezione-multipla-e-azioni-di-massa).
+**Con il mouse (tutte e tre le modalità):** trascina una pagina prendendola dalla maniglia ⠿ (il numero di posizione) e rilasciala nel punto desiderato. Le altre pagine si spostano di conseguenza — tutte le pagine intermedie slittano per fare spazio. Con "☑️ Selezione multipla" attiva e più pagine selezionate, trascinarne una sposta **l'intera selezione insieme** come blocco unico — vedi [§6bis](#6bis-selezione-multipla-e-azioni-di-massa). Se una pagina fa parte di un **gruppo collegato** (🔗), trascinarla sposta automaticamente tutto il gruppo insieme, anche senza selezione multipla — vedi [§6ter](#6ter-collegare-pagine-in-un-gruppo-permanente).
 
 **Da tastiera (tutte e tre le modalità):** clicca una volta sulla card/riga per selezionarla (o raggiungila con Tab), poi:
 - in **Griglia**/**Doppia pagina**: freccia sinistra/destra;
@@ -100,11 +102,17 @@ Per sbloccarla, clic sulla stessa icona (ora 🔒): torna 🔓 e la pagina è di
 - **Articolo**: titolo, rubrica (opzionale), autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
 - **Pubblicità**: titolo, rubrica, cliente, agenzia (opzionale), formato (l'intero listino ufficiale: pagina intera, mezza pagina orizzontale/verticale, 1/3, 1/4, 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale — mostra già accanto la percentuale di pagina che occuperebbe di default), percentuale manuale (opzionale — la usa al posto di quella del formato se la compili), **pagina preferita (opzionale)** — solo un promemoria di dove piazzarla, non assegna nulla da sola, visibile nel pannello "Pubblicità prenotate" ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), stato commerciale, note commerciali. Per **battente copertina** e **doppia pagina** (che occupano due pagine affiancate): crea il contenuto, assegnalo alla prima pagina, poi usa "↗" per estenderlo anche alla pagina successiva — ciascuna riceve il 100% come se fosse un'inserzione a piena pagina a sé.
 
+**Rubrica**: accanto al menu a tendina ci sono due bottoni — **➕** crea una nuova rubrica (nome, poi "Crea": viene selezionata subito), **✏️** rinomina quella attualmente selezionata. Il nome deve essere unico all'interno della rivista.
+
+**Allegare un file (opzionale)**: nel form di creazione, campo "Allega PDF/immagine" — un PDF o un'immagine (JPG/PNG/WEBP, fino a 20MB). L'anteprima si genera da sola in pochi secondi (stessa elaborazione in coda già usata per i PDF di pagina) e compare al posto dell'iconcina 📄/📢 sul chip del contenuto nel pannello "Contenuti da assegnare", senza bisogno di ricaricare la pagina. A differenza del PDF caricato su una pagina ([§7](#7-caricare-e-vedere-un-pdf)), questo file è legato al singolo contenuto: su una pagina con più contenuti (es. metà pubblicità + metà articolo), ciascuno ha il proprio allegato distinto.
+
 Una pubblicità creata ma non ancora assegnata a nessuna pagina è considerata **"prenotata"**: resta comunque conteggiata nel carico pubblicitario del cruscotto ([§8](#8-leggere-il-cruscotto-pubblicitario)) e gestibile dal pannello dedicato ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)).
 
 Il contenuto appena creato compare subito nel pannello **"Contenuti da assegnare"**, pronto per essere trascinato su una pagina.
 
 Sopra la griglia c'è appunto il pannello **"Contenuti da assegnare"**: tutti gli articoli e le pubblicità di questo numero non ancora messi su una pagina. Se l'elenco è lungo, usa il campo **"Cerca per titolo..."** accanto al titolo del pannello per restringerlo.
+
+**Archiviare o eliminare un contenuto non assegnato**: passando il mouse su un chip nel pannello "Contenuti da assegnare" compaiono due icone — **🗄️ Archivia** (lo nasconde dal pannello, ma resta nel database: recuperabile in qualsiasi momento dalla sezione "▸ Contenuti archiviati" subito sotto, bottone **↩️** per ripristinarlo) e **🗑️ Elimina** (cancellazione **definitiva**, non recuperabile — chiede doppia conferma). Un contenuto già assegnato a una pagina non può essere né archiviato né eliminato da qui: va prima rimosso dalla pagina ("✕" sulla card).
 
 **Per assegnare:** trascina un contenuto dal pannello sopra una pagina libera (o con spazio residuo). La percentuale di pagina occupata viene calcolata da sola:
 - un articolo prende tutto lo spazio libero rimasto sulla pagina;
@@ -151,6 +159,20 @@ Le pagine bloccate nella selezione, e — solo quando lo stato scelto è «Ok st
 
 Disattivando **☑️ Selezione multipla** la selezione corrente viene azzerata.
 
+## 6ter. Collegare pagine in un gruppo permanente
+
+Se un articolo o un'inserzione occupa sempre le stesse pagine (es. pagina 5 e pagina 6 di uno stesso articolo), puoi **collegarle in un gruppo**: da quel momento, trascinandone anche una sola, tutte le altre del gruppo si spostano insieme — senza dover rifare la selezione multipla ogni volta come al punto 6bis.
+
+**Per collegare**: attiva **☑️ Selezione multipla**, seleziona almeno 2 pagine, poi clicca **🔗 Collega selezionate** nella barra che compare. Le pagine del gruppo mostrano subito un contorno colorato e un'etichetta **🔗** (colore diverso per ogni gruppo diverso nello stesso numero, così più gruppi si distinguono a colpo d'occhio).
+
+**Per scollegare**: clicca l'etichetta **🔗** su una qualunque pagina del gruppo — l'intero gruppo viene sciolto (non solo quella pagina: un gruppo con una sola pagina non avrebbe senso). Il gruppo torna a essere pagine indipendenti, spostabili singolarmente come sempre.
+
+**Da sapere**:
+- Una pagina già bloccata (🔒) o già in un altro gruppo non può essere collegata: sblocca/scollega prima.
+- Se una pagina del gruppo è bloccata, l'intero gruppo non si può né spostare né scollegare finché non la sblocchi.
+- Se selezioni per un'azione di massa (punto 6bis) solo alcune pagine di un gruppo già esistente, le altre pagine del gruppo vengono **incluse automaticamente** nello spostamento — un gruppo non si spacca mai a metà.
+- Funziona in tutte e tre le modalità di vista (Griglia, Doppia pagina, Lista).
+
 ---
 
 ## 7. Caricare e vedere un PDF
@@ -169,7 +191,7 @@ Ogni nuovo caricamento sulla stessa pagina sostituisce quello mostrato in antepr
 
 **PDF con più pagine interne**: se il file che carichi ha più di una pagina (es. un PDF di 3 pagine per un'inserzione su tre pagine consecutive), il sistema propone di occupare automaticamente le pagine successive del timone a partire da quella su cui hai caricato. Prima di scrivere qualsiasi cosa, **si apre una finestra di conferma** (visibile sempre, anche se hai scrollato lontano dalla pagina su cui hai caricato) con un riepilogo:
 - se nessuna delle pagine coinvolte ha già un PDF, un solo bottone **"Occupa le N pagine"** conferma tutto in un colpo;
-- se una o più pagine hanno già un PDF caricato, puoi scegliere se **"Salta le pagine in conflitto"** (occupa solo quelle libere, lascia intatte le altre) o **"Sovrascrivi le pagine in conflitto"** (aggiunge comunque il nuovo PDF anche lì, senza cancellare lo storico di quello precedente — resta consultabile dall'icona 🕐);
+- se una o più pagine hanno già un PDF caricato, puoi scegliere tra tre opzioni: **"Salta le pagine in conflitto"** (occupa solo quelle libere, lascia intatte le altre), **"Sovrascrivi le pagine in conflitto"** (aggiunge comunque il nuovo PDF anche lì, senza cancellare lo storico di quello precedente — resta consultabile dall'icona 🕐), oppure **"↪️ Sposta le pagine esistenti dopo"** — non perde nulla: contenuto, note e PDF già presenti sulle pagine in conflitto vengono spostati su nuove pagine bianche inserite subito dopo, e il numero di pagine totali si allunga automaticamente se serve spazio;
 - **"Annulla il caricamento"** interrompe tutto senza scrivere nulla.
 
 Mentre le anteprime si generano una alla volta (per questo o per qualunque altro caricamento in corso sul numero), compare in cima un banner **"🖼️ N pagine in elaborazione — circa Xs rimanenti in totale"**: il conteggio e la stima sono calcolati dal sistema in tempo reale sulla base di tutte le pagine del numero ancora in lavorazione, non solo quelle appena caricate — sparisce da solo appena non resta più nessuna pagina in coda, oppure puoi chiuderlo prima con la ✕ (ricompare da solo al prossimo caricamento, se c'è ancora lavoro in corso). Se aggiorni la pagina del browser mentre delle miniature sono ancora in lavorazione, sia questo banner sia le stime sulle singole card restano visibili — riflettono sempre lo stato reale, non si perdono con un refresh.
@@ -226,6 +248,22 @@ Solo dopo aver visto questo riepilogo puoi cliccare **"Conferma rimozione defini
 
 ---
 
+## 9bis. Copertina e battente
+
+Riquadro **"📘 Copertina & battente"** in cima alla pagina del timone, prima della griglia principale — una vista separata e sempre a colpo d'occhio di copertina, battente e quarta di copertina, distinta dalle pagine "interne".
+
+La **prima pagina** del numero è sempre "Copertina (1ª)" e l'**ultima** è sempre "Quarta di copertina": il sistema li tiene aggiornati da solo, anche se trascini le pagine o cambi il numero totale di pagine — non serve (e non si può) assegnarli a mano.
+
+**Seconda/terza di copertina o battente**: dal riquadro, scegli una pagina interna e il ruolo da assegnarle (form in fondo al pannello). La pagina prende subito un'etichetta 📘 visibile anche nella griglia/lista principale, per ricordare che è gestita da qui. Per togliere il ruolo, clicca "✕ rimuovi" accanto alla pagina nel riquadro.
+
+Una pagina bloccata (🔒) non può ricevere né perdere un ruolo finché non la sblocchi.
+
+**Il battente conta nel totale pagine?** Dipende dalla rivista: quando la crei ([§12](#12-creare-una-rivista-un-numero-duplicare-la-struttura)) puoi spuntare "Il battente conta nel totale pagine dichiarato del numero" — se non la spunti (default), il numero di pagine mostrato nell'intestazione del numero esclude il battente dal conteggio, pur restando una pagina vera e propria nel timone (non sparisce, non è escludibile dall'export).
+
+**Nell'esportazione PDF** (bottone "📄 Esporta PDF", [§3](#3-leggere-la-griglia-del-timone)): copertina, battente e quarta di copertina compaiono in una sezione a sé, prima della griglia delle pagine interne.
+
+---
+
 ## 10. Consultare lo storico spostamenti e la cronologia generale
 
 Bottone **"📜 Storico spostamenti"** nella barra del timone: apre un elenco degli ultimi 50 spostamenti di pagina fatti su questo numero, con chi li ha fatti, da quale posizione a quale, e quando.
@@ -247,11 +285,23 @@ Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone 
 
 ## 12. Creare una rivista / un numero, duplicare la struttura
 
-**Nuova rivista** (solo Admin): dal riquadro "Le tue riviste", bottone "+ Nuova rivista". Nome, periodicità, colore identificativo, soglia di allarme pubblicitario (opzionale), note.
+**Nuova rivista** (solo Admin): dal riquadro "Le tue riviste", bottone "+ Nuova rivista". Nome, periodicità, colore identificativo, soglia di allarme pubblicitario (opzionale), se il battente conta nel totale pagine dichiarato (vedi [§9bis](#9bis-copertina-e-battente) — default: no), note.
 
-**Nuovo numero**: dalla pagina di una rivista, bottone "+ Nuovo numero" (visibile ad Admin e Redattori con accesso a quella rivista). Titolo, data di uscita (opzionale), numero totale di pagine, note.
+**Nuovo numero**: dalla pagina di una rivista, bottone "+ Nuovo numero" (visibile ad Admin e Redattori con accesso a quella rivista). Titolo, data di uscita (opzionale), **scadenza stampa** (opzionale — vedi [§12bis](#12bis-modificare-una-rivista-redattore-di-riferimento-e-scadenza-stampa)), numero totale di pagine, note.
 
 **Duplicare la struttura da un numero precedente**: nello stesso form di creazione numero, se la rivista ha già altri numeri, trovi un menu "Duplica struttura da un numero precedente". Selezionandone uno, il numero di pagine si pre-compila con quello del numero scelto (resta modificabile) e — dopo la creazione — ogni pagina eredita lo stesso tipo (editoriale/pubblicità/mista/bianca) della pagina corrispondente del numero di origine. **Non vengono copiati**: i contenuti assegnati, gli stati delle pagine, i PDF caricati — solo lo schema di che tipo di pagina è cosa, per non ripartire ogni volta da un timone completamente vuoto.
+
+---
+
+## 12bis. Modificare una rivista, redattore di riferimento e scadenza stampa
+
+**Modificare una rivista** (solo Admin): dalla pagina della rivista, bottone "Modifica rivista". Stessi campi della creazione (nome, periodicità, colore, soglia allarme pubblicitario, se il battente conta nel totale, note), più un campo nuovo:
+
+- **Redattore di riferimento**: l'utente responsabile di quella rivista. Assegnarlo gli dà automaticamente accesso alla rivista (se non ce l'aveva già) — non serve anche aggiungerlo da [§13](#13-gestire-gli-utenti-solo-admin). Riceve le mail di sollecito quando la scadenza stampa di un numero si avvicina (vedi sotto). Cambiare redattore non toglie l'accesso al precedente: se serve, va rimosso a mano da §13.
+
+**Scadenza stampa di un numero**: si imposta in creazione ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)) o, per un numero già esistente, con il campo **"📅 Scadenza stampa"** nella barra in alto sopra il timone. Quando la scadenza si avvicina (di default 3 giorni prima — l'esatto preavviso è un'impostazione tecnica dell'installazione, non modificabile dall'interfaccia), il **redattore di riferimento della rivista** riceve automaticamente una mail con il numero, la rivista e un link diretto al timone. La mail parte **una sola volta per scadenza**: se la sposti, può ripartire per la nuova data; se il redattore l'ha già ricevuta per la scadenza attuale, vedrai una ✉️ accanto al campo data.
+
+Se una rivista non ha un redattore assegnato, nessuna mail viene inviata per i suoi numeri finché non gliene assegni uno.
 
 ---
 

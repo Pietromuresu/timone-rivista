@@ -18,6 +18,8 @@ class Create extends Component
 
     public ?string $issue_date = '';
 
+    public ?string $print_deadline_at = '';
+
     public int $total_pages = 32;
 
     public string $notes = '';
@@ -61,9 +63,14 @@ class Create extends Component
             $this->issue_date = null;
         }
 
+        if ($this->print_deadline_at === '') {
+            $this->print_deadline_at = null;
+        }
+
         $validated = $this->validate([
             'title' => 'required|string|max:180',
             'issue_date' => 'nullable|date',
+            'print_deadline_at' => 'nullable|date',
             'total_pages' => 'required|integer|min:0|max:2000',
             'notes' => 'nullable|string|max:2000',
         ]);
@@ -72,6 +79,7 @@ class Create extends Component
             'magazine_id' => $this->magazine->id,
             'title' => $validated['title'],
             'issue_date' => $validated['issue_date'],
+            'print_deadline_at' => $validated['print_deadline_at'],
             'total_pages' => $validated['total_pages'],
             'notes' => $validated['notes'],
             'status' => IssueStatus::Bozza,

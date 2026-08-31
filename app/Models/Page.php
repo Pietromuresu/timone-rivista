@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\PageContentType;
+use App\Enums\PageRole;
 use App\Enums\PageStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +23,8 @@ class Page extends Model
         'notes',
         'locked_at',
         'locked_by',
+        'page_group_id',
+        'role',
     ];
 
     protected function casts(): array
@@ -31,6 +34,7 @@ class Page extends Model
             'content_type' => PageContentType::class,
             'status' => PageStatus::class,
             'locked_at' => 'datetime',
+            'role' => PageRole::class,
         ];
     }
 
@@ -42,6 +46,15 @@ class Page extends Model
     public function lockedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'locked_by');
+    }
+
+    /**
+     * Gruppo di pagine "collegate" (Fase 2.3): null se la pagina non è
+     * collegata a nessuna. Vedi PageGroup e App\Support\PageGroupResolver.
+     */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(PageGroup::class, 'page_group_id');
     }
 
     /**

@@ -144,6 +144,32 @@ test('updating a content percentage within the page free space is applied', func
     Event::assertDispatched(ContentAssigned::class, fn (ContentAssigned $event) => $event->contentId === $a->id && $event->percentage === 30.0);
 });
 
+test('a non-advertisement content accepts a genuinely fractional percentage, not just whole numbers (Fase 3.3)', function () {
+    // Verifica esplicita (Fase 3.3 del prompt "Batch modifiche": "estendi
+    // la stessa logica decimale già usata per gli spazi pubblicitari
+    // anche ai contenuti generici") che il meccanismo è GIÀ generico: non
+    // esiste alcuna distinzione per tipo di contenuto in
+    // updateContentPercentage()/PagePercentageAllocator, solo i test
+    // esistenti usavano finora percentuali intere (50/60/30), mai una
+    // frazione — questo test chiude quel dubbio con un numero vero.
+    Event::fake([ContentAssigned::class]);
+
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 1)->first();
+
+    $article = Content::factory()->article()->create(['issue_id' => $issue->id]);
+    $page->contents()->attach($article->id, ['occupied_percentage' => 100]);
+
+    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->call('updateContentPercentage', $page->id, $article->id, 33.33)
+        ->assertHasNoErrors();
+
+    $pivot = $page->contents()->where('content_id', $article->id)->first()->pivot;
+
+    expect((float) $pivot->occupied_percentage)->toBe(33.33);
+});
+
 test('unassigning a content removes it from the page and returns it to the unassigned pool', function () {
     Event::fake([ContentUnassigned::class]);
 

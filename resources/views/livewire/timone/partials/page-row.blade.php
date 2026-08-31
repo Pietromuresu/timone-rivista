@@ -12,6 +12,14 @@
     $thumbnailEstimate = $latestFile && in_array($latestFile->thumbnail_status, [\App\Enums\ThumbnailStatus::Pending, \App\Enums\ThumbnailStatus::Processing], true)
         ? \App\Support\ThumbnailProgressEstimator::forPageFile($latestFile, $avgThumbnailSeconds ?? null)
         : null;
+    // Stessa convenzione già usata da App\Support\PageSpreadBuilder per la
+    // vista doppia pagina (pagina 1 sempre a destra, poi alternanza): non
+    // va reinventata qui, solo espressa come etichetta testuale per chi
+    // scorre la lista senza vedere le aperture affiancate.
+    $pageSide = $page->position % 2 === 1 ? 'DX' : 'SX';
+    // Fase 2.3: pagine "collegate" in un gruppo — vedi App\Models\PageGroup,
+    // $page->group già eager-loaded da Grid::render().
+    $group = $page->group;
 @endphp
 <li
     wire:key="page-{{ $page->id }}"
@@ -68,6 +76,30 @@
             :title="$store.pagePresence.editorFor({{ $page->id }}).name + ' sta modificando questa pagina'"
         ></span>
     </template>
+
+    <span
+        class="w-7 shrink-0 text-center text-[10px] font-semibold rounded px-1 py-0.5 {{ $pageSide === 'DX' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300' }}"
+        title="{{ $pageSide === 'DX' ? 'Pagina destra' : 'Pagina sinistra' }}"
+    >{{ $pageSide }}</span>
+
+    {{-- Fase 3.1: stesso ruolo mostrato nel pannello "Copertina & battente" a inizio pagina — qui solo un promemoria compatto, la gestione vera è là. --}}
+    @if ($page->role->isCoverSection())
+        <span
+            class="shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300"
+            title="{{ $page->role->label() }} — gestita dal pannello Copertina &amp; battente"
+        >📘 {{ $page->role->label() }}</span>
+    @endif
+
+    @if ($group)
+        <button
+            type="button"
+            wire:click="unlinkGroup({{ $page->id }})"
+            x-on:click.stop
+            @unless ($locked) title="Pagina collegata — clic per scollegare l'intero gruppo" @else title="Pagina collegata (bloccata)" @endif
+            class="shrink-0 text-[10px] font-semibold rounded px-1 py-0.5 border {{ $group->badgeClasses() }}"
+            @if ($locked) disabled @endif
+        >🔗</button>
+    @endif
 
     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0 {{ $page->content_type->colorClasses() }}">
         {{ $page->content_type->label() }}

@@ -51,6 +51,20 @@ class TimoneExportController extends Controller
             $pages = $pages->reject(fn ($page) => in_array($page->status, $approved, true))->values();
         }
 
+        // Fase 3.1: stessa collezione $pages già caricata sopra, solo
+        // ripartita per il template — nessuna query aggiuntiva, coerente
+        // col resto di questo controller (un'unica query pagine per tutto
+        // l'export, filtri applicati sulla Collection in memoria).
+        $coverPages = $pages->filter(fn ($page) => $page->role->isCoverSection())
+            ->sortBy(fn ($page) => array_search($page->role, [
+                \App\Enums\PageRole::Copertina1,
+                \App\Enums\PageRole::Battente,
+                \App\Enums\PageRole::Copertina2,
+                \App\Enums\PageRole::Copertina3,
+                \App\Enums\PageRole::Copertina4,
+            ], true));
+        $internalPages = $pages->reject(fn ($page) => $page->role->isCoverSection())->values();
+
         $filename = Str::slug("timone-{$magazine->slug}-{$issue->title}").'.pdf';
 
         // Griglia semplice a righe (8 pagine per riga, come la modalità
@@ -60,7 +74,8 @@ class TimoneExportController extends Controller
         // colpo d'occhio, non la disposizione esatta di stampa.
         return Pdf::loadView('exports.timone', [
             'issue' => $issue,
-            'pageRows' => $pages->chunk(8),
+            'coverPages' => $coverPages,
+            'pageRows' => $internalPages->chunk(8),
             'totalPages' => $pages->count(),
             'withThumbnails' => $request->boolean('withThumbnails'),
             'filtersApplied' => $request->boolean('onlyAds') || $request->boolean('onlyUnapproved'),

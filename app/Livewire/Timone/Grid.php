@@ -9,6 +9,7 @@ use App\Enums\PageContentType;
 use App\Events\ContentAssigned;
 use App\Events\ContentUnassigned;
 use App\Events\IssuePageCountUpdated;
+use App\Events\PageGroupsChanged;
 use App\Events\PageLocked;
 use App\Events\PageMoved;
 use App\Events\PagesBlockMoved;
@@ -20,18 +21,22 @@ use App\Models\Content;
 use App\Models\Issue;
 use App\Models\Page;
 use App\Models\PageFile;
+use App\Models\PageGroup;
 use App\Models\PageReorderLog;
 use App\Support\ActivityLogger;
 use App\Support\AdLoadCalculator;
 use App\Support\AutomaticChecks;
 use App\Support\PageContentTypeResolver;
 use App\Support\PageCountResizer;
+use App\Support\PageGroupResolver;
 use App\Support\PagePercentageAllocator;
 use App\Support\PageReorderer;
+use App\Support\PageRoleAssigner;
 use App\Support\PageSpreadBuilder;
 use App\Support\PdfPageMeasurer;
 use App\Support\ThumbnailProgressEstimator;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -141,6 +146,22 @@ class Grid extends Component
      * numero e aveva bisogno di un modo per restringerla.
      */
     public string $contentSearch = '';
+
+    /**
+     * Fase 4.3 — pannello "contenuti archiviati" dentro il pannello
+     * "contenuti da assegnare" esistente (stesso pattern chiuso-di-default
+     * di showReorderLog/showPageCountEditor: la query gira solo quando
+     * aperto, per non appesantire ogni render/poll).
+     */
+    public bool $showArchivedContents = false;
+
+    /**
+     * Id del contenuto non assegnato per cui è in corso la conferma di
+     * eliminazione definitiva — stesso schema "due passaggi" già usato da
+     * resizePages()/PageCountResizer (Punto 6): il primo click mostra
+     * l'avviso, un secondo click esplicito conferma davvero.
+     */
+    public ?int $confirmDeleteContentId = null;
 
     /**
      * Modalità scambio (spec §6.2/§6.7): alternativa al drag&drop, utile
@@ -299,6 +320,12 @@ class Grid extends Component
             $this->issue->update(['total_pages' => $newTotal]);
         });
 
+        // Fase 3.1: un resize può spostare quale pagina fisica è la prima
+        // o l'ultima (es. inserimento in posizione 1, o rimozione della
+        // vecchia Copertina4 in coda) — va ricalcolato subito, non lasciato
+        // disallineato fino al prossimo accesso al pannello Copertina.
+        PageRoleAssigner::syncCoverRoles($this->issue);
+
         ActivityLogger::log(
             issue: $this->issue,
             entityType: 'Issue',
@@ -335,6 +362,23 @@ class Grid extends Component
         $insertBefore = $this->insertMode === 'position' && $requestedPosition !== null
             ? max(1, min($requestedPosition, $currentTotal + 1))
             : $currentTotal + 1;
+
+        $this->makeRoomForPages($insertBefore, $countToAdd, $currentTotal);
+    }
+
+    /**
+     * Fa spazio a $countToAdd pagine bianche a partire da $insertBefore,
+     * traslando in avanti quelle già presenti da quella posizione in poi —
+     * estratta da insertPages() (pannello "pagine totali") perché la Fase
+     * 3.2 (terza opzione di conflitto upload, "sposta le pagine esistenti
+     * dopo") ha bisogno esattamente della stessa meccanica, non di una
+     * copia parallela che potrebbe divergere.
+     */
+    private function makeRoomForPages(int $insertBefore, int $countToAdd, int $currentTotal): void
+    {
+        if ($countToAdd < 1) {
+            return;
+        }
 
         if ($insertBefore <= $currentTotal) {
             // Stessa tecnica a offset temporaneo di Grid::movePage(), per
@@ -406,6 +450,52 @@ class Grid extends Component
         $this->logAdThresholdChange($oldThreshold, $threshold);
     }
 
+    /**
+     * Scadenza stampa dell'issue (Fase 5.1) — modificabile qui, non solo in
+     * creazione (Issues\Create), perché un'issue esistente deve poter
+     * spostare la propria scadenza. Azzera sempre deadline_reminder_sent_at:
+     * una scadenza nuova/spostata deve poter far scattare un nuovo
+     * sollecito, altrimenti la deduplica di DeadlineReminderChecker la
+     * bloccherebbe per sempre pensando fosse già stata avvisata per QUESTA
+     * data (il campo tiene traccia di "avvisato per la scadenza attuale",
+     * non di "mai più avvisare questa issue").
+     */
+    public function updatePrintDeadline(?string $value): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $oldDeadline = $this->issue->print_deadline_at;
+
+        if ($value === null || trim($value) === '') {
+            $this->issue->update(['print_deadline_at' => null, 'deadline_reminder_sent_at' => null]);
+            $this->logPrintDeadlineChange($oldDeadline, null);
+
+            return;
+        }
+
+        try {
+            $newDeadline = Carbon::parse($value);
+        } catch (\Exception) {
+            return;
+        }
+
+        $this->issue->update(['print_deadline_at' => $newDeadline, 'deadline_reminder_sent_at' => null]);
+        $this->logPrintDeadlineChange($oldDeadline, $newDeadline);
+    }
+
+    private function logPrintDeadlineChange(?Carbon $old, ?Carbon $new): void
+    {
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Issue',
+            entityId: $this->issue->id,
+            action: 'issue.print_deadline_changed',
+            description: 'Scadenza stampa cambiata da '.($old?->toDateString() ?? 'nessuna').' a '.($new?->toDateString() ?? 'nessuna'),
+            old: ['print_deadline_at' => $old?->toDateString()],
+            new: ['print_deadline_at' => $new?->toDateString()],
+        );
+    }
+
     private function logAdThresholdChange(?float $old, ?float $new): void
     {
         ActivityLogger::log(
@@ -423,7 +513,44 @@ class Grid extends Component
     {
         $this->authorize('update', $this->issue);
 
-        if ($this->blockIfLocked(Page::find($pageId), 'spostata')) {
+        $page = Page::find($pageId);
+
+        if ($page === null || $page->issue_id !== $this->issue->id) {
+            return;
+        }
+
+        // Fase 2.3: se la pagina trascinata fa parte di un gruppo
+        // collegato, l'intero gruppo si sposta insieme come blocco unico —
+        // stesso identico meccanismo di moveSelectedBlock() (riusato via
+        // moveBlockOfPages(), mai duplicato), senza che l'utente debba
+        // rifare la selezione multipla ogni volta. Guardia sulle pagine
+        // bloccate diversa da blockIfLocked() sotto: qui, come in
+        // moveSelectedBlock(), una sola pagina bloccata nel gruppo rifiuta
+        // l'intero spostamento.
+        if ($page->page_group_id !== null) {
+            $groupPages = Page::where('issue_id', $this->issue->id)
+                ->where('page_group_id', $page->page_group_id)
+                ->get();
+
+            if ($groupPages->count() > 1) {
+                if ($groupPages->contains(fn (Page $p) => $p->isLocked())) {
+                    $this->addError('locked', 'Una pagina del gruppo collegato è bloccata: sbloccala prima di spostare il gruppo.');
+
+                    return;
+                }
+
+                $this->moveBlockOfPages(
+                    $groupPages->pluck('id')->all(),
+                    $pageId,
+                    $toPosition,
+                    $groupPages->count().' pagine spostate insieme (gruppo collegato)',
+                );
+
+                return;
+            }
+        }
+
+        if ($this->blockIfLocked($page, 'spostata')) {
             return;
         }
 
@@ -490,6 +617,12 @@ class Grid extends Component
         if ($applied === null) {
             return;
         }
+
+        // Fase 3.1: Copertina1/Copertina4 sono definite dalla posizione
+        // fisica (prima/ultima pagina), non da un id fisso — un drag&drop
+        // normale (non solo un resize) può spostare quale pagina occupa
+        // quegli estremi, va risincronizzato subito.
+        PageRoleAssigner::syncCoverRoles($this->issue);
 
         ActivityLogger::log(
             issue: $this->issue,
@@ -691,7 +824,21 @@ class Grid extends Component
             return;
         }
 
-        $lockedSelected = $selected->filter(fn (Page $page) => $page->isLocked());
+        // Fase 2.3: se una pagina selezionata fa parte di un gruppo
+        // collegato ma il resto del gruppo non è stato incluso nella
+        // selezione esplicita, il gruppo si estende automaticamente —
+        // scelta presa esplicitamente (vedi HANDOFF.md, "Decisioni
+        // architetturali da ricordare"): mai un'operazione bloccata o
+        // silenziosamente parziale che spaccherebbe un gruppo.
+        $groupIdByPageId = Page::where('issue_id', $this->issue->id)->pluck('page_group_id', 'id')->all();
+        $expandedIds = PageGroupResolver::expand($groupIdByPageId, $selected->pluck('id')->all());
+        $groupExpanded = count($expandedIds) !== $selected->count();
+
+        $blockPages = $groupExpanded
+            ? Page::whereIn('id', $expandedIds)->where('issue_id', $this->issue->id)->get()
+            : $selected;
+
+        $lockedSelected = $blockPages->filter(fn (Page $page) => $page->isLocked());
 
         if ($lockedSelected->isNotEmpty()) {
             $positions = $lockedSelected->pluck('position')->sort()->values()->implode(', ');
@@ -702,8 +849,27 @@ class Grid extends Component
             return;
         }
 
-        $blockPageIds = $selected->pluck('id')->all();
+        $blockPageIds = $blockPages->pluck('id')->all();
 
+        $this->moveBlockOfPages(
+            $blockPageIds,
+            $anchorPageId,
+            $toPosition,
+            count($blockPageIds).' pagine spostate insieme come blocco unico'
+                .($groupExpanded ? ' (selezione estesa automaticamente a un gruppo collegato)' : ''),
+        );
+    }
+
+    /**
+     * Nucleo transazionale condiviso tra moveSelectedBlock() (selezione
+     * multipla esplicita) e il redirect di movePage() quando la pagina
+     * trascinata fa parte di un gruppo collegato (Fase 2.3) — stesso
+     * algoritmo (PageReorderer::moveBlock()), stesso lock ottimistico su
+     * reorder_version, un solo evento PagesBlockMoved per l'intera
+     * operazione: evitare che le due chiamate finiscano per divergere.
+     */
+    private function moveBlockOfPages(array $blockPageIds, int $anchorPageId, int $toPosition, string $activityDescription): void
+    {
         $conflict = false;
         $applied = null;
 
@@ -749,12 +915,16 @@ class Grid extends Component
             return;
         }
 
+        // Fase 3.1: stesso motivo del ramo a pagina singola in movePage()
+        // sopra — un block-move può spostare l'estremo fisico del timone.
+        PageRoleAssigner::syncCoverRoles($this->issue);
+
         ActivityLogger::log(
             issue: $this->issue,
             entityType: 'Page',
             entityId: $anchorPageId,
             action: 'page.block_moved',
-            description: count($blockPageIds).' pagine spostate insieme come blocco unico',
+            description: $activityDescription,
             new: ['pageIds' => $blockPageIds, 'toPosition' => $toPosition],
         );
 
@@ -773,6 +943,107 @@ class Grid extends Component
     public function onPagesBlockMoved(): void
     {
         $this->reorderVersion = $this->issue->fresh()->reorder_version;
+    }
+
+    /**
+     * Collega la selezione multipla corrente in un gruppo permanente (Fase
+     * 2.3): da qui in avanti trascinare anche una sola pagina del gruppo
+     * sposta tutte le altre insieme (vedi movePage()), senza dover rifare
+     * la selezione multipla ogni volta.
+     */
+    public function linkSelectedPages(): void
+    {
+        $this->authorize('update', $this->issue);
+
+        if (! $this->selectionMode || count($this->selectedPageIds) < 2) {
+            return;
+        }
+
+        $pages = Page::whereIn('id', $this->selectedPageIds)
+            ->where('issue_id', $this->issue->id)
+            ->get();
+
+        if ($pages->count() < 2) {
+            return;
+        }
+
+        if ($pages->contains(fn (Page $page) => $page->isLocked())) {
+            $this->addError('locked', 'Una o più pagine selezionate sono bloccate: sbloccale prima di collegarle in un gruppo.');
+
+            return;
+        }
+
+        // Scelta pragmatica: fondere un gruppo esistente con un altro
+        // aggiungerebbe una casistica ("unione di due gruppi") non richiesta
+        // dalla fase — va scollegato esplicitamente prima con unlinkGroup().
+        if ($pages->contains(fn (Page $page) => $page->page_group_id !== null)) {
+            $this->addError('link', 'Una o più pagine selezionate fanno già parte di un altro gruppo: scollegale prima di crearne uno nuovo.');
+
+            return;
+        }
+
+        $color = PageGroup::PALETTE[PageGroup::where('issue_id', $this->issue->id)->count() % count(PageGroup::PALETTE)];
+        $group = PageGroup::create(['issue_id' => $this->issue->id, 'color' => $color]);
+
+        Page::whereIn('id', $pages->pluck('id'))->update(['page_group_id' => $group->id]);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'PageGroup',
+            entityId: $group->id,
+            action: 'page_group.linked',
+            description: $pages->count().' pagine collegate in un gruppo',
+            new: ['pageIds' => $pages->pluck('id')->all()],
+        );
+
+        broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
+    }
+
+    /**
+     * Scollega l'intero gruppo a cui appartiene $pageId, non solo quella
+     * pagina: un gruppo con una sola pagina rimasta non avrebbe senso, quindi
+     * "scollega" dissolve sempre il gruppo per intero (bottone "🔓" sul
+     * badge del gruppo, non sulla singola pagina).
+     */
+    public function unlinkGroup(int $pageId): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $page = Page::find($pageId);
+
+        if ($page === null || $page->issue_id !== $this->issue->id || $page->page_group_id === null) {
+            return;
+        }
+
+        $groupId = $page->page_group_id;
+        $groupPages = Page::where('page_group_id', $groupId)->get();
+
+        if ($groupPages->contains(fn (Page $p) => $p->isLocked())) {
+            $this->addError('locked', 'Una pagina del gruppo è bloccata: sbloccala prima di scollegare il gruppo.');
+
+            return;
+        }
+
+        Page::where('page_group_id', $groupId)->update(['page_group_id' => null]);
+        PageGroup::whereKey($groupId)->delete();
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'PageGroup',
+            entityId: $groupId,
+            action: 'page_group.unlinked',
+            description: $groupPages->count().' pagine scollegate dal gruppo',
+            old: ['pageIds' => $groupPages->pluck('id')->all()],
+        );
+
+        broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
+    }
+
+    #[On('echo-presence:issue.{issue.id},PageGroupsChanged')]
+    public function onPageGroupsChanged(): void
+    {
+        // render() ripesca già la relazione 'group' su ogni pagina — corpo
+        // vuoto, stesso pattern di tutti gli altri listener broadcast.
     }
 
     /**
@@ -1104,6 +1375,114 @@ class Grid extends Component
     }
 
     /**
+     * Fase 4.3 — archivia/ripristina/elimina un contenuto NON ASSEGNATO.
+     * Tutti e tre operano solo su contenuti che compaiono nel pannello
+     * "contenuti da assegnare" (whereDoesntHave('pages') già garantito da
+     * Issue::unassignedContents()): un contenuto già su una pagina non è
+     * raggiungibile da questi metodi, niente guardia esplicita in più
+     * necessaria oltre a filtrare la query su quella stessa relazione.
+     */
+    public function archiveContent(int $contentId): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $content = $this->issue->unassignedContents()->find($contentId);
+
+        if ($content === null) {
+            return;
+        }
+
+        $content->update(['archived_at' => now()]);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Content',
+            entityId: $content->id,
+            action: 'content.archived',
+            description: "Contenuto «{$content->title}» archiviato",
+        );
+    }
+
+    public function unarchiveContent(int $contentId): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $content = $this->issue->contents()->whereDoesntHave('pages')->whereNotNull('archived_at')->find($contentId);
+
+        if ($content === null) {
+            return;
+        }
+
+        $content->update(['archived_at' => null]);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Content',
+            entityId: $content->id,
+            action: 'content.unarchived',
+            description: "Contenuto «{$content->title}» ripristinato dall'archivio",
+        );
+    }
+
+    /**
+     * Richiede la conferma (primo passaggio) — non elimina ancora nulla,
+     * solo mostra l'avviso nel pannello. Stesso schema a due passaggi di
+     * resizePages()/PageCountResizer.
+     */
+    public function requestDeleteContent(int $contentId): void
+    {
+        $this->confirmDeleteContentId = $contentId;
+    }
+
+    public function cancelDeleteContent(): void
+    {
+        $this->confirmDeleteContentId = null;
+    }
+
+    /**
+     * Eliminazione DEFINITIVA (secondo passaggio, $confirmed=true dal
+     * bottone "Conferma eliminazione" nel pannello + un confirm() JS in più
+     * come rete di sicurezza, stesso schema di resizePages()). Sicura per
+     * costruzione sul solo cascade footprint di un Content non assegnato:
+     * nessuna riga page_content (non ha pagine, garantito dalla query),
+     * quindi l'unica cascata reale è article/advertisement (cascadeOnDelete
+     * dalla migrazione originale) + i ContentFile eventualmente allegati
+     * (Fase 4.1, stesso cascadeOnDelete) — footprint molto più piccolo del
+     * caso generale "elimina un Content già assegnato/con storico" lasciato
+     * volutamente fuori scope nel Punto 6 (vedi HANDOFF.md, gestione
+     * utenti/ruoli, stessa cautela lì applicata alla cancellazione utenti).
+     */
+    public function deleteUnassignedContent(int $contentId, bool $confirmed = false): void
+    {
+        $this->authorize('update', $this->issue);
+
+        if (! $confirmed) {
+            return;
+        }
+
+        $content = $this->issue->unassignedContents()->find($contentId);
+
+        if ($content === null) {
+            $this->confirmDeleteContentId = null;
+
+            return;
+        }
+
+        $title = $content->title;
+        $content->delete();
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Content',
+            entityId: $contentId,
+            action: 'content.deleted',
+            description: "Contenuto «{$title}» eliminato definitivamente",
+        );
+
+        $this->confirmDeleteContentId = null;
+    }
+
+    /**
      * Guardia condivisa da ogni mutazione che tocca direttamente una
      * pagina (spostamento, scambio, cambio stato, assegnazione contenuti,
      * upload file, eliminazione per riduzione pagine totali) — una pagina
@@ -1351,6 +1730,18 @@ class Grid extends Component
     }
 
     /**
+     * Fase 4.1: stesso pattern di onPageFileUploaded() — corpo vuoto, il
+     * prossimo render() ripesca già `files` su $unassignedContents (appena
+     * eager-loaded sopra), che basta per far comparire la miniatura sul
+     * chip senza refresh (Fase 1.1, riusato qui pari pari).
+     */
+    #[On('echo-presence:issue.{issue.id},ContentFileUploaded')]
+    public function onContentFileUploaded(): void
+    {
+        // idem
+    }
+
+    /**
      * Hook automatico Livewire per la proprietà annidata "pendingUploads.{pageId}":
      * chiamato dopo che Livewire ha già salvato il file nello storage temporaneo.
      */
@@ -1530,13 +1921,13 @@ class Grid extends Component
      * singola pagina invece che sull'intera operazione, coerente con
      * bulkChangeStatus(): il resto del batch va comunque a buon fine).
      *
-     * Nota consapevole (documentata anche in HANDOFF.md): non è
-     * implementata una terza scelta "riposiziona manualmente le pagine in
-     * conflitto altrove" — costruire un vero selettore di riposizionamento
-     * per un'azione così occasionale sarebbe sproporzionato (CLAUDE.md,
-     * regola 3); "salta" ottiene lo stesso risultato non distruttivo,
-     * lasciando all'utente la scelta manuale successiva di dove mettere le
-     * pagine del PDF che non hanno trovato posto.
+     * Correzione a una nota precedente (Fase 3.2, 2026-08-31): questo
+     * commento diceva "non è implementata una terza scelta 'riposiziona le
+     * pagine in conflitto altrove'" — ora lo è, vedi
+     * confirmMultipageUploadWithShift() subito sotto storeUploadedPdf().
+     * La nota originale restava valida finché la scelta pragmatica non
+     * veniva esplicitamente richiesta: la Fase 3.2 del nuovo prompt la
+     * richiede per nome, quindi il calcolo costo/beneficio è cambiato.
      */
     public function confirmMultipageUpload(bool $overwriteConflicts): void
     {
@@ -1587,6 +1978,142 @@ class Grid extends Component
         // a differenza di una proprietà Livewire effimera (bug segnalato
         // dall'utente il 2026-07-31, vedi HANDOFF.md).
         unset($this->pendingUploads[$pageId]);
+    }
+
+    /**
+     * Terza scelta del riepilogo conflitto (Fase 3.2, aggiunta a "salta"/
+     * "sovrascrivi" sopra — **supera** la nota "non implementata" lasciata
+     * nel commento di confirmMultipageUpload() qui sopra: la richiesta
+     * esplicita di questa fase la rende ora la scelta giusta da offrire).
+     * Nessuna perdita: le pagine in conflitto traslano SUBITO DOPO
+     * l'intervallo occupato dal nuovo PDF, invece di essere ignorate o
+     * sovrascritte — stessa tecnica di makeRoomForPages() già usata dal
+     * pannello "pagine totali" (Punto 6), qui applicata a un intervallo
+     * specifico invece che in coda/a una posizione scelta dall'utente.
+     *
+     * Caso limite esplicito dal prompt (l'intervallo supera total_pages):
+     * gestito automaticamente da makeRoomForPages(), che si limita ad
+     * "appendere" quando $insertBefore supera già il totale corrente —
+     * total_pages viene esteso di conseguenza, coerente con "l'aumento è
+     * sempre applicato subito" già scelto per il pannello pagine totali.
+     * $lastTargetPosition non può mai superare total_pages corrente
+     * (multipageTargetPages() interroga solo pagine già esistenti),
+     * quindi il nuovo totale è sempre `$currentTotal + $shiftCount`, mai
+     * un caso con "buco" da riempire.
+     *
+     * Pagina in conflitto bloccata (🔒): mai spostata (stesso principio di
+     * blockIfLocked() usato ovunque) — resta al suo posto, il che lascia
+     * anche il PDF nuovo escluso da quella posizione specifica nel loop di
+     * scrittura finale (già protetto da blockIfLocked() lì) e uno slot
+     * bianco di troppo creato per lei — scelta pragmatica (CLAUDE.md,
+     * regola 3): ricalcolare quante pagine bloccate ci sono PRIMA di
+     * decidere quanti slot creare aggiungerebbe una seconda passata di
+     * query per un caso limite raro, il costo di uno slot bianco in più è
+     * trascurabile e comunque visibile/gestibile a mano dall'utente.
+     */
+    public function confirmMultipageUploadWithShift(): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $conflict = $this->multipageUploadConflict;
+
+        if ($conflict === null) {
+            return;
+        }
+
+        $pageId = $conflict['pageId'];
+        $file = $this->pendingUploads[$pageId] ?? null;
+
+        $this->multipageUploadConflict = null;
+        $this->dispatch('close-modal', 'multipage-upload-conflict');
+
+        if (! $file instanceof TemporaryUploadedFile) {
+            unset($this->pendingUploads[$pageId]);
+
+            return;
+        }
+
+        $conflictingPositions = $conflict['conflictingPositions'];
+        $shiftCount = count($conflictingPositions);
+
+        if ($shiftCount > 0) {
+            $currentTotal = $this->issue->total_pages;
+            $insertBefore = max($conflict['targetPositions']) + 1;
+
+            DB::transaction(function () use ($insertBefore, $shiftCount, $currentTotal, $conflictingPositions) {
+                $this->makeRoomForPages($insertBefore, $shiftCount, $currentTotal);
+                $this->issue->update(['total_pages' => $currentTotal + $shiftCount]);
+
+                $displacedPages = $this->issue->pages()->whereIn('position', $conflictingPositions)->orderBy('position')->get();
+                $newSlots = $this->issue->pages()->where('position', '>=', $insertBefore)->orderBy('position')->limit($shiftCount)->get();
+
+                foreach ($displacedPages->values() as $index => $oldPage) {
+                    if ($oldPage->isLocked()) {
+                        continue;
+                    }
+
+                    $this->relocatePageContent($oldPage, $newSlots[$index]);
+                }
+            });
+
+            PageRoleAssigner::syncCoverRoles($this->issue);
+
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Issue',
+                entityId: $this->issue->id,
+                action: 'issue.pages_shifted_for_upload',
+                description: "{$shiftCount} pagine in conflitto traslate dopo la posizione ".max($conflict['targetPositions']).' per fare spazio a un caricamento PDF multipagina',
+                new: ['shiftedPositions' => $conflictingPositions, 'insertedFrom' => $insertBefore],
+            );
+        }
+
+        $targetPages = $this->issue->pages()
+            ->whereIn('position', $conflict['targetPositions'])
+            ->orderBy('position')
+            ->get();
+
+        foreach ($targetPages as $index => $targetPage) {
+            if ($this->blockIfLocked($targetPage, 'sovrascritta')) {
+                continue;
+            }
+
+            $this->storeUploadedPdf($targetPage, $file, pdfPageNumber: $index + 1, totalPdfPages: $conflict['totalPdfPages']);
+        }
+
+        unset($this->pendingUploads[$pageId]);
+    }
+
+    /**
+     * Trasferisce il "contenuto" editoriale di una pagina su un'altra —
+     * tipo pagina, stato, note, contenuti assegnati (con la percentuale
+     * invariata) e file PDF — lasciando $from bianca e pronta a ricevere
+     * il nuovo PDF. Usata solo da confirmMultipageUploadWithShift() sopra:
+     * un'operazione specifica di quel flusso, non un'utility generica di
+     * "scambio pagine" (che dovrebbe anche gestire i gruppi collegati
+     * della Fase 2.3, blocco escluso qui a monte dal chiamante — fuori
+     * scopo per questa fase).
+     */
+    private function relocatePageContent(Page $from, Page $to): void
+    {
+        $to->update([
+            'content_type' => $from->content_type,
+            'status' => $from->status,
+            'notes' => $from->notes,
+        ]);
+
+        foreach ($from->contents as $content) {
+            $to->contents()->attach($content->id, ['occupied_percentage' => $content->pivot->occupied_percentage]);
+        }
+        $from->contents()->detach();
+
+        PageFile::where('page_id', $from->id)->update(['page_id' => $to->id]);
+
+        $from->update([
+            'content_type' => PageContentType::Bianca->value,
+            'status' => PageStatus::DaAssegnare->value,
+            'notes' => null,
+        ]);
     }
 
     /**
@@ -1693,17 +2220,28 @@ class Grid extends Component
                 'contents.pages:pages.id,pages.position',
                 'files' => fn ($query) => $query->latest()->limit(1),
                 'lockedBy:id,name',
+                // Fase 2.3: badge/anello colorato del gruppo collegato,
+                // vedi page-card.blade.php/page-row.blade.php.
+                'group:id,color',
             ])
             ->get();
 
         $unassignedContents = $this->issue->unassignedContents()
-            ->with(['article', 'advertisement'])
+            ->with(['article', 'advertisement', 'files' => fn ($query) => $query->limit(1)])
             ->when($this->contentSearch !== '', fn ($query) => $query->where('title', 'like', '%'.$this->contentSearch.'%'))
             ->orderBy('created_at')
             ->get();
 
         $reorderLogs = $this->showReorderLog
             ? $this->issue->reorderLogs()->with(['page', 'user'])->latest()->limit(50)->get()
+            : null;
+
+        // Fase 4.3 — stesso pattern "query solo se il pannello è aperto"
+        // di $reorderLogs sopra: nessuno guarda gli archiviati alla
+        // maggior parte dei render/poll, non vale la pena caricarli sempre.
+        $archivedContents = $this->showArchivedContents
+            ? $this->issue->contents()->whereDoesntHave('pages')->whereNotNull('archived_at')
+                ->with(['article', 'advertisement'])->latest('archived_at')->get()
             : null;
 
         // Anteprima d'impatto calcolata solo su un valore già validato: se
@@ -1748,6 +2286,7 @@ class Grid extends Component
             'pages' => $pages,
             'spreads' => $this->viewMode === 'doppia' ? PageSpreadBuilder::build($pages) : null,
             'unassignedContents' => $unassignedContents,
+            'archivedContents' => $archivedContents,
             'reorderLogs' => $reorderLogs,
             'adLoad' => AdLoadCalculator::summarize($pages, $reservedAdvertisements),
             'adThreshold' => $this->issue->magazine->ad_threshold_percentage,

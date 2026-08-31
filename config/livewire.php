@@ -70,7 +70,18 @@ return [
         // docker/php/uploads.ini (upload_max_filesize/post_max_size).
         // Alzato da 32MB a 100MB il 2026-07-31 insieme a uploads.ini — PDF
         // multipagina reali superavano facilmente 32MB, vedi HANDOFF.md.
-        'rules' => ['required', 'file', 'mimes:pdf', 'max:102400'], // 100MB
+        // jpg/jpeg/png/webp aggiunti in Fase 4.1 (2026-08-31): questa è
+        // l'UNICA lista mimes che conta per il caricamento temporaneo di
+        // QUALUNQUE campo file Livewire dell'intero progetto (globale, non
+        // per componente) — senza estenderla qui, ContentCreate::$file
+        // veniva rifiutato prima ancora di raggiungere la validazione
+        // `mimes:pdf,jpg,jpeg,png,webp` del componente stesso (bug scoperto
+        // da un test che falliva silenziosamente: $file restava null, non
+        // un errore di validazione visibile). Innocuo per Grid::$pendingUploads
+        // (solo pagina): quel componente ha già una propria validazione
+        // `mimes:pdf` più stretta subito dopo, quindi un'immagine che
+        // superasse questo gate globale verrebbe comunque respinta lì.
+        'rules' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:102400'], // 100MB
         'directory' => null,   // Example: 'tmp'                      | Default: 'livewire-tmp'
         'middleware' => null,  // Example: 'throttle:5,1'             | Default: 'throttle:60,1'
         'preview_mimes' => [   // Supported file types for temporary pre-signed file URLs...

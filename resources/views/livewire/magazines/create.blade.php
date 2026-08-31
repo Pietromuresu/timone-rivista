@@ -40,6 +40,12 @@
                         <x-input-error class="mt-2" :messages="$errors->get('ad_threshold_percentage')" />
                     </div>
 
+                    <div class="flex items-center gap-2">
+                        <input id="battente_counted_in_total" wire:model="battente_counted_in_total" type="checkbox" class="rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500" />
+                        <x-input-label for="battente_counted_in_total" value="Il battente conta nel totale pagine dichiarato del numero" class="mb-0" />
+                        <x-input-error class="mt-2" :messages="$errors->get('battente_counted_in_total')" />
+                    </div>
+
                     <div>
                         <x-input-label for="notes" value="Note (opzionale)" />
                         <textarea id="notes" wire:model="notes" rows="3" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"></textarea>

@@ -1,12 +1,15 @@
 <?php
 
 use App\Http\Controllers\AdDashboardExportController;
+use App\Http\Controllers\ContentFileController;
+use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\PageFileController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TimoneExportController;
 use App\Livewire\Issues\Create as IssueCreate;
 use App\Livewire\Issues\Show as IssueShow;
 use App\Livewire\Magazines\Create as MagazineCreate;
+use App\Livewire\Magazines\Edit as MagazineEdit;
 use App\Livewire\Magazines\Index as MagazineIndex;
 use App\Livewire\Magazines\Show as MagazineShow;
 use App\Livewire\Users\Create as UserCreate;
@@ -33,6 +36,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/riviste/{magazine:slug}', MagazineShow::class)->name('magazines.show');
 
+    Route::get('/riviste/{magazine:slug}/modifica', MagazineEdit::class)->name('magazines.edit');
+
     Route::get('/riviste/{magazine:slug}/numeri/nuovo', IssueCreate::class)->name('issues.create');
 
     Route::get('/riviste/{magazine:slug}/numeri/{issue}', IssueShow::class)
@@ -53,6 +58,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/page-files/{pageFile}', [PageFileController::class, 'show'])->name('page-files.show');
     Route::get('/page-files/{pageFile}/thumbnail', [PageFileController::class, 'thumbnail'])->name('page-files.thumbnail');
+
+    Route::get('/content-files/{contentFile}', [ContentFileController::class, 'show'])->name('content-files.show');
+    Route::get('/content-files/{contentFile}/thumbnail', [ContentFileController::class, 'thumbnail'])->name('content-files.thumbnail');
+
+    // Contenuto d'aiuto, non uno strumento di lavoro su un dato specifico:
+    // nessun controllo oltre auth+verified (già richiesto da tutto il resto
+    // del gruppo) — stesso trattamento di /dashboard, che non ha altra
+    // policy oltre "sei loggato", a differenza delle rotte annidate sotto
+    // {magazine:slug} che verificano canAccessMagazine() per quella rivista
+    // specifica (qui non c'è alcuna rivista specifica da verificare).
+    Route::get('/documentazione', [DocumentationController::class, 'show'])->name('documentation.show');
 
     Route::get('/utenti', UserIndex::class)->name('users.index');
     Route::get('/utenti/nuovo', UserCreate::class)->name('users.create');

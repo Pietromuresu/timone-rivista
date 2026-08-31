@@ -2,6 +2,9 @@
     $latestFile = $page->files->first();
     $dropEnabled = $dropEnabled ?? false;
     $locked = $page->isLocked();
+    // Fase 2.3: pagine "collegate" in un gruppo — vedi App\Models\PageGroup,
+    // $page->group già eager-loaded da Grid::render().
+    $group = $page->group;
     // dropEnabled riflette la modalità di vista (griglia/doppia sì, doppia
     // sola lettura mai più dopo questa sessione — vedi HANDOFF.md); $locked
     // riflette il blocco pagina (§6.6), ortogonale alla modalità di vista.
@@ -41,7 +44,7 @@
         l'etichetta piccola sul badge di stato (che resta comunque, vedi
         sotto — "affianca", non "sostituisce", per chi preferisce leggerla).
     --}}
-    class="relative flex flex-col aspect-[3/4] rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $swapSelectedPageId === $page->id ? 'ring-4 ring-indigo-500' : '' }}"
+    class="relative flex flex-col aspect-[3/4] rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $swapSelectedPageId === $page->id ? 'ring-4 ring-indigo-500' : ($group ? 'ring-2 ring-offset-1 dark:ring-offset-gray-900 '.$group->ringClasses() : '') }}"
 >
     <template x-if="$store.pagePresence.editorFor({{ $page->id }})">
         <span
@@ -50,6 +53,14 @@
             :title="$store.pagePresence.editorFor({{ $page->id }}).name + ' sta modificando questa pagina'"
         ></span>
     </template>
+
+    {{-- Fase 3.1: promemoria compatto, gestione vera nel pannello "Copertina & battente" a inizio pagina — stesso principio del badge DX/SX in vista lista. --}}
+    @if ($page->role->isCoverSection())
+        <span
+            class="absolute -top-1.5 -left-1.5 text-[9px] leading-none rounded-full bg-indigo-600 text-white px-1 py-0.5 z-10"
+            title="{{ $page->role->label() }} — gestita dal pannello Copertina &amp; battente"
+        >📘</span>
+    @endif
 
     <div class="flex items-center justify-between gap-1">
         <div class="flex items-center gap-1">
@@ -101,6 +112,17 @@
                 class="shrink-0 text-[10px] opacity-60 hover:opacity-100"
                 title="{{ $locked ? 'Sblocca pagina' : 'Blocca pagina (impedisce spostamento, eliminazione e modifiche)' }}"
             >{{ $locked ? '🔒' : '🔓' }}</button>
+
+            @if ($group)
+                <button
+                    type="button"
+                    wire:click="unlinkGroup({{ $page->id }})"
+                    x-on:click.stop
+                    @unless ($locked) title="Pagina collegata — clic per scollegare l'intero gruppo" @else title="Pagina collegata (bloccata)" @endif
+                    class="shrink-0 text-[9px] font-semibold rounded px-1 border {{ $group->badgeClasses() }}"
+                    @if ($locked) disabled @endif
+                >🔗</button>
+            @endif
         </div>
     </div>
 
@@ -136,8 +158,8 @@
 
             <div class="absolute inset-x-0 bottom-0 max-h-[60%] overflow-y-auto bg-black/60 px-1 py-0.5 space-y-0.5">
                 @forelse ($page->contents as $content)
-                    <div wire:key="page-{{ $page->id }}-content-{{ $content->id }}" class="flex items-center gap-1 leading-tight text-white">
-                        <span class="truncate flex-1">
+                    <div wire:key="page-{{ $page->id }}-content-{{ $content->id }}" class="flex items-start gap-1 leading-tight text-white">
+                        <span class="break-words min-w-0 flex-1">
                             {{ $content->type->value === 'articolo' ? '📄' : '📢' }} {{ $content->displayLabel() }}
                             @if ($content->pages->count() > 1)
                                 <span class="opacity-70" title="Contenuto presente su {{ $content->pages->count() }} pagine">×{{ $content->pages->count() }}</span>
@@ -182,8 +204,8 @@
         @else
             <div class="h-full flex flex-col justify-center gap-1">
                 @forelse ($page->contents as $content)
-                    <div wire:key="page-{{ $page->id }}-content-{{ $content->id }}" class="flex items-center gap-1 leading-tight">
-                        <span class="truncate flex-1">
+                    <div wire:key="page-{{ $page->id }}-content-{{ $content->id }}" class="flex items-start gap-1 leading-tight">
+                        <span class="break-words min-w-0 flex-1">
                             {{ $content->type->value === 'articolo' ? '📄' : '📢' }} {{ $content->displayLabel() }}
                             @if ($content->pages->count() > 1)
                                 <span class="opacity-60" title="Contenuto presente su {{ $content->pages->count() }} pagine">×{{ $content->pages->count() }}</span>

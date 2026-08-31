@@ -26,6 +26,23 @@ test('an admin can create a magazine', function () {
         ->and((float) $magazine->ad_threshold_percentage)->toBe(25.0);
 });
 
+test('battente_counted_in_total defaults to false and can be opted into', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    Livewire::actingAs($admin)->test(Create::class)
+        ->set('name', 'Default Battente')
+        ->call('save');
+
+    expect(Magazine::where('name', 'Default Battente')->first()->battente_counted_in_total)->toBeFalse();
+
+    Livewire::actingAs($admin)->test(Create::class)
+        ->set('name', 'Battente Contato')
+        ->set('battente_counted_in_total', true)
+        ->call('save');
+
+    expect(Magazine::where('name', 'Battente Contato')->first()->battente_counted_in_total)->toBeTrue();
+});
+
 test('an empty ad threshold is stored as null', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin]);
 

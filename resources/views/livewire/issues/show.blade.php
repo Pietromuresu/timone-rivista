@@ -66,6 +66,8 @@
                 </div>
             </div>
 
+            <livewire:timone.cover-section :issue="$issue" :key="'cover-section-'.$issue->id" />
+
             <livewire:timone.grid :issue="$issue" :key="'timone-grid-'.$issue->id" />
         </div>
     </div>
