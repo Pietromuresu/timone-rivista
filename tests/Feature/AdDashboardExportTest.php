@@ -23,7 +23,9 @@ test('an editor can download the csv report with the correct figures', function 
         'occupied_percentage_override' => null,
         'confirmation_status' => AdConfirmationStatus::Confermata,
     ]);
-    $page = $issue->pages()->where('position', 1)->first();
+    // Posizione 2 (Interna), non 1 (Copertina1, esclusa dal cruscotto —
+    // vedi AdDashboardExportController::loadReportData()).
+    $page = $issue->pages()->where('position', 2)->first();
     $page->contents()->attach($content->id, ['occupied_percentage' => '100']);
 
     $response = $this->actingAs($user)->get(route('issues.export.ad-dashboard-csv', [$issue->magazine, $issue]));
@@ -32,10 +34,12 @@ test('an editor can download the csv report with the correct figures', function 
 
     $csv = $response->streamedContent();
 
+    // 1 pagina intera (100%) su 4 pagine numerate (6 totali - 2 di
+    // copertina) = 25%.
     expect($csv)->toContain($issue->magazine->name)
         ->toContain($issue->title)
         ->toContain('Pagine totali')
-        ->toContain('16.67')
+        ->toContain('25')
         ->toContain('Pagina intera')
         ->toContain('Confermata');
 });

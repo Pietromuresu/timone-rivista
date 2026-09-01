@@ -5,6 +5,7 @@ namespace App\Livewire\Timone;
 use App\Enums\PageRole;
 use App\Models\Issue;
 use App\Support\ActivityLogger;
+use App\Support\PageNumberer;
 use Livewire\Component;
 
 /**
@@ -122,10 +123,21 @@ class CoverSection extends Component
             ->orderBy('position')
             ->get(['id', 'position']);
 
+        // Etichetta mostrata nel menu "assegna a una pagina interna"
+        // (sotto): deve combaciare con quella già vista dall'utente nella
+        // griglia principale, non la posizione fisica grezza — serve
+        // l'intera issue (non solo $internalPages) perché il conteggio
+        // riparte da 1 dopo la copertina, vedi App\Support\PageNumberer.
+        $pageNumbers = PageNumberer::assign(
+            $this->issue->pages()->orderBy('position')->get(['id', 'position', 'role']),
+            $this->issue->magazine->battente_counted_in_total
+        );
+
         return view('livewire.timone.cover-section', [
             'coverPages' => $pages,
             'hasBattente' => $hasBattente,
             'internalPages' => $internalPages,
+            'pageNumbers' => $pageNumbers,
             'assignableRoles' => array_filter(PageRole::manuallyAssignable(), fn ($role) => $role !== PageRole::Interna),
             'displayedTotalPages' => $this->issue->displayedTotalPages(),
         ]);

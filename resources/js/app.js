@@ -30,6 +30,14 @@ document.addEventListener('alpine:init', () => {
         user: null,
         editing: {},
 
+        // Vero mentre QUESTO client sta trascinando una pagina (Sortable
+        // onStart/onEnd, sotto) — usato dal polling di fallback in
+        // grid.blade.php per mettere in pausa wire:poll durante un drag: un
+        // poll a metà trascinamento potrebbe far ripartire il morph di
+        // Livewire sull'elemento che Sortable sta ancora manipolando a
+        // mano (2026-09-01).
+        dragging: false,
+
         join(issueId, user) {
             this.user = user;
 
@@ -81,24 +89,25 @@ document.addEventListener('alpine:init', () => {
     });
 
     /**
-     * Fallback quando i websocket (Reverb) non sono raggiungibili: invece di
-     * restare silenziosamente non aggiornati, si passa a un polling
-     * periodico che richiama un metodo Livewire (in pratica un $wire.call
-     * mirato, non $wire.$refresh, perché deve anche riallineare la versione
-     * del lock ottimistico di riordino — vedi Grid::pollRefresh()).
+     * Fallback quando i websocket (Reverb) non sono raggiungibili: espone
+     * solo `connected` (letto da grid.blade.php per montare/smontare
+     * l'elemento `wire:poll.1s="checkForUpdates"` — vedi lì per il
+     * perché di `x-if` invece di un polling gestito qui in JS). Prima del
+     * 2026-09-01 questo store gestiva anche direttamente un
+     * `setInterval`/`$wire.call` (vedi HANDOFF.md per la versione
+     * precedente) — sostituito da `wire:poll`, nativo di Livewire, che si
+     * occupa da solo di schedulare/fermare la richiesta periodica; questo
+     * store resta responsabile SOLO di rilevare lo stato della connessione
+     * Reverb, non di far girare il timer.
      * Attivo solo se la connessione non è "connected" (dopo un breve periodo
      * di grazia iniziale, per non scattare durante il normale handshake) o
      * se Echo/Reverb non è configurato affatto.
      */
     Alpine.store('realtimeFallback', {
         connected: true,
-        pollTimer: null,
         graceTimer: null,
-        pollFn: null,
 
-        watch(pollFn) {
-            this.pollFn = pollFn;
-
+        watch() {
             const connection = window.Echo?.connector?.pusher?.connection;
 
             if (! connection) {
@@ -121,20 +130,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         enterFallback() {
-            if (! this.connected) return;
-
             this.connected = false;
-            this.pollTimer = setInterval(() => this.pollFn?.(), 8000);
         },
 
         exitFallback() {
             clearTimeout(this.graceTimer);
-
-            if (this.connected) return;
-
             this.connected = true;
-            clearInterval(this.pollTimer);
-            this.pollTimer = null;
         },
     });
 
@@ -159,9 +160,12 @@ document.addEventListener('alpine:init', () => {
             // restare coerenti con un'unica configurazione Sortable.
             draggable: '[data-page-id]',
             onStart(evt) {
+                Alpine.store('pagePresence').dragging = true;
                 Alpine.store('pagePresence').startEditing(evt.item.dataset.pageId);
             },
             onEnd(evt) {
+                Alpine.store('pagePresence').dragging = false;
+
                 const pageId = evt.item.dataset.pageId;
                 Alpine.store('pagePresence').stopEditing(pageId);
 

@@ -79,5 +79,6 @@ class GenerateContentFileThumbnail implements ShouldQueue
             contentFileId: $this->contentFile->id,
             thumbnailStatus: $this->contentFile->thumbnail_status->value,
         ));
+        $this->contentFile->content->issue->markPagesUpdated();
     }
 }

@@ -27,7 +27,7 @@
                         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             {{ $magazine->name }}
                             &middot; {{ $issue->issue_date?->translatedFormat('d M Y') ?? 'Data non definita' }}
-                            &middot; {{ $issue->total_pages }} pagine previste
+                            &middot; {{ $issue->displayedTotalPages() }} pagine previste
                         </p>
                         @if ($issue->notes)
                             <p class="text-sm text-gray-600 dark:text-gray-300 mt-3">{{ $issue->notes }}</p>

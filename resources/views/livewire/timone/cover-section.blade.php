@@ -81,7 +81,7 @@
                         <select wire:model="assignPageId" class="text-sm rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700">
                             <option value="">— pagina —</option>
                             @foreach ($internalPages as $internalPage)
-                                <option value="{{ $internalPage->id }}">Pagina {{ $internalPage->position }}</option>
+                                <option value="{{ $internalPage->id }}">Pagina {{ $pageNumbers[$internalPage->id] ?? $internalPage->position }}</option>
                             @endforeach
                         </select>
                         <select wire:model="assignRoleValue" class="text-sm rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700">

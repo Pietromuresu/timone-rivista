@@ -36,6 +36,22 @@ enum PageRole: string
     }
 
     /**
+     * True SOLO per le quattro pagine di copertina vere e proprie
+     * (I-IV). Deliberatamente esclude il Battente: la copertina è
+     * SEMPRE fuori dalla numerazione/conteggio pagine (vedi
+     * PageNumberer, App\Support\AdLoadCalculator), mentre il Battente
+     * resta un caso a parte già configurabile per rivista
+     * (`battente_counted_in_total`, Fase 3.1) — le due esclusioni non
+     * vanno confuse: isCoverSection() (sopra) le raggruppa entrambe solo
+     * per lo scopo diverso di "pannello copertina/export copertina",
+     * questo metodo serve invece a "conta come pagina numerata?".
+     */
+    public function isCoverPage(): bool
+    {
+        return in_array($this, [self::Copertina1, self::Copertina2, self::Copertina3, self::Copertina4], true);
+    }
+
+    /**
      * @return array<self> Ruoli assegnabili manualmente dal pannello
      *  Copertina/Battente — esclude Copertina1/Copertina4, che sono
      *  ricalcolati automaticamente da PageRoleAssigner in base alla

@@ -48,7 +48,7 @@ La schermata del timone ha tre modalità, selezionabili in alto a destra:
 |---|---|
 | Colore di sfondo | Tipo pagina: blu = editoriale, ambra = pubblicità, viola = mista (metà e metà), grigio = bianca (ancora vuota) — pubblicità sempre riconoscibile a colpo d'occhio |
 | Bordo colorato spesso (griglia/doppia) o striscia colorata a sinistra (lista) | Stato della pagina: grigio = da assegnare, azzurro = assegnata, giallo = in bozza, arancione = revisionata, verde = ok stampa — riconoscibile senza dover leggere l'etichetta |
-| Numero con ⠿ | Posizione della pagina — è anche la "maniglia" per trascinarla |
+| Numero con ⠿ | Numero della pagina, **senza contare la copertina** — la prima pagina interna è sempre "1", non importa quante pagine di copertina la precedono fisicamente (vedi [§9bis](#9bis-copertina-e-battente)). Sulle pagine di copertina stesse, al posto del numero compare il nome del ruolo (es. "Copertina (1ª)"). È anche la "maniglia" per trascinare la pagina |
 | Etichetta colorata (es. "In bozza") | Stato della pagina, stessa palette del bordo — cliccabile per cambiarlo, vedi [§6](#6-cambiare-lo-stato-di-una-pagina) |
 | 📄 / 📢 | Contenuto assegnato: 📄 articolo, 📢 pubblicità, seguito dal titolo/cliente |
 | Pallino verde con iniziali, animato | Un collega ha in questo momento il focus su quella pagina (sta cambiando qualcosa) |
@@ -61,7 +61,7 @@ La schermata del timone ha tre modalità, selezionabili in alto a destra:
 | 🔓 / 🔒 | Blocca/sblocca la pagina — vedi [§4bis](#4bis-bloccare-una-pagina) |
 | Casella di spunta (solo con "☑️ Selezione multipla" attivo) | Seleziona la pagina per un'azione di massa — vedi [§6bis](#6bis-selezione-multipla-e-azioni-di-massa) |
 
-Tutto si aggiorna da solo in tempo reale se un collega è collegato sullo stesso numero — non serve mai ricaricare la pagina. Se per qualche minuto non arrivano aggiornamenti (rete che taglia fuori i websocket), compare un avviso giallo: la pagina continua comunque ad aggiornarsi da sola, solo un po' più lentamente (ogni pochi secondi anziché all'istante).
+Tutto si aggiorna da solo in tempo reale se un collega è collegato sullo stesso numero — non serve mai ricaricare la pagina. Quando arriva un cambiamento fatto da qualcun altro, compare per pochi secondi un piccolo avviso in basso a destra (es. "Una pagina è stata spostata da un altro utente.") — un promemoria discreto che qualcosa è cambiato, non un blocco: la griglia si è già aggiornata da sola. Se per qualche minuto non arrivano aggiornamenti (rete che taglia fuori i websocket), compare invece un avviso giallo permanente: la pagina continua comunque a controllare da sola se c'è qualcosa di nuovo (circa una volta al secondo) e si aggiorna nello stesso identico modo, avviso "qualcosa è cambiato" compreso — l'unica differenza percepibile è un ritardo massimo di un secondo invece dell'istante.
 
 **Per stampare o condividere il timone**: bottone **"📄 Esporta PDF"** nella barra in alto — un foglio con tutte le pagine del numero, colori e stati come nell'interfaccia, con una **legenda colori** in cima (tipo pagina e stato) per chi lo guarda senza avere sotto mano lo schermo. Prima di scaricare puoi scegliere di includere le miniature dei PDF caricati, mostrare solo le pagine con pubblicità, o solo quelle non ancora approvate (non in stato "Revisionata"/"Ok stampa").
 
@@ -206,7 +206,7 @@ Ogni pagina timone coinvolta mostra la miniatura della propria pagina interna co
 
 Pannello sempre visibile sopra la griglia. Mostra, per il numero che stai guardando:
 
-- **Percentuale di carico pubblicitario** (numero grande) — quanta parte del numero è occupata da pubblicità, **incluse le pubblicità prenotate ma non ancora assegnate a una pagina** ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), non solo quelle già piazzate: il testo accanto al numero mostra il dettaglio "X già assegnate + Y prenotate". Diventa rossa se supera la soglia di allarme impostata.
+- **Percentuale di carico pubblicitario** (numero grande) — quanta parte del numero è occupata da pubblicità, **incluse le pubblicità prenotate ma non ancora assegnate a una pagina** ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), non solo quelle già piazzate: il testo accanto al numero mostra il dettaglio "X già assegnate + Y prenotate". Diventa rossa se supera la soglia di allarme impostata. Le pagine di copertina non entrano mai in questo calcolo (né come "pagine totali" del denominatore, né un eventuale contenuto assegnato per errore su di esse) — vedi [§9bis](#9bis-copertina-e-battente).
 - **Soglia di allarme**: il campo numerico accanto al titolo del cruscotto — impostala tu (es. `30` per il 30%); lasciala vuota per disattivare l'avviso. È un'impostazione della rivista, non del singolo numero: cambiarla qui vale per tutti i numeri di quella rivista.
 - **Inserzioni assegnate** vs **pubblicità non ancora assegnate**.
 - **Riepilogo per formato pubblicitario** (pagina intera, mezza pagina, ecc.) e **per stato commerciale** (in trattativa, confermata, annullata) — include anche le prenotazioni.
@@ -253,6 +253,8 @@ Solo dopo aver visto questo riepilogo puoi cliccare **"Conferma rimozione defini
 Riquadro **"📘 Copertina & battente"** in cima alla pagina del timone, prima della griglia principale — una vista separata e sempre a colpo d'occhio di copertina, battente e quarta di copertina, distinta dalle pagine "interne".
 
 La **prima pagina** del numero è sempre "Copertina (1ª)" e l'**ultima** è sempre "Quarta di copertina": il sistema li tiene aggiornati da solo, anche se trascini le pagine o cambi il numero totale di pagine — non serve (e non si può) assegnarli a mano.
+
+**La copertina non conta come pagina 1**: nella griglia, in doppia pagina e in lista, le pagine di copertina mostrano il nome del loro ruolo al posto di un numero (es. "Copertina (1ª)"), e la numerazione delle pagine interne riparte sempre da **1** subito dopo l'ultima copertina che le precede — non dalla loro posizione fisica nel timone. Lo stesso vale nel menu "assegna a una pagina interna" qui sotto e nell'esportazione PDF ([§3](#3-leggere-la-griglia-del-timone)): il numero mostrato è sempre quello "senza copertina", coerente ovunque. Anche il conteggio "pagine totali" mostrato in cima al timone e nel cruscotto pubblicitario ([§8](#8-leggere-il-cruscotto-pubblicitario)) esclude sempre le pagine di copertina.
 
 **Seconda/terza di copertina o battente**: dal riquadro, scegli una pagina interna e il ruolo da assegnarle (form in fondo al pannello). La pagina prende subito un'etichetta 📘 visibile anche nella griglia/lista principale, per ricordare che è gestita da qui. Per togliere il ruolo, clicca "✕ rimuovi" accanto alla pagina nel riquadro.
 

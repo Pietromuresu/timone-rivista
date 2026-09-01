@@ -3,14 +3,17 @@
 # Avvio a un solo comando di Timone Elettronico via Docker.
 #
 # Uso:
-#   ./setup.sh
+#   ./setup.sh          # produzione: docker-compose.yml da solo, immagini
+#                        # con codice/asset "congelati" nella build
+#   ./setup.sh dev       # sviluppo: aggiunge docker-compose.dev.yml
+#                        # (bind mount del codice, Vite con HMR su :5173)
 #
 # Cosa fa, in ordine:
 #   1. Se manca ".env", lo crea da ".env.example".
 #   2. Genera da solo tutte le password/chiavi obbligatorie ancora vuote
 #      (APP_KEY, DB_PASSWORD, MYSQL_ROOT_PASSWORD, REVERB_APP_ID/KEY/SECRET)
 #      — nessun valore da inventare o copiare a mano.
-#   3. Costruisce e avvia tutti i container Docker.
+#   3. Costruisce e avvia tutti i container Docker (nella modalità scelta).
 #   4. Esegue le migrazioni del database e carica i dati demo.
 #   5. Stampa un riepilogo con gli URL da aprire e i comandi utili.
 #
@@ -32,6 +35,29 @@ info()  { printf "%b\n" "${C_BLUE}==>${C_RESET} $*"; }
 ok()    { printf "%b\n" "${C_GREEN}✓${C_RESET} $*"; }
 warn()  { printf "%b\n" "${C_YELLOW}!${C_RESET} $*"; }
 fail()  { printf "%b\n" "${C_RED}✗ $*${C_RESET}"; exit 1; }
+
+# -----------------------------------------------------------------------------
+# -1. Modalità: produzione (default) o sviluppo (./setup.sh dev)
+# -----------------------------------------------------------------------------
+# docker-compose.dev.yml NON viene caricato automaticamente da "docker
+# compose" (a differenza di un file chiamato "docker-compose.override.yml")
+# — scelta deliberata per non rischiare di far girare per sbaglio bind
+# mount/Vite dev server su un server di produzione con un comando "nudo".
+# Qui lo aggiungiamo esplicitamente solo se richiesto.
+MODE="${1:-prod}"
+case "$MODE" in
+    dev)
+        DC=(docker compose -f docker-compose.yml -f docker-compose.dev.yml)
+        info "Modalità sviluppo: bind mount del codice + Vite dev server (docker-compose.dev.yml)."
+        ;;
+    prod)
+        DC=(docker compose -f docker-compose.yml)
+        info "Modalità produzione: solo docker-compose.yml (nessun bind mount)."
+        ;;
+    *)
+        fail "Argomento non riconosciuto: \"$MODE\". Uso: ./setup.sh oppure ./setup.sh dev"
+        ;;
+esac
 
 # -----------------------------------------------------------------------------
 # 0. Prerequisiti: Docker installato e il suo demone acceso
@@ -140,7 +166,7 @@ info "Costruisco e avvio i container Docker (la prima volta può richiedere qual
 # tecnico non deve accorgersene: si ritenta da soli fino a 3 volte.
 attempt=1
 max_attempts=3
-until docker compose up -d --build; do
+until "${DC[@]}" up -d --build; do
     if [ "$attempt" -ge "$max_attempts" ]; then
         fail "\"docker compose up\" ha fallito $max_attempts volte di fila. Copia l'errore qui sopra e chiedi aiuto, oppure prova a rilanciare ./setup.sh tra qualche secondo."
     fi
@@ -162,13 +188,13 @@ ok "Container avviati e in stato \"healthy\"."
 # invece eseguito una volta sola, solo se il database è ancora vuoto.
 
 info "Eseguo le migrazioni del database..."
-docker compose exec -T app php artisan migrate --force
+"${DC[@]}" exec -T app php artisan migrate --force
 
-user_count="$(docker compose exec -T app php artisan tinker --execute='echo \App\Models\User::count();' 2>/dev/null | tr -d '[:space:]')"
+user_count="$("${DC[@]}" exec -T app php artisan tinker --execute='echo \App\Models\User::count();' 2>/dev/null | tr -d '[:space:]')"
 
 if [ "$user_count" = "0" ] || [ -z "$user_count" ]; then
     info "Database vuoto: carico gli utenti/riviste/numeri demo..."
-    docker compose exec -T app php artisan db:seed --force
+    "${DC[@]}" exec -T app php artisan db:seed --force
     ok "Dati demo caricati."
 else
     ok "Il database ha già dei dati ($user_count utenti) — non ripeto il seed per non duplicarli."
@@ -182,23 +208,26 @@ ok "Database pronto."
 
 echo
 printf "%b\n" "${C_BOLD}==================================================================${C_RESET}"
-printf "%b\n" "${C_BOLD} Timone Elettronico è avviato ✅${C_RESET}"
+printf "%b\n" "${C_BOLD} Timone Elettronico è avviato ✅  (modalità: ${MODE})${C_RESET}"
 printf "%b\n" "${C_BOLD}==================================================================${C_RESET}"
 echo
 echo "App:      http://localhost"
 echo "Adminer:  http://localhost:8081  (server: mysql, credenziali in .env)"
 echo "Reverb:   ws://localhost:8080    (usato in automatico dal browser)"
+if [ "$MODE" = "dev" ]; then
+    echo "Vite:     http://localhost:5173  (HMR — non aprirlo direttamente, lo usa il browser da solo)"
+fi
 echo
 echo "Utenti demo (password per tutti: password):"
 echo "  admin@timone.test      — Admin, vede tutte le riviste"
 echo "  redattore@timone.test  — Redattore, solo su alcune riviste"
 echo
-echo "Comandi utili:"
-echo "  docker compose logs -f              # log di tutti i servizi in diretta"
-echo "  docker compose logs -f app          # log del solo servizio \"app\""
-echo "  docker compose ps                   # stato dei container"
-echo "  docker compose down                 # ferma tutto (i dati restano)"
-echo "  docker compose down -v              # ferma tutto e CANCELLA i dati (reset totale)"
-echo "  docker compose --profile tools run --rm backup   # backup del database in ./backups"
+echo "Comandi utili (stessa modalità di questo avvio):"
+echo "  ${DC[*]} logs -f              # log di tutti i servizi in diretta"
+echo "  ${DC[*]} logs -f app          # log del solo servizio \"app\""
+echo "  ${DC[*]} ps                   # stato dei container"
+echo "  ${DC[*]} down                 # ferma tutto (i dati restano)"
+echo "  ${DC[*]} down -v              # ferma tutto e CANCELLA i dati (reset totale)"
+echo "  ${DC[*]} --profile tools run --rm backup   # backup del database in ./backups"
 echo
 printf "%b\n" "${C_BOLD}==================================================================${C_RESET}"

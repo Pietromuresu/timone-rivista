@@ -9,9 +9,13 @@ use Livewire\Livewire;
 test('the grid defaults to the griglia view and shows every page', function () {
     $issue = Issue::factory()->create(['total_pages' => 6]);
 
+    // Header "Timone · N pagine" mostra il conteggio SENZA le due
+    // copertine auto-assegnate da PageRoleAssigner su un'issue di 6
+    // pagine (position 1 = Copertina1, position 6 = Copertina4) —
+    // copertina separata dal conteggio pagine, vedi Issue::displayedTotalPages().
     Livewire::test(Grid::class, ['issue' => $issue])
         ->assertSet('viewMode', 'griglia')
-        ->assertSee('6 pagine');
+        ->assertSee('4 pagine');
 });
 
 test('switching view mode updates what is rendered', function () {
@@ -59,6 +63,13 @@ test('the doppia view mode wraps every page in a single flat sortable container,
         // Ogni pagina ha data-page-id due volte: sul wrapper che Sortable
         // trascina davvero e sulla page-card interna (invariata).
         expect(substr_count($html, 'data-page-id="'.$page->id.'"'))->toBe(2);
+
+        // Bugfix drag&drop in doppia pagina (vedi HANDOFF.md): il wrapper
+        // trascinato da Sortable deve avere il proprio wire:key, non solo
+        // la page-card annidata al suo interno — altrimenti il morph di
+        // Livewire abbina i wrapper per posizione invece che per identità
+        // dopo un riordino, e il drag "non si consolida mai" visivamente.
+        expect($html)->toContain('wire:key="page-wrap-'.$page->id.'"');
     }
 });
 
@@ -71,7 +82,10 @@ test('in doppia view mode only the second page of a spread pair gets the visual 
         ->html();
 
     $wrapperMarkup = function (string $html, int $pageId): string {
-        preg_match('/<div\s+data-page-id="'.$pageId.'"[^>]*>/', $html, $matches);
+        // Il wrapper ora ha anche wire:key PRIMA di data-page-id (bugfix
+        // drag&drop doppia pagina, vedi HANDOFF.md) — il pattern non deve
+        // più assumere data-page-id come primo attributo dopo <div.
+        preg_match('/<div\s+[^>]*data-page-id="'.$pageId.'"[^>]*>/', $html, $matches);
 
         return $matches[0] ?? '';
     };
@@ -116,4 +130,29 @@ test('an unassigned blank page shows the "pagina bianca" placeholder', function 
 
     Livewire::test(Grid::class, ['issue' => $issue])
         ->assertSeeInOrder(['1', 'Pagina bianca']);
+});
+
+test('the cover is never numbered and internal numbering restarts at 1 right after it', function () {
+    // 4 pagine: position 1 = Copertina1, position 4 = Copertina4 (auto),
+    // position 2/3 = Interna — copertina separata dal conteggio pagine,
+    // vedi App\Support\PageNumberer/HANDOFF.md.
+    $issue = Issue::factory()->create(['total_pages' => 4]);
+    $pages = $issue->pages()->orderBy('position')->get();
+
+    $html = Livewire::test(Grid::class, ['issue' => $issue])->html();
+
+    // Isola il blocco di ogni card via il suo wire:key univoco (stesso
+    // approccio di TimoneGridContentTitleWrapTest), per non confondere il
+    // numero della card 1 con quello della card 2 nell'HTML concatenato.
+    $cardBlock = function (string $html, int $pageId): string {
+        $markerPos = mb_strpos($html, 'wire:key="page-'.$pageId.'"');
+        expect($markerPos)->not->toBeFalse();
+
+        return mb_substr($html, $markerPos, 2000);
+    };
+
+    expect($cardBlock($html, $pages[0]->id))->toContain('⠿ Copertina (1ª)')
+        ->and($cardBlock($html, $pages[1]->id))->toContain('⠿ 1')
+        ->and($cardBlock($html, $pages[2]->id))->toContain('⠿ 2')
+        ->and($cardBlock($html, $pages[3]->id))->toContain('⠿ Quarta di copertina');
 });

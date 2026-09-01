@@ -1,16 +1,53 @@
 <div
     class="space-y-4"
-    x-data
+    x-data="{ remoteToast: null, remoteToastTimeout: null }"
+    x-on:remote-change.window="
+        clearTimeout(remoteToastTimeout);
+        remoteToast = $event.detail.message;
+        remoteToastTimeout = setTimeout(() => remoteToast = null, 4000);
+    "
     @auth
         x-init="
             $store.pagePresence.join({{ $issue->id }}, { id: {{ auth()->id() }}, name: @js(auth()->user()->name) });
-            $store.realtimeFallback.watch(() => $wire.pollRefresh());
+            $store.realtimeFallback.watch();
         "
     @endauth
 >
+    {{-- Toast leggero per un cambiamento arrivato da un altro utente
+         (richiesta: "senza essere invasivo") — nessuno stato server, si
+         auto-nasconde da solo dopo 4s, alimentato dall'evento browser
+         'remote-change' dispatchato da Grid::notifyRemoteChange() da
+         ognuno dei listener broadcast già esistenti (#[On('echo-presence:...')])
+         E da checkForUpdates() (fallback a polling, vedi sotto). --}}
+    <div
+        x-show="remoteToast"
+        x-transition
+        x-text="remoteToast"
+        class="fixed bottom-4 right-4 z-50 max-w-xs rounded-lg bg-gray-900 dark:bg-gray-700 text-white text-sm px-4 py-2 shadow-lg"
+        style="display: none;"
+    ></div>
+
+    {{-- Fallback a polling (2026-09-01, sostituisce il precedente
+         setInterval JS + $wire.pollRefresh()): l'elemento con wire:poll
+         viene montato nel DOM SOLO mentre i websocket non sono connessi
+         (x-if, non x-show — un elemento con display:none avrebbe comunque
+         wire:poll attivo, x-if invece lo rimuove/reinserisce davvero dal
+         DOM, che è come Livewire capisce se un wire:poll è "presente")
+         E mentre nessun drag&drop è in corso su questo client: un poll
+         che arriva a metà di un trascinamento potrebbe far ripartire il
+         morph di Livewire sull'elemento che Sortable sta ancora
+         manipolando a mano, con risultati visivi imprevedibili — non un
+         problema di dati (nulla è ancora scritto finché il drop non
+         chiama $wire.movePage), solo di UI. `$store.pagePresence.dragging`
+         è impostato dagli stessi hook onStart/onEnd di Sortable già usati
+         per il badge "chi sta modificando cosa" (resources/js/app.js). --}}
+    <template x-if="! $store.realtimeFallback.connected && ! $store.pagePresence.dragging">
+        <div wire:poll.1s="checkForUpdates" aria-hidden="true" style="display: none;"></div>
+    </template>
+
     <div class="flex items-center justify-between">
         <h3 class="font-medium text-gray-700 dark:text-gray-300">
-            Timone &middot; {{ $pages->count() }} pagine
+            Timone &middot; {{ $issue->displayedTotalPages() }} pagine
         </h3>
 
         <div class="flex items-center gap-2">
@@ -224,7 +261,7 @@
          questo banner è solo l'aggregato. Non bloccante: le pagine sono
          già scritte in database, l'utente può continuare a lavorare. Si
          aggiorna da solo ad ogni render (broadcast PageFileUploaded per
-         pagina, o pollRefresh() di fallback) e sparisce da solo quando non
+         pagina, o checkForUpdates() di fallback) e sparisce da solo quando non
          resta più nessuna pagina in elaborazione. --}}
     @if ($thumbnailProgress && ! $thumbnailProgressDismissed)
         <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 text-xs space-y-1">
@@ -582,7 +619,7 @@
 
     <template x-if="! $store.realtimeFallback.connected">
         <p class="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-            ⚠️ Aggiornamento in tempo reale non disponibile — la pagina si aggiorna automaticamente ogni pochi secondi.
+            ⚠️ Aggiornamento in tempo reale non disponibile — la pagina si aggiorna automaticamente entro un secondo.
         </p>
     </template>
 
@@ -668,7 +705,7 @@
             class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3"
         >
             @foreach ($pages as $page)
-                @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds])
+                @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds, 'pageNumber' => $pageNumbers[$page->id]])
             @endforeach
         </div>
     @elseif ($viewMode === 'doppia')
@@ -720,11 +757,22 @@
                  fianco della "spina" delle aperture da due pagine. --}}
             @foreach ($spreads as $spreadIndex => $spread)
                 @foreach ($spread as $indexInSpread => $page)
+                    {{-- wire:key qui sul wrapper, non solo su page-card dentro
+                         (bug corretto, vedi HANDOFF.md): questo div è l'elemento
+                         diretto trascinato da Sortable e quello che Livewire deve
+                         identificare tra un render e l'altro dopo un riordino. Senza
+                         una key propria a questo livello, il morph di Livewire
+                         abbina i wrapper per posizione (non per identità), poi trova
+                         chiavi diverse sul page-card annidato e lo ricrea da zero —
+                         il riordino via drag&drop in doppia pagina sembra non
+                         "attaccare" mai visivamente. Stessa chiave di page-card,
+                         solo con un suffisso per restare univoca nell'albero DOM. --}}
                     <div
+                        wire:key="page-wrap-{{ $page->id }}"
                         data-page-id="{{ $page->id }}"
                         class="w-40 sm:w-48 {{ $spreadIndex > 0 ? 'mt-3' : '' }} {{ $indexInSpread > 0 ? 'border-l-2 border-gray-300 dark:border-gray-600' : '' }} {{ $spreadIndex === 0 && count($spread) === 1 ? 'ml-auto' : '' }}"
                     >
-                        @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds])
+                        @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds, 'pageNumber' => $pageNumbers[$page->id]])
                     </div>
                 @endforeach
                 <div class="basis-full h-0" aria-hidden="true"></div>
@@ -739,7 +787,7 @@
                 class="divide-y divide-gray-100 dark:divide-gray-700"
             >
                 @foreach ($pages as $page)
-                    @include('livewire.timone.partials.page-row', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds])
+                    @include('livewire.timone.partials.page-row', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds, 'pageNumber' => $pageNumbers[$page->id]])
                 @endforeach
             </ul>
         </div>

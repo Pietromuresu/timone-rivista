@@ -6,6 +6,7 @@ use App\Enums\ContentType;
 use App\Enums\PageStatus;
 use App\Models\Issue;
 use App\Models\Magazine;
+use App\Support\PageNumberer;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -65,6 +66,14 @@ class TimoneExportController extends Controller
             ], true));
         $internalPages = $pages->reject(fn ($page) => $page->role->isCoverSection())->values();
 
+        // Copertina separata dal conteggio pagine: la numerazione delle
+        // pagine interne mostrata in "Pagine interne" riparte da 1 subito
+        // dopo la copertina, invece di mostrare $page->position "grezzo"
+        // (che salterebbe le posizioni fisiche occupate da copertina/
+        // battente) — stessa etichettatura già usata da Grid::render(),
+        // vedi App\Support\PageNumberer.
+        $pageNumbers = PageNumberer::assign($pages, $issue->magazine->battente_counted_in_total);
+
         $filename = Str::slug("timone-{$magazine->slug}-{$issue->title}").'.pdf';
 
         // Griglia semplice a righe (8 pagine per riga, come la modalità
@@ -76,7 +85,8 @@ class TimoneExportController extends Controller
             'issue' => $issue,
             'coverPages' => $coverPages,
             'pageRows' => $internalPages->chunk(8),
-            'totalPages' => $pages->count(),
+            'pageNumbers' => $pageNumbers,
+            'totalPages' => $pages->reject(fn ($page) => $page->role->isCoverPage())->count(),
             'withThumbnails' => $request->boolean('withThumbnails'),
             'filtersApplied' => $request->boolean('onlyAds') || $request->boolean('onlyUnapproved'),
         ])->setPaper('a4', 'landscape')->download($filename);

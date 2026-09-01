@@ -1,0 +1,91 @@
+services:
+  app:
+    volumes:
+      # Bind mount del codice: le modifiche fatte sull'host sono visibili
+      # subito nel container, senza rebuild dell'immagine.
+      - ./:/var/www/html
+      # vendor/ e bootstrap/cache/ sono generati DENTRO l'immagine
+      # (composer_builder + `php artisan package:discover` nello stage
+      # finale) e sono gitignored sull'host. Senza questi volumi anonimi,
+      # il bind mount sopra li sovrascriverebbe con cartelle vuote/assenti
+      # e l'app non partirebbe più (autoload mancante, provider non
+      # scoperti — lo stesso problema che il Dockerfile documenta di
+      # aver già risolto in build).
+      - /var/www/html/vendor
+      - /var/www/html/bootstrap/cache
+      # Stesso motivo di vendor/bootstrap/cache sopra: storage/framework
+      # (views compilate, cache file-based, sessioni se mai si tornasse
+      # al driver "file") viene creata e chown-ata a www-data DENTRO
+      # l'immagine in fase di build. Sull'host questa cartella o non
+      # esiste o appartiene a un utente diverso da www-data (UID host
+      # != UID container) — senza questo volume anonimo, PHP non riesce
+      # a scrivere le view compilate e va in fallback silenzioso sulla
+      # temp di sistema (l'avviso "tempnam()").
+      - /var/www/html/storage/framework
+      # Persistenza dati invariata rispetto al compose principale
+      # (l'override sostituisce l'intera lista volumes del servizio,
+      # va quindi ripetuta qui).
+      - storage_data:/var/www/html/storage/app
+      - storage_logs:/var/www/html/storage/logs
+
+  # Stessa logica per i servizi che condividono lo stage "app": senza
+  # bind mount qui, worker/scheduler/reverb eseguirebbero ancora la
+  # versione "congelata" nell'immagine anche dopo una modifica al
+  # codice, mentre "app" la vedrebbe subito — incoerenza da evitare
+  # soprattutto per i job in coda e i listener broadcast.
+  worker:
+    volumes:
+      - ./:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/bootstrap/cache
+      - /var/www/html/storage/framework
+      - storage_data:/var/www/html/storage/app
+      - storage_logs:/var/www/html/storage/logs
+
+  scheduler:
+    volumes:
+      - ./:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/bootstrap/cache
+      - /var/www/html/storage/framework
+      - storage_data:/var/www/html/storage/app
+      - storage_logs:/var/www/html/storage/logs
+
+  reverb:
+    # Il servizio reverb nel compose principale non persiste storage/,
+    # quindi qui bastano codice + le due cartelle protette.
+    volumes:
+      - ./:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/bootstrap/cache
+      - /var/www/html/storage/framework
+
+  # Dev server Vite con HMR per Tailwind/Alpine/Sortable. Non è un target
+  # del Dockerfile multi-stage: node_builder fa una build statica una
+  # tantum (RUN npm run build) e non espone un processo server persistente,
+  # e ha come contesto solo resources/+public/+config, non l'intero repo.
+  # Per il dev serve un servizio a sé sull'immagine node pura, con TUTTO
+  # il repo bind-mountato.
+  vite:
+    image: node:20-alpine
+    working_dir: /var/www/html
+    # npm ci ad ogni avvio è più lento ma evita il rischio di un
+    # node_modules disallineato da package-lock.json dopo un git pull;
+    # se preferisci l'avvio rapido, sostituisci con solo "npm run dev".
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    environment:
+      # Stessa mappatura REVERB_APP_KEY -> VITE_REVERB_APP_KEY usata come
+      # build arg nel Dockerfile: qui è a runtime perché "npm run dev" (a
+      # differenza di "npm run build") legge le VITE_* da process.env del
+      # processo Node vivo, non le "cuoce" una volta sola nel bundle.
+      VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
+      VITE_REVERB_HOST: ${VITE_REVERB_HOST:-localhost}
+      VITE_REVERB_PORT: ${VITE_REVERB_PORT:-8080}
+      VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-http}
+    volumes:
+      - ./:/var/www/html
+      - /var/www/html/node_modules
+    ports:
+      - "5173:5173"
+    networks: [timone]
+    restart: unless-stopped

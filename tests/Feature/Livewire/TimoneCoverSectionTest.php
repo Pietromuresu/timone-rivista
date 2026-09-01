@@ -115,14 +115,41 @@ test('increasing total pages in coda keeps copertina1 in place and moves coperti
         ->and($issue->pages()->where('position', 8)->first()->role)->toBe(PageRole::Copertina4);
 });
 
-test('displayedTotalPages excludes a battente page by default and includes it when the magazine opts in', function () {
+test('displayedTotalPages excludes copertina1/4 always, and a battente page by default (included when the magazine opts in)', function () {
+    // reorderableIssue() ha 6 pagine: position 1 = Copertina1, position 6
+    // = Copertina4 (auto-assegnati da PageRoleAssigner), sempre esclusi
+    // dal conteggio indipendentemente da qualunque impostazione — vedi
+    // Issue::displayedTotalPages() e App\Support\PageNumberer.
     $issue = reorderableIssue();
     $battente = $issue->pages()->where('position', 3)->first();
     $battente->update(['role' => PageRole::Battente->value]);
 
-    expect($issue->fresh()->displayedTotalPages())->toBe(5);
+    expect($issue->fresh()->displayedTotalPages())->toBe(3);
 
     $issue->magazine->update(['battente_counted_in_total' => true]);
 
-    expect($issue->fresh()->displayedTotalPages())->toBe(6);
+    expect($issue->fresh()->displayedTotalPages())->toBe(4);
+});
+
+test('the "assign to internal page" dropdown shows the same page number the main grid shows, not the raw physical position', function () {
+    // reorderableIssue() ha 6 pagine: position 1 = Copertina1, position 6
+    // = Copertina4 (auto) — la pagina fisica in position 3 è quindi la
+    // SECONDA pagina interna numerata (position 2 = "1", position 3 =
+    // "2"), non "Pagina 3" come mostrerebbe la posizione grezza.
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 3)->first();
+
+    $html = Livewire::actingAs($user)->test(CoverSection::class, ['issue' => $issue])
+        ->set('expanded', true)
+        ->html();
+
+    $optionMarker = 'value="'.$page->id.'">';
+    $optionPos = mb_strpos($html, $optionMarker);
+    expect($optionPos)->not->toBeFalse();
+
+    $option = mb_substr($html, $optionPos, mb_strlen($optionMarker) + 20);
+
+    expect($option)->toContain('Pagina 2')
+        ->and($option)->not->toContain('Pagina 3');
 });

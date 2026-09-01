@@ -43,6 +43,23 @@ class Issue extends Model
     }
 
     /**
+     * Segna "qualcosa di visibile sul timone è cambiato" (2026-09-01,
+     * fallback a polling di Grid::checkForUpdates()) — chiamato ovunque il
+     * codice già trasmette un evento broadcast (PageMoved, ContentAssigned,
+     * PageStatusUpdated, PageGroupsChanged, PageFileUploaded, ecc., vedi
+     * HANDOFF.md), mai un observer sul model Page: molte di queste mutazioni
+     * passano da una pivot (`page_content`) o da un modello diverso
+     * (`PageFile`/`Content`), che un observer su `Page` da solo non
+     * intercetterebbe comunque. `touch()` con una colonna esplicita
+     * aggiorna SOLO `pages_updated_at`, un singolo UPDATE leggero, senza
+     * toccare `updated_at`/altri campi del modello.
+     */
+    public function markPagesUpdated(): void
+    {
+        $this->touch('pages_updated_at');
+    }
+
+    /**
      * Pagine del timone, ordinate per posizione.
      */
     public function pages(): HasMany
@@ -97,23 +114,31 @@ class Issue extends Model
     }
 
     /**
-     * Numero di pagine mostrato all'utente (Fase 3.1) — SOLO per
-     * visualizzazione, mai usato per posizioni/ordinamento: total_pages
-     * resta l'unica fonte di verità per lo schema (unique(issue_id,
-     * position), PageReorderer, ecc.), il battente occupa comunque una
-     * posizione fisica sequenziale come qualunque altra pagina. Scelta
-     * pragmatica documentata in HANDOFF.md — un vero "fuori sequenza" per
-     * il battente romperebbe l'invariante di posizione in tutto il
-     * progetto per un guadagno solo cosmetico.
+     * Numero di pagine mostrato all'utente (Fase 3.1, estesa per separare
+     * la copertina dal conteggio) — SOLO per visualizzazione, mai usato
+     * per posizioni/ordinamento: total_pages resta l'unica fonte di
+     * verità per lo schema (unique(issue_id, position), PageReorderer,
+     * ecc.), copertina e battente occupano comunque una posizione fisica
+     * sequenziale come qualunque altra pagina. Scelta pragmatica
+     * documentata in HANDOFF.md — un vero "fuori sequenza" romperebbe
+     * l'invariante di posizione in tutto il progetto per un guadagno solo
+     * cosmetico. Le quattro pagine di copertina (I-IV) sono SEMPRE escluse
+     * (mai contano come pagina numerata, a differenza del battente che
+     * resta configurabile per rivista).
      */
     public function displayedTotalPages(): int
     {
-        if ($this->magazine->battente_counted_in_total) {
-            return $this->total_pages;
-        }
+        $coverCount = $this->pages()->whereIn('role', [
+            PageRole::Copertina1->value,
+            PageRole::Copertina2->value,
+            PageRole::Copertina3->value,
+            PageRole::Copertina4->value,
+        ])->count();
 
-        $battenteCount = $this->pages()->where('role', PageRole::Battente->value)->count();
+        $battenteCount = $this->magazine->battente_counted_in_total
+            ? 0
+            : $this->pages()->where('role', PageRole::Battente->value)->count();
 
-        return $this->total_pages - $battenteCount;
+        return $this->total_pages - $coverCount - $battenteCount;
     }
 }

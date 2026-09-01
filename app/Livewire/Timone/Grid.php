@@ -29,6 +29,7 @@ use App\Support\AutomaticChecks;
 use App\Support\PageContentTypeResolver;
 use App\Support\PageCountResizer;
 use App\Support\PageGroupResolver;
+use App\Support\PageNumberer;
 use App\Support\PagePercentageAllocator;
 use App\Support\PageReorderer;
 use App\Support\PageRoleAssigner;
@@ -98,6 +99,16 @@ class Grid extends Component
      * uno spostamento calcolato su posizioni non più valide.
      */
     public int $reorderVersion = 0;
+
+    /**
+     * Ultimo valore di `issues.pages_updated_at` visto da QUESTO client
+     * (2026-09-01, fallback a polling — vedi checkForUpdates()) — stringa
+     * grezza, mai un Carbon: va confrontata byte-per-byte contro il valore
+     * letto da una query a colonna singola, non formattata/manipolata come
+     * data altrove. `null` finché non è mai stato toccato nulla su questa
+     * issue (caso raro, issue appena creata senza alcuna mutazione).
+     */
+    public ?string $lastKnownPagesUpdatedAt = null;
 
     /**
      * Il pannello storico spostamenti (page_reorder_logs) è chiuso di
@@ -207,6 +218,7 @@ class Grid extends Component
     {
         $this->issue = $issue;
         $this->reorderVersion = $issue->reorder_version ?? 0;
+        $this->lastKnownPagesUpdatedAt = $issue->getRawOriginal('pages_updated_at');
     }
 
     public function setViewMode(string $mode): void
@@ -343,6 +355,7 @@ class Grid extends Component
             changedByUserId: auth()->id(),
             changedByUserName: auth()->user()->name,
         ))->toOthers();
+        $this->issue->markPagesUpdated();
 
         $this->showPageCountEditor = false;
     }
@@ -412,11 +425,28 @@ class Grid extends Component
         Page::insert($newRows);
     }
 
-    #[On('echo-presence:issue.{issue.id},IssuePageCountUpdated')]
+    // Il "." davanti al nome evento (qui e in tutti gli altri #[On('echo...')]
+    // di questo file/ContentCreate.php) NON è un refuso: senza, Livewire
+    // interpreta un nome "nudo" come alias di App\Events\{Nome} e si mette
+    // in ascolto di QUEL nome sul canale — ma i nostri eventi (vedi
+    // broadcastAs() su ognuno, es. App\Events\PageMoved) trasmettono con il
+    // nome corto ("PageMoved", non "App\Events\PageMoved"), quindi senza il
+    // punto il listener non riceve MAI l'evento: nessun errore visibile,
+    // nessuna eccezione, il frame WebSocket arriva regolarmente (verificato
+    // via WS reale) ma non trova nessun callback ad aspettarlo. Bug reale
+    // scoperto il 2026-09-01 indagando la segnalazione "il polling non
+    // funziona": né il realtime né il fallback a polling se ne accorgevano,
+    // perché la connessione Echo restava "connected" a tutti gli effetti
+    // (il fallback si attiva solo quando la CONNESSIONE cade, non quando un
+    // singolo evento non trova ascoltatori) — un problema di nome, non di
+    // trasporto. Vedi doc Livewire: "prefix the event name with a dot to
+    // indicate it shouldn't be namespaced".
+    #[On('echo-presence:issue.{issue.id},.IssuePageCountUpdated')]
     public function onIssuePageCountUpdated(): void
     {
         // Nessuno stato locale da aggiornare: il prossimo render() ripesca
         // pagine e total_pages aggiornati dal database.
+        $this->notifyRemoteChange('Numero pagine aggiornato da un altro utente.');
     }
 
     /**
@@ -642,9 +672,10 @@ class Grid extends Component
             movedByUserId: auth()->id(),
             movedByUserName: auth()->user()->name,
         ))->toOthers();
+        $this->issue->markPagesUpdated();
     }
 
-    #[On('echo-presence:issue.{issue.id},PageMoved')]
+    #[On('echo-presence:issue.{issue.id},.PageMoved')]
     public function onPageMoved(): void
     {
         // Il prossimo render() ripesca già le pagine ordinate dal database:
@@ -652,6 +683,7 @@ class Grid extends Component
         // altrimenti un successivo movePage() di questo client verrebbe
         // rifiutato come conflitto anche se la sua vista è ormai aggiornata.
         $this->reorderVersion = $this->issue->fresh()->reorder_version;
+        $this->notifyRemoteChange('Una pagina è stata spostata da un altro utente.');
     }
 
     public function toggleSwapMode(): void
@@ -778,12 +810,14 @@ class Grid extends Component
             swappedByUserId: auth()->id(),
             swappedByUserName: auth()->user()->name,
         ))->toOthers();
+        $this->issue->markPagesUpdated();
     }
 
-    #[On('echo-presence:issue.{issue.id},PagesSwapped')]
+    #[On('echo-presence:issue.{issue.id},.PagesSwapped')]
     public function onPagesSwapped(): void
     {
         $this->reorderVersion = $this->issue->fresh()->reorder_version;
+        $this->notifyRemoteChange('Due pagine sono state scambiate da un altro utente.');
     }
 
     /**
@@ -937,12 +971,14 @@ class Grid extends Component
             movedByUserId: auth()->id(),
             movedByUserName: auth()->user()->name,
         ))->toOthers();
+        $this->issue->markPagesUpdated();
     }
 
-    #[On('echo-presence:issue.{issue.id},PagesBlockMoved')]
+    #[On('echo-presence:issue.{issue.id},.PagesBlockMoved')]
     public function onPagesBlockMoved(): void
     {
         $this->reorderVersion = $this->issue->fresh()->reorder_version;
+        $this->notifyRemoteChange('Un blocco di pagine è stato spostato da un altro utente.');
     }
 
     /**
@@ -997,6 +1033,7 @@ class Grid extends Component
         );
 
         broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
+        $this->issue->markPagesUpdated();
     }
 
     /**
@@ -1037,27 +1074,55 @@ class Grid extends Component
         );
 
         broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
+        $this->issue->markPagesUpdated();
     }
 
-    #[On('echo-presence:issue.{issue.id},PageGroupsChanged')]
+    #[On('echo-presence:issue.{issue.id},.PageGroupsChanged')]
     public function onPageGroupsChanged(): void
     {
         // render() ripesca già la relazione 'group' su ogni pagina — corpo
         // vuoto, stesso pattern di tutti gli altri listener broadcast.
+        $this->notifyRemoteChange('Un gruppo di pagine è stato modificato da un altro utente.');
     }
 
     /**
-     * Fallback quando i websocket non sono disponibili: il client lo
-     * richiama a intervalli regolari al posto di ricevere i broadcast
-     * (vedi `resources/js/app.js`, store `realtimeFallback`). render()
-     * ripesca già tutto (pagine, contenuti, stati, file) ad ogni
-     * richiesta Livewire: qui serve solo riallineare la versione del
-     * lock ottimistico, esattamente come farebbe onPageMoved() se il
-     * broadcast fosse arrivato normalmente.
+     * Fallback quando i websocket non sono disponibili (2026-09-01,
+     * sostituisce il precedente `pollRefresh()`): richiamato da un
+     * elemento `wire:poll.1s` in grid.blade.php, montato dal client SOLO
+     * mentre `$store.realtimeFallback.connected` è false — non un poll
+     * sempre attivo, altrimenti ogni client pagherebbe una richiesta
+     * Livewire completa al secondo anche con Reverb perfettamente
+     * funzionante, vanificando il vantaggio del modello a broadcast.
+     *
+     * Controllo deliberatamente leggero (richiesta esplicita: "non
+     * ricaricare sempre tutto"): una SELECT a singola colonna
+     * (`issues.pages_updated_at`, toccata da Issue::markPagesUpdated() in
+     * ogni punto del codice che già trasmette un evento broadcast — vedi
+     * HANDOFF.md) confrontata come stringa grezza contro l'ultimo valore
+     * visto da questo client. Se non è cambiato nulla, `skipRender()`
+     * evita del tutto il costo delle query più pesanti di render()
+     * (pagine con contenuti/file eager-loaded, cruscotto pubblicitario,
+     * ecc.) per questo giro di poll — la richiesta HTTP/Livewire resta
+     * comunque (limite noto di `wire:poll`, non evitabile lato server),
+     * ma non fa nulla di più di un `SELECT` a colonna singola.
      */
-    public function pollRefresh(): void
+    public function checkForUpdates(): void
     {
+        $latest = DB::table('issues')->where('id', $this->issue->id)->value('pages_updated_at');
+
+        if ($latest === null || $latest === $this->lastKnownPagesUpdatedAt) {
+            $this->skipRender();
+
+            return;
+        }
+
+        $this->lastKnownPagesUpdatedAt = $latest;
+        // Stesso motivo di onPageMoved()/pollRefresh() (versione precedente):
+        // un altro utente potrebbe aver riordinato le pagine nel frattempo,
+        // il lock ottimistico va riallineato o un successivo movePage() di
+        // questo client verrebbe rifiutato come conflitto inesistente.
         $this->reorderVersion = $this->issue->fresh()->reorder_version;
+        $this->notifyRemoteChange('Il timone è stato aggiornato da un altro utente.');
     }
 
     public function changePageStatus(int $pageId, string $status): void
@@ -1132,13 +1197,15 @@ class Grid extends Component
             updatedByUserId: auth()->id(),
             updatedByUserName: auth()->user()->name,
         ))->toOthers();
+        $this->issue->markPagesUpdated();
     }
 
-    #[On('echo-presence:issue.{issue.id},PageStatusUpdated')]
+    #[On('echo-presence:issue.{issue.id},.PageStatusUpdated')]
     public function onPageStatusUpdated(): void
     {
         // Nessuno stato locale da aggiornare: il prossimo render() ripesca
         // lo stato aggiornato delle pagine dal database.
+        $this->notifyRemoteChange('Lo stato di una pagina è cambiato da un altro utente.');
     }
 
     /**
@@ -1190,6 +1257,7 @@ class Grid extends Component
                 unlockedByUserId: auth()->id(),
                 unlockedByUserName: auth()->user()->name,
             ))->toOthers();
+            $this->issue->markPagesUpdated();
 
             return;
         }
@@ -1210,14 +1278,16 @@ class Grid extends Component
             lockedByUserId: auth()->id(),
             lockedByUserName: auth()->user()->name,
         ))->toOthers();
+        $this->issue->markPagesUpdated();
     }
 
-    #[On('echo-presence:issue.{issue.id},PageLocked')]
-    #[On('echo-presence:issue.{issue.id},PageUnlocked')]
+    #[On('echo-presence:issue.{issue.id},.PageLocked')]
+    #[On('echo-presence:issue.{issue.id},.PageUnlocked')]
     public function onPageLockChanged(): void
     {
         // Nessuno stato locale da aggiornare: il prossimo render() ripesca
         // locked_at/locked_by dal database.
+        $this->notifyRemoteChange('Una pagina è stata bloccata/sbloccata da un altro utente.');
     }
 
     public function toggleSelectionMode(): void
@@ -1603,6 +1673,7 @@ class Grid extends Component
             assignedByUserId: auth()->id(),
             assignedByUserName: auth()->user()->name,
         ))->toOthers();
+        $this->issue->markPagesUpdated();
     }
 
     /**
@@ -1670,6 +1741,7 @@ class Grid extends Component
             assignedByUserId: auth()->id(),
             assignedByUserName: auth()->user()->name,
         ))->toOthers();
+        $this->issue->markPagesUpdated();
     }
 
     public function unassignContent(int $contentId, int $pageId): void
@@ -1705,28 +1777,32 @@ class Grid extends Component
             unassignedByUserId: auth()->id(),
             unassignedByUserName: auth()->user()->name,
         ))->toOthers();
+        $this->issue->markPagesUpdated();
     }
 
-    #[On('echo-presence:issue.{issue.id},ContentAssigned')]
+    #[On('echo-presence:issue.{issue.id},.ContentAssigned')]
     public function onContentAssigned(): void
     {
         // Nessuno stato locale da aggiornare: il prossimo render() ripesca
         // pagine e contenuti non assegnati dal database.
+        $this->notifyRemoteChange('Un contenuto è stato assegnato da un altro utente.');
     }
 
-    #[On('echo-presence:issue.{issue.id},ContentUnassigned')]
+    #[On('echo-presence:issue.{issue.id},.ContentUnassigned')]
     public function onContentUnassigned(): void
     {
         // idem
+        $this->notifyRemoteChange('Un contenuto è stato rimosso da un altro utente.');
     }
 
-    #[On('echo-presence:issue.{issue.id},ContentCreated')]
+    #[On('echo-presence:issue.{issue.id},.ContentCreated')]
     public function onContentCreated(): void
     {
         // Nessuno stato locale da aggiornare: il prossimo render() ripesca
         // il nuovo contenuto tra i "non assegnati" dal database. Creato
         // da App\Livewire\Timone\ContentCreate, un componente a sé — vedi
         // "Decisioni architetturali da ricordare" in HANDOFF.md.
+        $this->notifyRemoteChange('Un nuovo contenuto è stato creato da un altro utente.');
     }
 
     /**
@@ -1735,10 +1811,11 @@ class Grid extends Component
      * eager-loaded sopra), che basta per far comparire la miniatura sul
      * chip senza refresh (Fase 1.1, riusato qui pari pari).
      */
-    #[On('echo-presence:issue.{issue.id},ContentFileUploaded')]
+    #[On('echo-presence:issue.{issue.id},.ContentFileUploaded')]
     public function onContentFileUploaded(): void
     {
         // idem
+        $this->notifyRemoteChange('Un file è stato caricato su un contenuto da un altro utente.');
     }
 
     /**
@@ -2198,11 +2275,12 @@ class Grid extends Component
         );
     }
 
-    #[On('echo-presence:issue.{issue.id},PageFileUploaded')]
+    #[On('echo-presence:issue.{issue.id},.PageFileUploaded')]
     public function onPageFileUploaded(): void
     {
         // Nessuno stato locale da aggiornare: il prossimo render() ripesca
         // l'ultimo PageFile (con thumbnail_status aggiornato) dal database.
+        $this->notifyRemoteChange('Un PDF è stato caricato da un altro utente.');
     }
 
     public function render(): View
@@ -2282,13 +2360,25 @@ class Grid extends Component
 
         $avgThumbnailSeconds = ThumbnailProgressEstimator::averageProcessingSeconds($pages->pluck('id'));
 
+        // Copertina separata dal conteggio pagine (scelta presa con
+        // l'utente: niente migration/riscrittura di position, solo
+        // etichetta mostrata + esclusione dai calcoli aggregati — vedi
+        // App\Support\PageNumberer). Le pagine di copertina restano
+        // comunque escluse dal cruscotto pubblicitario, non solo dalla
+        // numerazione: un contenuto assegnato per errore su una copertina
+        // non deve contribuire a "pagine totali"/carico % (denominatore e
+        // numeratore devono restare coerenti tra loro).
+        $pageNumbers = PageNumberer::assign($pages, $this->issue->magazine->battente_counted_in_total);
+        $numberedPages = $pages->reject(fn (Page $page) => $page->role->isCoverPage())->values();
+
         return view('livewire.timone.grid', [
             'pages' => $pages,
+            'pageNumbers' => $pageNumbers,
             'spreads' => $this->viewMode === 'doppia' ? PageSpreadBuilder::build($pages) : null,
             'unassignedContents' => $unassignedContents,
             'archivedContents' => $archivedContents,
             'reorderLogs' => $reorderLogs,
-            'adLoad' => AdLoadCalculator::summarize($pages, $reservedAdvertisements),
+            'adLoad' => AdLoadCalculator::summarize($numberedPages, $reservedAdvertisements),
             'adThreshold' => $this->issue->magazine->ad_threshold_percentage,
             'unassignedAdCount' => $reservedAdvertisements->count(),
             'pageCountImpact' => $pageCountImpact,
@@ -2297,5 +2387,23 @@ class Grid extends Component
             'avgThumbnailSeconds' => $avgThumbnailSeconds,
             'thumbnailProgress' => ThumbnailProgressEstimator::aggregate($pendingThumbnailFiles, $avgThumbnailSeconds),
         ]);
+    }
+
+    /**
+     * Indicatore visivo leggero per un cambiamento arrivato da un altro
+     * utente (richiesta esplicita: "toast o evidenziazione temporanea",
+     * senza essere invasivo) — chiamato da ognuno dei listener broadcast
+     * `on...()` qui sotto, mai dal fallback di polling (`pollRefresh()`):
+     * un poll non è "un altro utente ha appena fatto qualcosa", è solo
+     * questo client che si allinea, un toast lì sarebbe rumore falso.
+     * `$this->dispatch()` qui invia un CustomEvent al browser DOPO che
+     * Livewire ha già rifatto il round-trip innescato dall'evento Echo:
+     * l'Alpine in grid.blade.php lo ascolta e mostra/nasconde il toast da
+     * solo (nessuno stato server-side, effimero come il badge "chi sta
+     * modificando cosa" già esistente).
+     */
+    private function notifyRemoteChange(string $message): void
+    {
+        $this->dispatch('remote-change', message: $message);
     }
 }

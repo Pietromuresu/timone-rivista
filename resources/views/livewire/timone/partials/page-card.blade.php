@@ -1,6 +1,12 @@
 @php
     $latestFile = $page->files->first();
     $dropEnabled = $dropEnabled ?? false;
+    // Etichetta mostrata (copertina separata dal conteggio pagine): il
+    // fallback su $page->position copre solo il caso teorico di un
+    // include senza 'pageNumber' esplicito (oggi non accade, unico
+    // chiamante è grid.blade.php, che lo passa sempre — vedi
+    // App\Support\PageNumberer per il calcolo reale).
+    $pageNumber = $pageNumber ?? $page->position;
     $locked = $page->isLocked();
     // Fase 2.3: pagine "collegate" in un gruppo — vedi App\Models\PageGroup,
     // $page->group già eager-loaded da Grid::render().
@@ -76,11 +82,11 @@
 
             @if ($locked)
                 <span class="font-semibold text-sm select-none" title="{{ $page->lockedBy ? 'Bloccata da '.$page->lockedBy->name : 'Pagina bloccata' }}">
-                    🔒 {{ $page->position }}
+                    🔒 {{ $pageNumber }}
                 </span>
             @else
                 <span class="drag-handle cursor-grab font-semibold text-sm select-none" title="Trascina per riordinare">
-                    ⠿ {{ $page->position }}
+                    ⠿ {{ $pageNumber }}
                 </span>
             @endif
         </div>

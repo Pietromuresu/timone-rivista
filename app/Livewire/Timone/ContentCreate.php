@@ -201,6 +201,7 @@ class ContentCreate extends Component
             createdByUserId: auth()->id(),
             createdByUserName: auth()->user()->name,
         ))->toOthers();
+        $this->issue->markPagesUpdated();
 
         $this->showForm = false;
     }
@@ -317,7 +318,7 @@ class ContentCreate extends Component
         return $trimmed !== '' && ctype_digit($trimmed) ? (int) $trimmed : null;
     }
 
-    #[On('echo-presence:issue.{issue.id},ContentCreated')]
+    #[On('echo-presence:issue.{issue.id},.ContentCreated')]
     public function onContentCreated(): void
     {
         // Nessuno stato proprio da aggiornare qui: è Grid.php (il pannello

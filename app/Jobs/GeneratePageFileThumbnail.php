@@ -74,6 +74,7 @@ class GeneratePageFileThumbnail implements ShouldQueue
             pageFileId: $this->pageFile->id,
             thumbnailStatus: $this->pageFile->thumbnail_status->value,
         ));
+        $this->pageFile->page->issue->markPagesUpdated();
     }
 
     /**

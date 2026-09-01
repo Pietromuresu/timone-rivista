@@ -20,6 +20,9 @@
     // Fase 2.3: pagine "collegate" in un gruppo — vedi App\Models\PageGroup,
     // $page->group già eager-loaded da Grid::render().
     $group = $page->group;
+    // Etichetta mostrata (copertina separata dal conteggio pagine) — vedi
+    // App\Support\PageNumberer e la nota in page-card.blade.php.
+    $pageNumber = $pageNumber ?? $page->position;
 @endphp
 <li
     wire:key="page-{{ $page->id }}"
@@ -61,11 +64,11 @@
 
     @if ($locked)
         <span class="w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200" title="{{ $page->lockedBy ? 'Bloccata da '.$page->lockedBy->name : 'Pagina bloccata' }}">
-            🔒 {{ $page->position }}
+            🔒 {{ $pageNumber }}
         </span>
     @else
         <span class="drag-handle w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200 cursor-grab" title="Trascina per riordinare">
-            {{ $page->position }}
+            {{ $pageNumber }}
         </span>
     @endif
 

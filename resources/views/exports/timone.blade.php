@@ -123,7 +123,7 @@
                         $latestFile = $page->files->first();
                     @endphp
                     <td class="page-cell" style="background-color: {{ $typeColor['bg'] }}; border-color: {{ $statusColor['border'] }};">
-                        <span class="position" style="color: {{ $typeColor['text'] }};">{{ $page->position }}</span>
+                        <span class="position" style="color: {{ $typeColor['text'] }};">{{ $pageNumbers[$page->id] ?? $page->position }}</span>
                         <span class="status-badge" style="background-color: {{ $statusColor['bg'] }}; color: {{ $statusColor['text'] }};">
                             {{ $page->status->label() }}
                         </span>

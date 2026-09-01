@@ -40,16 +40,21 @@ test('an issue with no ads shows a zero percent ad load', function () {
 });
 
 test('the dashboard reports the correct equivalent pages and percentage for assigned ads', function () {
-    $issue = reorderableIssue(); // total_pages = 6
+    $issue = reorderableIssue(); // total_pages = 6 (position 1 = Copertina1, position 6 = Copertina4)
+
     $user = editorFor($issue);
 
-    assignedAdContent($issue, 1, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata);
-    assignedAdContent($issue, 2, AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::InTrattativa);
+    // Posizioni 2/3 (Interna), non 1: la copertina è esclusa dal
+    // cruscotto pubblicitario (vedi Grid::render(), $numberedPages) —
+    // un contenuto assegnato sulla copertina non deve alterare né
+    // numeratore né denominatore della percentuale.
+    assignedAdContent($issue, 2, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata);
+    assignedAdContent($issue, 3, AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::InTrattativa);
 
     // 1 pagina intera (100%) + 1 mezza pagina (50%) = 1.5 pagine equivalenti
-    // su 6 pagine totali = 25%.
+    // su 4 pagine numerate (6 totali - 2 di copertina) = 37.5%.
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->assertSee('25%')
+        ->assertSee('37.5%')
         ->assertSee('Pagina intera: 1')
         ->assertSee('Mezza pagina orizzontale: 1')
         ->assertSee('Confermata: 1')
@@ -73,17 +78,19 @@ test('an editor can set an ad load warning threshold and it is highlighted once 
     $issue = reorderableIssue();
     $user = editorFor($issue);
 
-    assignedAdContent($issue, 1, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata);
+    // Posizione 2 (Interna), non 1 (Copertina1, esclusa dal cruscotto).
+    assignedAdContent($issue, 2, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('updateAdThreshold', '10');
 
     expect((float) $issue->magazine->fresh()->ad_threshold_percentage)->toBe(10.0);
 
-    // Con una pagina intera su 6 pagine il carico è ~16.67%, sopra la
-    // soglia del 10% appena impostata. $issue->fresh() evita di riusare
-    // la relazione "magazine" già cache-ata (con la vecchia soglia) sulla
-    // variabile di test originale.
+    // Con una pagina intera su 4 pagine numerate (6 totali - 2 di
+    // copertina) il carico è 25%, sopra la soglia del 10% appena
+    // impostata. $issue->fresh() evita di riusare la relazione
+    // "magazine" già cache-ata (con la vecchia soglia) sulla variabile
+    // di test originale.
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue->fresh()])
         ->assertSee('⚠️ Sopra soglia');
 });
