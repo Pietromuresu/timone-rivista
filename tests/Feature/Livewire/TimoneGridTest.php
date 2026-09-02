@@ -60,16 +60,25 @@ test('the doppia view mode wraps every page in a single flat sortable container,
     expect(substr_count($html, 'x-sortable='))->toBe(1);
 
     foreach ($issue->pages()->orderBy('position')->get() as $page) {
-        // Ogni pagina ha data-page-id due volte: sul wrapper che Sortable
-        // trascina davvero e sulla page-card interna (invariata).
-        expect(substr_count($html, 'data-page-id="'.$page->id.'"'))->toBe(2);
+        // Bug reale trovato il 2026-09-02 (segnalato dall'utente: il drag
+        // in doppia non si avviava affatto): questo test asserisce ora
+        // l'INVARIANTE CORRETTO, prima asserisce esattamente il difetto
+        // ("data-page-id due volte, wrapper + page-card annidata"). Un
+        // div-wrapper esterno con un proprio data-page-id fa sì che
+        // SortableJS (closest('[data-page-id]') da resources/js/app.js)
+        // risalga dal target del click e si fermi al PRIMO match — il
+        // root di page-card, non il wrapper — il cui parentNode non è più
+        // il contenitore Sortable (Sortable.js:566): il drag abortisce in
+        // silenzio. page-card resta quindi l'unico elemento con
+        // data-page-id, esattamente come in griglia/lista, e va trovato
+        // una sola volta.
+        expect(substr_count($html, 'data-page-id="'.$page->id.'"'))->toBe(1);
 
-        // Bugfix drag&drop in doppia pagina (vedi HANDOFF.md): il wrapper
-        // trascinato da Sortable deve avere il proprio wire:key, non solo
-        // la page-card annidata al suo interno — altrimenti il morph di
-        // Livewire abbina i wrapper per posizione invece che per identità
-        // dopo un riordino, e il drag "non si consolida mai" visivamente.
-        expect($html)->toContain('wire:key="page-wrap-'.$page->id.'"');
+        // Stesso wire:key già usato (e mai stato il problema) in
+        // griglia/lista — nessun wrapper "page-wrap-" separato: page-card
+        // è di nuovo l'unico root, figlio diretto del contenitore Sortable.
+        expect($html)->toContain('wire:key="page-'.$page->id.'"')
+            ->not->toContain('wire:key="page-wrap-'.$page->id.'"');
     }
 });
 

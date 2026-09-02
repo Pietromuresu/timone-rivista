@@ -1,4 +1,4 @@
-<div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+<div id="content-create-panel" class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg border border-gray-200 dark:border-gray-700 p-3" wire:key="content-create-form">
     <div class="flex items-center justify-between">
         <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Nuovo contenuto</h4>
         <button
@@ -14,7 +14,37 @@
         </button>
     </div>
 
+    {{-- Punto 4 del prompt (2026-09-02): questi due errori restano FUORI
+         da "@if ($showForm)" apposta — possono scattare (blockIfLocked()/
+         spazio insufficiente sulla pagina di partenza) proprio nello
+         stesso metodo che poi chiude il form ($showForm = false a fine
+         createContentAndFinish()); dentro il blocco condizionale
+         sarebbero scomparsi insieme al form nella stessa risposta,
+         invisibili all'utente esattamente quando servono di più. Stesso
+         principio già seguito in grid.blade.php per i suoi banner
+         d'errore, mai nascosti dietro un pannello che si può richiudere
+         nella stessa azione che li genera. --}}
+    @error('locked')
+        <p class="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-1.5">🔒 {{ $message }}</p>
+    @enderror
+
+    @error('anchor')
+        <p class="mt-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5">⚠️ {{ $message }}</p>
+    @enderror
+
     @if ($showForm)
+        {{-- Promemoria di dove finirà il contenuto, quando il form si apre
+             dal bottone "carica materiale" di una card/riga specifica
+             (App\Livewire\Timone\ContentCreate::openForPage()) — sostituisce
+             l'immediatezza del vecchio upload diretto su pagina, che non
+             richiedeva questo tipo di conferma perché il PDF andava
+             ovviamente sulla pagina cliccata. --}}
+        @if ($anchorPageId)
+            <p class="mt-2 text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-1.5">
+                📌 Il materiale caricato qui verrà assegnato subito alla pagina da cui hai aperto questo modulo (o, se il PDF occupa più pagine, a quelle successive — te lo chiederemo prima di scrivere nulla).
+            </p>
+        @endif
+
         <form wire:submit="save" class="mt-3 space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -135,4 +165,70 @@
             <x-primary-button>Crea contenuto</x-primary-button>
         </form>
     @endif
+
+    {{-- Riepilogo di conflitto per un caricamento PDF multipagina (§2.1),
+         spostato qui dal Punto 4 del prompt (2026-09-02): prima viveva in
+         grid.blade.php/Grid.php per il caricamento diretto su pagina,
+         rimosso — un contenuto è ora l'unico oggetto a cui si può
+         allegare un PDF. Testo/scelte INVARIATI rispetto a prima (il
+         prompt chiedeva esplicitamente di non toccare questa UI), solo il
+         componente che la ospita è cambiato. Nessuna scrittura è ancora
+         avvenuta quando questa modale è aperta. --}}
+    <x-modal name="multipage-upload-conflict" maxWidth="lg">
+        @if ($multipageUploadConflict)
+            <div class="p-6 space-y-3">
+                <p class="font-medium text-lg text-gray-900 dark:text-gray-100">
+                    📄 Il PDF caricato sulla pagina {{ $multipageUploadConflict['initiatingPosition'] }} occupa {{ $multipageUploadConflict['totalPdfPages'] }} pagine.
+                </p>
+
+                @if ($multipageUploadConflict['availablePages'] < $multipageUploadConflict['totalPdfPages'])
+                    <p class="text-sm text-amber-700 dark:text-amber-400">
+                        Il numero finisce prima: solo {{ $multipageUploadConflict['availablePages'] }} pagine del timone sono disponibili da questo punto in poi — le pagine successive del PDF non verranno posizionate.
+                    </p>
+                @endif
+
+                @if (empty($multipageUploadConflict['conflictingPositions']))
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Nessuna delle pagine coinvolte ha già un PDF caricato: puoi procedere senza sovrascrivere nulla.</p>
+                    <button type="button" wire:click="confirmMultipageUpload(false)" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700">
+                        Occupa le {{ $multipageUploadConflict['totalPdfPages'] }} pagine
+                    </button>
+                @else
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        {{ count($multipageUploadConflict['conflictingPositions']) === 1 ? 'La pagina' : 'Le pagine' }}
+                        {{ implode(', ', $multipageUploadConflict['conflictingPositions']) }}
+                        {{ count($multipageUploadConflict['conflictingPositions']) === 1 ? 'risulta' : 'risultano' }}
+                        già occupata/e da un altro PDF.
+                    </p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="confirmMultipageUpload(false)"
+                            class="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-sm hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                        >
+                            Salta le pagine in conflitto
+                        </button>
+                        <button
+                            type="button"
+                            x-on:click="confirm('Sovrascrivere il PDF già presente su {{ implode(', ', $multipageUploadConflict['conflictingPositions']) }}? L\'operazione non è reversibile.') && $wire.confirmMultipageUpload(true)"
+                            class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700"
+                        >
+                            Sovrascrivi le pagine in conflitto
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="confirmMultipageUploadWithShift"
+                            title="Le pagine in conflitto vengono spostate subito dopo, nulla viene perso — il numero di pagine totali si estende automaticamente se necessario"
+                            class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700"
+                        >
+                            ↪️ Sposta le pagine esistenti dopo
+                        </button>
+                    </div>
+                @endif
+
+                <button type="button" wire:click="cancelMultipageUpload" class="text-xs text-gray-500 dark:text-gray-400 underline">
+                    Annulla il caricamento
+                </button>
+            </div>
+        @endif
+    </x-modal>
 </div>

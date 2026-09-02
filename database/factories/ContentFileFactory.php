@@ -39,4 +39,22 @@ class ContentFileFactory extends Factory
             'thumbnail_path' => 'contents/1/thumbnails/'.fake()->uuid().'.png',
         ]);
     }
+
+    public function formatMismatch(): static
+    {
+        return $this->state(fn () => [
+            'format_check_status' => \App\Enums\FormatCheckStatus::Mismatch,
+            'measured_width_mm' => 220.0,
+            'measured_height_mm' => 280.0,
+        ]);
+    }
+
+    public function formatMatching(): static
+    {
+        return $this->state(fn () => [
+            'format_check_status' => \App\Enums\FormatCheckStatus::Matching,
+            'measured_width_mm' => 216.0,
+            'measured_height_mm' => 276.0,
+        ]);
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\ThumbnailStatus;
+use App\Models\ContentFile;
 use App\Models\PageFile;
 use Illuminate\Support\Collection;
 
@@ -58,17 +59,53 @@ class ThumbnailProgressEstimator
     }
 
     /**
-     * Avanzamento per una singola pagina ancora in coda/elaborazione —
-     * tempo REALMENTE trascorso da quando il file è stato caricato, e (se
-     * disponibile una media) una stima di quanto manca. `remainingSeconds`
-     * resta null se non c'è ancora una media affidabile, o se il tempo
-     * trascorso ha già superato la media (mostrato invece come "quasi
-     * pronto" lato vista, non un numero negativo o azzerato che
-     * suggerirebbe una precisione che non abbiamo).
+     * Stesso principio di averageProcessingSeconds() sopra, ma per i file
+     * allegati a un Content invece che direttamente a una Page (Punto 4
+     * del prompt, 2026-09-02: il PDF ora si carica sempre su un
+     * contenuto). Due tabelle diverse (page_files/content_files), quindi
+     * due query separate invece di un'unica interrogazione — scelta
+     * pragmatica (CLAUDE.md, regola 3): unificarle richiederebbe una
+     * query UNION o un'astrazione sopra due Eloquent Model diversi per un
+     * beneficio marginale, vedi il commento su Grid::render() che le
+     * combina con un semplice fallback invece di una vera media pesata.
+     */
+    public static function averageProcessingSecondsForContents(Collection $contentIds): ?float
+    {
+        if ($contentIds->isEmpty()) {
+            return null;
+        }
+
+        $recentlyCompleted = ContentFile::query()
+            ->whereIn('content_id', $contentIds)
+            ->where('thumbnail_status', ThumbnailStatus::Ready)
+            ->latest('updated_at')
+            ->limit(20)
+            ->get(['created_at', 'updated_at']);
+
+        if ($recentlyCompleted->isEmpty()) {
+            return null;
+        }
+
+        return $recentlyCompleted->avg(
+            fn (ContentFile $file) => (int) abs($file->updated_at->diffInSeconds($file->created_at))
+        );
+    }
+
+    /**
+     * Avanzamento per una singola pagina/file ancora in coda/elaborazione
+     * — tempo REALMENTE trascorso da quando il file è stato caricato, e
+     * (se disponibile una media) una stima di quanto manca.
+     * `remainingSeconds` resta null se non c'è ancora una media
+     * affidabile, o se il tempo trascorso ha già superato la media
+     * (mostrato invece come "quasi pronto" lato vista, non un numero
+     * negativo o azzerato che suggerirebbe una precisione che non
+     * abbiamo). Accetta sia un PageFile (percorso legacy, Punto 8 non
+     * ancora eseguito) sia un ContentFile (Punto 4): entrambi espongono
+     * lo stesso `created_at`, unico dato che serve qui.
      *
      * @return array{elapsedSeconds: int, remainingSeconds: ?int}
      */
-    public static function forPageFile(PageFile $file, ?float $avgSeconds): array
+    public static function forFile(PageFile|ContentFile $file, ?float $avgSeconds): array
     {
         // (int): stesso motivo di averageProcessingSeconds() sopra — Carbon
         // 3 può restituire una frazione di secondo, non ha senso mostrarla.
@@ -94,7 +131,7 @@ class ThumbnailProgressEstimator
      * speso dalla stima; per le altre, ancora in coda (Pending), si conta
      * l'intera media.
      *
-     * @param  Collection<int, PageFile>  $pendingFiles
+     * @param  Collection<int, PageFile|ContentFile>  $pendingFiles
      * @return array{pending: int, remainingSeconds: ?int}|null
      */
     public static function aggregate(Collection $pendingFiles, ?float $avgSeconds): ?array
@@ -106,7 +143,7 @@ class ThumbnailProgressEstimator
         $remainingSeconds = null;
 
         if ($avgSeconds !== null) {
-            $remainingSeconds = (int) round($pendingFiles->sum(function (PageFile $file) use ($avgSeconds) {
+            $remainingSeconds = (int) round($pendingFiles->sum(function (PageFile|ContentFile $file) use ($avgSeconds) {
                 if ($file->thumbnail_status !== ThumbnailStatus::Processing) {
                     return $avgSeconds;
                 }

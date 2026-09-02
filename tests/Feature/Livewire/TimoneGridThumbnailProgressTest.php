@@ -21,7 +21,7 @@ test('with no completed samples yet, no average and no per-page estimate is fabr
     $page = \App\Models\Page::factory()->create();
     $pending = PageFile::factory()->create(['page_id' => $page->id]);
 
-    $estimate = ThumbnailProgressEstimator::forPageFile($pending, null);
+    $estimate = ThumbnailProgressEstimator::forFile($pending, null);
 
     expect($estimate['remainingSeconds'])->toBeNull()
         ->and($estimate['elapsedSeconds'])->toBeGreaterThanOrEqual(0);
@@ -54,7 +54,7 @@ test('a per-page estimate counts down as real time passes, and disappears once p
         'created_at' => now()->subSeconds(4),
     ]);
 
-    $estimate = ThumbnailProgressEstimator::forPageFile($file, 10.0);
+    $estimate = ThumbnailProgressEstimator::forFile($file, 10.0);
     // ~6s (10s di media - ~4s già trascorsi): range invece di un valore
     // esatto per lo stesso motivo del test dell'aggregato sopra — tempo
     // vero trascorso durante l'esecuzione del test, non simulato.
@@ -67,7 +67,7 @@ test('a per-page estimate counts down as real time passes, and disappears once p
         'page_id' => $page->id,
         'created_at' => now()->subSeconds(30),
     ]);
-    expect(ThumbnailProgressEstimator::forPageFile($overdueFile, 10.0)['remainingSeconds'])->toBeNull();
+    expect(ThumbnailProgressEstimator::forFile($overdueFile, 10.0)['remainingSeconds'])->toBeNull();
 });
 
 test('the aggregate counts every pending page and is null when nothing is pending', function () {

@@ -1,16 +1,25 @@
 @php
-    $latestFile = $page->files->first();
+    // Punto 4 del prompt (2026-09-02): l'anteprima ora viene dal contenuto
+    // assegnato alla pagina (Page::previewFile()) — vedi la nota completa
+    // in page-card.blade.php, identica qui.
+    $previewFile = $page->previewFile();
+    $previewIsPageFile = $previewFile instanceof \App\Models\PageFile;
     $dropEnabled = $dropEnabled ?? false;
     $locked = $page->isLocked();
     $interactive = $dropEnabled && ! $locked;
     // §2.2: stesso frammento #page=N di page-card.blade.php — vedi lì per
     // il perché (nessun pdf.js in questo progetto).
-    $fileUrl = $latestFile ? route('page-files.show', $latestFile).($latestFile->pdf_page_number > 1 ? '#page='.$latestFile->pdf_page_number : '') : null;
+    $fileUrl = $previewFile
+        ? ($previewIsPageFile ? route('page-files.show', $previewFile) : route('content-files.show', $previewFile)).($previewFile->pdf_page_number > 1 ? '#page='.$previewFile->pdf_page_number : '')
+        : null;
+    $thumbnailRouteUrl = $previewFile
+        ? ($previewIsPageFile ? route('page-files.thumbnail', $previewFile) : route('content-files.thumbnail', $previewFile))
+        : null;
     // Stima PER QUESTA card (2026-07-31, vedi HANDOFF.md) — dati reali
     // (tempo di orologio trascorso, media osservata su questo numero),
     // mai un placeholder. $avgThumbnailSeconds arriva da Grid::render().
-    $thumbnailEstimate = $latestFile && in_array($latestFile->thumbnail_status, [\App\Enums\ThumbnailStatus::Pending, \App\Enums\ThumbnailStatus::Processing], true)
-        ? \App\Support\ThumbnailProgressEstimator::forPageFile($latestFile, $avgThumbnailSeconds ?? null)
+    $thumbnailEstimate = $previewFile && in_array($previewFile->thumbnail_status, [\App\Enums\ThumbnailStatus::Pending, \App\Enums\ThumbnailStatus::Processing], true)
+        ? \App\Support\ThumbnailProgressEstimator::forFile($previewFile, $avgThumbnailSeconds ?? null)
         : null;
     // Stessa convenzione già usata da App\Support\PageSpreadBuilder per la
     // vista doppia pagina (pagina 1 sempre a destra, poi alternanza): non
@@ -23,6 +32,15 @@
     // Etichetta mostrata (copertina separata dal conteggio pagine) — vedi
     // App\Support\PageNumberer e la nota in page-card.blade.php.
     $pageNumber = $pageNumber ?? $page->position;
+    // Evidenziazione selezione multipla — stessa logica/priorità di
+    // page-card.blade.php (vedi lì per il perché), solo classi diverse
+    // per restare coerenti con lo stile "riga" invece che "card".
+    $isMultiSelected = ($selectionMode ?? false) && in_array($page->id, $selectedPageIds ?? [], true);
+    $selectionRowClasses = match (true) {
+        $swapSelectedPageId === $page->id => 'ring-2 ring-inset ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30',
+        $isMultiSelected => 'ring-2 ring-inset ring-emerald-500 bg-emerald-50 dark:bg-emerald-900/20',
+        default => '',
+    };
 @endphp
 <li
     wire:key="page-{{ $page->id }}"
@@ -38,6 +56,13 @@
     @endif
     @if ($swapMode && ! $locked)
         x-on:click="$wire.selectForSwap({{ $page->id }})"
+    @elseif (! $swapMode)
+        {{-- Shortcut da tastiera (2026-09-02, punto 2 del prompt) — stesso
+             wiring di page-card.blade.php, vedi lì per la spiegazione
+             completa: click semplice seleziona solo questa riga (no-op
+             fuori dalla selezione multipla), Ctrl/Cmd+click la
+             aggiunge/rimuove dalla selezione. --}}
+        x-on:click="$event.ctrlKey || $event.metaKey ? $wire.ctrlClickPage({{ $page->id }}) : $wire.clickPage({{ $page->id }})"
     @endif
     {{--
         Fase 4 (§4): bordo sinistro spesso per lo stato, stesso principio
@@ -50,7 +75,7 @@
         solo canale cromatico aggiuntivo qui, la lista è già pensata per
         scorrere veloce, non per un colpo d'occhio sul tipo pagina).
     --}}
-    class="flex items-center gap-4 px-4 py-3 border-l-4 {{ $page->status->borderClasses() }} hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $swapSelectedPageId === $page->id ? 'ring-2 ring-inset ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : '' }}"
+    class="flex items-center gap-4 px-4 py-3 border-l-4 {{ $page->status->borderClasses() }} hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $selectionRowClasses }}"
 >
     @if ($selectionMode ?? false)
         <input
@@ -153,57 +178,38 @@
         @endforelse
     </div>
 
-    <span
-        class="text-xs shrink-0 flex items-center gap-1"
-        x-data="{ uploading: false, progress: 0, examiningSeconds: 0, examiningTimer: null }"
-        x-on:livewire-upload-start="uploading = true; progress = 0"
-        x-on:livewire-upload-progress="progress = $event.detail.progress"
-        x-on:livewire-upload-finish="
-            uploading = false; examiningSeconds = 0;
-            clearInterval(examiningTimer);
-            examiningTimer = setInterval(() => examiningSeconds++, 1000);
-        "
-        x-on:livewire-upload-error="uploading = false; clearInterval(examiningTimer)"
-        x-on:livewire-upload-cancel="uploading = false; clearInterval(examiningTimer)"
-    >
-        <input
-            type="file"
-            id="page-file-input-{{ $page->id }}"
-            wire:model="pendingUploads.{{ $page->id }}"
-            accept="application/pdf"
-            class="hidden"
-        />
-
-        @if (! $latestFile)
+    {{-- Punto 4 del prompt (2026-09-02): rimosso il caricamento diretto su
+         pagina — vedi la nota completa in page-card.blade.php, identica
+         qui. --}}
+    <span class="text-xs shrink-0 flex items-center gap-1">
+        @if (! $previewFile)
             @unless ($locked)
                 <button
                     type="button"
-                    x-on:click.stop="document.getElementById('page-file-input-{{ $page->id }}').click()"
-                    wire:loading.attr="disabled"
-                    wire:target="pendingUploads.{{ $page->id }}"
+                    x-on:click.stop="$dispatch('open-content-create-for-page', { pageId: {{ $page->id }} })"
                     class="opacity-70 hover:opacity-100"
-                    title="Carica PDF"
-                >📤</button>
+                    title="Carica materiale (PDF o immagine) su questa pagina"
+                >📎 Carica materiale</button>
             @endunless
-        @elseif ($latestFile->thumbnail_status === \App\Enums\ThumbnailStatus::Ready)
+        @elseif ($previewFile->thumbnail_status === \App\Enums\ThumbnailStatus::Ready)
             <a
                 href="{{ $fileUrl }}"
                 target="_blank"
                 rel="noopener"
                 x-on:click.stop
                 class="flex items-center gap-1"
-                title="{{ $latestFile->original_name }} — apri in una nuova scheda{{ $latestFile->pdf_page_number > 1 ? ' (pagina '.$latestFile->pdf_page_number.')' : '' }}"
+                title="{{ $previewFile->original_name }} — apri in una nuova scheda{{ $previewFile->pdf_page_number > 1 ? ' (pagina '.$previewFile->pdf_page_number.')' : '' }}"
             >
                 <img
-                    src="{{ route('page-files.thumbnail', $latestFile) }}"
+                    src="{{ $thumbnailRouteUrl }}"
                     alt=""
                     class="w-5 h-6 object-cover rounded border border-gray-300 dark:border-gray-600"
                 />
             </a>
-        @elseif (in_array($latestFile->thumbnail_status, [\App\Enums\ThumbnailStatus::Pending, \App\Enums\ThumbnailStatus::Processing]))
+        @elseif (in_array($previewFile->thumbnail_status, [\App\Enums\ThumbnailStatus::Pending, \App\Enums\ThumbnailStatus::Processing]))
             {{-- Tempo REALMENTE trascorso (non un'animazione) + stima
                  individuale se disponibile — sopravvive a un refresh
-                 perché ricalcolato da $latestFile->created_at, non da uno
+                 perché ricalcolato da $previewFile->created_at, non da uno
                  stato Livewire effimero (vedi HANDOFF.md 2026-07-31). --}}
             <span title="In coda da {{ $thumbnailEstimate['elapsedSeconds'] }}s">
                 ⏳ PDF
@@ -211,26 +217,19 @@
                     (~{{ $thumbnailEstimate['remainingSeconds'] }}s)
                 @endif
             </span>
-        @elseif ($locked)
-            <span title="Generazione anteprima fallita — sblocca la pagina per ricaricare il file">⚠️ PDF</span>
         @else
-            <button
-                type="button"
-                x-on:click.stop="document.getElementById('page-file-input-{{ $page->id }}').click()"
-                class="text-red-600"
-                title="Generazione thumbnail fallita — clic per ricaricare"
-            >⚠️ PDF</button>
+            <span title="Generazione anteprima fallita">⚠️ PDF</span>
         @endif
 
-        @if ($latestFile && $latestFile->hasUnresolvedFormatMismatch())
+        @if ($previewFile && $previewFile->hasUnresolvedFormatMismatch())
             <span
                 class="text-red-600 dark:text-red-400"
-                title="Formato non conforme: ricevuto {{ $latestFile->measured_width_mm }}×{{ $latestFile->measured_height_mm }}mm"
+                title="Formato non conforme: ricevuto {{ $previewFile->measured_width_mm }}×{{ $previewFile->measured_height_mm }}mm"
             >⚠️ formato</span>
-            @if ($interactive)
+            @if ($interactive && ! $previewIsPageFile)
                 <button
                     type="button"
-                    wire:click="confirmFormatOverride({{ $latestFile->id }})"
+                    wire:click="confirmFormatOverride({{ $previewFile->id }})"
                     x-on:click.stop
                     class="text-red-600 dark:text-red-400 underline decoration-dotted"
                     title="Accetta comunque questo formato (caso limite legittimo)"
@@ -238,34 +237,12 @@
             @endif
         @endif
 
-        {{-- Sostituisce il vecchio "caricamento..." in corsivo (troppo
-             discreto, facile da non notare — causa segnalata di un upload
-             che "sembrava bloccato", vedi HANDOFF.md 2026-07-31): durante il
-             trasferimento mostra la percentuale REALE di byte inviati
-             (evento nativo Livewire `livewire-upload-progress`, non
-             simulato); una volta trasferito il file, il server esamina il
-             PDF (conteggio pagine via Imagick) — un'unica chiamata atomica,
-             senza un vero "avanzamento" misurabile, quindi mostriamo il
-             tempo REALMENTE trascorso invece di una barra finta. --}}
-        <span x-show="uploading" class="font-medium text-indigo-700 dark:text-indigo-400">📤 <span x-text="progress"></span>%</span>
-        <span wire:loading wire:target="pendingUploads.{{ $page->id }}" class="font-medium text-indigo-700 dark:text-indigo-400">
-            🔎 Analisi del PDF... (<span x-text="examiningSeconds"></span>s)
-        </span>
-
-        {{-- Bug scoperto il 2026-07-31: senza questo @error, un upload
-             respinto da Livewire (es. PDF oltre i 32MB) falliva "in
-             silenzio" lato UI — lo spinner si fermava ma l'utente non
-             capiva perché, sembrava che l'upload si fosse "bloccato". --}}
-        @error('pendingUploads.' . $page->id)
-            <span class="text-red-600 dark:text-red-400" title="{{ $message }}">⚠️ upload fallito</span>
-        @enderror
-
-        @if ($latestFile)
+        @if ($previewIsPageFile)
             <button
                 type="button"
                 x-on:click.stop="$dispatch('open-modal', 'page-file-history'); $dispatch('show-file-history', { pageId: {{ $page->id }} })"
                 class="opacity-70 hover:opacity-100"
-                title="Storico PDF caricati"
+                title="Storico PDF caricati (pagina non ancora migrata al nuovo percorso)"
             >🕐</button>
         @endif
     </span>

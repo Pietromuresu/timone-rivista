@@ -11,7 +11,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * sposta tutte le altre insieme, senza bisogno di rifare la selezione
  * multipla ogni volta — vedi App\Support\PageGroupResolver e
  * Grid::movePage()/moveSelectedBlock(). Un gruppo esiste solo finché ha
- * almeno 2 pagine: Grid::unlinkGroup() lo elimina sempre per intero.
+ * almeno 2 pagine: Grid::unlinkGroup() (bottone 🔗 sul badge) lo scioglie
+ * sempre per intero; App\Support\PageGroupLinker::removeFromGroup() (Punto
+ * 4.6 del prompt, 2026-09-02) permette invece di rimuovere solo alcune
+ * pagine lasciando le altre collegate, sciogliendo comunque il gruppo se
+ * ne restano meno di 2 — le due modalità di scollegamento coesistono
+ * deliberatamente, vedi App\Support\PageGroupLinker per i dettagli.
  */
 class PageGroup extends Model
 {

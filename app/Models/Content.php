@@ -74,7 +74,10 @@ class Content extends Model
     {
         return $this->belongsToMany(Page::class, 'page_content')
             ->using(PageContent::class)
-            ->withPivot('occupied_percentage')
+            // content_file_id (Punto 4, 2026-09-02): quale file di questo
+            // contenuto è rilevante per ciascuna pagina — vedi
+            // PageContent::contentFile().
+            ->withPivot('occupied_percentage', 'content_file_id')
             ->withTimestamps();
     }
 

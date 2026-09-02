@@ -75,7 +75,7 @@ Tutto si aggiorna da solo in tempo reale se un collega è collegato sullo stesso
 - in **Griglia**/**Doppia pagina**: freccia sinistra/destra;
 - in **Lista**: freccia su/giù.
 
-**Modalità scambio (bottone "🔀 Modalità scambio" in barra, funziona in tutte e tre le modalità, utile soprattutto in Doppia pagina che non supporta il trascinamento):** attivala, poi clicca una pagina (si evidenzia con un bordo colorato) e clicca una seconda pagina — si scambiano di posto direttamente, senza far slittare nient'altro. Un secondo click sulla stessa pagina annulla la selezione senza fare nulla. Utile per scambiare due pagine lontane tra loro senza dover trascinare attraverso tutto lo schermo. Contenuti, stato e PDF caricati restano legati alla pagina, non alla posizione: si "spostano" insieme ad essa.
+**Modalità scambio (bottone "🔀 Modalità scambio" in barra, funziona in tutte e tre le modalità):** attivala, poi clicca una pagina (si evidenzia con un bordo colorato) e clicca una seconda pagina — si scambiano di posto direttamente, senza far slittare nient'altro. Un secondo click sulla stessa pagina annulla la selezione senza fare nulla. Utile per scambiare due pagine lontane tra loro senza dover trascinare attraverso tutto lo schermo. Contenuti, stato e PDF caricati restano legati alla pagina, non alla posizione: si "spostano" insieme ad essa.
 
 Se nel frattempo un collega ha spostato o scambiato delle pagine e la tua vista non si è ancora aggiornata, l'operazione viene rifiutata con un avviso invece di mescolare le posizioni in modo imprevedibile — la vista si allinea subito da sola e puoi riprovare.
 
@@ -146,7 +146,7 @@ Non c'è un ordine obbligato: puoi passare da uno stato all'altro liberamente �
 
 Bottone **☑️ Selezione multipla** nella toolbar in alto — attivalo per far comparire una casella di spunta su ogni card/riga (funziona in tutte e tre le modalità di vista, e puoi tenerlo attivo insieme alla modalità scambio senza conflitti).
 
-Seleziona le pagine che ti interessano (clic sulla casella), poi usa la barra che compare sotto la toolbar per:
+Seleziona le pagine che ti interessano (clic sulla casella, oppure **Ctrl+click — o Cmd+click su Mac — direttamente sulla card/riga**, che attiva da sola la selezione multipla se non lo è già: vedi [§6quater](#6quater-scorciatoie-da-tastiera)), poi usa la barra che compare sotto la toolbar per:
 
 - **Cambiare stato** a tutte le pagine selezionate in un colpo solo, scegliendolo dal menu a tendina "Cambia stato in";
 - **Bloccare selezionate** / **Sbloccare selezionate** — applica il blocco pagina (vedi punto 4bis) a tutta la selezione.
@@ -173,32 +173,53 @@ Se un articolo o un'inserzione occupa sempre le stesse pagine (es. pagina 5 e pa
 - Se selezioni per un'azione di massa (punto 6bis) solo alcune pagine di un gruppo già esistente, le altre pagine del gruppo vengono **incluse automaticamente** nello spostamento — un gruppo non si spacca mai a metà.
 - Funziona in tutte e tre le modalità di vista (Griglia, Doppia pagina, Lista).
 
+## 6quater. Scorciatoie da tastiera
+
+Riducono i click per le operazioni più comuni su selezione e collegamento pagine — identiche in tutte e tre le modalità di vista. Non si attivano mai mentre stai scrivendo in un campo di testo (una ricerca, un modulo in una finestra) per non entrare in conflitto con le stesse combinazioni usate dal browser lì.
+
+| Scorciatoia | Effetto |
+|---|---|
+| **Ctrl+click** (Cmd+click su Mac) su una pagina | Aggiunge/rimuove quella pagina dalla selezione multipla (attivandola da sola se non lo è già) — stesso effetto della casella di spunta, un click più veloce |
+| **Click semplice** su una pagina, con selezione multipla già attiva | Azzera la selezione e seleziona solo quella pagina (come in un file manager) |
+| **Ctrl+Shift+G**, con almeno 2 pagine selezionate | Le collega in un gruppo se non lo sono già (come [§6ter](#6ter-collegare-pagine-in-un-gruppo-permanente)); se sono già collegate tra loro, le scollega — stesso tasto per entrambe le direzioni. Se la selezione non si può collegare/scollegare (es. una pagina bloccata, o pagine che appartengono a gruppi diversi), compare lo stesso messaggio di avviso che vedresti cliccando i bottoni corrispondenti, mai un silenzio |
+| **Ctrl+A** (Cmd+A su Mac) | Seleziona tutte le pagine del numero corrente (equivale al bottone "Seleziona tutte", attivando da sola la selezione multipla se serve) |
+| **Esc** | Deseleziona tutte le pagine (equivale al bottone "Deseleziona tutte") |
+
+Le pagine selezionate con Ctrl+click hanno un contorno verde acceso, ben distinto dal contorno del gruppo collegato (colorato secondo il gruppo) e da quello della modalità scambio (indaco).
+
 ---
 
 ## 7. Caricare e vedere un PDF
 
-Clicca sull'icona 📤 in basso sulla card/riga della pagina, scegli il file PDF dal tuo computer (solo PDF: è l'unico formato accettato per il materiale definitivo di pagina, fino a **100MB**). Durante il caricamento vedi la percentuale reale di trasferimento; appena il file è arrivato al server, un messaggio "🔎 Analisi del PDF... (Ns)" con un contatore di secondi ti dice che il sistema sta ancora leggendo il file (conteggio pagine) — non è mai un'attesa silenziosa. Mentre l'anteprima (miniatura) viene generata, l'icona ⏳ mostra anche da quanti secondi la pagina è in coda e, appena il sistema ha una stima affidabile (basata sul tempo osservato per le pagine già completate in questo numero), quanti secondi mancano circa — passa il mouse sopra per vederli. Questa stima **sopravvive a un aggiornamento della pagina**: se ricarichi il browser mentre una miniatura è ancora in lavorazione, la trovi ancora lì.
+**Dal 2026-09-02 il PDF (o un'immagine) si carica sempre su un contenuto, mai più direttamente su una pagina.** Due modi per farlo, con lo stesso risultato:
 
-Se il file è troppo grande o non valido, compare l'avviso "⚠️ upload fallito" accanto al pulsante di caricamento: passa il mouse sopra per leggere il motivo esatto.
+- **Dal bottone "📎 Carica materiale"** in basso su una card/riga ancora vuota — il modo più rapido: si apre il modulo "Nuovo contenuto" già pronto a collegare quello che crei alla pagina da cui sei partito (compare un promemoria "📌" in cima al modulo). Se il modulo non è visibile subito, la pagina scorre automaticamente per mostrartelo.
+- **Dal bottone "+ Nuovo contenuto"** in cima alla griglia — crea un contenuto "libero", non ancora assegnato a nessuna pagina: lo trovi poi nel pannello "Contenuti da assegnare", da lì lo trascini dove vuoi come sempre.
 
-Una volta pronta, clicca sulla miniatura per aprire il PDF originale in una nuova scheda del browser.
+In entrambi i casi, compila titolo/tipo (articolo o pubblicità) e allega il file dal campo "Allega PDF/immagine" — PDF o immagine (jpg/png/webp), fino a **20MB**. Durante il caricamento vedi "Caricamento in corso…"; appena il contenuto è creato, il file allegato genera automaticamente la sua anteprima, esattamente come succedeva prima per il caricamento diretto — un'immagine è pronta quasi subito, un PDF passa per lo stesso esame (conteggio pagine, poi generazione miniatura) di prima.
 
-Se la generazione dell'anteprima fallisce (icona ⚠️ rossa), il file più probabilmente è danneggiato o non è un PDF valido: clicca di nuovo per ricaricarne uno.
+Se hai usato "📎 Carica materiale" (ancorato a una pagina) e il file allegato è un PDF di **una sola pagina** (o un'immagine), il contenuto si assegna **subito** a quella pagina, stessa immediatezza di prima. Se sulla pagina non c'è più spazio libero, compare un avviso giallo: il contenuto resta comunque creato, solo non assegnato lì — lo trovi tra i "Contenuti da assegnare".
 
-Ogni nuovo caricamento sulla stessa pagina sostituisce quello mostrato in anteprima, ma non cancella i caricamenti precedenti: clicca sull'icona 🕐 (compare accanto all'anteprima non appena c'è almeno un file) per aprire lo storico completo — nome file, chi l'ha caricato, quando, e un link per aprire ciascuna versione, non solo l'ultima.
+Una volta pronta, clicca sulla miniatura sulla card/riga per aprire il file originale in una nuova scheda del browser.
 
-**Ogni pagina deve avere un PDF prima di poter essere segnata «Ok stampa»** — se provi a farlo su una pagina senza PDF, compare un messaggio d'errore e lo stato non cambia. Le pagine già "Revisionata"/"Ok stampa" ma ancora senza PDF compaiono anche nel pannello "⚠️ Avvisi" ([§11](#11-avvisi-automatici)).
+Se la generazione dell'anteprima fallisce (icona ⚠️ rossa), il file più probabilmente è danneggiato o non è un PDF valido: crea un nuovo contenuto con un file diverso (non c'è più, per un contenuto già creato, un pulsante di "ricarica" — allega di nuovo dal modulo, come per qualunque altro contenuto).
 
-**PDF con più pagine interne**: se il file che carichi ha più di una pagina (es. un PDF di 3 pagine per un'inserzione su tre pagine consecutive), il sistema propone di occupare automaticamente le pagine successive del timone a partire da quella su cui hai caricato. Prima di scrivere qualsiasi cosa, **si apre una finestra di conferma** (visibile sempre, anche se hai scrollato lontano dalla pagina su cui hai caricato) con un riepilogo:
-- se nessuna delle pagine coinvolte ha già un PDF, un solo bottone **"Occupa le N pagine"** conferma tutto in un colpo;
-- se una o più pagine hanno già un PDF caricato, puoi scegliere tra tre opzioni: **"Salta le pagine in conflitto"** (occupa solo quelle libere, lascia intatte le altre), **"Sovrascrivi le pagine in conflitto"** (aggiunge comunque il nuovo PDF anche lì, senza cancellare lo storico di quello precedente — resta consultabile dall'icona 🕐), oppure **"↪️ Sposta le pagine esistenti dopo"** — non perde nulla: contenuto, note e PDF già presenti sulle pagine in conflitto vengono spostati su nuove pagine bianche inserite subito dopo, e il numero di pagine totali si allunga automaticamente se serve spazio;
-- **"Annulla il caricamento"** interrompe tutto senza scrivere nulla.
+**Ogni pagina deve avere un'anteprima (dal contenuto assegnato) prima di poter essere segnata «Ok stampa»** — se provi a farlo su una pagina senza anteprima, compare un messaggio d'errore e lo stato non cambia. Le pagine già "Revisionata"/"Ok stampa" ma ancora senza anteprima compaiono anche nel pannello "⚠️ Avvisi" ([§11](#11-avvisi-automatici)).
 
-Mentre le anteprime si generano una alla volta (per questo o per qualunque altro caricamento in corso sul numero), compare in cima un banner **"🖼️ N pagine in elaborazione — circa Xs rimanenti in totale"**: il conteggio e la stima sono calcolati dal sistema in tempo reale sulla base di tutte le pagine del numero ancora in lavorazione, non solo quelle appena caricate — sparisce da solo appena non resta più nessuna pagina in coda, oppure puoi chiuderlo prima con la ✕ (ricompare da solo al prossimo caricamento, se c'è ancora lavoro in corso). Se aggiorni la pagina del browser mentre delle miniature sono ancora in lavorazione, sia questo banner sia le stime sulle singole card restano visibili — riflettono sempre lo stato reale, non si perdono con un refresh.
+**PDF con più pagine interne**: se il file che alleghi (dal bottone "📎 Carica materiale" di una pagina, con un titolo/tipo già compilati) ha più di una pagina interna (es. un PDF di 3 pagine per un'inserzione su tre pagine consecutive), il sistema propone di occupare automaticamente le pagine successive del timone a partire da quella da cui sei partito — **stessa identica finestra di conferma di sempre**, nessuna modifica lì:
+- se nessuna delle pagine coinvolte ha già un'anteprima, un solo bottone **"Occupa le N pagine"** conferma tutto in un colpo;
+- se una o più pagine hanno già un'anteprima, puoi scegliere tra tre opzioni: **"Salta le pagine in conflitto"** (occupa solo quelle libere, lascia intatte le altre), **"Sovrascrivi le pagine in conflitto"** (il contenuto nuovo si aggiunge comunque anche lì), oppure **"↪️ Sposta le pagine esistenti dopo"** — non perde nulla: contenuto, note e materiale già presenti sulle pagine in conflitto vengono spostati su nuove pagine bianche inserite subito dopo, e il numero di pagine totali si allunga automaticamente se serve spazio;
+- **"Annulla il caricamento"** interrompe tutto senza scrivere nulla (il contenuto non viene creato).
 
-Ogni pagina timone coinvolta mostra la miniatura della propria pagina interna corrispondente (pagina 1 del PDF → prima card, pagina 2 → la successiva, ecc.), e il link "apri PDF" ti porta direttamente alla pagina interna giusta, non sempre alla prima.
+**Le pagine derivate da un PDF multi-pagina vengono collegate automaticamente tra loro** (stesso 🔗 di [§6ter](#6ter-collegare-pagine-in-un-gruppo-permanente)) — trascinandone una si spostano tutte insieme. Se serve, puoi scollegarne una o più singolarmente senza sciogliere tutto il gruppo: selezionale (☑️ Selezione multipla) e usa **"✂️ Scollega selezionate dal gruppo"** ([§6bis](#6bis-selezione-multipla-e-azioni-di-massa)) — a differenza del bottone 🔗 sul badge (che scioglie sempre l'intero gruppo), questo rimuove solo le pagine che hai selezionato, lasciando le altre ancora collegate.
 
-**Formato pubblicitario non conforme**: se carichi un PDF su una pagina con una pubblicità assegnata che ha un formato specifico (es. "1 pagina intera"), il sistema confronta le dimensioni reali del file con quelle attese dal listino ufficiale (comprensive di 3mm di abbondanza per lato). Se non corrispondono, compare un avviso rosso "⚠️ formato" con le dimensioni ricevute — non blocca nulla, ma segnala il problema. Se sei sicuro che vada bene comunque (un caso limite legittimo), clicca **"accetta"** accanto all'avviso: sparisce e resta registrato chi l'ha confermato. Se le dimensioni non sono misurabili (file danneggiato) o la pagina non ha un formato pubblicitario chiaro a cui riferirsi, non compare nessun avviso.
+Mentre le anteprime si generano una alla volta (per questo o per qualunque altro caricamento in corso sul numero), compare in cima un banner **"🖼️ N pagine in elaborazione — circa Xs rimanenti in totale"**: il conteggio e la stima sono calcolati dal sistema in tempo reale sulla base di tutte le pagine del numero ancora in lavorazione — sparisce da solo appena non resta più nessuna pagina in coda, oppure puoi chiuderlo prima con la ✕ (ricompare da solo al prossimo caricamento, se c'è ancora lavoro in corso). Se aggiorni la pagina del browser mentre delle miniature sono ancora in lavorazione, sia questo banner sia le stime sulle singole card restano visibili — riflettono sempre lo stato reale, non si perdono con un refresh.
+
+Ogni pagina timone coinvolta mostra la miniatura della propria pagina interna corrispondente (pagina 1 del PDF → prima card, pagina 2 → la successiva, ecc.), e il link "apri file" ti porta direttamente alla pagina interna giusta, non sempre alla prima.
+
+**Formato pubblicitario non conforme**: se il PDF allegato finisce su una pagina con una pubblicità assegnata che ha un formato specifico (es. "1 pagina intera"), il sistema confronta le dimensioni reali del file con quelle attese dal listino ufficiale (comprensive di 3mm di abbondanza per lato) — stesso controllo di sempre. Se non corrispondono, compare un avviso rosso "⚠️ formato" con le dimensioni ricevute — non blocca nulla, ma segnala il problema. Se sei sicuro che vada bene comunque (un caso limite legittimo), clicca **"accetta"** accanto all'avviso: sparisce e resta registrato chi l'ha confermato. Se le dimensioni non sono misurabili (file danneggiato) o la pagina non ha un formato pubblicitario chiaro a cui riferirsi, non compare nessun avviso.
+
+**Pagine caricate prima del 2026-09-02**: se una pagina ha ancora un PDF caricato con il vecchio sistema (direttamente sulla pagina, prima di questa modifica), continua a funzionare esattamente come prima — anteprima visibile, storico consultabile dall'icona 🕐 — finché non verrà migrata al nuovo sistema (operazione futura, non ancora effettuata: nessun dato esistente è stato toccato da questa modifica).
 
 ---
 

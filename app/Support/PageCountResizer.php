@@ -35,16 +35,20 @@ class PageCountResizer
 
         $removedPages = $pages->filter(fn ($page) => $page->position > $newTotal);
 
-        // $pages arriva da Grid::render(), dove la relazione "files" è
-        // già limitata all'ultimo caricamento per pagina (vedi query in
-        // Grid::render()): sufficiente per sapere SE una pagina ha
-        // almeno un file (booleano), non per contarli con precisione —
-        // per questo qui si segnala solo la presenza, non un conteggio.
+        // $pages arriva da Grid::render(), dove 'files'/'contents.files'
+        // sono già eager-loaded (vedi query in Grid::render()): sufficiente
+        // per sapere SE una pagina ha almeno un file (booleano), non per
+        // contarli con precisione — per questo qui si segnala solo la
+        // presenza, non un conteggio. Page::previewFile() copre sia il
+        // vecchio PageFile diretto sia il nuovo percorso via contenuto
+        // (Punto 4, 2026-09-02: bug reale trovato qui, prima guardava solo
+        // $page->files e mostrava "nessun file" anche per pagine con un
+        // PDF caricato sul contenuto assegnato).
         $affectedPages = $removedPages
             ->map(fn ($page) => [
                 'position' => $page->position,
                 'contentCount' => $page->contents->count(),
-                'hasFiles' => $page->files->isNotEmpty(),
+                'hasFiles' => $page->previewFile() !== null,
             ])
             ->filter(fn (array $info) => $info['contentCount'] > 0 || $info['hasFiles'])
             ->values()

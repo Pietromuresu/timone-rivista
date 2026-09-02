@@ -140,7 +140,11 @@ class AdReservations extends Component
     private function issueAdvertisements(): Collection
     {
         return Advertisement::whereHas('content', fn ($query) => $query->where('issue_id', $this->issue->id))
-            ->with(['content.pages.files'])
+            // Punto 4 (2026-09-02): 'content.pages.files' resta per le
+            // pagine legacy con PageFile diretto non ancora migrate (Punto
+            // 8); 'content.pages.contents.files' serve a Page::previewFile()
+            // per il nuovo percorso via contenuto — vedi AdMaterialStatusResolver.
+            ->with(['content.pages.files', 'content.pages.contents.files'])
             ->get();
     }
 

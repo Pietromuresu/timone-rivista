@@ -1,77 +1,94 @@
 <?php
 
+use App\Enums\ContentType;
 use App\Livewire\Timone\Grid;
-use App\Models\PageFile;
+use App\Models\Article;
+use App\Models\Content;
+use App\Models\ContentFile;
 use Livewire\Livewire;
 
 // reorderableIssue()/editorFor() sono definite in TimoneGridReorderTest.php.
-// Nessun ext-imagick richiesto: si parte già da un PageFile con
+// Nessun ext-imagick richiesto: si parte già da un ContentFile con
 // format_check_status precalcolato (factory state), senza passare dal Job.
+// Punto 4 del prompt (2026-09-02): Grid::confirmFormatOverride() opera ora
+// su ContentFile invece che PageFile (il PDF si carica solo su un
+// contenuto) — stesso identico comportamento, verificato qui con
+// l'equivalente ContentFile+pivot invece del vecchio PageFile diretto.
+
+function attachedArticleWithFile(\App\Models\Page $page, string $factoryState): ContentFile
+{
+    $content = Content::create(['issue_id' => $page->issue_id, 'type' => ContentType::Articolo, 'title' => 'Articolo di prova']);
+    Article::create(['content_id' => $content->id, 'editorial_status' => 'da_scrivere']);
+    $contentFile = ContentFile::factory()->for($content)->{$factoryState}()->create();
+    $page->contents()->attach($content->id, ['occupied_percentage' => 100, 'content_file_id' => $contentFile->id]);
+
+    return $contentFile;
+}
 
 test('an editor can force-accept a mismatching format', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
     $page = $issue->pages()->where('position', 1)->first();
-    $pageFile = PageFile::factory()->for($page)->formatMismatch()->create();
+    $contentFile = attachedArticleWithFile($page, 'formatMismatch');
 
-    expect($pageFile->hasUnresolvedFormatMismatch())->toBeTrue();
+    expect($contentFile->hasUnresolvedFormatMismatch())->toBeTrue();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->call('confirmFormatOverride', $pageFile->id)
+        ->call('confirmFormatOverride', $contentFile->id)
         ->assertHasNoErrors();
 
-    $pageFile->refresh();
-    expect($pageFile->format_override_confirmed_at)->not->toBeNull()
-        ->and($pageFile->format_override_confirmed_by)->toBe($user->id)
-        ->and($pageFile->hasUnresolvedFormatMismatch())->toBeFalse();
+    $contentFile->refresh();
+    expect($contentFile->format_override_confirmed_at)->not->toBeNull()
+        ->and($contentFile->format_override_confirmed_by)->toBe($user->id)
+        ->and($contentFile->hasUnresolvedFormatMismatch())->toBeFalse();
 });
 
 test('confirming a format that already matches does nothing', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
     $page = $issue->pages()->where('position', 1)->first();
-    $pageFile = PageFile::factory()->for($page)->formatMatching()->create();
+    $contentFile = attachedArticleWithFile($page, 'formatMatching');
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->call('confirmFormatOverride', $pageFile->id);
+        ->call('confirmFormatOverride', $contentFile->id);
 
-    expect($pageFile->fresh()->format_override_confirmed_at)->toBeNull();
+    expect($contentFile->fresh()->format_override_confirmed_at)->toBeNull();
 });
 
 test('a locked page cannot have its format override confirmed', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
     $page = $issue->pages()->where('position', 1)->first();
+    $contentFile = attachedArticleWithFile($page, 'formatMismatch');
     $page->update(['locked_at' => now(), 'locked_by' => $user->id]);
-    $pageFile = PageFile::factory()->for($page)->formatMismatch()->create();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->call('confirmFormatOverride', $pageFile->id)
+        ->call('confirmFormatOverride', $contentFile->id)
         ->assertHasErrors('locked');
 
-    expect($pageFile->fresh()->format_override_confirmed_at)->toBeNull();
+    expect($contentFile->fresh()->format_override_confirmed_at)->toBeNull();
 });
 
-test('a page file from a different issue cannot have its format override confirmed through this grid', function () {
+test('a content file from a different issue cannot have its format override confirmed through this grid', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
     $otherIssue = reorderableIssue();
     $otherPage = $otherIssue->pages()->where('position', 1)->first();
-    $pageFile = PageFile::factory()->for($otherPage)->formatMismatch()->create();
+    $contentFile = attachedArticleWithFile($otherPage, 'formatMismatch');
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->call('confirmFormatOverride', $pageFile->id);
+        ->call('confirmFormatOverride', $contentFile->id);
 
-    expect($pageFile->fresh()->format_override_confirmed_at)->toBeNull();
+    expect($contentFile->fresh()->format_override_confirmed_at)->toBeNull();
 });
 
 test('a guest cannot confirm a format override', function () {
     $issue = reorderableIssue();
     $page = $issue->pages()->where('position', 1)->first();
-    $pageFile = PageFile::factory()->for($page)->formatMismatch()->create();
+    $contentFile = attachedArticleWithFile($page, 'formatMismatch');
 
     Livewire::test(Grid::class, ['issue' => $issue])
-        ->call('confirmFormatOverride', $pageFile->id);
+        ->call('confirmFormatOverride', $contentFile->id);
 
-    expect($pageFile->fresh()->format_override_confirmed_at)->toBeNull();
+    expect($contentFile->fresh()->format_override_confirmed_at)->toBeNull();
 });

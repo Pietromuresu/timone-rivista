@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\PageContentType;
 use App\Enums\ThumbnailStatus;
+use App\Events\ContentAssigned;
 use App\Events\ContentCreated;
 use App\Events\ContentFileUploaded;
 use App\Jobs\GenerateContentFileThumbnail;
@@ -26,8 +28,10 @@ beforeEach(function () {
     // ContentFileUploaded: il job di miniatura per un'immagine gira per
     // davvero qui (nessun Queue::fake(), a differenza dei test PDF sotto),
     // quindi arriva fino al broadcast finale — va fakato per lo stesso
-    // motivo.
-    Event::fake([ContentCreated::class, ContentFileUploaded::class]);
+    // motivo. ContentAssigned: broadcastato quando il file (immagine, non
+    // richiede imagick) si assegna subito alla pagina di ancoraggio — vedi
+    // i test "anchored" sotto (Punto 4, 2026-09-02).
+    Event::fake([ContentCreated::class, ContentFileUploaded::class, ContentAssigned::class]);
 });
 
 test('attaching an image to a new content generates a ready thumbnail synchronously, no imagick needed', function () {
@@ -51,6 +55,82 @@ test('attaching an image to a new content generates a ready thumbnail synchronou
         ->and($contentFile->thumbnail_path)->not->toBeNull();
 
     Storage::disk('local')->assertExists($contentFile->thumbnail_path);
+});
+
+// Punto 4 del prompt (2026-09-02): il bottone "📎 Carica materiale" di una
+// card/riga apre questo stesso componente ancorato a quella pagina
+// (ContentCreate::openForPage()) — il materiale caricato si assegna
+// SUBITO alla pagina di partenza, stessa immediatezza percepita del
+// vecchio caricamento diretto su pagina (rimosso), ma passando sempre da
+// un Content. Un'immagine non richiede imagick, gira per davvero qui.
+test('opening the form anchored to a page and uploading an image attaches the content to that page immediately', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 1)->first();
+
+    Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
+        ->call('openForPage', $page->id)
+        ->assertSet('anchorPageId', $page->id)
+        ->assertSet('showForm', true)
+        ->set('type', 'articolo')
+        ->set('title', 'Foto ancorata alla pagina')
+        ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $content = Content::where('title', 'Foto ancorata alla pagina')->first();
+    $contentFile = $content->files->first();
+
+    expect($page->contents()->where('content_id', $content->id)->exists())->toBeTrue()
+        ->and($page->contents()->first()->pivot->content_file_id)->toBe($contentFile->id)
+        ->and($page->fresh()->content_type)->toBe(PageContentType::Editoriale)
+        ->and($page->fresh()->previewFile()->id)->toBe($contentFile->id);
+
+    Event::assertDispatched(ContentAssigned::class, fn (ContentAssigned $e) => $e->pageId === $page->id && $e->contentId === $content->id);
+});
+
+test('a content created from the free-standing "+ Nuovo contenuto" form (no anchor) is not auto-assigned to any page', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+
+    Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
+        ->call('toggleForm')
+        ->assertSet('anchorPageId', null)
+        ->set('type', 'articolo')
+        ->set('title', 'Foto non ancorata')
+        ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $content = Content::where('title', 'Foto non ancorata')->first();
+
+    expect($content->isAssigned())->toBeFalse();
+
+    Event::assertNotDispatched(ContentAssigned::class);
+});
+
+test('anchored upload reports insufficient space instead of failing silently, the content is still created', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $page = $issue->pages()->where('position', 1)->first();
+
+    // La pagina è già piena (100%): non c'è spazio per il nuovo contenuto.
+    $existingContent = Content::factory()->create(['issue_id' => $issue->id]);
+    $page->contents()->attach($existingContent->id, ['occupied_percentage' => 100]);
+
+    Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
+        ->call('openForPage', $page->id)
+        ->set('type', 'articolo')
+        ->set('title', 'Foto senza spazio')
+        ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
+        ->call('save')
+        ->assertHasErrors('anchor');
+
+    $content = Content::where('title', 'Foto senza spazio')->first();
+
+    expect($content)->not->toBeNull()
+        ->and($content->files->first())->not->toBeNull()
+        ->and($content->isAssigned())->toBeFalse();
 });
 
 test('attaching a real pdf actually converts its first page to a ready thumbnail', function () {

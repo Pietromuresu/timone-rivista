@@ -13,9 +13,7 @@ use App\Events\PageStatusUpdated;
 use App\Events\PageUnlocked;
 use App\Livewire\Timone\Grid;
 use App\Models\Content;
-use App\Models\PageFile;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 
@@ -211,22 +209,6 @@ test('a content cannot be unassigned from a locked page', function () {
 
     expect($page->fresh()->contents()->count())->toBe(1);
     Event::assertNotDispatched(ContentUnassigned::class);
-});
-
-test('a file cannot be uploaded to a locked page', function () {
-    Event::fake([PageLocked::class]);
-
-    $issue = reorderableIssue();
-    $user = editorFor($issue);
-    $page = $issue->pages()->where('position', 1)->first();
-
-    $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->call('togglePageLock', $page->id);
-
-    $component->set("pendingUploads.{$page->id}", UploadedFile::fake()->create('sample.pdf', 100, 'application/pdf'))
-        ->assertHasErrors('locked');
-
-    expect(PageFile::where('page_id', $page->id)->count())->toBe(0);
 });
 
 test('reducing the total page count is rejected while a page in the removed range is locked', function () {

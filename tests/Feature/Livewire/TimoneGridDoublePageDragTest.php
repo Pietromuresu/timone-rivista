@@ -70,3 +70,37 @@ test('a block move works correctly while the component is set to doppia view mod
  * posizionamento visivo del contenitore, non l'elenco degli elementi
  * trascinabili al suo interno.
  */
+
+// Bug reale trovato il 2026-09-02 (segnalato dall'utente: "in doppia pagina
+// il drag non si aggancia, torna alla posizione originale" — in realtà non
+// partiva proprio): il commento sopra si fidava della sola lettura del
+// codice e non aveva notato che grid.blade.php avvolgeva ogni page-card in
+// un <div data-page-id="..."> extra (per un wire:key, vedi storico Git).
+// SortableJS risolve l'elemento draggable risalendo dal target del click
+// con closest('[data-page-id]') e SI FERMA AL PRIMO MATCH — cioè il root di
+// page-card, non il wrapper — poi verifica che il suo parentNode sia
+// esattamente il contenitore Sortable (Sortable.js:566): con un wrapper di
+// mezzo la condizione è sempre falsa e il drag non parte mai, in silenzio.
+// Questo test codifica l'invariante che ha causato il bug — nessun
+// [data-page-id] deve avere un antenato che sia anch'esso [data-page-id] —
+// così un futuro wrapper "innocente" (es. per un'altra esigenza di CSS o
+// wire:key) fa fallire il test invece di rompere silenziosamente il
+// drag&drop reale in produzione.
+test('no page element is nested inside another element carrying data-page-id, in any view mode', function (string $viewMode) {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+
+    $html = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->call('setViewMode', $viewMode)
+        ->html();
+
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    libxml_clear_errors();
+
+    $xpath = new DOMXPath($dom);
+    $nested = $xpath->query('//*[@data-page-id]/ancestor::*[@data-page-id]');
+
+    expect($nested->length)->toBe(0);
+})->with(['griglia', 'doppia', 'lista']);

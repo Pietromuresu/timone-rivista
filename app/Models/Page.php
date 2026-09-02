@@ -79,7 +79,10 @@ class Page extends Model
     {
         return $this->belongsToMany(Content::class, 'page_content')
             ->using(PageContent::class)
-            ->withPivot('occupied_percentage')
+            // content_file_id (Punto 4, 2026-09-02): quale file di quel
+            // contenuto è rilevante per QUESTA pagina — vedi
+            // PageContent::contentFile().
+            ->withPivot('occupied_percentage', 'content_file_id')
             ->withTimestamps();
     }
 
@@ -92,11 +95,50 @@ class Page extends Model
     }
 
     /**
-     * Ultimo PDF caricato: quello mostrato come anteprima principale sulla card.
+     * Ultimo PDF caricato direttamente sulla pagina (percorso "legacy",
+     * pre-Punto 4): quello mostrato come anteprima principale sulla card
+     * PRIMA che esistesse il caricamento via contenuto.
      */
     public function latestFile(): ?PageFile
     {
         return $this->files()->first();
+    }
+
+    /**
+     * File da mostrare come anteprima principale sulla card/riga (Punto 4
+     * del prompt, 2026-09-02): il file del primo contenuto assegnato a
+     * questa pagina che ne ha uno — tramite il file specifico registrato
+     * sul pivot (`content_file_id`, per una pagina derivata da un PDF
+     * multi-pagina caricato su un contenuto) o il file più recente del
+     * contenuto se il pivot non lo specifica (contenuto a file singolo:
+     * immagine, PDF di una pagina, o nessun file). Ricade sul vecchio
+     * PageFile diretto solo se nessun contenuto assegnato ha un file —
+     * cioè per le pagine caricate PRIMA di questa modifica e non ancora
+     * migrate (Punto 8 del prompt, non eseguito in questa sessione: i
+     * dati esistenti restano leggibili finché non vengono migrati
+     * esplicitamente). Richiede 'contents.files' e 'files' eager-loaded
+     * (vedi Grid::render()) per non generare N+1.
+     */
+    public function previewFile(): PageFile|ContentFile|null
+    {
+        foreach ($this->contents as $content) {
+            $file = $content->pivot?->content_file_id !== null
+                ? $content->files->firstWhere('id', $content->pivot->content_file_id)
+                // sortByDesc(), non solo first(): la relazione Content::files()
+                // ordina "latest()" a livello di query, ma una collection
+                // già in memoria (es. eager-loaded diversamente, o un
+                // fixture di test con setRelation()) non rispetta quell'ordine
+                // da sola — stesso principio già seguito da
+                // App\Support\AdMaterialStatusResolver prima di questa
+                // modifica, qui esteso anche al ramo PageFile sotto.
+                : $content->files->sortByDesc('created_at')->first();
+
+            if ($file !== null) {
+                return $file;
+            }
+        }
+
+        return $this->files->sortByDesc('created_at')->first();
     }
 
     public function reorderLogs(): HasMany

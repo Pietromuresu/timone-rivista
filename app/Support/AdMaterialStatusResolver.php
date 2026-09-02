@@ -10,8 +10,16 @@ use Illuminate\Support\Collection;
  * Deriva lo stato del materiale di una pubblicità (Fase 3, §3) dalle pagine
  * a cui è assegnata — puro/testabile come le altre classi App\Support
  * (PageReorderer, AdLoadCalculator, ...): nessuna query propria, opera solo
- * sulla collection di pagine già caricata dal chiamante (con la relazione
- * "files" completa, non limitata all'ultimo file come in Grid::render()).
+ * sulla collection di pagine già caricata dal chiamante (con 'files' E
+ * 'contents.files' eager-loaded per intero, non limitati all'ultimo come
+ * in Grid::render() — vedi AdReservations::issueAdvertisements()).
+ *
+ * Bug reale trovato durante il Punto 4 (2026-09-02): guardava solo
+ * $page->files (PageFile diretto) — con il PDF che si carica ora solo su
+ * un contenuto, una pubblicità con materiale caricato col nuovo flusso non
+ * sarebbe mai risultata "Completo", restando bloccata su "Assegnato" a
+ * vita nel cruscotto. Page::previewFile() copre entrambi i casi (contenuto
+ * assegnato con file, o PageFile legacy non ancora migrato).
  */
 class AdMaterialStatusResolver
 {
@@ -25,9 +33,9 @@ class AdMaterialStatusResolver
         }
 
         $everyPageComplete = $assignedPages->every(function (Page $page) {
-            $latestFile = $page->files->sortByDesc('created_at')->first();
+            $file = $page->previewFile();
 
-            return $latestFile !== null && ! $latestFile->hasUnresolvedFormatMismatch();
+            return $file !== null && ! $file->hasUnresolvedFormatMismatch();
         });
 
         return $everyPageComplete ? AdMaterialStatus::Completo : AdMaterialStatus::Assegnato;

@@ -1,11 +1,61 @@
 <div
     class="space-y-4"
-    x-data="{ remoteToast: null, remoteToastTimeout: null }"
+    x-data="{
+        remoteToast: null, remoteToastTimeout: null,
+        // Shortcut da tastiera (2026-09-02, punto 2 del prompt), identiche
+        // in griglia/doppia/lista perché vivono qui sul componente Grid,
+        // non per-vista: Esc deseleziona tutto (Grid::clearSelection()),
+        // Ctrl/Cmd+A seleziona tutte le pagine dell'uscita corrente
+        // (Grid::selectAllPages()), Ctrl/Cmd+Shift+G collega o scollega la
+        // selezione multipla corrente, in base a se lo è già
+        // (Grid::toggleLinkForSelection() — riusa linkSelectedPages()/
+        // unlinkGroup(), nessuna logica di collegamento duplicata qui).
+        // Il click/Ctrl+click sulla singola card/riga per selezionare
+        // vive invece in page-card.blade.php/page-row.blade.php (vedi lì).
+        // Mai attive col focus su un campo di testo (input/textarea/select/
+        // contenteditable, incluso un modale con un form) — altrimenti
+        // Ctrl+A dentro un campo selezionerebbe le pagine del timone
+        // invece del testo che l'utente sta scrivendo.
+        isTimoneShortcutTarget(el) {
+            return el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT' && ! el.isContentEditable;
+        },
+        handleTimoneShortcut(event) {
+            if (! this.isTimoneShortcutTarget(event.target)) return;
+
+            if (event.key === 'Escape') {
+                $wire.clearSelection();
+
+                return;
+            }
+
+            const ctrlOrCmd = event.ctrlKey || event.metaKey;
+
+            if (ctrlOrCmd && ! event.shiftKey && event.key.toLowerCase() === 'a') {
+                event.preventDefault();
+                $wire.selectAllPages();
+
+                return;
+            }
+
+            if (ctrlOrCmd && event.shiftKey && event.key.toLowerCase() === 'g') {
+                event.preventDefault();
+                $wire.toggleLinkForSelection();
+            }
+        },
+    }"
+    x-on:keydown.window="handleTimoneShortcut($event)"
     x-on:remote-change.window="
         clearTimeout(remoteToastTimeout);
         remoteToast = $event.detail.message;
         remoteToastTimeout = setTimeout(() => remoteToast = null, 4000);
     "
+    {{-- Punto 4 (2026-09-02): il bottone "carica materiale" di una card/riga
+         apre App\Livewire\Timone\ContentCreate, montato in cima alla
+         griglia — su un numero lungo può restare fuori dal viewport
+         rispetto alla pagina cliccata più in basso. Un piccolo ritardo
+         (non un vero hook "dopo il render Livewire", per restare semplice
+         qui) basta perché lo scroll parta a form già aperto, non prima. --}}
+    x-on:open-content-create-for-page.window="setTimeout(() => document.getElementById('content-create-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150)"
     @auth
         x-init="
             $store.pagePresence.join({{ $issue->id }}, { id: {{ auth()->id() }}, name: @js(auth()->user()->name) });
@@ -92,7 +142,7 @@
             <button
                 type="button"
                 wire:click="toggleSwapMode"
-                title="Scambia due pagine di posto con un click, senza trascinare — utile anche in modalità Doppia pagina, che non supporta il drag&drop"
+                title="Scambia due pagine di posto con un click, senza trascinare"
                 @class([
                     'px-3 py-1.5 rounded-lg border text-sm transition-colors',
                     'bg-indigo-600 text-white border-indigo-600' => $swapMode,
@@ -179,74 +229,6 @@
          propria riga, non incastrato nella toolbar. --}}
     <livewire:timone.activity-log-panel :issue="$issue" :key="'activity-log-'.$issue->id" />
     <livewire:timone.ad-reservations :issue="$issue" :key="'ad-reservations-'.$issue->id" />
-
-    {{-- Riepilogo di conflitto per un caricamento PDF multipagina (§2.1) in
-         attesa di conferma — nessuna scrittura è ancora avvenuta. Mostrato
-         come modale (non più un pannello inline) dal 2026-07-31: su una
-         griglia lunga il pannello poteva finire fuori dal viewport se
-         l'utente aveva scrollato oltre la pagina su cui ha caricato il
-         file, dando l'impressione che l'upload fosse "bloccato" mentre in
-         realtà il riepilogo era pronto ma invisibile. Aperta/chiusa da
-         Grid.php via dispatch('open-modal'/'close-modal', 'multipage-
-         upload-conflict') — stesso pattern già in uso per lo storico PDF
-         (vedi page-file-history.blade.php). --}}
-    <x-modal name="multipage-upload-conflict" maxWidth="lg">
-        @if ($multipageUploadConflict)
-            <div class="p-6 space-y-3">
-                <p class="font-medium text-lg text-gray-900 dark:text-gray-100">
-                    📄 Il PDF caricato sulla pagina {{ $multipageUploadConflict['initiatingPosition'] }} occupa {{ $multipageUploadConflict['totalPdfPages'] }} pagine.
-                </p>
-
-                @if ($multipageUploadConflict['availablePages'] < $multipageUploadConflict['totalPdfPages'])
-                    <p class="text-sm text-amber-700 dark:text-amber-400">
-                        Il numero finisce prima: solo {{ $multipageUploadConflict['availablePages'] }} pagine del timone sono disponibili da questo punto in poi — le pagine successive del PDF non verranno posizionate.
-                    </p>
-                @endif
-
-                @if (empty($multipageUploadConflict['conflictingPositions']))
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Nessuna delle pagine coinvolte ha già un PDF caricato: puoi procedere senza sovrascrivere nulla.</p>
-                    <button type="button" wire:click="confirmMultipageUpload(false)" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700">
-                        Occupa le {{ $multipageUploadConflict['totalPdfPages'] }} pagine
-                    </button>
-                @else
-                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                        {{ count($multipageUploadConflict['conflictingPositions']) === 1 ? 'La pagina' : 'Le pagine' }}
-                        {{ implode(', ', $multipageUploadConflict['conflictingPositions']) }}
-                        {{ count($multipageUploadConflict['conflictingPositions']) === 1 ? 'risulta' : 'risultano' }}
-                        già occupata/e da un altro PDF.
-                    </p>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button
-                            type="button"
-                            wire:click="confirmMultipageUpload(false)"
-                            class="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-sm hover:bg-amber-100 dark:hover:bg-amber-900/50"
-                        >
-                            Salta le pagine in conflitto
-                        </button>
-                        <button
-                            type="button"
-                            x-on:click="confirm('Sovrascrivere il PDF già presente su {{ implode(', ', $multipageUploadConflict['conflictingPositions']) }}? L\'operazione non è reversibile.') && $wire.confirmMultipageUpload(true)"
-                            class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700"
-                        >
-                            Sovrascrivi le pagine in conflitto
-                        </button>
-                        <button
-                            type="button"
-                            wire:click="confirmMultipageUploadWithShift"
-                            title="Le pagine in conflitto vengono spostate subito dopo, nulla viene perso — il numero di pagine totali si estende automaticamente se necessario"
-                            class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700"
-                        >
-                            ↪️ Sposta le pagine esistenti dopo
-                        </button>
-                    </div>
-                @endif
-
-                <button type="button" wire:click="cancelMultipageUpload" class="text-xs text-gray-500 dark:text-gray-400 underline">
-                    Annulla il caricamento
-                </button>
-            </div>
-        @endif
-    </x-modal>
 
     {{-- Avanzamento reale del rendering miniature, aggregato su TUTTE le
          pagine del numero ancora in coda/elaborazione (2026-07-31, non più
@@ -607,6 +589,22 @@
                         🔗 Collega selezionate
                     </button>
                 @endif
+
+                {{-- Punto 4.6 del prompt (2026-09-02, deciso esplicitamente
+                     con l'utente): scollega SOLO le pagine selezionate dal
+                     proprio gruppo, lasciando le altre pagine di quel
+                     gruppo ancora collegate — a differenza del bottone 🔗
+                     sul badge del gruppo (tutto il gruppo). Riusa
+                     App\Support\PageGroupLinker::removeFromGroup(), utile
+                     per qualsiasi gruppo, non solo quelli creati da un
+                     contenuto PDF multi-pagina. Mostrato non appena c'è
+                     una selezione (come gli altri bottoni bulk sopra):
+                     se nessuna pagina selezionata è in un gruppo, il
+                     backend lo segnala senza fare nulla, stesso principio
+                     "nessun fallimento silenzioso" già in uso qui. --}}
+                <button type="button" wire:click="unlinkSelectedFromGroup" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
+                    ✂️ Scollega selezionate dal gruppo
+                </button>
             @endif
         </div>
 
@@ -710,23 +708,51 @@
         </div>
     @elseif ($viewMode === 'doppia')
         {{-- Ogni pagina resta un elemento Sortable a sé, figlio diretto
-             dello stesso contenitore usato da griglia/lista (non più
-             annidata in un div per apertura, il bug originario: Sortable
-             richiede figli diretti dello stesso contenitore per il
-             drag&drop di riordino, e prima ogni apertura aveva il proprio
-             div "flex justify-center", rendendo le pagine trascinabili
-             solo tra loro all'interno della stessa coppia). L'andata a
-             capo visiva tra un'apertura e la successiva è ora ottenuta con
-             un elemento "spacer" (flex-basis:100%) invece che con
-             l'annidamento: lo spacer non ha data-page-id, quindi il
-             filtro `draggable: '[data-page-id]'` in resources/js/app.js
-             lo esclude sia dal trascinamento sia dal calcolo dell'indice
-             di destinazione (Sortable conta solo gli elementi che
+             dello stesso contenitore usato da griglia/lista (non annidata
+             in un div per apertura, il bug originario: Sortable richiede
+             figli diretti dello stesso contenitore per il drag&drop di
+             riordino, e prima ogni apertura aveva il proprio div "flex
+             justify-center", rendendo le pagine trascinabili solo tra loro
+             all'interno della stessa coppia). L'andata a capo visiva tra
+             un'apertura e la successiva è ottenuta con un elemento
+             "spacer" (flex-basis:100%) invece che con l'annidamento: lo
+             spacer non ha data-page-id, quindi il filtro
+             `draggable: '[data-page-id]'` in resources/js/app.js lo
+             esclude sia dal trascinamento sia dal calcolo dell'indice di
+             destinazione (Sortable conta solo gli elementi che
              corrispondono al selettore). Risultato: si può trascinare una
              singola pagina fuori da una coppia, dentro un'altra coppia, o
              in una posizione che ne spacca una esistente — lato/posizione
              si ricalcolano da soli al prossimo render() (PageSpreadBuilder
-             raggruppa sempre le pagine nell'ordine risultante). --}}
+             raggruppa sempre le pagine nell'ordine risultante).
+
+             IMPORTANTE — niente div-wrapper attorno a ogni page-card qui
+             (bug reale trovato e corretto il 2026-09-02, la sessione
+             precedente lo aveva solo mascherato aggiungendo un wire:key
+             al wrapper senza accorgersi che il wrapper stesso rompeva il
+             drag&drop): il root di page-card.blade.php porta già il suo
+             data-page-id, IDENTICO a quello usato da griglia/lista.
+             SortableJS individua l'elemento trascinabile risalendo dal
+             target del click fino al primo antenato che soddisfa il
+             selettore `draggable: '[data-page-id]'` (closest(), vedi
+             node_modules/sortablejs/src/Sortable.js) e poi verifica che
+             il suo `parentNode` sia esattamente il contenitore Sortable
+             (Sortable.js:566, `target.parentNode === el`) prima di
+             avviare il drag. Con un wrapper esterno che duplica anche lui
+             data-page-id, closest() risale e si ferma SUBITO al root di
+             page-card (il primo match, più vicino alla maniglia
+             ".drag-handle"), il cui parentNode è il wrapper e non questo
+             contenitore: la condizione fallisce silenziosamente e il drag
+             non parte mai — esattamente il sintomo osservato ("la pagina
+             non si muove minimamente"), invisibile ai test esistenti
+             perché nessuno di essi guida un mousedown reale in un
+             browser (niente Dusk in questo progetto, solo
+             Livewire::test()/lettura markup). Le classi di posizione per
+             apertura (larghezza, margine, bordo separatore) che prima
+             stavano sul wrapper vengono quindi passate a page-card come
+             parametro `extraClasses`, mantenendo il root di page-card
+             l'unico elemento draggable reale, figlio diretto di questo
+             contenitore, identico in tutte e tre le viste. --}}
         <div
             x-sortable="$wire.swapMode"
             @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
@@ -757,23 +783,23 @@
                  fianco della "spina" delle aperture da due pagine. --}}
             @foreach ($spreads as $spreadIndex => $spread)
                 @foreach ($spread as $indexInSpread => $page)
-                    {{-- wire:key qui sul wrapper, non solo su page-card dentro
-                         (bug corretto, vedi HANDOFF.md): questo div è l'elemento
-                         diretto trascinato da Sortable e quello che Livewire deve
-                         identificare tra un render e l'altro dopo un riordino. Senza
-                         una key propria a questo livello, il morph di Livewire
-                         abbina i wrapper per posizione (non per identità), poi trova
-                         chiavi diverse sul page-card annidato e lo ricrea da zero —
-                         il riordino via drag&drop in doppia pagina sembra non
-                         "attaccare" mai visivamente. Stessa chiave di page-card,
-                         solo con un suffisso per restare univoca nell'albero DOM. --}}
-                    <div
-                        wire:key="page-wrap-{{ $page->id }}"
-                        data-page-id="{{ $page->id }}"
-                        class="w-40 sm:w-48 {{ $spreadIndex > 0 ? 'mt-3' : '' }} {{ $indexInSpread > 0 ? 'border-l-2 border-gray-300 dark:border-gray-600' : '' }} {{ $spreadIndex === 0 && count($spread) === 1 ? 'ml-auto' : '' }}"
-                    >
-                        @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds, 'pageNumber' => $pageNumbers[$page->id]])
-                    </div>
+                    @include('livewire.timone.partials.page-card', [
+                        'page' => $page,
+                        'dropEnabled' => true,
+                        'avgThumbnailSeconds' => $avgThumbnailSeconds,
+                        'pageNumber' => $pageNumbers[$page->id],
+                        // Dimensione fissa + margini/bordo di posizione nell'apertura:
+                        // prima stavano su un div-wrapper attorno a page-card, rimosso
+                        // perché rompeva silenziosamente il drag&drop (vedi commento
+                        // sopra) — page-card resta l'unico root, qui gli si passano
+                        // solo le classi extra da appendere al suo class= esistente.
+                        'extraClasses' => trim(
+                            'w-40 sm:w-48'
+                            . ($spreadIndex > 0 ? ' mt-3' : '')
+                            . ($indexInSpread > 0 ? ' border-l-2 border-gray-300 dark:border-gray-600' : '')
+                            . ($spreadIndex === 0 && count($spread) === 1 ? ' ml-auto' : '')
+                        ),
+                    ])
                 @endforeach
                 <div class="basis-full h-0" aria-hidden="true"></div>
             @endforeach

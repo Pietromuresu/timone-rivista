@@ -42,6 +42,11 @@ function fakeContentOnPositions(string $title, array $positions): Content
         fn (int $position) => new Page(['position' => $position]),
         $positions,
     )));
+    // Page::previewFile() (Punto 4, 2026-09-02) legge $content->files —
+    // stub esplicito a vuoto, altrimenti l'accesso lazy andrebbe in
+    // errore qui: i test in tests/Unit/ non hanno un database (solo
+    // tests/Feature/ usa RefreshDatabase, vedi tests/Pest.php).
+    $content->setRelation('files', new Collection());
 
     return $content;
 }

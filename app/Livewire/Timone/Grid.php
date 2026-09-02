@@ -16,8 +16,8 @@ use App\Events\PagesBlockMoved;
 use App\Events\PagesSwapped;
 use App\Events\PageStatusUpdated;
 use App\Events\PageUnlocked;
-use App\Jobs\GeneratePageFileThumbnail;
 use App\Models\Content;
+use App\Models\ContentFile;
 use App\Models\Issue;
 use App\Models\Page;
 use App\Models\PageFile;
@@ -26,30 +26,25 @@ use App\Models\PageReorderLog;
 use App\Support\ActivityLogger;
 use App\Support\AdLoadCalculator;
 use App\Support\AutomaticChecks;
-use App\Support\PageContentTypeResolver;
+use App\Support\ContentPageAttacher;
 use App\Support\PageCountResizer;
+use App\Support\PageGroupLinker;
 use App\Support\PageGroupResolver;
+use App\Support\PageInserter;
 use App\Support\PageNumberer;
 use App\Support\PagePercentageAllocator;
 use App\Support\PageReorderer;
 use App\Support\PageRoleAssigner;
 use App\Support\PageSpreadBuilder;
-use App\Support\PdfPageMeasurer;
 use App\Support\ThumbnailProgressEstimator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use Livewire\WithFileUploads;
 
 class Grid extends Component
 {
-    use WithFileUploads;
-
     public Issue $issue;
 
     /**
@@ -57,25 +52,6 @@ class Grid extends Component
      * nella rivista stampata) o lista (una riga per pagina).
      */
     public string $viewMode = 'griglia';
-
-    /**
-     * File PDF in fase di upload, indicizzati per page_id — un solo
-     * componente Grid gestisce l'intero timone, non uno per card.
-     *
-     * @var array<int, TemporaryUploadedFile>
-     */
-    public array $pendingUploads = [];
-
-    /**
-     * Stato del riepilogo di conflitto per un caricamento PDF multipagina
-     * (§2.1) in attesa di conferma dall'utente — null quando non c'è
-     * nessun caricamento multipagina in sospeso. Il file resta comunque
-     * in $pendingUploads[$pageId] finché l'utente non conferma/annulla
-     * (vedi Grid::confirmMultipageUpload()/cancelMultipageUpload()).
-     *
-     * @var array{pageId: int, initiatingPosition: int, totalPdfPages: int, availablePages: int, targetPositions: list<int>, conflictingPositions: list<int>}|null
-     */
-    public ?array $multipageUploadConflict = null;
 
     /**
      * Solo un'etichetta "nascosto per ora" per il banner di avanzamento
@@ -190,13 +166,16 @@ class Grid extends Component
     public ?int $swapSelectedPageId = null;
 
     /**
-     * Selezione multipla e azioni di massa (spec §6.4/§19): a differenza
-     * della modalità scambio (che intercetta il click sull'intera card),
-     * qui la selezione avviene tramite checkbox dedicata su ogni
-     * card/riga, quindi le due modalità possono restare attive insieme
-     * senza conflitto. $selectedPageIds contiene solo id di pagine di
-     * *questa* issue (verificato ad ogni azione bulk, mai fidandosi del
-     * solo stato client).
+     * Selezione multipla e azioni di massa (spec §6.4/§19): oltre alla
+     * checkbox dedicata su ogni card/riga, dal 2026-09-02 (shortcut da
+     * tastiera) si seleziona anche con click/Ctrl+click sull'intera card —
+     * vedi clickPage()/ctrlClickPage() sotto. Quando la modalità scambio è
+     * attiva, il click sulla card resta esclusivamente suo (vedi
+     * page-card.blade.php/page-row.blade.php: il ramo `@if ($swapMode...)`
+     * ha sempre priorità), quindi le due modalità possono restare attive
+     * insieme senza conflitto solo tramite la checkbox in quel caso.
+     * $selectedPageIds contiene solo id di pagine di *questa* issue
+     * (verificato ad ogni azione bulk, mai fidandosi del solo stato client).
      *
      * @var array<int, int>
      */
@@ -376,53 +355,7 @@ class Grid extends Component
             ? max(1, min($requestedPosition, $currentTotal + 1))
             : $currentTotal + 1;
 
-        $this->makeRoomForPages($insertBefore, $countToAdd, $currentTotal);
-    }
-
-    /**
-     * Fa spazio a $countToAdd pagine bianche a partire da $insertBefore,
-     * traslando in avanti quelle già presenti da quella posizione in poi —
-     * estratta da insertPages() (pannello "pagine totali") perché la Fase
-     * 3.2 (terza opzione di conflitto upload, "sposta le pagine esistenti
-     * dopo") ha bisogno esattamente della stessa meccanica, non di una
-     * copia parallela che potrebbe divergere.
-     */
-    private function makeRoomForPages(int $insertBefore, int $countToAdd, int $currentTotal): void
-    {
-        if ($countToAdd < 1) {
-            return;
-        }
-
-        if ($insertBefore <= $currentTotal) {
-            // Stessa tecnica a offset temporaneo di Grid::movePage(), per
-            // non violare unique(issue_id, position) mentre si fa spazio
-            // alle nuove pagine.
-            $toShift = $this->issue->pages()->where('position', '>=', $insertBefore)->pluck('id', 'position');
-            $offset = $currentTotal + $countToAdd;
-
-            foreach ($toShift as $position => $id) {
-                Page::whereKey($id)->update(['position' => $position + $offset]);
-            }
-            foreach ($toShift as $position => $id) {
-                Page::whereKey($id)->update(['position' => $position + $countToAdd]);
-            }
-        }
-
-        $now = now();
-        $newRows = [];
-
-        for ($i = 0; $i < $countToAdd; $i++) {
-            $newRows[] = [
-                'issue_id' => $this->issue->id,
-                'position' => $insertBefore + $i,
-                'content_type' => PageContentType::Bianca->value,
-                'status' => PageStatus::DaAssegnare->value,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }
-
-        Page::insert($newRows);
+        PageInserter::makeRoom($this->issue, $insertBefore, $countToAdd, $currentTotal);
     }
 
     // Il "." davanti al nome evento (qui e in tutti gli altri #[On('echo...')]
@@ -1003,7 +936,9 @@ class Grid extends Component
             return;
         }
 
-        if ($pages->contains(fn (Page $page) => $page->isLocked())) {
+        $result = PageGroupLinker::link($this->issue, $pages);
+
+        if ($result === PageGroupLinker::ERROR_LOCKED) {
             $this->addError('locked', 'Una o più pagine selezionate sono bloccate: sbloccale prima di collegarle in un gruppo.');
 
             return;
@@ -1012,16 +947,13 @@ class Grid extends Component
         // Scelta pragmatica: fondere un gruppo esistente con un altro
         // aggiungerebbe una casistica ("unione di due gruppi") non richiesta
         // dalla fase — va scollegato esplicitamente prima con unlinkGroup().
-        if ($pages->contains(fn (Page $page) => $page->page_group_id !== null)) {
+        if ($result === PageGroupLinker::ERROR_ALREADY_GROUPED) {
             $this->addError('link', 'Una o più pagine selezionate fanno già parte di un altro gruppo: scollegale prima di crearne uno nuovo.');
 
             return;
         }
 
-        $color = PageGroup::PALETTE[PageGroup::where('issue_id', $this->issue->id)->count() % count(PageGroup::PALETTE)];
-        $group = PageGroup::create(['issue_id' => $this->issue->id, 'color' => $color]);
-
-        Page::whereIn('id', $pages->pluck('id'))->update(['page_group_id' => $group->id]);
+        $group = $result;
 
         ActivityLogger::log(
             issue: $this->issue,
@@ -1040,7 +972,9 @@ class Grid extends Component
      * Scollega l'intero gruppo a cui appartiene $pageId, non solo quella
      * pagina: un gruppo con una sola pagina rimasta non avrebbe senso, quindi
      * "scollega" dissolve sempre il gruppo per intero (bottone "🔓" sul
-     * badge del gruppo, non sulla singola pagina).
+     * badge del gruppo, non sulla singola pagina). Per rimuovere solo
+     * alcune pagine da un gruppo più grande, lasciando le altre collegate,
+     * vedi unlinkSelectedFromGroup() sotto.
      */
     public function unlinkGroup(int $pageId): void
     {
@@ -1053,16 +987,15 @@ class Grid extends Component
         }
 
         $groupId = $page->page_group_id;
-        $groupPages = Page::where('page_group_id', $groupId)->get();
+        $result = PageGroupLinker::unlink($groupId);
 
-        if ($groupPages->contains(fn (Page $p) => $p->isLocked())) {
+        if ($result === PageGroupLinker::ERROR_LOCKED) {
             $this->addError('locked', 'Una pagina del gruppo è bloccata: sbloccala prima di scollegare il gruppo.');
 
             return;
         }
 
-        Page::where('page_group_id', $groupId)->update(['page_group_id' => null]);
-        PageGroup::whereKey($groupId)->delete();
+        $groupPages = $result;
 
         ActivityLogger::log(
             issue: $this->issue,
@@ -1075,6 +1008,98 @@ class Grid extends Component
 
         broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
         $this->issue->markPagesUpdated();
+    }
+
+    /**
+     * Scollegamento selettivo (Punto 4.6 del prompt, 2026-09-02, deciso
+     * esplicitamente con l'utente): rimuove SOLO le pagine attualmente
+     * selezionate dal proprio gruppo, lasciando le altre pagine di quel
+     * gruppo ancora collegate tra loro — a differenza di unlinkGroup()
+     * sopra (bottone 🔗 sul badge, tutto il gruppo). Riusa
+     * PageGroupLinker::removeFromGroup(), generale e non specifico ai
+     * gruppi creati da un contenuto PDF multi-pagina (Punto 4.5): utile
+     * per QUALSIASI gruppo, anche quelli collegati manualmente dal
+     * bottone "🔗 Collega selezionate"/Ctrl+Shift+G (Punto 2).
+     */
+    public function unlinkSelectedFromGroup(): void
+    {
+        $this->authorize('update', $this->issue);
+
+        if (! $this->selectionMode || $this->selectedPageIds === []) {
+            return;
+        }
+
+        $pages = Page::whereIn('id', $this->selectedPageIds)
+            ->where('issue_id', $this->issue->id)
+            ->get();
+
+        $result = PageGroupLinker::removeFromGroup($pages);
+
+        if ($result === PageGroupLinker::ERROR_LOCKED) {
+            $this->addError('locked', 'Una o più pagine selezionate sono bloccate: sbloccale prima di scollegarle dal gruppo.');
+
+            return;
+        }
+
+        $removed = $result;
+
+        if ($removed->isEmpty()) {
+            $this->addError('link', 'Nessuna delle pagine selezionate fa parte di un gruppo.');
+
+            return;
+        }
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'PageGroup',
+            entityId: null,
+            action: 'page_group.pages_removed',
+            description: $removed->count().' pagine scollegate individualmente dal proprio gruppo, il resto di ciascun gruppo resta collegato',
+            old: ['pageIds' => $removed->pluck('id')->all()],
+        );
+
+        broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
+        $this->issue->markPagesUpdated();
+    }
+
+    /**
+     * Shortcut da tastiera Ctrl+Shift+G (2026-09-02): collega o scollega la
+     * selezione multipla corrente, riusando esattamente linkSelectedPages()
+     * e unlinkGroup() — nessuna logica di collegamento/scollegamento
+     * duplicata qui, solo la decisione di quale delle due chiamare.
+     *
+     * "Già collegate tra loro" = tutte le pagine selezionate condividono
+     * lo stesso page_group_id non nullo (un gruppo può avere altre pagine
+     * non selezionate: si scollega comunque l'intero gruppo, stesso
+     * comportamento di unlinkGroup() ovunque nell'app — nessuna semantica
+     * "parziale" diversa introdotta qui). In ogni altro caso si tenta di
+     * collegarle: se il tentativo fallisce per una regola già esistente
+     * (pagina bloccata, pagina già in un altro gruppo), linkSelectedPages()
+     * stesso popola l'errore 'locked'/'link' già mostrato in barra — non è
+     * un "fallimento silenzioso", solo riuso del meccanismo di feedback
+     * esistente invece di inventarne uno nuovo per lo shortcut.
+     */
+    public function toggleLinkForSelection(): void
+    {
+        if (! $this->selectionMode || count($this->selectedPageIds) < 2) {
+            $this->addError('link', 'Seleziona almeno 2 pagine per collegarle o scollegarle.');
+
+            return;
+        }
+
+        $pages = Page::whereIn('id', $this->selectedPageIds)
+            ->where('issue_id', $this->issue->id)
+            ->get();
+
+        $groupIds = $pages->pluck('page_group_id')->unique();
+
+        if ($pages->count() === count($this->selectedPageIds) && $groupIds->count() === 1 && $groupIds->first() !== null) {
+            $this->unlinkGroup($this->selectedPageIds[0]);
+
+            return;
+        }
+
+        $this->linkSelectedPages();
     }
 
     #[On('echo-presence:issue.{issue.id},.PageGroupsChanged')]
@@ -1163,9 +1188,18 @@ class Grid extends Component
      * da Grid::render()) perché qui serve solo sapere SE esiste almeno
      * un file, non quale sia l'ultimo.
      */
+    /**
+     * Bug reale trovato durante il Punto 4 (2026-09-02): questo controllo
+     * guardava solo $page->files() (PageFile diretto) — con il PDF che si
+     * carica ora solo su un contenuto, ogni pagina caricata col nuovo
+     * flusso non avrebbe mai potuto passare a «Ok stampa», nonostante
+     * avesse un'anteprima perfettamente valida. Page::previewFile() copre
+     * entrambi i casi (contenuto assegnato con file, o PageFile legacy
+     * non ancora migrato).
+     */
     private function pageHasFile(Page $page): bool
     {
-        return $page->files()->exists();
+        return $page->previewFile() !== null;
     }
 
     /**
@@ -1317,8 +1351,57 @@ class Grid extends Component
         $this->selectedPageIds[] = $pageId;
     }
 
+    /**
+     * Shortcut da tastiera (2026-09-02): Ctrl/Cmd+click su una card/riga,
+     * fuori dalla modalità scambio (vedi wiring in page-card.blade.php/
+     * page-row.blade.php). A differenza di togglePageSelection() (che è
+     * no-op se la selezione multipla non è già attiva — usata dalla
+     * checkbox, sempre nascosta finché non lo è), qui il primo Ctrl+click
+     * la attiva automaticamente: coerente col comportamento "tipo file
+     * manager" richiesto, dove Ctrl+click funziona subito senza dover
+     * prima premere il pulsante "☑️ Selezione multipla" in barra.
+     */
+    public function ctrlClickPage(int $pageId): void
+    {
+        if (! $this->selectionMode) {
+            $this->selectionMode = true;
+            $this->selectedPageIds = [];
+            $this->bulkResultMessage = null;
+        }
+
+        $this->togglePageSelection($pageId);
+    }
+
+    /**
+     * Shortcut da tastiera (2026-09-02): click semplice (senza Ctrl) su una
+     * card/riga, solo mentre la selezione multipla è già attiva — comportamento
+     * "tipo file manager": azzera la selezione corrente e seleziona solo
+     * questa pagina. Se la selezione multipla non è attiva, no-op: un click
+     * semplice fuori da quella modalità non deve iniziarla da solo (a
+     * differenza di Ctrl+click, vedi ctrlClickPage()), altrimenti un
+     * normale click sulla card diventerebbe indistinguibile da un click
+     * "a vuoto" per chi non sta usando le scorciatoie.
+     */
+    public function clickPage(int $pageId): void
+    {
+        if (! $this->selectionMode) {
+            return;
+        }
+
+        $this->selectedPageIds = [$pageId];
+    }
+
+    /**
+     * Ctrl+A da tastiera e pulsante "Seleziona tutte" in barra: entrambi
+     * riusano questo stesso metodo. Attiva anche la modalità selezione se
+     * non lo è già (rilevante solo per lo shortcut: il pulsante in barra è
+     * visibile solo a modalità già attiva, quindi per quel chiamante è un
+     * no-op) — senza, Ctrl+A premuto a freddo selezionerebbe le pagine lato
+     * server senza che checkbox/toolbar compaiano mai a mostrarlo.
+     */
     public function selectAllPages(): void
     {
+        $this->selectionMode = true;
         $this->selectedPageIds = $this->issue->pages()->pluck('id')->all();
     }
 
@@ -1641,20 +1724,13 @@ class Grid extends Component
             return;
         }
 
-        $occupied = $page->contents()->pluck('occupied_percentage')->all();
+        $percentage = ContentPageAttacher::attach($content, $page);
 
-        $percentage = $content->type === ContentType::Pubblicita
-            ? $content->advertisement->occupiedPercentage()
-            : PagePercentageAllocator::freeSpace($occupied);
-
-        if (! PagePercentageAllocator::fits($occupied, $percentage)) {
+        if ($percentage === null) {
             $this->addError($errorKey, 'Spazio insufficiente su questa pagina per assegnare il contenuto.');
 
             return;
         }
-
-        $page->contents()->attach($content->id, ['occupied_percentage' => (string) $percentage]);
-        $this->syncPageContentType($page);
 
         ActivityLogger::log(
             issue: $this->issue,
@@ -1669,32 +1745,11 @@ class Grid extends Component
             issueId: $this->issue->id,
             pageId: $page->id,
             contentId: $content->id,
-            percentage: $percentage,
+            percentage: (float) $percentage,
             assignedByUserId: auth()->id(),
             assignedByUserName: auth()->user()->name,
         ))->toOthers();
         $this->issue->markPagesUpdated();
-    }
-
-    /**
-     * Bug reale scoperto in questa sessione: assegnare/rimuovere un
-     * contenuto non aggiornava mai `page.content_type` (il colore della
-     * card) — restava "bianca" per sempre su qualunque pagina toccata
-     * dall'interfaccia reale, mai un problema visibile nei dati demo solo
-     * perché il seeder imposta `content_type` a mano con un proprio
-     * helper mai usato dall'app vera. Richiamato dopo ogni attach/detach
-     * in questo componente, in modo che il colore resti sempre coerente
-     * con i contenuti effettivamente presenti — non solo al momento
-     * dell'assegnazione iniziale.
-     */
-    private function syncPageContentType(Page $page): void
-    {
-        $types = $page->contents()->pluck('type')->all();
-        $resolved = PageContentTypeResolver::resolve($types);
-
-        if ($resolved !== $page->content_type) {
-            $page->update(['content_type' => $resolved]);
-        }
     }
 
     public function updateContentPercentage(int $pageId, int $contentId, float $percentage): void
@@ -1759,7 +1814,7 @@ class Grid extends Component
         }
 
         $page->contents()->detach($contentId);
-        $this->syncPageContentType($page);
+        ContentPageAttacher::syncPageContentType($page);
 
         ActivityLogger::log(
             issue: $this->issue,
@@ -1819,164 +1874,6 @@ class Grid extends Component
     }
 
     /**
-     * Hook automatico Livewire per la proprietà annidata "pendingUploads.{pageId}":
-     * chiamato dopo che Livewire ha già salvato il file nello storage temporaneo.
-     */
-    public function updatedPendingUploads($value, $key): void
-    {
-        if ($value instanceof TemporaryUploadedFile) {
-            $this->uploadPageFile((int) $key, $value);
-        }
-    }
-
-    /**
-     * §2.1: un PDF di una sola pagina va sempre e solo sulla pagina su cui
-     * è stato caricato (comportamento invariato). Un PDF con N>1 pagine
-     * interne deve occupare automaticamente le N pagine successive del
-     * timone — ma MAI scrivere nulla finché l'utente non ha visto ed
-     * eventualmente confermato un riepilogo dei conflitti: qui ci si
-     * ferma alla sola rilevazione, salvando lo stato in
-     * $multipageUploadConflict, così il file resta disponibile
-     * (`$pendingUploads[$pageId]` non viene svuotato) per la conferma
-     * successiva (confirmMultipageUpload()/cancelMultipageUpload()).
-     */
-    public function uploadPageFile(int $pageId, TemporaryUploadedFile $file): void
-    {
-        $this->authorize('update', $this->issue);
-
-        $page = Page::findOrFail($pageId);
-
-        if ($page->issue_id !== $this->issue->id) {
-            return;
-        }
-
-        if ($this->blockIfLocked($page, 'sovrascritta')) {
-            return;
-        }
-
-        // Bug scoperto il 2026-07-31: questa validazione usava una chiave
-        // d'errore artificiale ("pendingFile") che nessuna vista del
-        // progetto legge (`grep @error` non trova nulla) — se mai fosse
-        // scattata, la richiesta sarebbe comunque andata a buon fine dal
-        // punto di vista di Livewire (nessuna eccezione non gestita, nessun
-        // errore in console), ma l'utente non avrebbe visto NULLA cambiare:
-        // esattamente il sintomo "si blocca, nessun errore in console"
-        // segnalato per i PDF multipagina. Allineata alla stessa chiave
-        // "pendingUploads.{pageId}" già letta dal badge "⚠️ upload fallito"
-        // aggiunto in page-row.blade.php/page-card.blade.php.
-        $uploadFieldKey = "pendingUploads.{$pageId}";
-
-        validator(['pendingUploads' => [$pageId => $file]], [
-            // Regola coerente con config/livewire.php e docker/php/uploads.ini (100MB).
-            $uploadFieldKey => 'required|file|mimes:pdf|max:102400',
-        ])->validate();
-
-        try {
-            // Un PDF illeggibile (pageCount() torna null, es. ext-imagick
-            // assente in locale) degrada al comportamento precedente — 1
-            // sola pagina — invece di bloccare l'upload: la stessa
-            // robustezza richiesta esplicitamente per il controllo formato
-            // (§2.3) si applica per coerenza anche qui.
-            $pdfPageCount = PdfPageMeasurer::pageCount($file->getRealPath()) ?? 1;
-
-            if ($pdfPageCount <= 1) {
-                $this->storeUploadedPdf($page, $file, pdfPageNumber: 1, totalPdfPages: 1);
-                unset($this->pendingUploads[$pageId]);
-
-                return;
-            }
-
-            $targetPages = $this->multipageTargetPages($page, $pdfPageCount);
-
-            $conflicting = $targetPages
-                ->reject(fn (Page $p) => $p->id === $page->id)
-                ->filter(fn (Page $p) => $p->files->isNotEmpty());
-
-            $this->multipageUploadConflict = [
-                'pageId' => $pageId,
-                'initiatingPosition' => $page->position,
-                'totalPdfPages' => $pdfPageCount,
-                'availablePages' => $targetPages->count(),
-                'targetPositions' => $targetPages->pluck('position')->all(),
-                'conflictingPositions' => $conflicting->pluck('position')->values()->all(),
-            ];
-
-            // Riepilogo mostrato come modale (2026-07-31), non più un
-            // pannello inline: su una griglia lunga il pannello poteva
-            // apparire fuori dal viewport se l'utente aveva scrollato oltre
-            // la pagina su cui ha caricato il file, dando l'impressione che
-            // il caricamento fosse "bloccato" mentre in realtà il riepilogo
-            // era pronto ma non visibile. La modale è sempre in vista,
-            // indipendentemente dallo scroll.
-            $this->dispatch('open-modal', 'multipage-upload-conflict');
-
-            // Il file resta in $this->pendingUploads[$pageId] finché
-            // l'utente non sceglie esplicitamente cosa fare — nessuna
-            // scrittura ancora.
-        } catch (\Throwable $e) {
-            // Bug scoperto il 2026-07-31 (vedi HANDOFF.md, "Upload PDF
-            // multipagina 'bloccato'..."): senza questo catch, un'eccezione
-            // imprevista qui (es. Imagick/Ghostscript su un PDF reale con
-            // struttura anomala) propagava come 500 generico di Livewire —
-            // di solito visibile, ma non garantito in ogni configurazione
-            // browser/proxy. Log esplicito (ora persistito, vedi
-            // docker-compose.yml storage_logs) + badge visibile invece di
-            // fidarsi del comportamento di default.
-            report($e);
-
-            Log::error('Caricamento PDF pagina fallito in modo imprevisto', [
-                'page_id' => $pageId,
-                'issue_id' => $this->issue->id,
-                'file_name' => $file->getClientOriginalName(),
-                'file_size_bytes' => $file->getSize(),
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
-            ]);
-
-            unset($this->pendingUploads[$pageId]);
-
-            $this->addError(
-                "pendingUploads.{$pageId}",
-                'Caricamento fallito per un errore imprevisto durante la lettura del PDF. Riprova; se il problema persiste, contatta chi gestisce il server (dettagli nel log).'
-            );
-        }
-    }
-
-    /**
-     * Le pagine del timone che un PDF multipagina caricato su $initiatingPage
-     * andrebbe a occupare: da $initiatingPage in poi, fino a $count pagine
-     * — meno se l'edizione finisce prima (mai un errore, semplicemente
-     * $availablePages nel riepilogo risulta inferiore a $totalPdfPages).
-     *
-     * @return \Illuminate\Support\Collection<int, Page>
-     */
-    private function multipageTargetPages(Page $initiatingPage, int $count): \Illuminate\Support\Collection
-    {
-        return $this->issue->pages()
-            ->with('files')
-            ->where('position', '>=', $initiatingPage->position)
-            ->where('position', '<', $initiatingPage->position + $count)
-            ->orderBy('position')
-            ->get();
-    }
-
-    /**
-     * Annulla un caricamento multipagina in attesa di conferma: nessuna
-     * scrittura era comunque ancora avvenuta, quindi basta scartare lo
-     * stato e il file temporaneo.
-     */
-    public function cancelMultipageUpload(): void
-    {
-        $pageId = $this->multipageUploadConflict['pageId'] ?? null;
-        $this->multipageUploadConflict = null;
-        $this->dispatch('close-modal', 'multipage-upload-conflict');
-
-        if ($pageId !== null) {
-            unset($this->pendingUploads[$pageId]);
-        }
-    }
-
-    /**
      * Chiusura manuale del banner di avanzamento miniature — solo
      * un'etichetta "nascosto per ora" (vedi $thumbnailProgressDismissed),
      * non tocca in alcun modo i dati reali di avanzamento.
@@ -1987,300 +1884,68 @@ class Grid extends Component
     }
 
     /**
-     * Applica un caricamento multipagina confermato dall'utente (§2.1).
-     * $overwriteConflicts distingue le due scelte esplicite offerte nel
-     * riepilogo: `false` = "salta le pagine in conflitto" (restano
-     * intatte, il PDF occupa solo le pagine libere), `true` = "sovrascrivi"
-     * (ogni pagina dell'intervallo riceve comunque il PDF, indipendentemente
-     * da cosa avesse già). In entrambi i casi una pagina bloccata
-     * nell'intervallo viene sempre saltata (mai un'eccezione, la stessa
-     * guardia blockIfLocked() di ogni altra mutazione — qui applicata per
-     * singola pagina invece che sull'intera operazione, coerente con
-     * bulkChangeStatus(): il resto del batch va comunque a buon fine).
-     *
-     * Correzione a una nota precedente (Fase 3.2, 2026-08-31): questo
-     * commento diceva "non è implementata una terza scelta 'riposiziona le
-     * pagine in conflitto altrove'" — ora lo è, vedi
-     * confirmMultipageUploadWithShift() subito sotto storeUploadedPdf().
-     * La nota originale restava valida finché la scelta pragmatica non
-     * veniva esplicitamente richiesta: la Fase 3.2 del nuovo prompt la
-     * richiede per nome, quindi il calcolo costo/beneficio è cambiato.
+     * Punto 4 (2026-09-02): il caricamento file vive ora su ContentCreate,
+     * un componente diverso — non può impostare direttamente la proprietà
+     * $thumbnailProgressDismissed di QUESTO componente, quindi glielo
+     * segnala con un dispatch() puro Livewire (non Echo: entrambi montati
+     * sulla stessa pagina, nessun giro broadcast/server necessario).
+     * Stesso comportamento di prima: un nuovo upload fa ricomparire il
+     * banner anche se era stato chiuso in precedenza.
      */
-    public function confirmMultipageUpload(bool $overwriteConflicts): void
+    #[On('thumbnail-work-started')]
+    public function resetThumbnailProgressDismissed(): void
     {
-        $this->authorize('update', $this->issue);
-
-        $conflict = $this->multipageUploadConflict;
-
-        if ($conflict === null) {
-            return;
-        }
-
-        $pageId = $conflict['pageId'];
-        $file = $this->pendingUploads[$pageId] ?? null;
-
-        $this->multipageUploadConflict = null;
-        $this->dispatch('close-modal', 'multipage-upload-conflict');
-
-        if (! $file instanceof TemporaryUploadedFile) {
-            unset($this->pendingUploads[$pageId]);
-
-            return;
-        }
-
-        $targetPages = $this->issue->pages()
-            ->whereIn('position', $conflict['targetPositions'])
-            ->orderBy('position')
-            ->get();
-
-        foreach ($targetPages as $index => $targetPage) {
-            $isConflicting = in_array($targetPage->position, $conflict['conflictingPositions'], true);
-
-            if ($isConflicting && ! $overwriteConflicts) {
-                continue;
-            }
-
-            if ($this->blockIfLocked($targetPage, 'sovrascritta')) {
-                continue;
-            }
-
-            $this->storeUploadedPdf($targetPage, $file, pdfPageNumber: $index + 1, totalPdfPages: $conflict['totalPdfPages']);
-        }
-
-        // Nessuno stato locale da tracciare per l'avanzamento del rendering
-        // miniature: render() lo ricalcola da zero da App\Support\
-        // ThumbnailProgressEstimator, guardando lo stato reale in database
-        // di OGNI pagina del numero ancora Pending/Processing (non solo
-        // quelle di questo batch) — sopravvive a un refresh della pagina,
-        // a differenza di una proprietà Livewire effimera (bug segnalato
-        // dall'utente il 2026-07-31, vedi HANDOFF.md).
-        unset($this->pendingUploads[$pageId]);
-    }
-
-    /**
-     * Terza scelta del riepilogo conflitto (Fase 3.2, aggiunta a "salta"/
-     * "sovrascrivi" sopra — **supera** la nota "non implementata" lasciata
-     * nel commento di confirmMultipageUpload() qui sopra: la richiesta
-     * esplicita di questa fase la rende ora la scelta giusta da offrire).
-     * Nessuna perdita: le pagine in conflitto traslano SUBITO DOPO
-     * l'intervallo occupato dal nuovo PDF, invece di essere ignorate o
-     * sovrascritte — stessa tecnica di makeRoomForPages() già usata dal
-     * pannello "pagine totali" (Punto 6), qui applicata a un intervallo
-     * specifico invece che in coda/a una posizione scelta dall'utente.
-     *
-     * Caso limite esplicito dal prompt (l'intervallo supera total_pages):
-     * gestito automaticamente da makeRoomForPages(), che si limita ad
-     * "appendere" quando $insertBefore supera già il totale corrente —
-     * total_pages viene esteso di conseguenza, coerente con "l'aumento è
-     * sempre applicato subito" già scelto per il pannello pagine totali.
-     * $lastTargetPosition non può mai superare total_pages corrente
-     * (multipageTargetPages() interroga solo pagine già esistenti),
-     * quindi il nuovo totale è sempre `$currentTotal + $shiftCount`, mai
-     * un caso con "buco" da riempire.
-     *
-     * Pagina in conflitto bloccata (🔒): mai spostata (stesso principio di
-     * blockIfLocked() usato ovunque) — resta al suo posto, il che lascia
-     * anche il PDF nuovo escluso da quella posizione specifica nel loop di
-     * scrittura finale (già protetto da blockIfLocked() lì) e uno slot
-     * bianco di troppo creato per lei — scelta pragmatica (CLAUDE.md,
-     * regola 3): ricalcolare quante pagine bloccate ci sono PRIMA di
-     * decidere quanti slot creare aggiungerebbe una seconda passata di
-     * query per un caso limite raro, il costo di uno slot bianco in più è
-     * trascurabile e comunque visibile/gestibile a mano dall'utente.
-     */
-    public function confirmMultipageUploadWithShift(): void
-    {
-        $this->authorize('update', $this->issue);
-
-        $conflict = $this->multipageUploadConflict;
-
-        if ($conflict === null) {
-            return;
-        }
-
-        $pageId = $conflict['pageId'];
-        $file = $this->pendingUploads[$pageId] ?? null;
-
-        $this->multipageUploadConflict = null;
-        $this->dispatch('close-modal', 'multipage-upload-conflict');
-
-        if (! $file instanceof TemporaryUploadedFile) {
-            unset($this->pendingUploads[$pageId]);
-
-            return;
-        }
-
-        $conflictingPositions = $conflict['conflictingPositions'];
-        $shiftCount = count($conflictingPositions);
-
-        if ($shiftCount > 0) {
-            $currentTotal = $this->issue->total_pages;
-            $insertBefore = max($conflict['targetPositions']) + 1;
-
-            DB::transaction(function () use ($insertBefore, $shiftCount, $currentTotal, $conflictingPositions) {
-                $this->makeRoomForPages($insertBefore, $shiftCount, $currentTotal);
-                $this->issue->update(['total_pages' => $currentTotal + $shiftCount]);
-
-                $displacedPages = $this->issue->pages()->whereIn('position', $conflictingPositions)->orderBy('position')->get();
-                $newSlots = $this->issue->pages()->where('position', '>=', $insertBefore)->orderBy('position')->limit($shiftCount)->get();
-
-                foreach ($displacedPages->values() as $index => $oldPage) {
-                    if ($oldPage->isLocked()) {
-                        continue;
-                    }
-
-                    $this->relocatePageContent($oldPage, $newSlots[$index]);
-                }
-            });
-
-            PageRoleAssigner::syncCoverRoles($this->issue);
-
-            ActivityLogger::log(
-                issue: $this->issue,
-                entityType: 'Issue',
-                entityId: $this->issue->id,
-                action: 'issue.pages_shifted_for_upload',
-                description: "{$shiftCount} pagine in conflitto traslate dopo la posizione ".max($conflict['targetPositions']).' per fare spazio a un caricamento PDF multipagina',
-                new: ['shiftedPositions' => $conflictingPositions, 'insertedFrom' => $insertBefore],
-            );
-        }
-
-        $targetPages = $this->issue->pages()
-            ->whereIn('position', $conflict['targetPositions'])
-            ->orderBy('position')
-            ->get();
-
-        foreach ($targetPages as $index => $targetPage) {
-            if ($this->blockIfLocked($targetPage, 'sovrascritta')) {
-                continue;
-            }
-
-            $this->storeUploadedPdf($targetPage, $file, pdfPageNumber: $index + 1, totalPdfPages: $conflict['totalPdfPages']);
-        }
-
-        unset($this->pendingUploads[$pageId]);
-    }
-
-    /**
-     * Trasferisce il "contenuto" editoriale di una pagina su un'altra —
-     * tipo pagina, stato, note, contenuti assegnati (con la percentuale
-     * invariata) e file PDF — lasciando $from bianca e pronta a ricevere
-     * il nuovo PDF. Usata solo da confirmMultipageUploadWithShift() sopra:
-     * un'operazione specifica di quel flusso, non un'utility generica di
-     * "scambio pagine" (che dovrebbe anche gestire i gruppi collegati
-     * della Fase 2.3, blocco escluso qui a monte dal chiamante — fuori
-     * scopo per questa fase).
-     */
-    private function relocatePageContent(Page $from, Page $to): void
-    {
-        $to->update([
-            'content_type' => $from->content_type,
-            'status' => $from->status,
-            'notes' => $from->notes,
-        ]);
-
-        foreach ($from->contents as $content) {
-            $to->contents()->attach($content->id, ['occupied_percentage' => $content->pivot->occupied_percentage]);
-        }
-        $from->contents()->detach();
-
-        PageFile::where('page_id', $from->id)->update(['page_id' => $to->id]);
-
-        $from->update([
-            'content_type' => PageContentType::Bianca->value,
-            'status' => PageStatus::DaAssegnare->value,
-            'notes' => null,
-        ]);
-    }
-
-    /**
-     * Scrittura effettiva di un PDF su una pagina — condivisa dal percorso
-     * a pagina singola e da ciascuna pagina coinvolta in un caricamento
-     * multipagina confermato. Ogni pagina riceve una copia indipendente
-     * del file fisico (più semplice di un riferimento condiviso tra righe
-     * PageFile: ogni riga resta proprietaria del proprio file, coerente
-     * con la cascata di eliminazione e con `pagefiles:prune-orphaned` già
-     * esistenti, che non sanno nulla di riferimenti condivisi) — il costo
-     * in spazio disco è accettabile per PDF tipicamente di poche pagine.
-     */
-    private function storeUploadedPdf(Page $page, TemporaryUploadedFile $file, int $pdfPageNumber, int $totalPdfPages): void
-    {
-        $storedPath = $file->storeAs("pages/{$page->id}", Str::uuid().'.pdf', 'local');
-
-        $pageFile = PageFile::create([
-            'page_id' => $page->id,
-            'uploaded_by' => auth()->id(),
-            'disk' => 'local',
-            'path' => $storedPath,
-            'original_name' => $file->getClientOriginalName(),
-            'size' => $file->getSize(),
-            'thumbnail_status' => ThumbnailStatus::Pending,
-            'pdf_page_number' => $pdfPageNumber,
-        ]);
-
-        // Un nuovo upload crea nuovo lavoro reale da tracciare: se il
-        // banner era stato chiuso in precedenza, ricompare per questo.
         $this->thumbnailProgressDismissed = false;
-
-        $description = $totalPdfPages > 1
-            ? "PDF «{$pageFile->original_name}» (pagina {$pdfPageNumber} di {$totalPdfPages}) caricato sulla pagina {$page->position}"
-            : "PDF «{$pageFile->original_name}» caricato sulla pagina {$page->position}";
-
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'PageFile',
-            entityId: $pageFile->id,
-            action: 'page.file_uploaded',
-            description: $description,
-            new: ['page_id' => $page->id, 'original_name' => $pageFile->original_name, 'pdf_page_number' => $pdfPageNumber],
-        );
-
-        GeneratePageFileThumbnail::dispatch($pageFile);
     }
 
     /**
      * Forza l'accettazione di un formato non conforme (§2.3) — un avviso,
      * non un blocco: l'utente conferma esplicitamente di aver visto la
      * non conformità e di volerla accettare per un caso limite legittimo.
+     * Punto 4 del prompt (2026-09-02): opera ora su ContentFile invece
+     * che PageFile, stesso identico significato — il PDF è allegato a un
+     * contenuto invece che direttamente alla pagina, ma il controllo
+     * formato/l'override restano concettualmente pagina-per-pagina (vedi
+     * App\Jobs\GenerateContentFileThumbnail::checkFormat()).
      */
-    public function confirmFormatOverride(int $pageFileId): void
+    public function confirmFormatOverride(int $contentFileId): void
     {
         $this->authorize('update', $this->issue);
 
-        $pageFile = PageFile::with('page')->findOrFail($pageFileId);
+        $contentFile = ContentFile::with('content.issue', 'content.pages')->findOrFail($contentFileId);
 
-        if ($pageFile->page->issue_id !== $this->issue->id) {
+        if ($contentFile->content->issue_id !== $this->issue->id) {
             return;
         }
 
-        if ($this->blockIfLocked($pageFile->page)) {
+        // Un contenuto può essere su più pagine (o su nessuna, se non
+        // ancora assegnato): basta che UNA sia bloccata per bloccare
+        // anche questo — stesso principio di blockIfLocked() applicato a
+        // ogni pagina coinvolta invece che a una sola, dato che qui non
+        // c'è più un'unica pagina di riferimento come per il vecchio
+        // PageFile.
+        if ($contentFile->content->pages->contains(fn (Page $p) => $p->isLocked())) {
+            $this->addError('locked', 'Una pagina su cui è assegnato questo contenuto è bloccata: sbloccala prima di accettare il formato.');
+
             return;
         }
 
-        if (! $pageFile->hasUnresolvedFormatMismatch()) {
+        if (! $contentFile->hasUnresolvedFormatMismatch()) {
             return;
         }
 
-        $pageFile->update([
+        $contentFile->update([
             'format_override_confirmed_by' => auth()->id(),
             'format_override_confirmed_at' => now(),
         ]);
 
         ActivityLogger::log(
             issue: $this->issue,
-            entityType: 'PageFile',
-            entityId: $pageFile->id,
-            action: 'page.file_format_override_confirmed',
-            description: "Formato non conforme accettato manualmente sul PDF della pagina {$pageFile->page->position}",
+            entityType: 'ContentFile',
+            entityId: $contentFile->id,
+            action: 'content.file_format_override_confirmed',
+            description: "Formato non conforme accettato manualmente sul file del contenuto «{$contentFile->content->displayLabel()}»",
         );
-    }
-
-    #[On('echo-presence:issue.{issue.id},.PageFileUploaded')]
-    public function onPageFileUploaded(): void
-    {
-        // Nessuno stato locale da aggiornare: il prossimo render() ripesca
-        // l'ultimo PageFile (con thumbnail_status aggiornato) dal database.
-        $this->notifyRemoteChange('Un PDF è stato caricato da un altro utente.');
     }
 
     public function render(): View
@@ -2296,6 +1961,17 @@ class Grid extends Component
                 // pagine non contigue — stesso eager load riusato per
                 // entrambi, non vale la pena separarli.
                 'contents.pages:pages.id,pages.position',
+                // Punto 4 (2026-09-02): Page::previewFile() legge questa
+                // relazione per mostrare l'anteprima del file del
+                // contenuto sulla card/riga — TUTTI i file del contenuto,
+                // non solo il più recente, perché il pivot può puntare a
+                // uno specifico più vecchio (pagina di un PDF
+                // multi-pagina, vedi PageContent::contentFile()).
+                'contents.files',
+                // 'files' diretto sulla pagina resta come fallback per le
+                // pagine caricate PRIMA di questa modifica e non ancora
+                // migrate (Punto 8, non eseguito in questa sessione) —
+                // vedi Page::previewFile().
                 'files' => fn ($query) => $query->latest()->limit(1),
                 'lockedBy:id,name',
                 // Fase 2.3: badge/anello colorato del gruppo collegato,
@@ -2347,18 +2023,32 @@ class Grid extends Component
         // Avanzamento reale del rendering miniature (2026-07-31, vedi
         // HANDOFF.md) — ricalcolato da zero da App\Support\
         // ThumbnailProgressEstimator ad ogni render(), leggendo solo lo
-        // stato persistito in database ($pages ha già $latestFile eager-
-        // loaded, 'files' => query()->latest()->limit(1) qui sopra):
-        // sopravvive a un refresh della pagina, a differenza di una
-        // proprietà Livewire effimera. $avgThumbnailSeconds passato anche
-        // ai partial page-row/page-card per la stima PER SINGOLA CARD,
-        // non solo quella aggregata.
+        // stato persistito in database: sopravvive a un refresh della
+        // pagina, a differenza di una proprietà Livewire effimera.
+        // $avgThumbnailSeconds passato anche ai partial page-row/page-card
+        // per la stima PER SINGOLA CARD, non solo quella aggregata.
+        //
+        // Punto 4 (2026-09-02): Page::previewFile() può tornare un
+        // PageFile (pagine legacy non ancora migrate, Punto 8) o un
+        // ContentFile (nuovo percorso via contenuto) — entrambi hanno lo
+        // stesso identico ventaglio di thumbnail_status, quindi il filtro
+        // sotto funziona identico per entrambi senza doverli distinguere.
         $pendingThumbnailFiles = $pages
-            ->map(fn (Page $page) => $page->files->first())
-            ->filter(fn (?PageFile $file) => $file && in_array($file->thumbnail_status, [ThumbnailStatus::Pending, ThumbnailStatus::Processing], true))
+            ->map(fn (Page $page) => $page->previewFile())
+            ->filter(fn (PageFile|ContentFile|null $file) => $file && in_array($file->thumbnail_status, [ThumbnailStatus::Pending, ThumbnailStatus::Processing], true))
             ->values();
 
-        $avgThumbnailSeconds = ThumbnailProgressEstimator::averageProcessingSeconds($pages->pluck('id'));
+        // Media calcolata sulle pagine legacy (PageFile) se ce ne sono di
+        // recenti, altrimenti sui contenuti (ContentFile) — scelta
+        // pragmatica (CLAUDE.md, regola 3): una media "combinata" vera
+        // richiederebbe interrogare e pesare due tabelle insieme per un
+        // beneficio marginale (la stima resta comunque onesta, solo
+        // basata su un campione via l'altra fonte quando la prima non ne
+        // ha), non vale la complessità aggiuntiva.
+        $avgThumbnailSeconds = ThumbnailProgressEstimator::averageProcessingSeconds($pages->pluck('id'))
+            ?? ThumbnailProgressEstimator::averageProcessingSecondsForContents(
+                $pages->flatMap(fn (Page $page) => $page->contents->pluck('id'))->unique()
+            );
 
         // Copertina separata dal conteggio pagine (scelta presa con
         // l'utente: niente migration/riscrittura di position, solo

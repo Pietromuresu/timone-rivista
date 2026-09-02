@@ -129,8 +129,13 @@ class AutomaticChecks
     {
         $approvedStatuses = [PageStatus::Revisionata, PageStatus::OkStampa];
 
+        // Page::previewFile() (Punto 4, 2026-09-02): bug reale trovato qui,
+        // $page->files->isEmpty() guardava solo il vecchio PageFile
+        // diretto — una pagina approvata col nuovo materiale via contenuto
+        // sarebbe finita comunque in questo pannello, segnalata come
+        // "senza PDF" nonostante ne avesse uno.
         return $pages
-            ->filter(fn ($page) => in_array($page->status, $approvedStatuses, true) && $page->files->isEmpty())
+            ->filter(fn ($page) => in_array($page->status, $approvedStatuses, true) && $page->previewFile() === null)
             ->pluck('position')
             ->values()
             ->all();

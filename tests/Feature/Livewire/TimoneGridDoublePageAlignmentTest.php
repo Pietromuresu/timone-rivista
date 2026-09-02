@@ -24,7 +24,18 @@ test('in double-page view the first page is right-aligned and the last page is n
         $markerPos = mb_strpos($html, 'data-page-id="'.$pageId.'"');
         expect($markerPos)->not->toBeFalse();
 
-        return mb_substr($html, $markerPos, 400);
+        // Il numero di attributi tra data-page-id= e class= sul root di
+        // page-card varia (keydown/dragover/drop/click sono condizionali,
+        // vedi page-card.blade.php) — una finestra di lunghezza fissa è
+        // fragile (ha già rotto questo test il 2026-09-02, rimuovendo il
+        // div-wrapper che prima stava più vicino a data-page-id=). Si cerca
+        // quindi esplicitamente il class= di quel tag, non un offset fisso.
+        $classPos = mb_strpos($html, 'class="', $markerPos);
+        expect($classPos)->not->toBeFalse();
+
+        $classEnd = mb_strpos($html, '"', $classPos + mb_strlen('class="'));
+
+        return mb_substr($html, $classPos, $classEnd - $classPos);
     };
 
     // Pagina 1: apertura singola iniziale, spinta a destra (ml-auto) —

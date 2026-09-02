@@ -15,6 +15,13 @@ function fakeReservationPage(array $files): Page
 {
     $page = new Page;
     $page->setRelation('files', new Collection($files));
+    // Punto 4 (2026-09-02): Page::previewFile() guarda prima 'contents'
+    // (il nuovo percorso via contenuto) — stub esplicito a vuoto per
+    // restare "pura" (nessuna query reale) come dichiarato in cima a
+    // questo file, altrimenti l'accesso lazy a $page->contents
+    // eseguirebbe comunque una query reale (silenziosamente innocua qui,
+    // ma non più "nessun DB").
+    $page->setRelation('contents', new Collection());
 
     return $page;
 }
