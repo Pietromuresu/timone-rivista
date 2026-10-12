@@ -172,6 +172,10 @@ class MigrateLegacyPageFilesToContents extends Command
                 'issue_id' => $issue->id,
                 'type' => ContentType::Articolo,
                 'title' => $title,
+                // Bug 5 (2026-10-12, occupazione obbligatoria): qui il dato
+                // è certo, non inventato — ogni pagina del gruppo era
+                // occupata al 100% dal suo PDF legacy.
+                'page_occupancy' => $group->count(),
             ]);
 
             Article::create([

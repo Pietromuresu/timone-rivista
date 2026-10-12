@@ -21,7 +21,7 @@ test('an editor can create an article and it appears among unassigned contents',
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Prova su strada: nuova moto elettrica')
+        ->set('title', 'Prova su strada: nuova moto elettrica')->set('page_occupancy', '1')
         ->set('author', 'Luca Rossi')
         ->set('editorial_status', 'in_scrittura')
         ->set('expected_length', 4)
@@ -49,7 +49,7 @@ test('an editor can create an advertisement with format default percentage', fun
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'pubblicita')
-        ->set('title', 'Pubblicità Acme Tools')
+        ->set('title', 'Pubblicità Acme Tools')->set('page_occupancy', '1')
         ->set('client', 'Acme Tools')
         ->set('agency', 'Agenzia Creativa')
         ->set('format', 'mezza_pagina_orizzontale')
@@ -76,7 +76,7 @@ test('an advertisement can be created with a preferred position, purely informat
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'pubblicita')
-        ->set('title', 'Pubblicità con preferenza')
+        ->set('title', 'Pubblicità con preferenza')->set('page_occupancy', '1')
         ->set('client', 'Cliente Preferenza')
         ->set('format', 'pagina_intera')
         ->set('confirmation_status', 'in_trattativa')
@@ -99,7 +99,7 @@ test('a non-numeric preferred position is silently ignored instead of failing th
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'pubblicita')
-        ->set('title', 'Pubblicità senza preferenza valida')
+        ->set('title', 'Pubblicità senza preferenza valida')->set('page_occupancy', '1')
         ->set('client', 'Cliente Senza Preferenza')
         ->set('format', 'pagina_intera')
         ->set('confirmation_status', 'in_trattativa')
@@ -121,7 +121,7 @@ test('an advertisement with a manual percentage override stores it', function ()
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'pubblicita')
-        ->set('title', 'Pubblicità con override')
+        ->set('title', 'Pubblicità con override')->set('page_occupancy', '1')
         ->set('client', 'Cliente Override')
         ->set('format', 'un_quarto_pagina')
         ->set('occupied_percentage_override', '35.5')
@@ -144,7 +144,7 @@ test('a content can be linked to a magazine section', function () {
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'In breve')
+        ->set('title', 'In breve')->set('page_occupancy', '1')
         ->set('section_id', $section->id)
         ->call('save')
         ->assertHasNoErrors();
@@ -160,7 +160,7 @@ test('the title is required', function () {
 
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
-        ->set('title', '')
+        ->set('title', '')->set('page_occupancy', '1')
         ->call('save')
         ->assertHasErrors(['title' => 'required']);
 });
@@ -172,7 +172,7 @@ test('the client is required for an advertisement', function () {
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'pubblicita')
-        ->set('title', 'Pubblicità senza cliente')
+        ->set('title', 'Pubblicità senza cliente')->set('page_occupancy', '1')
         ->set('client', '')
         ->call('save')
         ->assertHasErrors(['client' => 'required_if']);
@@ -184,7 +184,7 @@ test('a redattore without access to the magazine cannot create a content', funct
 
     Livewire::actingAs($outsider)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
-        ->set('title', 'Non dovrebbe esistere')
+        ->set('title', 'Non dovrebbe esistere')->set('page_occupancy', '1')
         ->call('save');
 
     expect(Content::where('title', 'Non dovrebbe esistere')->exists())->toBeFalse();
@@ -197,7 +197,7 @@ test('a sola lettura user cannot create a content', function () {
 
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
-        ->set('title', 'Non dovrebbe esistere')
+        ->set('title', 'Non dovrebbe esistere')->set('page_occupancy', '1')
         ->call('save');
 
     expect(Content::where('title', 'Non dovrebbe esistere')->exists())->toBeFalse();
@@ -207,7 +207,7 @@ test('a guest cannot create a content', function () {
     $issue = reorderableIssue();
 
     Livewire::test(ContentCreate::class, ['issue' => $issue])
-        ->set('title', 'Non dovrebbe esistere')
+        ->set('title', 'Non dovrebbe esistere')->set('page_occupancy', '1')
         ->call('save');
 
     expect(Content::where('title', 'Non dovrebbe esistere')->exists())->toBeFalse();

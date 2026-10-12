@@ -23,6 +23,9 @@ class ContentFactory extends Factory
             'section_id' => null,
             'type' => ContentType::Articolo->value,
             'title' => fake()->sentence(3),
+            // Obbligatoria da bug 5 (2026-10-12, colonna NOT NULL): 1 pagina
+            // come valore neutro per i test che non la riguardano.
+            'page_occupancy' => '1.00',
         ];
     }
 

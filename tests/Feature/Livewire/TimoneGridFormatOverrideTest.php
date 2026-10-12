@@ -17,7 +17,7 @@ use Livewire\Livewire;
 
 function attachedArticleWithFile(\App\Models\Page $page, string $factoryState): ContentFile
 {
-    $content = Content::create(['issue_id' => $page->issue_id, 'type' => ContentType::Articolo, 'title' => 'Articolo di prova']);
+    $content = Content::create(['issue_id' => $page->issue_id, 'type' => ContentType::Articolo, 'title' => 'Articolo di prova', 'page_occupancy' => 1]);
     Article::create(['content_id' => $content->id, 'editorial_status' => 'da_scrivere']);
     $contentFile = ContentFile::factory()->for($content)->{$factoryState}()->create();
     $page->contents()->attach($content->id, ['occupied_percentage' => 100, 'content_file_id' => $contentFile->id]);

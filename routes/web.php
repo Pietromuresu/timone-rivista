@@ -68,7 +68,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // policy oltre "sei loggato", a differenza delle rotte annidate sotto
     // {magazine:slug} che verificano canAccessMagazine() per quella rivista
     // specifica (qui non c'è alcuna rivista specifica da verificare).
-    Route::get('/documentazione', [DocumentationController::class, 'show'])->name('documentation.show');
+    Route::get('/manuale', [DocumentationController::class, 'show'])->name('documentation.show');
+    // Vecchio indirizzo (Fase 6.1): reindirizzato per non rompere segnalibri.
+    Route::redirect('/documentazione', '/manuale', 301);
 
     Route::get('/utenti', UserIndex::class)->name('users.index');
     Route::get('/utenti/nuovo', UserCreate::class)->name('users.create');

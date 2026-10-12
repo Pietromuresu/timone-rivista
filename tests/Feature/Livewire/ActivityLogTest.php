@@ -146,7 +146,7 @@ test('creating a content logs an activity entry', function () {
 
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
-        ->set('title', 'Nuovo articolo di prova')
+        ->set('title', 'Nuovo articolo di prova')->set('page_occupancy', '1')
         ->call('save');
 
     $log = ActivityLog::where('action', 'content.created')->first();

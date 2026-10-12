@@ -139,6 +139,7 @@ class DatabaseSeeder extends Seeder
             'issue_id' => $issue->id,
             'type' => ContentType::Pubblicita,
             'title' => 'Pubblicità Neoparts',
+            'page_occupancy' => '0.50', // = formato mezza pagina (PageOccupancy::forAdFormat())
         ]);
         Advertisement::factory()->create([
             'content_id' => $halfPageAd->id,
@@ -152,6 +153,7 @@ class DatabaseSeeder extends Seeder
             'section_id' => $attualita->id,
             'type' => ContentType::Articolo,
             'title' => 'In breve: incentivi statali per l\'elettrico',
+            'page_occupancy' => '0.50',
         ]);
         Article::factory()->create([
             'content_id' => $shortArticle->id,
@@ -186,6 +188,7 @@ class DatabaseSeeder extends Seeder
             'issue_id' => $issue->id,
             'type' => ContentType::Pubblicita,
             'title' => 'Pubblicità Bullettina Tools',
+            'page_occupancy' => '0.25', // = formato un quarto di pagina
         ]);
         Advertisement::factory()->create([
             'content_id' => $unassignedAd->id,

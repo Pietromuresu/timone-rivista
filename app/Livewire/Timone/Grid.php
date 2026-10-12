@@ -27,6 +27,7 @@ use App\Support\ActivityLogger;
 use App\Support\AdLoadCalculator;
 use App\Support\AutomaticChecks;
 use App\Support\ContentPageAttacher;
+use App\Support\ContentPlacer;
 use App\Support\PageCountResizer;
 use App\Support\PageGroupLinker;
 use App\Support\PageGroupResolver;
@@ -1665,7 +1666,58 @@ class Grid extends Component
             return;
         }
 
-        $this->attachContentToPage($content, $page, 'percentage');
+        // Pagina di partenza bloccata: stesso errore "locked" di sempre (il
+        // banner dedicato in griglia); le pagine successive di un contenuto
+        // multipagina le controlla ContentPlacer, con il proprio messaggio.
+        if ($this->blockIfLocked($page)) {
+            return;
+        }
+
+        // Bug 1 (2026-10-12): il drop occupa tante pagine consecutive quante
+        // ne dichiara l'occupazione del contenuto (un PDF di 3 pagine → 3
+        // pagine, ciascuna con la propria miniatura), tutto o niente — vedi
+        // App\Support\ContentPlacer. Prima agganciava sempre una sola pagina.
+        $result = ContentPlacer::place($content, $page);
+
+        if (is_string($result)) {
+            $this->addError('percentage', $result);
+
+            return;
+        }
+
+        foreach ($result['pages'] as $targetPage) {
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Content',
+                entityId: $content->id,
+                action: 'content.assigned',
+                description: "Contenuto «{$content->displayLabel()}» assegnato alla pagina {$targetPage->position} ({$result['percentage']}%)",
+                new: ['page_id' => $targetPage->id, 'occupied_percentage' => $result['percentage']],
+            );
+
+            broadcast(new ContentAssigned(
+                issueId: $this->issue->id,
+                pageId: $targetPage->id,
+                contentId: $content->id,
+                percentage: (float) $result['percentage'],
+                assignedByUserId: auth()->id(),
+                assignedByUserName: auth()->user()->name,
+            ))->toOthers();
+        }
+
+        if ($result['group'] !== null) {
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'PageGroup',
+                entityId: $result['group']->id,
+                action: 'page_group.linked',
+                description: $result['pages']->count()." pagine collegate automaticamente posizionando il contenuto multipagina «{$content->displayLabel()}»",
+                new: ['pageIds' => $result['pages']->pluck('id')->all()],
+            );
+            broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
+        }
+
+        $this->issue->markPagesUpdated();
     }
 
     /**

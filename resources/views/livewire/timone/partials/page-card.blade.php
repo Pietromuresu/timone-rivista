@@ -60,6 +60,22 @@
         (bool) $group => 'ring-2 ring-offset-1 dark:ring-offset-gray-900 '.$group->ringClasses(),
         default => '',
     };
+    // Bug 4 (2026-10-12): la card ha tabindex="0", quindi l'ultima cliccata
+    // con Ctrl+click resta col focus — e `.focus\:ring-*:focus` (classe +
+    // pseudo-classe, più specifica di `.ring-*`) sostituiva il verde della
+    // selezione con l'anello indigo da 2px del focus: proprio l'ultima
+    // pagina selezionata sembrava non esserlo. Una pagina selezionata (o
+    // scelta per lo scambio) tiene lo stesso anello anche quando ha il
+    // focus; le altre mantengono l'indicatore di focus da tastiera di
+    // sempre. Nessun cambiamento allo stato: la selezione resta solo in
+    // Grid::$selectedPageIds (lato server), il polling ri-renderizza dallo
+    // stesso stato e quindi non c'era nulla da sospendere o isolare con
+    // wire:ignore.
+    $focusClasses = match (true) {
+        $swapSelectedPageId === $page->id => 'focus:ring-4 focus:ring-indigo-500',
+        $isMultiSelected => 'focus:ring-4 focus:ring-emerald-500',
+        default => 'focus:ring-2 focus:ring-indigo-500',
+    };
 @endphp
 <div
     wire:key="page-{{ $page->id }}"
@@ -95,7 +111,7 @@
         l'etichetta piccola sul badge di stato (che resta comunque, vedi
         sotto — "affianca", non "sostituisce", per chi preferisce leggerla).
     --}}
-    class="relative flex flex-col aspect-[3/4] rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-500 {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $ringClasses }} {{ $extraClasses }}"
+    class="relative flex flex-col aspect-[3/4] rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none {{ $focusClasses }} {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $ringClasses }} {{ $extraClasses }}"
 >
     <template x-if="$store.pagePresence.editorFor({{ $page->id }})">
         <span

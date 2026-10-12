@@ -41,7 +41,7 @@ test('attaching an image to a new content generates a ready thumbnail synchronou
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Articolo con foto allegata')
+        ->set('title', 'Articolo con foto allegata')->set('page_occupancy', '1')
         ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
         ->call('save')
         ->assertHasNoErrors();
@@ -73,7 +73,7 @@ test('opening the form anchored to a page and uploading an image attaches the co
         ->assertSet('anchorPageId', $page->id)
         ->assertSet('showForm', true)
         ->set('type', 'articolo')
-        ->set('title', 'Foto ancorata alla pagina')
+        ->set('title', 'Foto ancorata alla pagina')->set('page_occupancy', '1')
         ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
         ->call('save')
         ->assertHasNoErrors();
@@ -97,7 +97,7 @@ test('a content created from the free-standing "+ Nuovo contenuto" form (no anch
         ->call('toggleForm')
         ->assertSet('anchorPageId', null)
         ->set('type', 'articolo')
-        ->set('title', 'Foto non ancorata')
+        ->set('title', 'Foto non ancorata')->set('page_occupancy', '1')
         ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
         ->call('save')
         ->assertHasNoErrors();
@@ -121,7 +121,7 @@ test('anchored upload reports insufficient space instead of failing silently, th
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('openForPage', $page->id)
         ->set('type', 'articolo')
-        ->set('title', 'Foto senza spazio')
+        ->set('title', 'Foto senza spazio')->set('page_occupancy', '1')
         ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
         ->call('save')
         ->assertHasErrors('anchor');
@@ -144,7 +144,7 @@ test('attaching a real pdf actually converts its first page to a ready thumbnail
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Articolo con PDF reale')
+        ->set('title', 'Articolo con PDF reale')->set('page_occupancy', '1')
         ->set('file', UploadedFile::fake()->createWithContent('bozza.pdf', minimalValidPdfBytes()))
         ->call('save')
         ->assertHasNoErrors();
@@ -165,7 +165,7 @@ test('a content can be created with no file attached, exactly as before this pha
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Articolo senza allegati')
+        ->set('title', 'Articolo senza allegati')->set('page_occupancy', '1')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -175,6 +175,14 @@ test('a content can be created with no file attached, exactly as before this pha
 });
 
 test('attaching a pdf dispatches the thumbnail generation job for the content file, not the page pipeline', function () {
+    // Bug 1 (2026-10-12): il numero di pagine di un PDF è ora sempre letto
+    // (App\Support\ContentCreator) e un PDF illeggibile viene rifiutato
+    // invece di essere trattato come "1 pagina" — serve un PDF vero, e
+    // quindi ext-imagick (solo in Docker).
+    if (! extension_loaded('imagick')) {
+        $this->markTestSkipped('ext-imagick non disponibile su questa macchina (solo dentro Docker) — vedi HANDOFF.md.');
+    }
+
     Queue::fake([GenerateContentFileThumbnail::class]);
 
     $issue = reorderableIssue();
@@ -183,8 +191,8 @@ test('attaching a pdf dispatches the thumbnail generation job for the content fi
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Articolo con PDF allegato')
-        ->set('file', UploadedFile::fake()->create('bozza.pdf', 200, 'application/pdf'))
+        ->set('title', 'Articolo con PDF allegato')->set('page_occupancy', '1')
+        ->set('file', UploadedFile::fake()->createWithContent('bozza.pdf', minimalValidPdfBytes()))
         ->call('save')
         ->assertHasNoErrors();
 
@@ -213,7 +221,7 @@ test('a file with a disallowed mime type is rejected at upload time, before save
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Articolo con file non ammesso')
+        ->set('title', 'Articolo con file non ammesso')->set('page_occupancy', '1')
         ->set('file', UploadedFile::fake()->create('note.txt', 10, 'text/plain'))
         ->assertHasErrors('file');
 
@@ -226,11 +234,11 @@ test('each content on a mixed page keeps its own file, resolving the page-scoped
     $page = $issue->pages()->where('position', 1)->first();
 
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
-        ->call('toggleForm')->set('type', 'articolo')->set('title', 'Articolo A')
+        ->call('toggleForm')->set('type', 'articolo')->set('title', 'Articolo A')->set('page_occupancy', '1')
         ->set('file', UploadedFile::fake()->image('a.jpg'))->call('save');
 
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
-        ->call('toggleForm')->set('type', 'articolo')->set('title', 'Articolo B')
+        ->call('toggleForm')->set('type', 'articolo')->set('title', 'Articolo B')->set('page_occupancy', '1')
         ->set('file', UploadedFile::fake()->image('b.jpg'))->call('save');
 
     $contentA = Content::where('title', 'Articolo A')->first();

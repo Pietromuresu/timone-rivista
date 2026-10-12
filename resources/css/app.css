@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 /*
+ * Bug 2 (2026-10-12): elementi Alpine nascosti finché Alpine non li
+ * gestisce (barra di avanzamento/errori della drop zone file in
+ * content-create.blade.php) — senza, comparirebbero per un istante al
+ * primo render, prima che x-show li nasconda.
+ */
+[x-cloak] { display: none !important; }
+
+/*
  * Fase 6.1: stile per il markdown di MANUALE_UTENTE.md renderizzato in
  * resources/views/documentation/show.blade.php. Deve stare qui (non in un
  * <style> inline nella vista): @apply è una direttiva PostCSS, valutata solo

@@ -10,6 +10,7 @@ use App\Models\ContentFile;
 use App\Models\PageFile;
 use App\Models\PageGroup;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 
@@ -30,6 +31,12 @@ beforeEach(function () {
     }
 
     Queue::fake();
+    // Questi test erano sempre "skip" in locale (niente imagick) e non
+    // erano mai stati eseguiti davvero: in Docker .env punta a Reverb e
+    // ogni broadcast() reale falliva con "Could not resolve host".
+    // Event::fake() intercetta anche i broadcast (vedi HANDOFF.md,
+    // "Decisioni architetturali"), stesso pattern degli altri test.
+    Event::fake([\App\Events\ContentCreated::class, \App\Events\ContentAssigned::class, \App\Events\PageGroupsChanged::class]);
 });
 
 /**
@@ -207,7 +214,14 @@ test('a pdf reaching past the end of the issue is capped to the pages actually a
 
     $component->call('confirmMultipageUpload', false);
 
-    expect(ContentFile::query()->count())->toBe(2);
+    // Bug 1 (2026-10-12): il contenuto conserva TUTTE le pagine del PDF
+    // (App\Support\ContentCreator crea un ContentFile per pagina sorgente,
+    // a prescindere da dove verrà posizionato) — prima ne nascevano solo
+    // tante quante le pagine raggiunte. Solo le 2 pagine esistenti
+    // (posizioni 5 e 6) ricevono il contenuto.
+    $content = Content::sole();
+    expect(ContentFile::query()->count())->toBe(4)
+        ->and($content->pages()->orderBy('position')->pluck('position')->all())->toBe([5, 6]);
 });
 
 test('shifting conflicting pages relocates their existing content instead of losing it, then attaches the new content in place', function () {
@@ -235,7 +249,9 @@ test('shifting conflicting pages relocates their existing content instead of los
     // a differenza del vecchio percorso PageFile (indipendente dal
     // content_type), qui l'attach del nuovo contenuto aggiorna anche
     // content_type tramite ContentPageAttacher::syncPageContentType().
-    $newContent = Content::sole();
+    // whereKeyNot: il test crea anche $existingContent, un sole() nudo
+    // troverebbe 2 righe (mai emerso finché il file era sempre "skip").
+    $newContent = Content::whereKeyNot($existingContent->id)->sole();
     expect($conflictingPage->fresh()->notes)->toBeNull()
         ->and($conflictingPage->fresh()->content_type)->toBe(PageContentType::Editoriale)
         ->and($conflictingPage->contents()->pluck('content_id')->all())->toBe([$newContent->id])

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ContentType;
+use App\Support\PageOccupancy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ class Content extends Model
         'section_id',
         'type',
         'title',
+        'page_occupancy',
         'archived_at',
     ];
 
@@ -27,7 +29,35 @@ class Content extends Model
         return [
             'type' => ContentType::class,
             'archived_at' => 'datetime',
+            'page_occupancy' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Bug 5 (2026-10-12): null solo per i contenuti creati prima che
+     * l'occupazione diventasse obbligatoria e non ancora valorizzati (vedi
+     * `php artisan timone:missing-occupancy`) — chi la legge deve trattare
+     * null come "dato mancante" e rifiutare l'operazione, mai come 1 pagina.
+     */
+    public function occupancy(): ?PageOccupancy
+    {
+        return PageOccupancy::tryFrom($this->page_occupancy);
+    }
+
+    /**
+     * Percentuale occupata su ciascuna pagina attraversata dal contenuto:
+     * per la pubblicità resta quella di listino/manuale
+     * (Advertisement::occupiedPercentage(), che può non essere una frazione
+     * esatta: 52%, 32.6%...), per un articolo la deriva l'occupazione.
+     * Null se il dato manca.
+     */
+    public function occupiedPercentagePerPage(): ?float
+    {
+        if ($this->type === ContentType::Pubblicita) {
+            return $this->advertisement?->occupiedPercentage();
+        }
+
+        return $this->occupancy()?->percentagePerPage();
     }
 
     public function isArchived(): bool

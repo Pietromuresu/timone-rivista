@@ -23,7 +23,7 @@ test('the card switches from pending to the ready thumbnail without a page reloa
     $user = editorFor($issue);
     $page = $issue->pages()->where('position', 1)->first();
 
-    $content = Content::create(['issue_id' => $issue->id, 'type' => ContentType::Articolo, 'title' => 'Articolo di prova']);
+    $content = Content::create(['issue_id' => $issue->id, 'type' => ContentType::Articolo, 'title' => 'Articolo di prova', 'page_occupancy' => 1]);
     Article::create(['content_id' => $content->id, 'editorial_status' => 'da_scrivere']);
     $contentFile = ContentFile::factory()->for($content)->create(['thumbnail_status' => ThumbnailStatus::Pending]);
     $page->contents()->attach($content->id, ['occupied_percentage' => 100, 'content_file_id' => $contentFile->id]);

@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Enums\ContentType;
 use App\Models\Content;
 use App\Models\Page;
 
@@ -20,17 +19,21 @@ use App\Models\Page;
 class ContentPageAttacher
 {
     /**
+     * @param  float|null  $percentage  già calcolata dal chiamante (ContentPlacer), altrimenti dedotta dal contenuto
      * @return string|null  La percentuale attribuita (come stringa, stesso formato già passato ad attach()), o null se lo spazio sulla pagina non basta.
      */
-    public static function attach(Content $content, Page $page, ?int $contentFileId = null): ?string
+    public static function attach(Content $content, Page $page, ?int $contentFileId = null, ?float $percentage = null): ?string
     {
         $occupied = $page->contents()->pluck('occupied_percentage')->all();
 
-        $percentage = $content->type === ContentType::Pubblicita
-            ? $content->advertisement->occupiedPercentage()
-            : PagePercentageAllocator::freeSpace($occupied);
+        // Bug 5 (2026-10-12): un articolo non prende più "tutto lo spazio
+        // libero" della pagina (PagePercentageAllocator::freeSpace(), il
+        // vecchio default implicito) ma la percentuale dichiarata dalla sua
+        // occupazione. Occupazione mancante → null, come "spazio
+        // insufficiente": il chiamante rifiuta, non sceglie un default.
+        $percentage ??= $content->occupiedPercentagePerPage();
 
-        if (! PagePercentageAllocator::fits($occupied, $percentage)) {
+        if ($percentage === null || ! PagePercentageAllocator::fits($occupied, $percentage)) {
             return null;
         }
 

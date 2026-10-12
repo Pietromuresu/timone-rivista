@@ -8,15 +8,10 @@ use App\Enums\ContentType;
 use App\Enums\EditorialStatus;
 use App\Enums\PageContentType;
 use App\Enums\PageStatus;
-use App\Enums\ThumbnailStatus;
 use App\Events\ContentAssigned;
 use App\Events\ContentCreated;
 use App\Events\PageGroupsChanged;
-use App\Jobs\GenerateContentFileThumbnail;
-use App\Models\Advertisement;
-use App\Models\Article;
 use App\Models\Content;
-use App\Models\ContentFile;
 use App\Models\Issue;
 use App\Models\Page;
 use App\Models\PageFile;
@@ -26,12 +21,14 @@ use App\Support\ContentPageAttacher;
 use App\Support\PageGroupLinker;
 use App\Support\PageInserter;
 use App\Support\PageRoleAssigner;
-use App\Support\PdfPageMeasurer;
+use App\Support\ContentCreator;
+use App\Support\ContentPlacer;
+use App\Support\PageOccupancy;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -92,6 +89,20 @@ class ContentCreate extends Component
     public ?TemporaryUploadedFile $file = null;
 
     /**
+     * Bug 5 (2026-10-12): occupazione di pagina dell'articolo, obbligatoria
+     * — valore di App\Support\PageOccupancy::options() (select, non input
+     * libero). Stringa vuota = non ancora scelta: nessun default silenzioso.
+     * Per la pubblicità non si usa: l'occupazione deriva dal formato.
+     */
+    public string $page_occupancy = '';
+
+    /**
+     * Pagine del PDF appena selezionato (null se nessun PDF), mostrate nel
+     * form come proposta di occupazione da confermare — vedi updatedFile().
+     */
+    public ?int $pdfPageCount = null;
+
+    /**
      * Punto 4 (2026-09-02): valorizzata quando il form si apre dal bottone
      * "carica materiale" di una card/riga specifica (vedi openForPage()),
      * null quando si apre dal bottone libero "+ Nuovo contenuto" in cima
@@ -101,6 +112,15 @@ class ContentCreate extends Component
      * significato della pagina "cliccata" nel vecchio Grid::uploadPageFile()).
      */
     public ?int $anchorPageId = null;
+
+    /**
+     * Stesso ventaglio mimes già usato prima del Punto 4 (solo lì pdf-only,
+     * perché quell'upload era sempre un PDF di pagina) più le immagini,
+     * ammesse da Fase 4.1. Costante perché la stessa regola serve sia al
+     * salvataggio sia alla validazione immediata del file appena scelto o
+     * trascinato (updatedFile(), bug 2): un solo punto da cambiare.
+     */
+    private const FILE_RULES = 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:20480';
 
     /**
      * Stato del riepilogo di conflitto per un caricamento PDF multipagina
@@ -154,10 +174,14 @@ class ContentCreate extends Component
             'title', 'section_id', 'author', 'expected_length',
             'client', 'agency', 'preferred_position', 'occupied_percentage_override', 'commercial_notes',
             'file', 'showSectionForm', 'editingSectionId', 'sectionName',
+            'page_occupancy', 'pdfPageCount',
         ]);
         $this->type = 'articolo';
         $this->editorial_status = 'da_scrivere';
-        $this->format = 'pagina_intera';
+        // Bug 5: nessun formato preselezionato — il formato È l'occupazione
+        // di una pubblicità, quindi va scelto esplicitamente come quella di
+        // un articolo (prima partiva da "pagina intera" in silenzio).
+        $this->format = '';
         $this->confirmation_status = 'in_trattativa';
     }
 
@@ -173,7 +197,7 @@ class ContentCreate extends Component
 
     public string $agency = '';
 
-    public string $format = 'pagina_intera';
+    public string $format = '';
 
     /**
      * Posizione di pagina preferita (Fase 3, §3) — puramente informativa,
@@ -190,36 +214,72 @@ class ContentCreate extends Component
 
     public string $commercial_notes = '';
 
+    /**
+     * Bug 5 (2026-10-12): appena l'utente sceglie (o trascina, Fase 4) un
+     * file, se è un PDF ne leggiamo subito il numero di pagine e, per un
+     * articolo senza occupazione ancora scelta, lo proponiamo come
+     * occupazione — mostrato nel form come proposta da confermare, mai
+     * scelto in silenzio al salvataggio. Un PDF illeggibile viene segnalato
+     * qui, prima ancora di premere "Crea".
+     */
+    public function updatedFile(): void
+    {
+        $this->pdfPageCount = null;
+        $this->resetErrorBag('file');
+
+        if (! $this->file instanceof TemporaryUploadedFile) {
+            return;
+        }
+
+        $this->validateOnly('file', ['file' => self::FILE_RULES]);
+
+        try {
+            $this->pdfPageCount = ContentCreator::pdfPageCount($this->file);
+        } catch (ValidationException $e) {
+            $this->addError('file', $e->validator->errors()->first('file'));
+
+            return;
+        }
+
+        if ($this->pdfPageCount !== null && $this->type === ContentType::Articolo->value && $this->page_occupancy === '') {
+            $this->page_occupancy = PageOccupancy::from($this->pdfPageCount)->value;
+        }
+    }
+
+    /**
+     * Se l'utente passa ad "Articolo" dopo aver già scelto un PDF, la
+     * proposta di occupazione va applicata ora (updatedFile() l'aveva
+     * saltata perché il tipo era "pubblicità").
+     */
+    public function updatedType(): void
+    {
+        if ($this->type === ContentType::Articolo->value && $this->pdfPageCount !== null && $this->page_occupancy === '') {
+            $this->page_occupancy = PageOccupancy::from($this->pdfPageCount)->value;
+        }
+    }
+
     public function save(): void
     {
         $this->authorize('update', $this->issue);
 
         $validated = $this->validatedFields();
+        $validated['preferred_position'] = $this->parsedPreferredPosition();
 
-        if ($this->file !== null && $this->anchorPageId !== null && $this->fileIsPdf($this->file)) {
-            $anchorPage = Page::find($this->anchorPageId);
+        // Stesso servizio per entrambi i percorsi (bug 1): misura del PDF e
+        // vincoli occupazione/PDF verificati PRIMA di qualunque scrittura o
+        // modale di conflitto. Un ValidationException qui finisce nel form.
+        $pdfPageCount = $this->file !== null ? ContentCreator::pdfPageCount($this->file) : null;
+        ContentCreator::resolveOccupancy($validated, $pdfPageCount);
 
-            if ($anchorPage !== null && $anchorPage->issue_id === $this->issue->id) {
-                // Un PDF illeggibile (pageCount() torna null, es. ext-imagick
-                // assente in locale) degrada al comportamento precedente — 1
-                // sola pagina — invece di bloccare l'upload, stessa
-                // robustezza già richiesta per il controllo formato.
-                $pdfPageCount = PdfPageMeasurer::pageCount($this->file->getRealPath()) ?? 1;
+        $anchorPage = $this->anchorPageId !== null ? Page::find($this->anchorPageId) : null;
 
-                if ($pdfPageCount > 1) {
-                    $this->openMultipageConflict($anchorPage, $pdfPageCount, $validated);
+        if ($anchorPage !== null && $anchorPage->issue_id === $this->issue->id && ($pdfPageCount ?? 0) > 1) {
+            $this->openMultipageConflict($anchorPage, $pdfPageCount, $validated);
 
-                    return;
-                }
-            }
+            return;
         }
 
-        $this->createContentAndFinish($validated, pdfPageCount: 1, targetPages: null);
-    }
-
-    private function fileIsPdf(TemporaryUploadedFile $file): bool
-    {
-        return $file->getMimeType() === 'application/pdf';
+        $this->createContentAndFinish($validated, $pdfPageCount, targetPages: null);
     }
 
     /**
@@ -332,7 +392,7 @@ class ContentCreate extends Component
             return;
         }
 
-        $this->createContentAndFinish($conflict['validated'], $conflict['totalPdfPages'], $selectedPages, $file);
+        $this->createContentAndFinish($conflict['validated'], $conflict['totalPdfPages'], $selectedPages, $file, $conflict['initiatingPosition']);
     }
 
     /**
@@ -416,7 +476,7 @@ class ContentCreate extends Component
             return;
         }
 
-        $this->createContentAndFinish($conflict['validated'], $conflict['totalPdfPages'], $selectedPages, $file);
+        $this->createContentAndFinish($conflict['validated'], $conflict['totalPdfPages'], $selectedPages, $file, $conflict['initiatingPosition']);
     }
 
     /**
@@ -465,66 +525,26 @@ class ContentCreate extends Component
     }
 
     /**
-     * Crea il Content (+ Article/Advertisement) e, se presente un file, lo
-     * allega — a una sola pagina (percorso a file singolo, $targetPages
-     * null) o a N pagine con un ContentFile per pagina (PDF multi-pagina
-     * confermato, Punto 4/4.5), collegandole automaticamente tra loro con
-     * PageGroupLinker::link() — la stessa funzione già usata dal bottone
-     * "🔗 Collega selezionate"/Ctrl+Shift+G (Punto 2), non una copia.
+     * Crea il contenuto tramite App\Support\ContentCreator (unico punto di
+     * creazione, bug 1 — un ContentFile per pagina del PDF in entrambi i
+     * percorsi) e poi lo posiziona: sulle pagine confermate nella modale
+     * di conflitto (PDF multipagina ancorato), oppure con ContentPlacer a
+     * partire dalla pagina d'ancoraggio — la stessa logica del drop dal
+     * pannello, non una sua copia. Senza ancoraggio resta tra i "contenuti
+     * da assegnare", invariato.
      *
      * @param  Collection<int, Page>|null  $targetPages
      */
-    private function createContentAndFinish(array $validated, int $pdfPageCount, ?Collection $targetPages, ?TemporaryUploadedFile $file = null): void
+    private function createContentAndFinish(array $validated, ?int $pdfPageCount, ?Collection $targetPages, ?TemporaryUploadedFile $file = null, ?int $initiatingPosition = null): void
     {
         $file ??= $this->file;
-        $preferredPosition = $this->parsedPreferredPosition();
 
-        $content = DB::transaction(function () use ($validated, $preferredPosition) {
-            $content = Content::create([
-                'issue_id' => $this->issue->id,
-                'section_id' => $validated['section_id'],
-                'type' => $validated['type'],
-                'title' => $validated['title'],
-            ]);
+        $content = ContentCreator::create($this->issue, $validated, $file, auth()->id(), $pdfPageCount);
 
-            if ($validated['type'] === ContentType::Articolo->value) {
-                Article::create([
-                    'content_id' => $content->id,
-                    'author' => $validated['author'],
-                    'editorial_status' => $validated['editorial_status'],
-                    'expected_length' => $validated['expected_length'],
-                ]);
-            } else {
-                Advertisement::create([
-                    'content_id' => $content->id,
-                    'client' => $validated['client'],
-                    'agency' => $validated['agency'],
-                    'format' => $validated['format'],
-                    'preferred_position' => $preferredPosition,
-                    'occupied_percentage_override' => $validated['occupied_percentage_override'],
-                    'confirmation_status' => $validated['confirmation_status'],
-                    'commercial_notes' => $validated['commercial_notes'],
-                ]);
-            }
-
-            return $content;
-        });
-
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Content',
-            entityId: $content->id,
-            action: 'content.created',
-            description: "Contenuto «{$content->title}» creato (".($validated['type'] === 'articolo' ? 'articolo' : 'pubblicità').')',
-            new: ['type' => $validated['type'], 'title' => $content->title],
-        );
-
-        if ($file !== null) {
-            if ($targetPages !== null) {
-                $this->attachMultipageFile($content, $file, $pdfPageCount, $targetPages);
-            } else {
-                $this->attachSingleFile($content, $file);
-            }
+        if ($targetPages !== null) {
+            $this->attachConfirmedPages($content, $targetPages, $initiatingPosition);
+        } elseif ($this->anchorPageId !== null) {
+            $this->placeOnAnchorPage($content);
         }
 
         broadcast(new ContentCreated(
@@ -540,70 +560,75 @@ class ContentCreate extends Component
         // diverso) era stato chiuso in precedenza, ricompare per questo.
         // dispatch() puro Livewire (non Echo): entrambi i componenti sono
         // montati sulla stessa pagina, non serve un giro broadcast/server.
-        $this->dispatch('thumbnail-work-started');
+        if ($file !== null) {
+            $this->dispatch('thumbnail-work-started');
+        }
 
         $this->showForm = false;
         $this->anchorPageId = null;
-        $this->reset('file');
+        $this->reset('file', 'pdfPageCount');
     }
 
-    private function attachSingleFile(Content $content, TemporaryUploadedFile $file): void
+    private function placeOnAnchorPage(Content $content): void
     {
-        $contentFile = $this->storeContentFile($content, $file, pdfPageNumber: 1, totalPdfPages: 1);
-
-        if ($this->anchorPageId === null) {
-            return;
-        }
-
         $anchorPage = Page::find($this->anchorPageId);
 
-        if ($anchorPage === null || $anchorPage->issue_id !== $this->issue->id || $anchorPage->isLocked()) {
+        if ($anchorPage === null || $anchorPage->issue_id !== $this->issue->id) {
             return;
         }
 
-        $percentage = ContentPageAttacher::attach($content, $anchorPage, $contentFile->id);
+        $result = ContentPlacer::place($content, $anchorPage);
 
-        if ($percentage === null) {
-            // Il contenuto (con il suo file) resta comunque creato — solo
-            // non assegnato alla pagina di partenza, finisce tra i
-            // "contenuti da assegnare": stesso comportamento di
-            // Grid::attachContentToPage() quando lo spazio non basta,
-            // segnalato qui perché l'utente si aspettava un'assegnazione
+        if (is_string($result)) {
+            // Il contenuto (con i suoi file) resta comunque creato — solo
+            // non posizionato, finisce tra i "contenuti da assegnare":
+            // segnalato perché l'utente si aspettava un'assegnazione
             // immediata (il badge "📌" in cima al form la prometteva).
-            $this->addError('anchor', 'Spazio insufficiente sulla pagina di partenza: il contenuto è stato creato ma non assegnato lì — puoi assegnarlo a mano dal pannello "Contenuti da assegnare".');
+            $this->addError('anchor', $result.' Il contenuto è stato creato ma non posizionato: lo trovi tra i "Contenuti da assegnare".');
 
             return;
         }
 
-        broadcast(new ContentAssigned(
-            issueId: $this->issue->id,
-            pageId: $anchorPage->id,
-            contentId: $content->id,
-            percentage: (float) $percentage,
-            assignedByUserId: auth()->id(),
-            assignedByUserName: auth()->user()->name,
-        ))->toOthers();
+        foreach ($result['pages'] as $page) {
+            broadcast(new ContentAssigned(
+                issueId: $this->issue->id,
+                pageId: $page->id,
+                contentId: $content->id,
+                percentage: (float) $result['percentage'],
+                assignedByUserId: auth()->id(),
+                assignedByUserName: auth()->user()->name,
+            ))->toOthers();
+        }
+
+        if ($result['group'] !== null) {
+            broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
+        }
     }
 
     /**
+     * Pagine scelte nella modale di conflitto di un PDF multipagina
+     * ancorato (salta/sovrascrivi/sposta): ognuna riceve il ContentFile
+     * della pagina sorgente che le corrisponde per POSIZIONE rispetto alla
+     * pagina di partenza — una pagina saltata non fa "scalare" le
+     * successive sulla pagina PDF sbagliata (prima l'indice era quello
+     * nella lista delle sole pagine selezionate).
+     *
      * @param  Collection<int, Page>  $targetPages
      */
-    private function attachMultipageFile(Content $content, TemporaryUploadedFile $file, int $pdfPageCount, Collection $targetPages): void
+    private function attachConfirmedPages(Content $content, Collection $targetPages, ?int $initiatingPosition): void
     {
+        $filesByPdfPage = $content->files()->get()->keyBy('pdf_page_number');
+        $initiatingPosition ??= $targetPages->min('position');
         $skippedForSpace = 0;
 
-        foreach ($targetPages->values() as $index => $targetPage) {
-            $contentFile = $this->storeContentFile($content, $file, pdfPageNumber: $index + 1, totalPdfPages: $pdfPageCount);
-            $percentage = ContentPageAttacher::attach($content, $targetPage, $contentFile->id);
+        foreach ($targetPages->values() as $targetPage) {
+            $contentFile = $filesByPdfPage->get($targetPage->position - $initiatingPosition + 1);
+            $percentage = ContentPageAttacher::attach($content, $targetPage, $contentFile?->id);
 
             if ($percentage === null) {
-                // Caso limite raro: le pagine target di un PDF multi-pagina
-                // sono quasi sempre bianche/libere (freeSpace() su una
-                // pagina vuota è sempre 100), capita solo se una di esse
-                // aveva già altro materiale assegnato prima di questo
-                // caricamento — la relativa anteprima resta comunque
-                // generata (ContentFile creato sopra), solo non collegata
-                // a quella pagina specifica.
+                // Caso limite raro: una pagina dell'intervallo aveva già
+                // altro materiale (scelta "sovrascrivi") — l'anteprima
+                // esiste comunque, solo non collegata a quella pagina.
                 $skippedForSpace++;
 
                 continue;
@@ -627,23 +652,15 @@ class ContentCreate extends Component
 
         // Punto 4.5: collegamento automatico delle pagine derivate da un
         // PDF multi-pagina — riusa PageGroupLinker::link(), la stessa
-        // funzione già dietro "🔗 Collega selezionate"/Ctrl+Shift+G
-        // (Punto 2), non una sua copia. Meno di 2 pagine (es. tutte le
-        // altre erano bloccate/in conflitto-salta) non ha nulla da
-        // collegare, nessun errore: un contenuto su una sola pagina è
-        // comunque valido, solo senza gruppo.
+        // funzione già dietro "🔗 Collega selezionate"/Ctrl+Shift+G.
+        // Meno di 2 pagine non ha nulla da collegare; un fallimento (pagina
+        // già in un gruppo) non annulla la creazione già avvenuta.
         if ($targetPages->count() < 2) {
             return;
         }
 
         $result = PageGroupLinker::link($this->issue, $targetPages);
 
-        // Un fallimento qui (pagina già in un gruppo/bloccata — caso limite
-        // raro per pagine coinvolte in un caricamento appena confermato,
-        // dato che blockIfLocked() le ha già filtrate sopra) non annulla
-        // la creazione del contenuto già avvenuta: solo il collegamento
-        // automatico non si applica, l'utente può comunque collegarle a
-        // mano in seguito (☑️ Selezione multipla + 🔗/Ctrl+Shift+G).
         if (! $result instanceof PageGroup) {
             return;
         }
@@ -658,50 +675,6 @@ class ContentCreate extends Component
         );
 
         broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
-    }
-
-    /**
-     * Scrittura effettiva di un file su un contenuto — condivisa dal
-     * percorso a file singolo e da ciascuna pagina coinvolta in un PDF
-     * multi-pagina confermato (Punto 4, 2026-09-02: prima esisteva solo
-     * la versione "un file, sempre pagina 1" di Fase 4.1). Ogni pagina
-     * riceve una copia indipendente del file fisico, stesso principio già
-     * documentato per PageFile — più semplice di un riferimento condiviso
-     * tra righe ContentFile.
-     */
-    private function storeContentFile(Content $content, TemporaryUploadedFile $file, int $pdfPageNumber, int $totalPdfPages): ContentFile
-    {
-        $extension = $file->getClientOriginalExtension() ?: $file->extension();
-        $storedPath = $file->storeAs("contents/{$content->id}", Str::uuid().'.'.$extension, 'local');
-
-        $contentFile = ContentFile::create([
-            'content_id' => $content->id,
-            'uploaded_by' => auth()->id(),
-            'disk' => 'local',
-            'path' => $storedPath,
-            'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType(),
-            'size' => $file->getSize(),
-            'thumbnail_status' => ThumbnailStatus::Pending,
-            'pdf_page_number' => $pdfPageNumber,
-        ]);
-
-        $description = $totalPdfPages > 1
-            ? "PDF «{$contentFile->original_name}» (pagina {$pdfPageNumber} di {$totalPdfPages}) allegato al contenuto «{$content->title}»"
-            : "File «{$contentFile->original_name}» allegato al contenuto «{$content->title}»";
-
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'ContentFile',
-            entityId: $contentFile->id,
-            action: 'content.file_uploaded',
-            description: $description,
-            new: ['content_id' => $content->id, 'original_name' => $contentFile->original_name, 'pdf_page_number' => $pdfPageNumber],
-        );
-
-        GenerateContentFileThumbnail::dispatch($contentFile);
-
-        return $contentFile;
     }
 
     private function validatedFields(): array
@@ -723,10 +696,16 @@ class ContentCreate extends Component
             'occupied_percentage_override' => 'nullable|numeric|min:0.1|max:100',
             'confirmation_status' => 'required_if:type,pubblicita|nullable|in:'.implode(',', array_column(AdConfirmationStatus::cases(), 'value')),
             'commercial_notes' => 'nullable|string|max:2000',
-            // Stesso ventaglio mimes già usato prima del Punto 4 (solo lì
-            // pdf-only, perché quell'upload era sempre un PDF di pagina)
-            // più le immagini, qui ammesse fin da subito (Fase 4.1).
-            'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:20480',
+            // Bug 5: obbligatoria per un articolo e solo tra i valori della
+            // select (PageOccupancy::options()); per la pubblicità la deriva
+            // il formato, già obbligatorio sopra. Il secondo livello del
+            // vincolo è in ContentCreator::resolveOccupancy().
+            'page_occupancy' => ['required_if:type,articolo', 'nullable', Rule::in(array_keys(PageOccupancy::options($this->issue->total_pages)))],
+            'file' => self::FILE_RULES,
+        ], [
+            'page_occupancy.required_if' => "Scegli l'occupazione di pagina dell'articolo.",
+            'page_occupancy.in' => 'Occupazione non valida: scegline una dall\'elenco.',
+            'format.required_if' => 'Scegli il formato della pubblicità.',
         ]);
     }
 
@@ -823,6 +802,7 @@ class ContentCreate extends Component
             'editorialStatuses' => EditorialStatus::cases(),
             'adFormats' => AdFormat::cases(),
             'confirmationStatuses' => AdConfirmationStatus::cases(),
+            'occupancyOptions' => PageOccupancy::options($this->issue->total_pages),
         ]);
     }
 }

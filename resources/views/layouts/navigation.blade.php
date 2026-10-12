@@ -23,7 +23,7 @@
                     @endcan
 
                     <x-nav-link :href="route('documentation.show')" :active="request()->routeIs('documentation.show')">
-                        📖 Documentazione
+                        📖 Manuale
                     </x-nav-link>
                 </div>
             </div>
@@ -88,7 +88,7 @@
             @endcan
 
             <x-responsive-nav-link :href="route('documentation.show')" :active="request()->routeIs('documentation.show')">
-                📖 Documentazione
+                📖 Manuale
             </x-responsive-nav-link>
         </div>
 

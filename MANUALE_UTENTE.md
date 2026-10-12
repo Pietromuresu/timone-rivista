@@ -2,7 +2,7 @@
 
 Guida per chi lavora sul timone ogni giorno: redattori, commerciali, grafici. Organizzata per "voglio fare X → ecco come": cerca la sezione che ti serve, non serve leggerlo tutto di fila.
 
-Questo stesso testo è consultabile anche **dentro l'applicazione**, senza uscire dal browser: voce **"📖 Documentazione"** nel menu in alto, visibile a qualunque utente loggato (nessun ruolo specifico richiesto — è materiale di aiuto, non un'azione che modifica dati).
+**Dove trovare questo manuale**: è consultabile anche **dentro l'applicazione**, senza uscire dal browser — voce **"📖 Manuale"** nel menu in alto (indirizzo `/manuale`; il vecchio `/documentazione` ti porta comunque lì), visibile a qualunque utente loggato (nessun ruolo specifico richiesto — è materiale di aiuto, non un'azione che modifica dati). A sinistra trovi un **indice cliccabile** con tutte le sezioni: un clic ti porta direttamente alla sezione che ti serve. Se al posto del manuale compare un avviso giallo "Il manuale utente non è disponibile", avvisa chi gestisce l'installazione.
 
 Per avviare l'applicazione la prima volta vedi invece [README.md](README.md).
 
@@ -16,7 +16,7 @@ La struttura è sempre: **rivista → numero → timone**.
 - Un **numero** (es. "Novembre 2026") è una singola uscita di quella rivista, con un numero di pagine deciso.
 - Il **timone** è la griglia delle pagine di un numero specifico: qui si fa il lavoro vero e proprio.
 
-Accedi da `http://localhost` (o l'indirizzo che ti è stato dato) con l'email e la password che ti sono state assegnate. Se non hai ancora un account, chiedi a un Admin di crearlo (vedi [§13](#13-gestire-gli-utenti-solo-admin)).
+Accedi da <{{APP_URL}}> (l'indirizzo della tua installazione: nella pagina "📖 Manuale" dell'applicazione qui compare quello vero) con l'email e la password che ti sono state assegnate. Se non hai ancora un account, chiedi a un Admin di crearlo (vedi [§13](#13-gestire-gli-utenti-solo-admin)).
 
 Quello che vedi dipende dal tuo **ruolo** — riepilogo completo in [§14](#14-cosa-può-fare-ciascun-ruolo).
 
@@ -99,12 +99,12 @@ Per sbloccarla, clic sulla stessa icona (ora 🔒): torna 🔓 e la pagina è di
 
 **Per creare un nuovo articolo o una nuova pubblicità:** bottone **"+ Nuovo contenuto"** sopra la griglia. Scegli il tipo (Articolo o Pubblicità): i campi del form cambiano di conseguenza.
 
-- **Articolo**: titolo, rubrica (opzionale), autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
-- **Pubblicità**: titolo, rubrica, cliente, agenzia (opzionale), formato (l'intero listino ufficiale: pagina intera, mezza pagina orizzontale/verticale, 1/3, 1/4, 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale — mostra già accanto la percentuale di pagina che occuperebbe di default), percentuale manuale (opzionale — la usa al posto di quella del formato se la compili), **pagina preferita (opzionale)** — solo un promemoria di dove piazzarla, non assegna nulla da sola, visibile nel pannello "Pubblicità prenotate" ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), stato commerciale, note commerciali. Per **battente copertina** e **doppia pagina** (che occupano due pagine affiancate): crea il contenuto, assegnalo alla prima pagina, poi usa "↗" per estenderlo anche alla pagina successiva — ciascuna riceve il 100% come se fosse un'inserzione a piena pagina a sé.
+- **Articolo**: titolo, rubrica (opzionale), **occupazione di pagina (obbligatoria, vedi [§5bis](#5bis-occupazione-di-pagina-obbligatoria))**, autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
+- **Pubblicità**: titolo, rubrica, cliente, agenzia (opzionale), **formato (obbligatorio, nessun valore già scelto: è l'occupazione della pubblicità)** (l'intero listino ufficiale: pagina intera, mezza pagina orizzontale/verticale, 1/3, 1/4, 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale — mostra già accanto la percentuale di pagina che occuperebbe di default), percentuale manuale (opzionale — la usa al posto di quella del formato se la compili), **pagina preferita (opzionale)** — solo un promemoria di dove piazzarla, non assegna nulla da sola, visibile nel pannello "Pubblicità prenotate" ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), stato commerciale, note commerciali. Per **battente copertina** e **doppia pagina** (che occupano due pagine affiancate): trascinala sulla prima delle due pagine — occupa da sola anche la successiva, ciascuna al 100% come un'inserzione a piena pagina a sé, e le due pagine vengono collegate tra loro.
 
 **Rubrica**: accanto al menu a tendina ci sono due bottoni — **➕** crea una nuova rubrica (nome, poi "Crea": viene selezionata subito), **✏️** rinomina quella attualmente selezionata. Il nome deve essere unico all'interno della rivista.
 
-**Allegare un file (opzionale)**: nel form di creazione, campo "Allega PDF/immagine" — un PDF o un'immagine (JPG/PNG/WEBP, fino a 20MB). L'anteprima si genera da sola in pochi secondi (stessa elaborazione in coda già usata per i PDF di pagina) e compare al posto dell'iconcina 📄/📢 sul chip del contenuto nel pannello "Contenuti da assegnare", senza bisogno di ricaricare la pagina. A differenza del PDF caricato su una pagina ([§7](#7-caricare-e-vedere-un-pdf)), questo file è legato al singolo contenuto: su una pagina con più contenuti (es. metà pubblicità + metà articolo), ciascuno ha il proprio allegato distinto.
+**Allegare un file (opzionale)**: nel form di creazione, riquadro tratteggiato "Allega PDF/immagine" — **trascinaci sopra il file** dal tuo computer, oppure cliccaci per sceglierlo come sempre (vedi [§7](#7-caricare-e-vedere-un-pdf) per i dettagli). Un PDF o un'immagine (JPG/PNG/WEBP, fino a 20MB). L'anteprima si genera da sola in pochi secondi (stessa elaborazione in coda già usata per i PDF di pagina) e compare al posto dell'iconcina 📄/📢 sul chip del contenuto nel pannello "Contenuti da assegnare", senza bisogno di ricaricare la pagina. A differenza del PDF caricato su una pagina ([§7](#7-caricare-e-vedere-un-pdf)), questo file è legato al singolo contenuto: su una pagina con più contenuti (es. metà pubblicità + metà articolo), ciascuno ha il proprio allegato distinto.
 
 Una pubblicità creata ma non ancora assegnata a nessuna pagina è considerata **"prenotata"**: resta comunque conteggiata nel carico pubblicitario del cruscotto ([§8](#8-leggere-il-cruscotto-pubblicitario)) e gestibile dal pannello dedicato ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)).
 
@@ -114,9 +114,12 @@ Sopra la griglia c'è appunto il pannello **"Contenuti da assegnare"**: tutti gl
 
 **Archiviare o eliminare un contenuto non assegnato**: passando il mouse su un chip nel pannello "Contenuti da assegnare" compaiono due icone — **🗄️ Archivia** (lo nasconde dal pannello, ma resta nel database: recuperabile in qualsiasi momento dalla sezione "▸ Contenuti archiviati" subito sotto, bottone **↩️** per ripristinarlo) e **🗑️ Elimina** (cancellazione **definitiva**, non recuperabile — chiede doppia conferma). Un contenuto già assegnato a una pagina non può essere né archiviato né eliminato da qui: va prima rimosso dalla pagina ("✕" sulla card).
 
-**Per assegnare:** trascina un contenuto dal pannello sopra una pagina libera (o con spazio residuo). La percentuale di pagina occupata viene calcolata da sola:
-- un articolo prende tutto lo spazio libero rimasto sulla pagina;
+**Per assegnare:** trascina un contenuto dal pannello sopra una pagina. Quanto spazio occupa lo decide la sua **occupazione** ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)):
+- un articolo da **una frazione** (1/4, 1/3, 1/2, 2/3) prende quella parte della pagina (25%, 33,3%, 50%, 66,7%);
+- un articolo da **N pagine** (es. un PDF di 3 pagine) occupa **N pagine consecutive** a partire da quella su cui lo lasci, ciascuna al 100% e con la miniatura della propria pagina del PDF; le pagine vengono collegate tra loro (🔗) e si spostano insieme;
 - una pubblicità prende la percentuale del suo formato (es. mezza pagina = 50%), a meno che non sia stata impostata una percentuale manuale sull'inserzione.
+
+**Tutto o niente**: se il contenuto non ci sta (il numero finisce prima, una delle pagine è bloccata o già occupata), compare un messaggio che spiega il motivo e **nessuna pagina viene modificata** — scegli un'altra pagina di partenza o libera spazio. Un contenuto creato prima che l'occupazione diventasse obbligatoria e ancora senza occupazione non viene mai piazzato "a caso" su una pagina: il messaggio te lo segnala.
 
 **Per cambiare la percentuale** dopo l'assegnazione: modifica il numero accanto al contenuto direttamente sulla card. Se il nuovo valore supera lo spazio disponibile sulla pagina, viene rifiutato con un messaggio.
 
@@ -125,6 +128,20 @@ Sopra la griglia c'è appunto il pannello **"Contenuti da assegnare"**: tutti gl
 **Per un contenuto che continua su più pagine** (es. un articolo che prosegue da pagina 5 a pagina 8): una volta assegnato una prima volta, clicca sull'icona **"↗"** accanto al contenuto e indica il numero della pagina aggiuntiva. Il contenuto compare anche lì, con la sua percentuale calcolata separatamente per quella pagina; un piccolo **"×N"** accanto al titolo indica su quante pagine è presente in totale.
 
 Una pagina può ospitare più contenuti insieme (es. metà pubblicità + metà articolo = pagina "mista"), purché il totale non superi il 100%.
+
+---
+
+## 5bis. Occupazione di pagina (obbligatoria)
+
+Ogni contenuto deve dichiarare **quanto spazio occupa nel timone**: è il dato che usano il posizionamento sulle pagine, il cruscotto pubblicitario e i conteggi di foliazione. Non c'è un valore già scelto: finché non lo scegli, "Crea contenuto" segnala l'errore e non crea nulla.
+
+- **Articolo**: menu **"Occupazione di pagina"** — 1/4, 1/3, 1/2 o 2/3 di pagina, oppure 1, 2, 3… pagine intere (fino al numero di pagine del numero).
+- **Pubblicità**: l'occupazione **è il formato** scelto dal listino (mezza pagina, un quarto, doppia pagina…), anch'esso obbligatorio e senza valore preimpostato.
+
+**Con un PDF allegato**: appena scegli (o trascini) il file, il sistema ne conta le pagine e, se non hai ancora scelto l'occupazione di un articolo, te la **propone** — sotto il menu compare "📄 Il PDF allegato ha N pagine: proposta N pagine — controlla e conferma prima di creare". Se avevi già scelto un valore, non viene cambiato. Le regole:
+- PDF di **più pagine** → l'occupazione deve essere esattamente quel numero di pagine (altrimenti non si saprebbe come distribuirlo);
+- PDF di **una pagina** → puoi scegliere 1 pagina o una frazione (es. un articolo da mezza pagina);
+- PDF **illeggibile** (danneggiato o protetto) → viene rifiutato subito con un messaggio, invece di essere trattato come "1 pagina".
 
 ---
 
@@ -196,7 +213,11 @@ Le pagine selezionate con Ctrl+click hanno un contorno verde acceso, ben distint
 - **Dal bottone "📎 Carica materiale"** in basso su una card/riga ancora vuota — il modo più rapido: si apre il modulo "Nuovo contenuto" già pronto a collegare quello che crei alla pagina da cui sei partito (compare un promemoria "📌" in cima al modulo). Se il modulo non è visibile subito, la pagina scorre automaticamente per mostrartelo.
 - **Dal bottone "+ Nuovo contenuto"** in cima alla griglia — crea un contenuto "libero", non ancora assegnato a nessuna pagina: lo trovi poi nel pannello "Contenuti da assegnare", da lì lo trascini dove vuoi come sempre.
 
-In entrambi i casi, compila titolo/tipo (articolo o pubblicità) e allega il file dal campo "Allega PDF/immagine" — PDF o immagine (jpg/png/webp), fino a **20MB**. Durante il caricamento vedi "Caricamento in corso…"; appena il contenuto è creato, il file allegato genera automaticamente la sua anteprima, esattamente come succedeva prima per il caricamento diretto — un'immagine è pronta quasi subito, un PDF passa per lo stesso esame (conteggio pagine, poi generazione miniatura) di prima.
+In entrambi i casi, compila titolo/tipo (articolo o pubblicità) e l'occupazione ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)), poi allega il file nel riquadro tratteggiato "Allega PDF/immagine" — PDF o immagine (jpg/png/webp), fino a **20MB**:
+- **trascina il file** dal computer sopra il riquadro: mentre ci passi sopra il riquadro diventa blu ("Rilascia per caricare"); rilascialo e parte il caricamento, con una **barra di avanzamento** in percentuale;
+- oppure **clicca sul riquadro** per sceglierlo dalla solita finestra del computer.
+
+Il risultato è identico nei due modi (stessi controlli, stessa anteprima). Un file del tipo sbagliato o troppo grande viene rifiutato subito con un messaggio rosso sotto il riquadro; trascinando più file insieme ti viene chiesto di trascinarne uno solo (ogni contenuto ha un solo PDF o immagine). Dopo il caricamento il nome del file compare nel riquadro con una ✓; appena il contenuto è creato, il file allegato genera automaticamente la sua anteprima, esattamente come succedeva prima per il caricamento diretto — un'immagine è pronta quasi subito, un PDF passa per lo stesso esame (conteggio pagine, poi generazione miniatura) di prima.
 
 Se hai usato "📎 Carica materiale" (ancorato a una pagina) e il file allegato è un PDF di **una sola pagina** (o un'immagine), il contenuto si assegna **subito** a quella pagina, stessa immediatezza di prima. Se sulla pagina non c'è più spazio libero, compare un avviso giallo: il contenuto resta comunque creato, solo non assegnato lì — lo trovi tra i "Contenuti da assegnare".
 
@@ -206,7 +227,9 @@ Se la generazione dell'anteprima fallisce (icona ⚠️ rossa), il file più pro
 
 **Ogni pagina deve avere un'anteprima (dal contenuto assegnato) prima di poter essere segnata «Ok stampa»** — se provi a farlo su una pagina senza anteprima, compare un messaggio d'errore e lo stato non cambia. Le pagine già "Revisionata"/"Ok stampa" ma ancora senza anteprima compaiono anche nel pannello "⚠️ Avvisi" ([§11](#11-avvisi-automatici)).
 
-**PDF con più pagine interne**: se il file che alleghi (dal bottone "📎 Carica materiale" di una pagina, con un titolo/tipo già compilati) ha più di una pagina interna (es. un PDF di 3 pagine per un'inserzione su tre pagine consecutive), il sistema propone di occupare automaticamente le pagine successive del timone a partire da quella da cui sei partito — **stessa identica finestra di conferma di sempre**, nessuna modifica lì:
+**PDF con più pagine creato da "+ Nuovo contenuto"**: il contenuto conserva tutte le pagine del PDF (una miniatura per pagina). Quando lo trascini dal pannello "Contenuti da assegnare" su una pagina, occupa automaticamente le N pagine consecutive da lì in poi, ognuna con la miniatura della propria pagina del PDF — se non c'è spazio per tutte, non viene piazzato e un messaggio spiega perché ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-la-percentuale)).
+
+**PDF con più pagine interne da "📎 Carica materiale"**: se il file che alleghi (dal bottone "📎 Carica materiale" di una pagina, con un titolo/tipo già compilati) ha più di una pagina interna (es. un PDF di 3 pagine per un'inserzione su tre pagine consecutive), il sistema propone di occupare automaticamente le pagine successive del timone a partire da quella da cui sei partito — **stessa identica finestra di conferma di sempre**, nessuna modifica lì:
 - se nessuna delle pagine coinvolte ha già un'anteprima, un solo bottone **"Occupa le N pagine"** conferma tutto in un colpo;
 - se una o più pagine hanno già un'anteprima, puoi scegliere tra tre opzioni: **"Salta le pagine in conflitto"** (occupa solo quelle libere, lascia intatte le altre), **"Sovrascrivi le pagine in conflitto"** (il contenuto nuovo si aggiunge comunque anche lì), oppure **"↪️ Sposta le pagine esistenti dopo"** — non perde nulla: contenuto, note e materiale già presenti sulle pagine in conflitto vengono spostati su nuove pagine bianche inserite subito dopo, e il numero di pagine totali si allunga automaticamente se serve spazio;
 - **"Annulla il caricamento"** interrompe tutto senza scrivere nulla (il contenuto non viene creato).
@@ -281,7 +304,7 @@ La **prima pagina** del numero è sempre "Copertina (1ª)" e l'**ultima** è sem
 
 Una pagina bloccata (🔒) non può ricevere né perdere un ruolo finché non la sblocchi.
 
-**Il battente conta nel totale pagine?** Dipende dalla rivista: quando la crei ([§12](#12-creare-una-rivista-un-numero-duplicare-la-struttura)) puoi spuntare "Il battente conta nel totale pagine dichiarato del numero" — se non la spunti (default), il numero di pagine mostrato nell'intestazione del numero esclude il battente dal conteggio, pur restando una pagina vera e propria nel timone (non sparisce, non è escludibile dall'export).
+**Il battente conta nel totale pagine?** Dipende dalla rivista: quando la crei ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)) puoi spuntare "Il battente conta nel totale pagine dichiarato del numero" — se non la spunti (default), il numero di pagine mostrato nell'intestazione del numero esclude il battente dal conteggio, pur restando una pagina vera e propria nel timone (non sparisce, non è escludibile dall'export).
 
 **Nell'esportazione PDF** (bottone "📄 Esporta PDF", [§3](#3-leggere-la-griglia-del-timone)): copertina, battente e quarta di copertina compaiono in una sezione a sé, prima della griglia delle pagine interne.
 

@@ -93,6 +93,32 @@
             </div>
 
             @if ($type === 'articolo')
+                {{-- Bug 5 (2026-10-12): occupazione obbligatoria, da una select
+                     con le sole frazioni/pagine ammesse (App\Support\PageOccupancy)
+                     e nessun valore preselezionato. Se è stato scelto un PDF,
+                     il suo numero di pagine viene proposto (updatedFile()) e
+                     dichiarato qui sotto come proposta, non applicato in silenzio. --}}
+                <div>
+                    <x-input-label for="page_occupancy" value="Occupazione di pagina (obbligatoria)" />
+                    <select id="page_occupancy" wire:model.live="page_occupancy" class="mt-1 block w-full sm:w-1/2 text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm">
+                        <option value="">— Scegli quanto spazio occupa —</option>
+                        @foreach ($occupancyOptions as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @if ($pdfPageCount)
+                        <p class="mt-1 text-xs text-indigo-700 dark:text-indigo-300">
+                            📄 Il PDF allegato ha {{ $pdfPageCount }} {{ $pdfPageCount === 1 ? 'pagina' : 'pagine' }}:
+                            @if ($pdfPageCount > 1)
+                                proposta {{ $pdfPageCount }} pagine — controlla e conferma prima di creare.
+                            @else
+                                proposta 1 pagina — puoi scegliere anche una frazione (es. 1/2 pagina).
+                            @endif
+                        </p>
+                    @endif
+                    <x-input-error class="mt-1" :messages="$errors->get('page_occupancy')" />
+                </div>
+
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <x-input-label for="author" value="Autore (opzionale)" />
@@ -123,12 +149,17 @@
                         <x-text-input id="agency" wire:model="agency" type="text" class="mt-1 block w-full text-sm" />
                     </div>
                     <div>
-                        <x-input-label for="format" value="Formato" />
+                        {{-- Bug 5: per la pubblicità il formato È l'occupazione
+                             (App\Support\PageOccupancy::forAdFormat()) — obbligatorio
+                             e senza default, come l'occupazione di un articolo. --}}
+                        <x-input-label for="format" value="Formato / occupazione (obbligatorio)" />
                         <select id="format" wire:model="format" class="mt-1 block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm">
+                            <option value="">— Scegli il formato —</option>
                             @foreach ($adFormats as $adFormat)
                                 <option value="{{ $adFormat->value }}">{{ $adFormat->label() }} ({{ $adFormat->defaultPercentage() }}%)</option>
                             @endforeach
                         </select>
+                        <x-input-error class="mt-1" :messages="$errors->get('format')" />
                     </div>
                     <div>
                         <x-input-label for="occupied_percentage_override" value="Percentuale manuale (opzionale)" />
@@ -155,10 +186,79 @@
                 </div>
             @endif
 
-            <div>
+            {{-- Bug 2 (2026-10-12): drop zone per il file, solo Alpine +
+                 l'upload nativo di Livewire, nessuna libreria. Il file
+                 trascinato va nella STESSA proprietà `file` dell'input
+                 classico ($wire.upload('file', ...)), quindi segue lo stesso
+                 identico flusso: validazione FILE_RULES + lettura pagine PDF
+                 in updatedFile(), stesso servizio ContentCreator al
+                 salvataggio, stessi job miniature. Un click sulla zona apre il
+                 selettore classico (l'<input> resta, nascosto). Un solo file
+                 per contenuto, come l'input: più file trascinati insieme
+                 vengono rifiutati con un messaggio invece di prenderne uno a
+                 caso. La validazione tipo/dimensione resta quella server
+                 (stesse regole dell'input), il messaggio compare sotto. --}}
+            <div
+                x-data="{
+                    dragging: false,
+                    uploading: false,
+                    progress: 0,
+                    clientError: null,
+                    send(files) {
+                        this.dragging = false;
+                        this.clientError = null;
+                        if (! files || files.length === 0) return;
+                        if (files.length > 1) {
+                            this.clientError = 'Trascina un solo file alla volta: ogni contenuto ha un solo PDF o immagine.';
+                            return;
+                        }
+                        this.uploading = true;
+                        this.progress = 0;
+                        $wire.upload('file', files[0],
+                            () => { this.uploading = false; },
+                            () => { this.uploading = false; this.clientError = 'Caricamento non riuscito: controlla che sia un PDF o un\'immagine (JPG, PNG, WebP) di massimo 20 MB.'; },
+                            (event) => { this.progress = event.detail.progress; },
+                        );
+                    },
+                }"
+                x-on:livewire-upload-start="uploading = true; progress = 0; clientError = null"
+                x-on:livewire-upload-progress="progress = $event.detail.progress"
+                x-on:livewire-upload-finish="uploading = false"
+                x-on:livewire-upload-error="uploading = false; clientError = 'Caricamento non riuscito: controlla che sia un PDF o un\'immagine (JPG, PNG, WebP) di massimo 20 MB.'"
+            >
                 <x-input-label for="file" value="Allega PDF/immagine (opzionale)" />
-                <input type="file" id="file" wire:model="file" accept=".pdf,image/*" class="mt-1 block w-full text-sm text-gray-600 dark:text-gray-300" />
-                <div wire:loading wire:target="file" class="mt-1 text-xs text-gray-400">Caricamento in corso…</div>
+                <div
+                    data-testid="file-drop-zone"
+                    role="button"
+                    tabindex="0"
+                    x-on:click="$refs.fileInput.click()"
+                    x-on:keydown.enter.prevent="$refs.fileInput.click()"
+                    x-on:dragover.prevent="dragging = true"
+                    x-on:dragleave.prevent="dragging = false"
+                    x-on:drop.prevent="send($event.dataTransfer.files)"
+                    :class="dragging
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+                        : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400'"
+                    class="mt-1 flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-6 text-center text-sm text-gray-600 dark:text-gray-300 cursor-pointer transition-colors"
+                >
+                    <span class="text-2xl" aria-hidden="true">📄</span>
+                    <span x-show="! dragging"><strong>Trascina qui il PDF o l'immagine</strong> oppure clicca per sceglierlo</span>
+                    <span x-show="dragging" x-cloak><strong>Rilascia per caricare</strong></span>
+                    <span class="text-xs text-gray-400">PDF, JPG, PNG, WebP — max 20 MB</span>
+                    @if ($file)
+                        <span class="mt-1 text-xs text-emerald-700 dark:text-emerald-400">✓ {{ $file->getClientOriginalName() }}</span>
+                    @endif
+                </div>
+                <input type="file" id="file" x-ref="fileInput" wire:model="file" accept=".pdf,image/*" class="sr-only" />
+
+                <div x-show="uploading" x-cloak class="mt-2">
+                    <div class="h-2 w-full rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                        <div class="h-2 bg-indigo-600 transition-all" :style="`width: ${progress}%`"></div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500" x-text="`Caricamento… ${progress}%`"></p>
+                </div>
+                <div wire:loading wire:target="file" class="mt-1 text-xs text-gray-400">Lettura del file in corso…</div>
+                <p x-show="clientError" x-cloak x-text="clientError" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
                 <x-input-error class="mt-1" :messages="$errors->get('file')" />
             </div>
 

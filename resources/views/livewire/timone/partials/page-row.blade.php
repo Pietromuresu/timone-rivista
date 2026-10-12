@@ -41,6 +41,14 @@
         $isMultiSelected => 'ring-2 ring-inset ring-emerald-500 bg-emerald-50 dark:bg-emerald-900/20',
         default => '',
     };
+    // Bug 4 (2026-10-12): stesso motivo di page-card.blade.php — senza,
+    // il focus (ultima riga cliccata) sostituiva il ring verde con quello
+    // indigo del focus.
+    $focusClasses = match (true) {
+        $swapSelectedPageId === $page->id => 'focus:ring-indigo-500',
+        $isMultiSelected => 'focus:ring-emerald-500',
+        default => 'focus:ring-indigo-500',
+    };
 @endphp
 <li
     wire:key="page-{{ $page->id }}"
@@ -75,7 +83,7 @@
         solo canale cromatico aggiuntivo qui, la lista è già pensata per
         scorrere veloce, non per un colpo d'occhio sul tipo pagina).
     --}}
-    class="flex items-center gap-4 px-4 py-3 border-l-4 {{ $page->status->borderClasses() }} hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $selectionRowClasses }}"
+    class="flex items-center gap-4 px-4 py-3 border-l-4 {{ $page->status->borderClasses() }} hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset {{ $focusClasses }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $selectionRowClasses }}"
 >
     @if ($selectionMode ?? false)
         <input

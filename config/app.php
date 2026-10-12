@@ -16,6 +16,13 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
+    | Manuale utente mostrato in-app su /manuale (App\Http\Controllers\
+    | DocumentationController). Configurabile solo per i test (file
+    | mancante): in esercizio resta il file nella radice del progetto.
+    */
+    'manual_path' => base_path('MANUALE_UTENTE.md'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

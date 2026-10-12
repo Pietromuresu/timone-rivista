@@ -38,3 +38,7 @@ tests
 
 *.md
 !README.md
+# Bug 3 (2026-10-12): il manuale è letto a runtime da /manuale
+# (DocumentationController) — senza questa eccezione mancava
+# dall'immagine di produzione e la pagina andava in errore 500.
+!MANUALE_UTENTE.md
