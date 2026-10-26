@@ -1,0 +1,158 @@
+# 05 — Configurazione (variabili d'ambiente)
+
+[← Indice](README.md) · Vedi anche: [01-setup-locale.md](01-setup-locale.md), [09-deploy.md](09-deploy.md)
+
+## Come funziona la configurazione in questo progetto
+
+- Un unico file **`.env`** nella root, letto da:
+  - Laravel (container `app`, `worker`, `reverb`, `scheduler` tramite `env_file: .env` in `docker-compose.yml`);
+  - **Docker Compose stesso**, per l'interpolazione: `MYSQL_DATABASE`/`MYSQL_USER`/`MYSQL_PASSWORD` del container `mysql` sono **le stesse** `DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD`, più `MYSQL_ROOT_PASSWORD`;
+  - i build arg `VITE_REVERB_*` delle immagini.
+- **`.env.example`** è commentato riga per riga ed è la base del `.env`. `setup.sh` genera da solo le 6 variabili segrete se sono vuote.
+- `config/timone.php` contiene i 2 parametri specifici del progetto.
+- **Variabili `VITE_*`**: vengono inserite nel bundle JS **al momento della build**. In Docker passano come `build.args` (il `.env` è escluso dal contesto di build da `.dockerignore`). Se cambiano, serve **ricostruire le immagini** (`docker compose up -d --build`); non basta un restart.
+- Dopo un `php artisan config:cache` le `env()` fuori da `config/` non vengono più lette. Il progetto non usa `env()` fuori da `config/` (verificato con grep su `app/`, `routes/`, `database/`).
+
+> Regola: **nessun valore segreto in questo documento.** Dove serve un segreto, è indicato come ottenerlo.
+
+## Tabella completa
+
+Legenda colonna *Obbl.*: **Sì** = senza, l'app o lo stack non partono o una funzione chiave si rompe; *Prod* = obbligatoria da cambiare/impostare in produzione; No = opzionale.
+
+### Applicazione
+
+| Variabile | Obbl. | Default (codice) | Esempio formato | Usata in | Dove si ottiene il valore |
+|---|---|---|---|---|---|
+| `APP_NAME` | No | `Laravel` | `"Timone Rivista"` | `config/app.php:16`, mail `from.name`, prefissi cache/sessione | Scelta libera (`.env.example`: `Timone Rivista`) |
+| `APP_ENV` | Prod | `production` | `local` / `production` | `config/app.php:36` | `production` sul server |
+| `APP_KEY` | **Sì** | nessuno | `base64:<44 caratteri>` | `config/app.php:107` (cifratura sessioni/cookie, firma degli snapshot Livewire) | Generata da `setup.sh` (`openssl rand -base64 32`) oppure `php artisan key:generate`. **Non va mai cambiata in produzione**: invaliderebbe sessioni e dati cifrati |
+| `APP_DEBUG` | Prod | `false` | `true` / `false` | `config/app.php:49` | **`false` in produzione** (`.env.example` ha `true`) |
+| `APP_URL` | **Sì** | `http://localhost` | `https://timone.example.org` | `config/app.php:62`; `AppServiceProvider::boot()` forza root URL e schema https; `{{APP_URL}}` nel manuale | URL pubblico reale. ⚠️ DA VERIFICARE: URL di produzione |
+| `APP_TIMEZONE` | No | `UTC` | `Europe/Rome` | `config/app.php:75`; **orario dello scheduler** (07:30) | Decisione di business: oggi i solleciti partono alle 07:30 UTC |
+| `APP_LOCALE` | No | `en` | `it` | `config/app.php:88` | `.env.example`: `it` (traduzioni in `lang/it/`) |
+| `APP_FALLBACK_LOCALE` | No | `en` | `en` | `config/app.php:90` | — |
+| `APP_FAKER_LOCALE` | No | `en_US` | `it_IT` | factory/seeder | — |
+| `APP_PREVIOUS_KEYS` | No | vuoto | `base64:...,base64:...` | `config/app.php:111` | Solo per una rotazione di `APP_KEY` |
+| `APP_MAINTENANCE_DRIVER` | No | `file` | `file` | `config/app.php:129` | — |
+| `PHP_CLI_SERVER_WORKERS` | No | — | `4` | solo `php artisan serve` | Irrilevante in Docker |
+| `BCRYPT_ROUNDS` | No | `12` | `12` | hashing password | — |
+
+### Log
+
+| Variabile | Obbl. | Default | Esempio | Usata in | Dove si ottiene |
+|---|---|---|---|---|---|
+| `LOG_CHANNEL` | No | `stack` | `stack` | `config/logging.php:21` | — |
+| `LOG_STACK` | No | `single` | `single` o `daily` | canali dello stack | Consigliato `daily` in produzione (vedi [10-debugging.md](10-debugging.md)) |
+| `LOG_LEVEL` | No | `debug` | `warning` | `config/logging.php` | `warning`/`error` in produzione |
+| `LOG_DAILY_DAYS` | No | `14` | `30` | canale `daily` | Non presente in `.env.example` |
+| `LOG_DEPRECATIONS_CHANNEL` | No | `null` | `null` | — | — |
+
+### Database
+
+| Variabile | Obbl. | Default | Esempio | Usata in | Dove si ottiene |
+|---|---|---|---|---|---|
+| `DB_CONNECTION` | **Sì** | `sqlite` | `mysql` | `config/database.php:19` | `mysql` con Docker |
+| `DB_HOST` | **Sì** | `127.0.0.1` | `mysql` | idem | Nome del servizio compose `mysql` |
+| `DB_PORT` | No | `3306` | `3306` | idem | — |
+| `DB_DATABASE` | **Sì** | `laravel` (Laravel); il compose usa `timone` | `timone` | Laravel + `MYSQL_DATABASE` del container + `backup` | `.env.example`: `timone` |
+| `DB_USERNAME` | **Sì** | `root` (Laravel); il compose usa `timone` | `timone` | Laravel + `MYSQL_USER` | `.env.example`: `timone` |
+| `DB_PASSWORD` | **Sì** | nessuno (compose fallisce con errore esplicito) | 40 caratteri hex | Laravel + `MYSQL_PASSWORD` + `backup` | Generata da `setup.sh` (`openssl rand -hex 20`). Su un server nuovo: generane una tu. **Se il volume `mysql_data` esiste già, cambiarla nel `.env` NON cambia la password in MySQL** |
+| `MYSQL_ROOT_PASSWORD` | **Sì** (solo compose) | nessuno (compose fallisce) | 40 caratteri hex | `docker-compose.yml` (container mysql, healthcheck), restore in `DOCKER.md` | Generata da `setup.sh` |
+
+### Sessione, cache, code, Redis
+
+| Variabile | Obbl. | Default | Esempio | Usata in | Dove si ottiene |
+|---|---|---|---|---|---|
+| `SESSION_DRIVER` | No | `database` | `database` | `config/session.php:21` | — |
+| `SESSION_LIFETIME` | No | `120` (minuti) | `120` | `config/session.php:35` | — |
+| `SESSION_ENCRYPT` | No | `false` | `false` | — | — |
+| `SESSION_PATH` / `SESSION_DOMAIN` | No | `/` / `null` | — | — | — |
+| `SESSION_SECURE_COOKIE` | Prod se HTTPS | `null` | `true` | `config/session.php:172` | Non in `.env.example`: impostare `true` se il sito è servito in HTTPS |
+| `CACHE_STORE` | No | `database` | `redis` | `config/cache.php:18` | `.env.example`: `redis` |
+| `CACHE_PREFIX` | No | slug di `APP_NAME` + `_cache_` | vuoto | `config/cache.php:106` | `.env.example` lo lascia vuoto |
+| `QUEUE_CONNECTION` | **Sì** | `database` | `redis` | `config/queue.php:16` | Deve coincidere con il comando del `worker` (`queue:work redis`) |
+| `BROADCAST_CONNECTION` | **Sì** | `null` | `reverb` | `config/broadcasting.php:18` | `reverb` (con `null` il realtime tace, ma non va usato nei test di presence, vedi [10-debugging.md](10-debugging.md)) |
+| `FILESYSTEM_DISK` | No | `local` | `local` | `config/filesystems.php:16` | Il codice usa comunque `'local'` esplicito |
+| `REDIS_CLIENT` | No | `phpredis` | `phpredis` | `config/database.php` | Richiede `ext-redis` (presente nell'immagine) |
+| `REDIS_HOST` | **Sì** | `127.0.0.1` | `redis` | idem | Nome del servizio compose |
+| `REDIS_PASSWORD` | No | `null` | — | idem | Redis nel compose non ha password (rete interna, porta non esposta) |
+| `REDIS_PORT` | No | `6379` | `6379` | idem | — |
+| `MEMCACHED_HOST` | No | — | — | non usata | Residuo dello scaffold |
+
+### Reverb (WebSocket)
+
+| Variabile | Obbl. | Default | Esempio | Usata in | Dove si ottiene |
+|---|---|---|---|---|---|
+| `REVERB_APP_ID` | **Sì** | nessuno | 12 caratteri hex | `config/broadcasting.php:37`, `config/reverb.php` | Generata da `setup.sh` |
+| `REVERB_APP_KEY` | **Sì** | nessuno | 20 caratteri hex | server + **`VITE_REVERB_APP_KEY`** (il compose la copia nel build arg) | Generata da `setup.sh` |
+| `REVERB_APP_SECRET` | **Sì** | nessuno | 32 caratteri hex | firma server ↔ Reverb | Generata da `setup.sh` |
+| `REVERB_HOST` | **Sì** | nessuno | `reverb` | dove **il server PHP** pubblica gli eventi | Nome del servizio compose (rete interna) |
+| `REVERB_PORT` | No | `443` | `8080` | idem | `.env.example`: 8080 |
+| `REVERB_SCHEME` | No | `https` | `http` | idem | `http` sulla rete interna Docker |
+| `REVERB_SERVER_HOST` | No | `0.0.0.0` | `0.0.0.0` | bind del processo `reverb:start` | — |
+| `REVERB_SERVER_PORT` | No | `8080` | `8080` | idem; deve coincidere con `ports` e healthcheck del compose | — |
+| `VITE_REVERB_APP_KEY` | **Sì** | — | — | `resources/js/echo.js:8` (build) | Nel compose è **sovrascritta** dal build arg `${REVERB_APP_KEY}`: il valore nel `.env` serve solo fuori Docker |
+| `VITE_REVERB_HOST` | **Sì** | `localhost` (compose) | `timone.example.org` | `echo.js:9`, host a cui **il browser** si connette | Hostname pubblico. ⚠️ DA VERIFICARE in produzione |
+| `VITE_REVERB_PORT` | No | `8080` (compose) | `443` | `echo.js:10-11` | Porta pubblica del WebSocket |
+| `VITE_REVERB_SCHEME` | No | `http` (compose); `https` se non impostata in `echo.js` | `https` | `echo.js:12` (`forceTLS`) | `https` se il sito è in HTTPS (altrimenti il browser blocca un `ws://` da una pagina `https://`) |
+| `VITE_APP_NAME` | No | — | `"${APP_NAME}"` | nessun uso trovato in `resources/js` | Residuo dello scaffold |
+
+### Mail
+
+| Variabile | Obbl. | Default | Esempio | Usata in | Dove si ottiene |
+|---|---|---|---|---|---|
+| `MAIL_MAILER` | Prod | `log` | `smtp` | `config/mail.php:17` | Con `log` **nessuna mail viene inviata** (finisce in `laravel.log`). ⚠️ DA VERIFICARE: provider SMTP di produzione |
+| `MAIL_SCHEME` | No | `null` | `smtps` / `null` | `config/mail.php` | Dal provider SMTP |
+| `MAIL_HOST` | Prod | `127.0.0.1` | `smtp.provider.tld` | idem | Dal provider SMTP |
+| `MAIL_PORT` | Prod | `2525` | `587` | idem | Dal provider SMTP |
+| `MAIL_USERNAME` | Prod | `null` | — | idem | Credenziali del provider SMTP |
+| `MAIL_PASSWORD` | Prod | `null` | — | idem | Credenziali del provider SMTP (segreto) |
+| `MAIL_FROM_ADDRESS` | Prod | `hello@example.com` | `timone@dominio.it` | `config/mail.php:112` | ⚠️ DA VERIFICARE: indirizzo mittente reale |
+| `MAIL_FROM_NAME` | No | `Example` | `"${APP_NAME}"` | `config/mail.php:113` | — |
+
+### Storage remoto (non usato)
+
+| Variabile | Obbl. | Note |
+|---|---|---|
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_BUCKET`, `AWS_USE_PATH_STYLE_ENDPOINT` | No | Il disco `s3` non è usato da nessun punto del codice (tutti i file usano il disco `local`). Lasciare vuote |
+
+### Specifiche del progetto (`config/timone.php`)
+
+| Variabile | Obbl. | Default | Esempio | Usata in | Dove si ottiene |
+|---|---|---|---|---|---|
+| `TIMONE_PDF_FORMAT_TOLERANCE_MM` | No | `1.5` | `1.5` | `config/timone.php` → `GenerateContentFileThumbnail`/`GeneratePageFileThumbnail::checkFormat()` | Tolleranza in mm oltre l'abbondanza di 3 mm per lato. Decisione della redazione |
+| `TIMONE_DEADLINE_REMINDER_DAYS_BEFORE` | No | `3` | `3` | `config/timone.php` → `SendDeadlineReminders` | **Assente da `.env.example`** (vedi sotto). Decisione della redazione |
+
+### Variabili non-`.env` rilevanti
+
+| Chiave | Dove | Note |
+|---|---|---|
+| `app.manual_path` | `config/app.php:23` | `base_path('MANUALE_UTENTE.md')`; modificabile solo nei test |
+| `livewire.temporary_file_upload.rules` | `config/livewire.php:84` | `mimes:pdf,jpg,jpeg,png,webp`, `max:102400` (100 MB). Va allineato con `docker/php/uploads.ini` (100M/110M) e `client_max_body_size 120m` in nginx |
+| `livewire.temporary_file_upload.max_upload_time` | `config/livewire.php:92` | 10 (minuti) |
+
+## Discrepanze tra `.env.example` e il codice
+
+**Usate nel codice, assenti in `.env.example`:**
+- `TIMONE_DEADLINE_REMINDER_DAYS_BEFORE` (`config/timone.php`). Funziona con il default 3, ma non è documentata dove un sistemista la cercherebbe.
+- `SESSION_SECURE_COOKIE`, `LOG_DAILY_DAYS`: default di Laravel, rilevanti in produzione.
+- Tutte le altre variabili lette in `config/*.php` e assenti dall'esempio (`PUSHER_*`, `ABLY_KEY`, `POSTMARK_*`, `RESEND_KEY`, `SQS_*`, `DYNAMODB_*`, `SLACK_*`, `PAPERTRAIL_*`, `REVERB_SCALING_*`, ecc.) sono default dello scaffold Laravel per driver non usati da questo progetto.
+
+**In `.env.example` ma inutili per il codice:** `MEMCACHED_HOST`, `AWS_*`, `VITE_APP_NAME`, `PHP_CLI_SERVER_WORKERS` (solo `artisan serve`). `MYSQL_ROOT_PASSWORD` è usata solo da Docker Compose, non da Laravel.
+
+## Checklist `.env` di produzione
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://<dominio-pubblico>              # ⚠️ DA VERIFICARE
+APP_TIMEZONE=UTC                                # o Europe/Rome, decisione esplicita
+LOG_LEVEL=warning
+LOG_STACK=daily                                 # opzionale, evita un laravel.log infinito
+SESSION_SECURE_COOKIE=true                      # se HTTPS
+MAIL_MAILER=smtp                                # + MAIL_HOST/PORT/USERNAME/PASSWORD/FROM_ADDRESS
+VITE_REVERB_HOST=<dominio-pubblico>
+VITE_REVERB_PORT=443                            # se il WS passa da un reverse proxy TLS
+VITE_REVERB_SCHEME=https
+# APP_KEY, DB_PASSWORD, MYSQL_ROOT_PASSWORD, REVERB_APP_ID/KEY/SECRET: generate una volta, mai committate
+```

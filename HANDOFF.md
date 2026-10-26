@@ -1184,3 +1184,35 @@ Richiesta dell'utente: nel manuale l'indirizzo dell'app era scritto a mano (`htt
 **Test**: `DocumentationTest.php` +1 (con `app.url = https://timone.example.org/` la pagina contiene `href="https://timone.example.org"`, nessun `{{APP_URL}}` letterale). 7/7 verdi.
 
 **Da verificare a mano**: lo stack attivo in questo momento è stato ricreato in modalità produzione (`docker-compose.yml` da solo, nessun bind mount), quindi esegue il codice dell'immagine costruita prima di questa modifica — la pagina dal vivo mostra ancora il vecchio testo finché l'immagine non viene ricostruita (`./setup.sh`, o `./setup.sh dev` per vedere subito le modifiche). Dopo: aprire "📖 Manuale", §1 → il link deve puntare all'`APP_URL` del `.env`. Nello stesso stack la migration `..._make_page_occupancy_not_null_on_contents_table` risulta **Pending** (attende il backfill, vedi sopra).
+
+----
+## Sessione 2026-10-26 — Documentazione tecnica di passaggio di consegne in `docs/`
+
+Richiesta dell'utente: documentazione completa per uno sviluppatore che non ha mai visto il progetto (setup, architettura, debug in produzione, deploy da zero, aggiornamento dipendenze), più una scheda sintetica per Nextcloud. **Nessun codice, config o dipendenza modificati**: solo comandi in sola lettura (`php artisan about`, `route:list`, `composer show/outdated/audit`, `npm ls/audit`, `git log`). Test non rieseguiti (vincolo di sola lettura): i numeri citati vengono da questo file.
+
+**File creati** in `docs/`:
+- `README.md` (indice);
+- `01-setup-locale.md`, `02-architettura.md`, `03-dominio-e-flussi.md`, `04-database.md`;
+- `05-configurazione.md`, `06-dipendenze.md`, `07-integrazioni.md`, `08-job-e-scheduler.md`;
+- `09-deploy.md`, `10-debugging.md`, `11-debito-tecnico.md`, `12-glossario.md`;
+- `DA-VERIFICARE.md`;
+- `nextcloud/timone-rivista.md`.
+
+Questi file non sostituiscono `HANDOFF.md`, `MANUALE_UTENTE.md`, `DOCKER.md` e `README.md`, che restano validi: li citano come fonte.
+
+**Domande aperte**: 17 informazioni non deducibili dal repo (URL e server di produzione, accessi, SMTP, backup reali, stato della migration `page_occupancy` in produzione, ecc.), raccolte in `docs/DA-VERIFICARE.md`. Vanno chiarite prima del passaggio di consegne.
+
+**Scoperte nuove** rispetto a quanto già annotato qui sopra (dettaglio e priorità in `docs/11-debito-tecnico.md`):
+- **Cancellazione utente distruttiva.** `content_files.uploaded_by`, `page_files.uploaded_by` e `page_reorder_logs.user_id` sono `cascadeOnDelete`, e ogni utente può cancellarsi da `/profile` (`ProfileController::destroy`). Questo elimina le righe dei file che ha caricato.
+- **Una copia intera del PDF per ogni pagina.** `ContentCreator::create()` → `storeFile()` salva un file completo per ogni pagina del PDF: un PDF di 64 pagine da 100 MB occupa circa 6,4 GB.
+- **Seed demo in modalità prod.** `setup.sh` lancia `db:seed` (utenti con password `password`) su qualunque DB vuoto, anche in modalità prod. `docs/09-deploy.md` descrive un primo deploy senza seed.
+- **`pagefiles:prune-orphaned` può cancellare file in uso.** Guarda solo `page_files`: dopo `timone:migrate-legacy-page-files` potrebbe cancellare file sotto `pages/` ancora referenziati da `content_files`. Dedotto dal codice, non verificato con un test.
+- **Sollecito non ritentato.** `deadline_reminder_sent_at` viene impostato all'accodamento: se SMTP fallisce, il sollecito non viene ritentato.
+- **Log di Reverb non persistito.** Il servizio `reverb` non monta il volume `storage_logs`.
+- **Variabile non documentata.** `TIMONE_DEADLINE_REMINDER_DAYS_BEFORE` è assente da `.env.example`.
+- **Vulnerabilità al 2026-10-26.** `composer audit` segnala 19 advisory su 6 pacchetti, tra cui Livewire 3.8.2 (XSS, CVE-2026-81887) e Laravel 12.64. `npm audit` segnala 11 vulnerabilità, quasi tutte nel tooling di build.
+- **OPcache in dev, da verificare.** `opcache.validate_timestamps=0` non viene sovrascritto in `docker-compose.dev.yml`, quindi in `./setup.sh dev` le modifiche PHP potrebbero richiedere `restart app`.
+
+**Nota su questo file**: la riga "Ultimo aggiornamento" in testa (ferma al 2026-09-01) e la menzione di "Laravel 11" in "Stato generale" sono superate (il progetto è su Laravel 12.64). Non le ho corrette per non riscrivere la cronologia esistente.
+
+**Repository di riferimento**: su indicazione dell'utente, la documentazione in `docs/` indica come repository `https://its.git/pietro/timone-rivista` (clone, accessi, scheda Nextcloud). Il remote `origin` del clone locale punta ancora al vecchio indirizzo GitHub e non è stato modificato. Per allinearlo: `git remote set-url origin https://its.git/pietro/timone-rivista`.
