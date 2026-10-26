@@ -3,6 +3,7 @@
 namespace App\Livewire\Timone;
 
 use App\Enums\PageRole;
+use App\Livewire\Concerns\NormalizesEmptyNumericInput;
 use App\Models\Issue;
 use App\Support\ActivityLogger;
 use App\Support\PageNumberer;
@@ -27,6 +28,8 @@ use Livewire\Component;
  */
 class CoverSection extends Component
 {
+    use NormalizesEmptyNumericInput;
+
     public Issue $issue;
 
     public bool $expanded = false;

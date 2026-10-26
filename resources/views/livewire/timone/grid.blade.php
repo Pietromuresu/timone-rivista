@@ -58,8 +58,8 @@
     x-on:open-content-create-for-page.window="setTimeout(() => document.getElementById('content-create-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150)"
     @auth
         x-init="
-            $store.pagePresence.join({{ $issue->id }}, { id: {{ auth()->id() }}, name: @js(auth()->user()->name) });
-            $store.realtimeFallback.watch();
+            $store.pagePresence?.join({{ $issue->id }}, { id: {{ auth()->id() }}, name: @js(auth()->user()->name) });
+            $store.realtimeFallback?.watch();
         "
     @endauth
 >
@@ -91,16 +91,16 @@
          chiama $wire.movePage), solo di UI. `$store.pagePresence.dragging`
          è impostato dagli stessi hook onStart/onEnd di Sortable già usati
          per il badge "chi sta modificando cosa" (resources/js/app.js). --}}
-    <template x-if="! $store.realtimeFallback.connected && ! $store.pagePresence.dragging">
+    <template x-if="$store.realtimeFallback && ! $store.realtimeFallback.connected && ! $store.pagePresence?.dragging">
         <div wire:poll.1s="checkForUpdates" aria-hidden="true" style="display: none;"></div>
     </template>
 
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
         <h3 class="font-medium text-gray-700 dark:text-gray-300">
             Timone &middot; {{ $issue->displayedTotalPages() }} pagine
         </h3>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <div class="flex items-center gap-1.5 text-xs" title="{{ $issue->deadline_reminder_sent_at ? 'Sollecito già inviato per questa scadenza' : '' }}">
                 <label for="print-deadline-{{ $issue->id }}" class="text-gray-500 dark:text-gray-400">📅 Scadenza stampa</label>
                 <input
@@ -205,6 +205,28 @@
                     </button>
                 </form>
             </div>
+
+            {{-- Fase 1, bug 7: zoom delle miniature, preferenza del singolo
+                 utente ricordata in localStorage (store Alpine timoneZoom,
+                 resources/js/timone-alpine.js) — nessuno stato Livewire, non
+                 deve propagarsi agli altri utenti. Non ha effetto sulla lista. --}}
+            @if ($viewMode !== 'lista')
+                <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm" role="group" aria-label="Dimensione delle pagine">
+                    <template x-for="(zoom, key) in ($store.timoneZoom?.levels ?? {})" :key="key">
+                        <button
+                            type="button"
+                            x-on:click="$store.timoneZoom?.set(key)"
+                            x-text="zoom.label"
+                            :aria-pressed="$store.timoneZoom?.level === key"
+                            :title="'Pagine ' + ({ s: 'piccole', m: 'medie', l: 'grandi' })[key]"
+                            :class="$store.timoneZoom?.level === key
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                            class="px-2.5 py-1.5 transition-colors font-medium"
+                        ></button>
+                    </template>
+                </div>
+            @endif
 
             <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm">
                 @foreach (['griglia' => 'Griglia', 'doppia' => 'Doppia pagina', 'lista' => 'Lista'] as $mode => $label)
@@ -615,7 +637,7 @@
         @endif
     @endif
 
-    <template x-if="! $store.realtimeFallback.connected">
+    <template x-if="$store.realtimeFallback && ! $store.realtimeFallback.connected">
         <p class="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
             ⚠️ Aggiornamento in tempo reale non disponibile — la pagina si aggiorna automaticamente entro un secondo.
         </p>
@@ -698,12 +720,17 @@
     @elseif ($viewMode === 'griglia')
         <div
             x-sortable="$wire.swapMode"
-            @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
-            @block-dropped="$wire.moveSelectedBlock($event.detail.anchorPageId, $event.detail.newPosition)"
-            class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3"
+            @page-dropped="$flipAfterDrop('movePage', $event.detail.pageId, $event.detail.newPosition)"
+            @block-dropped="$flipAfterDrop('moveSelectedBlock', $event.detail.anchorPageId, $event.detail.newPosition)"
+            {{-- Fase 1, bug 7 (2026-10-26): colonne a larghezza minima
+                 variabile (--timone-page-min, impostata dallo zoom S/M/L in
+                 resources/js/timone-alpine.js) invece di 8 colonne fisse
+                 che schiacciavano il contenuto delle pagine; altezza dalle
+                 proporzioni reali del formato (page-card). --}}
+            class="grid gap-5 grid-cols-[repeat(auto-fill,minmax(var(--timone-page-min,11.5rem),1fr))]"
         >
             @foreach ($pages as $page)
-                @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds, 'pageNumber' => $pageNumbers[$page->id]])
+                @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds, 'pageNumber' => $pageNumbers[$page->id], 'pageAspectRatio' => $pageAspectRatio])
             @endforeach
         </div>
     @elseif ($viewMode === 'doppia')
@@ -755,9 +782,9 @@
              contenitore, identico in tutte e tre le viste. --}}
         <div
             x-sortable="$wire.swapMode"
-            @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
-            @block-dropped="$wire.moveSelectedBlock($event.detail.anchorPageId, $event.detail.newPosition)"
-            class="flex flex-wrap gap-x-0.5 mx-auto w-[20.125rem] sm:w-[24.125rem]"
+            @page-dropped="$flipAfterDrop('movePage', $event.detail.pageId, $event.detail.newPosition)"
+            @block-dropped="$flipAfterDrop('moveSelectedBlock', $event.detail.anchorPageId, $event.detail.newPosition)"
+            class="flex flex-wrap gap-x-0.5 mx-auto w-[calc(var(--timone-page-w,13rem)*2+0.125rem)]"
         >
             {{-- Niente gap-y sul contenitore: applicherebbe uno spazio
                  verticale anche sopra/sotto la riga a lì-height dello
@@ -788,14 +815,17 @@
                         'dropEnabled' => true,
                         'avgThumbnailSeconds' => $avgThumbnailSeconds,
                         'pageNumber' => $pageNumbers[$page->id],
+                        'pageAspectRatio' => $pageAspectRatio,
                         // Dimensione fissa + margini/bordo di posizione nell'apertura:
                         // prima stavano su un div-wrapper attorno a page-card, rimosso
                         // perché rompeva silenziosamente il drag&drop (vedi commento
                         // sopra) — page-card resta l'unico root, qui gli si passano
                         // solo le classi extra da appendere al suo class= esistente.
                         'extraClasses' => trim(
-                            'w-40 sm:w-48'
-                            . ($spreadIndex > 0 ? ' mt-3' : '')
+                            // Larghezza dallo zoom S/M/L (Fase 1, bug 7): stessa
+                            // variabile usata per la larghezza del contenitore sopra.
+                            'w-[var(--timone-page-w,13rem)]'
+                            . ($spreadIndex > 0 ? ' mt-6' : '')
                             . ($indexInSpread > 0 ? ' border-l-2 border-gray-300 dark:border-gray-600' : '')
                             . ($spreadIndex === 0 && count($spread) === 1 ? ' ml-auto' : '')
                         ),
@@ -808,8 +838,8 @@
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
             <ul
                 x-sortable="$wire.swapMode"
-                @page-dropped="$wire.movePage($event.detail.pageId, $event.detail.newPosition)"
-                @block-dropped="$wire.moveSelectedBlock($event.detail.anchorPageId, $event.detail.newPosition)"
+                @page-dropped="$flipAfterDrop('movePage', $event.detail.pageId, $event.detail.newPosition)"
+                @block-dropped="$flipAfterDrop('moveSelectedBlock', $event.detail.anchorPageId, $event.detail.newPosition)"
                 class="divide-y divide-gray-100 dark:divide-gray-700"
             >
                 @foreach ($pages as $page)

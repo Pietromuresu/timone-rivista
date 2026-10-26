@@ -3,6 +3,7 @@
 namespace App\Livewire\Issues;
 
 use App\Enums\IssueStatus;
+use App\Livewire\Concerns\NormalizesEmptyNumericInput;
 use App\Models\Issue;
 use App\Models\Magazine;
 use App\Support\Weight\WeightLimits;
@@ -15,6 +16,8 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class Create extends Component
 {
+    use NormalizesEmptyNumericInput;
+
     public Magazine $magazine;
 
     public string $title = '';
@@ -23,7 +26,23 @@ class Create extends Component
 
     public ?string $print_deadline_at = '';
 
-    public int $total_pages = 32;
+    /**
+     * `?int`, non `int` (Fase 1, bug 2, 2026-10-26): svuotando il campo il
+     * browser invia '' — su una proprietà `int` Livewire non può né
+     * assegnarla né convertirla e la "unset"-ta (vedi HandleComponents::
+     * setComponentPropertyAwareOfTypes()), quindi il render successivo
+     * esplodeva con PropertyNotFoundException. Con `?int` Livewire la porta
+     * a null, la validazione `required` mostra l'errore inline al
+     * salvataggio e anteprima peso/avviso multiplo-di-4 restano spenti
+     * finché il valore non è valido.
+     *
+     * Default di classe `null` e 32 impostato in mount(): in idratazione
+     * Livewire NON riassegna un null dello snapshot a una proprietà
+     * tipizzata (HandleComponents::hydrateProperties, `continue` su
+     * is_null), quindi con `= 32` qui il campo svuotato tornava a 32 alla
+     * richiesta successiva e il salvataggio passava senza errore.
+     */
+    public ?int $total_pages = null;
 
     public string $notes = '';
 
@@ -47,6 +66,7 @@ class Create extends Component
         abort_unless(auth()->user()->canAccessMagazine($magazine), 403);
 
         $this->magazine = $magazine;
+        $this->total_pages = 32;
         $this->weight = WeightParameters::formValuesFrom($magazine)
             + array_fill_keys(WeightParameters::ISSUE_ONLY_FIELDS, '');
     }
@@ -143,7 +163,7 @@ class Create extends Component
     {
         return WeightPreview::fromForm(
             $this->weight,
-            (int) $this->total_pages,
+            $this->total_pages,
             config('peso_rivista.scaglioni'),
             WeightLimits::fromConfig(),
         );

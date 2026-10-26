@@ -72,17 +72,22 @@ final class ContentPlacer
         // occorrenza di ogni chiave: invertendo prima, a parità di
         // pdf_page_number resta il file più recente.
         $files = $content->files()->get();
-        $filesByPdfPage = $files->reverse()->keyBy('pdf_page_number');
+        // Per POSIZIONE nell'ordine delle pagine PDF, non per numero di
+        // pagina: dal bug 8 (2026-10-26) un contenuto può avere solo un
+        // intervallo del PDF (es. pagine 2-3), e la prima pagina del timone
+        // deve ricevere la prima pagina SCELTA, non la "pagina 1" che non
+        // esiste. Per i contenuti che partono da 1 il risultato è identico.
+        $filesInPdfOrder = $files->reverse()->keyBy('pdf_page_number')->sortKeys()->values();
         $latestFileId = $files->first()?->id;
 
-        $group = DB::transaction(function () use ($content, $targetPages, $filesByPdfPage, $latestFileId, $percentage, $span) {
+        $group = DB::transaction(function () use ($content, $targetPages, $filesInPdfOrder, $latestFileId, $percentage, $span) {
             foreach ($targetPages->values() as $index => $page) {
                 // Multipagina: la pagina sorgente del PDF che corrisponde a
                 // questa posizione. Pagina singola: il file più recente del
                 // contenuto (stesso valore che il vecchio percorso ancorato
                 // registrava sul pivot).
                 $contentFileId = $span > 1
-                    ? $filesByPdfPage->get($index + 1)?->id
+                    ? $filesInPdfOrder->get($index)?->id
                     : $latestFileId;
                 ContentPageAttacher::attach($content, $page, $contentFileId, $percentage);
             }

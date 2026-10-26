@@ -5,6 +5,13 @@ use App\Livewire\Timone\Grid;
 use App\Models\Content;
 use App\Models\User;
 use Livewire\Livewire;
+use App\Events\ContentListChanged;
+use Illuminate\Support\Facades\Event;
+
+// Fase 1, bug 3: archivia/ripristina/elimina ora trasmettono
+// ContentListChanged — finto qui come ogni altro broadcast nei test (vedi
+// HANDOFF.md, BROADCAST_CONNECTION e Event::fake()).
+beforeEach(fn () => Event::fake([ContentListChanged::class]));
 
 // reorderableIssue()/editorFor() sono definite in TimoneGridReorderTest.php.
 // Fase 4.3 — archiviazione/eliminazione di contenuti NON assegnati. Nessuna

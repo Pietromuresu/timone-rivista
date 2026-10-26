@@ -17,6 +17,8 @@
 | **Percentuale occupata** | Quota di **una** pagina presa da un contenuto (0–100, somma ≤ 100 per pagina) | `page_content.occupied_percentage`, `PagePercentageAllocator` |
 | **Pagina mista** | Pagina con contenuti editoriali e pubblicitari insieme | `PageContentType::Mista` |
 | **Carico pubblicitario** | Percentuale del numero occupata da pubblicità, comprese le prenotazioni | `App\Support\AdLoadCalculator` |
+| **Gruppo collegato** | Pagine legate tra loro (🔗) che si spostano sempre insieme, con il mouse o con le frecce | `PageGroup`, `pages.page_group_id`, `Grid::nudgePage()` |
+| **Zoom delle pagine (S/M/L)** | Dimensione delle miniature nel timone, scelta da ciascun utente e ricordata dal suo browser | store Alpine `timoneZoom` (`resources/js/timone-alpine.js`) |
 | **Soglia di allarme** | Carico pubblicitario oltre il quale il cruscotto diventa rosso; impostata per rivista | `magazines.ad_threshold_percentage` |
 | **Prenotazione** (pubblicità prenotata) | Pubblicità registrata senza pagina né materiale | `AdMaterialStatus::Prenotato` |
 | **Materiale** | Il file (PDF o immagine) di un contenuto | `ContentFile` |
@@ -63,6 +65,8 @@
 | WS / WSS | WebSocket in chiaro / su TLS |
 | Fase N, Punto N, Bug N | Riferimenti alle fasi di sviluppo documentate in `HANDOFF.md` e ai prompt in `CLAUDE_PROMPTS/` |
 | §N | Riferimento a una sezione dello spec originale o del manuale |
+| `upload_failed` | Voce del log applicativo scritta quando un caricamento di file fallisce prima della validazione, con il contesto per capirne la causa (`ContentCreate::_uploadErrored()`) |
+| `timone:diagnose-upload` | Comando artisan che controlla configurazione e permessi da cui dipende il caricamento dei file |
 
 ## Valori degli enum (`app/Enums`)
 

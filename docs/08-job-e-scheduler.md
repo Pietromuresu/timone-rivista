@@ -107,6 +107,10 @@ Elenco dei task: `docker compose exec app php artisan schedule:list`. Sull'host 
   docker compose exec app php artisan pagefiles:prune-orphaned
   ```
 
+### `timone:diagnose-upload {--no-pdf}`
+
+Aggiunto il 2026-10-26 (Fase 1, bug 9). Sola lettura: stampa ✅/⚠️/❌/ℹ️ per APP_URL, limiti PHP vs regole di upload, disco temporaneo Livewire e disco finale (`local`) scrivibili, cartella temporanea di PHP, lettura di un PDF di prova con Imagick (saltata con `--no-pdf`), coda delle miniature, `storage:link` (solo informativo). Esce con codice 1 se un controllo è fallito. Logica in `App\Support\Uploads\UploadEnvironmentInspector`, la stessa usata per il contesto della voce di log `upload_failed`. Uso: `docker compose exec app php artisan timone:diagnose-upload`. Checklist: [09-deploy.md §6bis](09-deploy.md#6bis-checklist-in-produzione-non-si-caricano-media-fase-1-2026-10-26).
+
 ### `inspire`
 
 Comando di esempio dello scaffold Laravel (`routes/console.php`). Irrilevante.
@@ -114,6 +118,6 @@ Comando di esempio dello scaffold Laravel (`routes/console.php`). Irrilevante.
 ## Event, listener, observer
 
 - **Observer**: `App\Observers\IssueObserver::created`, registrato in `AppServiceProvider::boot()`. Crea le pagine e assegna i ruoli di copertina. Né `Issues\Create::save()` né l'observer usano `DB::transaction`. Se l'inserimento delle pagine fallisce, la riga `issues` è già scritta e resta un numero senza pagine; l'utente vede un errore. Il recupero va fatto via tinker (cancellare e ricreare l'issue). Non ho verificato se il ridimensionamento da UI (`Grid::resizePages`) ricostruisca le pagine mancanti: lavora sulla differenza rispetto a `total_pages`.
-- **Eventi broadcast** (`app/Events/`): `PageMoved`, `PagesBlockMoved`, `PagesSwapped`, `PageStatusUpdated`, `PageLocked`, `PageUnlocked`, `PageGroupsChanged`, `IssuePageCountUpdated`, `ContentCreated`, `ContentAssigned`, `ContentUnassigned`, `ContentFileUploaded`, `PageFileUploaded`. Tutti `ShouldBroadcastNow` su `PresenceChannel('issue.{id}')`.
+- **Eventi broadcast** (`app/Events/`): `PageMoved`, `PagesBlockMoved`, `PagesSwapped`, `PageStatusUpdated`, `PageLocked`, `PageUnlocked`, `PageGroupsChanged`, `IssuePageCountUpdated`, `ContentCreated`, `ContentAssigned`, `ContentUnassigned`, `ContentListChanged` (dal 2026-10-26: contenuto non assegnato archiviato/ripristinato/eliminato), `ContentFileUploaded`, `PageFileUploaded`. Tutti `ShouldBroadcastNow` su `PresenceChannel('issue.{id}')`.
 - **Listener**: nessuna classe listener server-side. I "listener" sono i metodi `#[On('echo-presence:issue.{issue.id},.Evento')]` di `App\Livewire\Timone\Grid` (es. `Grid.php:612`, `:750`, `:911`).
 - **Eventi Livewire interni** (non broadcast): `thumbnail-work-started`, `remote-change`, `open-modal`/`close-modal`.

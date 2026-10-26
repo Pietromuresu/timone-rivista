@@ -50,7 +50,7 @@
                         <x-input-label for="total_pages" value="Numero totale di pagine" />
                         <x-text-input id="total_pages" wire:model.live="total_pages" type="number" min="0" max="2000" class="mt-1 block w-32" required />
                         <x-input-error class="mt-2" :messages="$errors->get('total_pages')" />
-                        @if ($total_pages > 0 && $total_pages % 4 !== 0)
+                        @if ($total_pages !== null && $total_pages > 0 && $total_pages % 4 !== 0)
                             <p class="mt-1 text-xs text-amber-600 dark:text-amber-400">
                                 ⚠️ Non è un multiplo di 4 — consentito per i casi speciali, ma da verificare.
                             </p>

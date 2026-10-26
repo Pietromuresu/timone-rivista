@@ -20,8 +20,10 @@ test('the doppia view mode wires up both single-page and block move listeners on
         ->html();
 
     expect($html)
-        ->toContain('@page-dropped="$wire.movePage(')
-        ->toContain('@block-dropped="$wire.moveSelectedBlock(');
+        // Fase 1, bug 4 (2026-10-26): il drop passa da $flipAfterDrop
+        // (animazione finale), che chiama lo stesso metodo Livewire.
+        ->toContain('@page-dropped="$flipAfterDrop(\'movePage\'')
+        ->toContain('@block-dropped="$flipAfterDrop(\'moveSelectedBlock\'');
 });
 
 // movePage()/moveSelectedBlock() sono agnostiche rispetto a viewMode (il

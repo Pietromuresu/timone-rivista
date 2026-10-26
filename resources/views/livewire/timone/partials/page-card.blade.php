@@ -81,9 +81,16 @@
     wire:key="page-{{ $page->id }}"
     data-page-id="{{ $page->id }}"
     tabindex="0"
+    {{-- Fase 1, bug 4 (2026-10-26): Grid::nudgePage() invece di
+         movePage(posizione ± 1) — per una pagina di un gruppo collegato
+         movePage() interpreta la destinazione come INIZIO del blocco, quindi
+         "posizione − 1" sulla seconda pagina di un gruppo lo spostava a
+         destra invece che a sinistra. $animatedMove anima tutte le pagine
+         che si spostano (resources/js/timone-alpine.js). --}}
+    @if ($page->page_group_id) data-group-id="{{ $page->page_group_id }}" @endif
     @unless ($locked)
-        @keydown.arrow-left.prevent="$wire.movePage({{ $page->id }}, {{ $page->position - 1 }})"
-        @keydown.arrow-right.prevent="$wire.movePage({{ $page->id }}, {{ $page->position + 1 }})"
+        @keydown.arrow-left.prevent="$animatedMove('nudgePage', {{ $page->id }}, -1)"
+        @keydown.arrow-right.prevent="$animatedMove('nudgePage', {{ $page->id }}, 1)"
     @endunless
     @if ($interactive)
         x-on:dragover.prevent
@@ -111,13 +118,17 @@
         l'etichetta piccola sul badge di stato (che resta comunque, vedi
         sotto — "affianca", non "sostituisce", per chi preferisce leggerla).
     --}}
-    class="relative flex flex-col aspect-[3/4] rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none {{ $focusClasses }} {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $ringClasses }} {{ $extraClasses }}"
+    {{-- Fase 1, bug 7: proporzioni del formato reale del numero (base/altezza
+         del pannello Peso, vedi Grid::render() → $pageAspectRatio) invece di
+         un 3/4 fisso; la larghezza la decide lo zoom S/M/L. --}}
+    style="aspect-ratio: {{ $pageAspectRatio ?? '3 / 4' }};"
+    class="relative flex flex-col rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none {{ $focusClasses }} {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $ringClasses }} {{ $extraClasses }}"
 >
-    <template x-if="$store.pagePresence.editorFor({{ $page->id }})">
+    <template x-if="$store.pagePresence?.editorFor({{ $page->id }})">
         <span
             class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white text-[8px] flex items-center justify-center ring-2 ring-white dark:ring-gray-800 uppercase animate-pulse z-10"
-            x-text="$store.pagePresence.editorFor({{ $page->id }}).name.substring(0, 2)"
-            :title="$store.pagePresence.editorFor({{ $page->id }}).name + ' sta modificando questa pagina'"
+            x-text="$store.pagePresence?.editorFor({{ $page->id }})?.name.substring(0, 2)"
+            :title="$store.pagePresence?.editorFor({{ $page->id }})?.name + ' sta modificando questa pagina'"
         ></span>
     </template>
 
@@ -157,8 +168,8 @@
                 <select
                     x-on:click.stop
                     x-on:keydown.stop
-                    x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
-                    x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
+                    x-on:focus="$store.pagePresence?.startEditing({{ $page->id }})"
+                    x-on:blur="$store.pagePresence?.stopEditing({{ $page->id }})"
                     wire:change="changePageStatus({{ $page->id }}, $event.target.value)"
                     class="rounded text-[10px] font-medium border-none py-0.5 pl-1.5 pr-5 {{ $page->status->colorClasses() }}"
                 >
@@ -243,10 +254,10 @@
                                 value="{{ $content->pivot->occupied_percentage }}"
                                 x-on:keydown.stop
                                 x-on:click.stop
-                                x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
-                                x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
+                                x-on:focus="$store.pagePresence?.startEditing({{ $page->id }})"
+                                x-on:blur="$store.pagePresence?.stopEditing({{ $page->id }})"
                                 wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
-                                class="w-9 shrink-0 text-[10px] rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-0.5 py-0"
+                                class="w-11 shrink-0 text-[10px] rounded border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 px-0.5 py-0"
                             />
                             <button
                                 type="button"
@@ -289,10 +300,10 @@
                                 value="{{ $content->pivot->occupied_percentage }}"
                                 x-on:keydown.stop
                                 x-on:click.stop
-                                x-on:focus="$store.pagePresence.startEditing({{ $page->id }})"
-                                x-on:blur="$store.pagePresence.stopEditing({{ $page->id }})"
+                                x-on:focus="$store.pagePresence?.startEditing({{ $page->id }})"
+                                x-on:blur="$store.pagePresence?.stopEditing({{ $page->id }})"
                                 wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
-                                class="w-9 shrink-0 text-[10px] rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-0.5 py-0"
+                                class="w-11 shrink-0 text-[10px] rounded border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 px-0.5 py-0"
                             />
                             <button
                                 type="button"

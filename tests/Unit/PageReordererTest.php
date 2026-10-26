@@ -156,3 +156,30 @@ test('moving a block with an unknown page id throws', function () {
     expect(fn () => PageReorderer::moveBlock($positions, [10, 999], 1))
         ->toThrow(InvalidArgumentException::class);
 });
+
+// Fase 1, bug 4 (2026-10-26): spostamento di un passo da tastiera.
+test('nudging a single page returns its position plus or minus one', function () {
+    $positions = [10 => 1, 20 => 2, 30 => 3, 40 => 4];
+
+    expect(PageReorderer::nudgeTarget($positions, [20], -1))->toBe(1)
+        ->and(PageReorderer::nudgeTarget($positions, [20], 1))->toBe(3);
+});
+
+test('nudging a block is computed from the first page of the block, whatever page has the focus', function () {
+    // Gruppo sulle posizioni 3-4: a sinistra deve iniziare in 2, a destra in 4.
+    $positions = [10 => 1, 20 => 2, 30 => 3, 40 => 4, 50 => 5, 60 => 6];
+
+    expect(PageReorderer::nudgeTarget($positions, [40, 30], -1))->toBe(2)
+        ->and(PageReorderer::nudgeTarget($positions, [40, 30], 1))->toBe(4);
+
+    // La destinazione è valida per moveBlock(): il blocco resta compatto e scorre di uno.
+    expect(PageReorderer::moveBlock($positions, [30, 40], 2))->toEqual([20 => 4, 30 => 2, 40 => 3])
+        ->and(PageReorderer::moveBlock($positions, [30, 40], 4))->toEqual([50 => 3, 30 => 4, 40 => 5]);
+});
+
+test('nudging past the edges returns null', function () {
+    $positions = [10 => 1, 20 => 2, 30 => 3];
+
+    expect(PageReorderer::nudgeTarget($positions, [10], -1))->toBeNull()
+        ->and(PageReorderer::nudgeTarget($positions, [20, 30], 1))->toBeNull();
+});

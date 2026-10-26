@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Models\Issue;
 use App\Observers\IssueObserver;
+use App\Support\Uploads\RequestRootSignedUploadUrl;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Features\SupportFileUploads\GenerateSignedUploadUrl;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,7 +16,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Fase 1, bug 9 (2026-10-26): l'URL firmato dell'upload temporaneo
+        // Livewire va generato sull'indirizzo reale della richiesta, non su
+        // APP_URL forzato qui sotto — altrimenti la firma non torna e
+        // l'upload fallisce con 401. Vedi la classe per il dettaglio.
+        $this->app->bind(GenerateSignedUploadUrl::class, RequestRootSignedUploadUrl::class);
     }
 
     /**

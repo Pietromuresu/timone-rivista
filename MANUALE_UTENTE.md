@@ -42,6 +42,10 @@ La schermata del timone ha tre modalità, selezionabili in alto a destra:
 - **Doppia pagina** — le pagine affiancate come si vedrebbero sfogliando la rivista stampata (copertina da sola, poi coppie). La pagina 1 è sempre allineata a destra (nessuna pagina sinistra la precede) e, se il numero ha un totale pagine pari, l'ultima resta da sola allineata a sinistra — coerente con la convenzione editoriale di stampa. Puoi assegnare/rimuovere contenuti, cambiare lo stato pagina e trascinare per riordinare esattamente come in Griglia: ogni pagina resta trascinabile singolarmente anche dentro una coppia, sia per spostarla fuori sia per inserirne un'altra al suo posto (la coppia si ricompone da sola in base al nuovo ordine).
 - **Lista** — una riga per pagina, utile per scorrere velocemente un numero lungo. Ogni riga mostra anche un'etichetta **DX**/**SX**: pagina destra o sinistra secondo la convenzione di stampa (pagina 1 sempre a destra, poi alternanza) — la stessa usata per affiancare le pagine in Doppia pagina.
 
+**Dimensione delle pagine (S / M / L)**: in Griglia e Doppia pagina, accanto ai bottoni delle modalità, tre bottoni **S**, **M**, **L** ingrandiscono o rimpiccioliscono le pagine (M è il valore iniziale). La scelta resta memorizzata **su questo browser** per te (non cambia la vista dei colleghi) e la ritrovi alla prossima apertura. Le pagine hanno le **proporzioni del formato reale del numero** (base × altezza impostate nel pannello Peso, [§9ter](#9ter-peso-della-rivista)); se il formato non è ancora impostato si usa una proporzione standard 3:4.
+
+**La barra in alto** (logo, Riviste, Utenti, Manuale, il tuo nome) resta sempre visibile mentre scorri il timone: non serve tornare in cima per cambiare schermata.
+
 **Ogni card/riga mostra:**
 
 | Elemento | Significato |
@@ -71,9 +75,13 @@ Tutto si aggiorna da solo in tempo reale se un collega è collegato sullo stesso
 
 **Con il mouse (tutte e tre le modalità):** trascina una pagina prendendola dalla maniglia ⠿ (il numero di posizione) e rilasciala nel punto desiderato. Le altre pagine si spostano di conseguenza — tutte le pagine intermedie slittano per fare spazio. Con "☑️ Selezione multipla" attiva e più pagine selezionate, trascinarne una sposta **l'intera selezione insieme** come blocco unico — vedi [§6bis](#6bis-selezione-multipla-e-azioni-di-massa). Se una pagina fa parte di un **gruppo collegato** (🔗), trascinarla sposta automaticamente tutto il gruppo insieme, anche senza selezione multipla — vedi [§6ter](#6ter-collegare-pagine-in-un-gruppo-permanente).
 
+Mentre trascini un **gruppo collegato** o una **selezione multipla**, tutte le pagine coinvolte si "raccolgono" sotto quella che hai afferrato e si muovono insieme (hanno un bordo tratteggiato blu); l'immagine che segue il mouse le mostra tutte affiancate. Al rilascio le pagine scorrono fino alla loro posizione finale.
+
 **Da tastiera (tutte e tre le modalità):** clicca una volta sulla card/riga per selezionarla (o raggiungila con Tab), poi:
 - in **Griglia**/**Doppia pagina**: freccia sinistra/destra;
 - in **Lista**: freccia su/giù.
+
+La pagina si sposta di un posto e scorre visibilmente nella nuova posizione, restando selezionata: puoi premere la freccia più volte di fila. Se fa parte di un **gruppo collegato**, si sposta di un posto **l'intero gruppo**, qualunque pagina del gruppo tu abbia selezionato.
 
 **Modalità scambio (bottone "🔀 Modalità scambio" in barra, funziona in tutte e tre le modalità):** attivala, poi clicca una pagina (si evidenzia con un bordo colorato) e clicca una seconda pagina — si scambiano di posto direttamente, senza far slittare nient'altro. Un secondo click sulla stessa pagina annulla la selezione senza fare nulla. Utile per scambiare due pagine lontane tra loro senza dover trascinare attraverso tutto lo schermo. Contenuti, stato e PDF caricati restano legati alla pagina, non alla posizione: si "spostano" insieme ad essa.
 
@@ -108,7 +116,7 @@ Per sbloccarla, clic sulla stessa icona (ora 🔒): torna 🔓 e la pagina è di
 
 Una pubblicità creata ma non ancora assegnata a nessuna pagina è considerata **"prenotata"**: resta comunque conteggiata nel carico pubblicitario del cruscotto ([§8](#8-leggere-il-cruscotto-pubblicitario)) e gestibile dal pannello dedicato ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)).
 
-Il contenuto appena creato compare subito nel pannello **"Contenuti da assegnare"**, pronto per essere trascinato su una pagina.
+Il contenuto appena creato compare subito nel pannello **"Contenuti da assegnare"** (e, se è una pubblicità, nel pannello "📌 Pubblicità prenotate" se è aperto), pronto per essere trascinato su una pagina — senza ricaricare la pagina, sia per te sia per i colleghi collegati allo stesso numero. Lo stesso vale quando archivi, ripristini o elimini un contenuto non assegnato: sparisce o ricompare subito anche sugli schermi degli altri.
 
 Sopra la griglia c'è appunto il pannello **"Contenuti da assegnare"**: tutti gli articoli e le pubblicità di questo numero non ancora messi su una pagina. Se l'elenco è lungo, usa il campo **"Cerca per titolo..."** accanto al titolo del pannello per restringerlo.
 
@@ -217,7 +225,7 @@ In entrambi i casi, compila titolo/tipo (articolo o pubblicità) e l'occupazione
 - **trascina il file** dal computer sopra il riquadro: mentre ci passi sopra il riquadro diventa blu ("Rilascia per caricare"); rilascialo e parte il caricamento, con una **barra di avanzamento** in percentuale;
 - oppure **clicca sul riquadro** per sceglierlo dalla solita finestra del computer.
 
-Il risultato è identico nei due modi (stessi controlli, stessa anteprima). Un file del tipo sbagliato o troppo grande viene rifiutato subito con un messaggio rosso sotto il riquadro; trascinando più file insieme ti viene chiesto di trascinarne uno solo (ogni contenuto ha un solo PDF o immagine). Dopo il caricamento il nome del file compare nel riquadro con una ✓; appena il contenuto è creato, il file allegato genera automaticamente la sua anteprima, esattamente come succedeva prima per il caricamento diretto — un'immagine è pronta quasi subito, un PDF passa per lo stesso esame (conteggio pagine, poi generazione miniatura) di prima.
+Il risultato è identico nei due modi (stessi controlli, stessa anteprima). Un file del tipo sbagliato o troppo grande viene rifiutato subito con un messaggio rosso sotto il riquadro — per un file troppo grande il messaggio dice quanto pesa e qual è il massimo accettato (lo stesso indicato nel riquadro: è il limite **reale** del server, che può essere più basso di 20MB se il server è configurato così). Se il caricamento viene rifiutato dal server prima ancora di controllare il file, compare il messaggio «Il file non è arrivato al server…»: riprova, e se si ripete avvisa l'amministratore indicando l'ora del tentativo (nel registro del server c'è la causa); trascinando più file insieme ti viene chiesto di trascinarne uno solo (ogni contenuto ha un solo PDF o immagine). Dopo il caricamento il nome del file compare nel riquadro con una ✓; appena il contenuto è creato, il file allegato genera automaticamente la sua anteprima, esattamente come succedeva prima per il caricamento diretto — un'immagine è pronta quasi subito, un PDF passa per lo stesso esame (conteggio pagine, poi generazione miniatura) di prima.
 
 Se hai usato "📎 Carica materiale" (ancorato a una pagina) e il file allegato è un PDF di **una sola pagina** (o un'immagine), il contenuto si assegna **subito** a quella pagina, stessa immediatezza di prima. Se sulla pagina non c'è più spazio libero, compare un avviso giallo: il contenuto resta comunque creato, solo non assegnato lì — lo trovi tra i "Contenuti da assegnare".
 
@@ -226,6 +234,12 @@ Una volta pronta, clicca sulla miniatura sulla card/riga per aprire il file orig
 Se la generazione dell'anteprima fallisce (icona ⚠️ rossa), il file più probabilmente è danneggiato o non è un PDF valido: crea un nuovo contenuto con un file diverso (non c'è più, per un contenuto già creato, un pulsante di "ricarica" — allega di nuovo dal modulo, come per qualunque altro contenuto).
 
 **Ogni pagina deve avere un'anteprima (dal contenuto assegnato) prima di poter essere segnata «Ok stampa»** — se provi a farlo su una pagina senza anteprima, compare un messaggio d'errore e lo stato non cambia. Le pagine già "Revisionata"/"Ok stampa" ma ancora senza anteprima compaiono anche nel pannello "⚠️ Avvisi" ([§11](#11-avvisi-automatici)).
+
+**Pubblicità con un PDF più lungo del formato** (es. un PDF di 3 pagine per una pubblicità "Copertina (2ª/3ª/4ª)" o "Pagina intera", che occupano una pagina): non è un errore. Sotto il riquadro del file compare un riquadro azzurro «📄 Il PDF ha 3 pagine, il formato … ne occupa 1» con due scelte:
+- **«Usa tutte le 3 pagine»** (proposta di partenza): la pubblicità occuperà 3 pagine intere consecutive. Per il formato copertina la dicitura è «la prima sulla copertina, le altre sulle pagine successive»: piazzala sulla pagina di copertina e occuperà anche quelle dopo.
+- **«Usa solo le pagine da X a Y»**: scrivi la prima e l'ultima pagina del PDF da usare (per una sola pagina, la stessa in entrambi i campi, es. da 2 a 2). Se il numero di pagine scelte è quello del formato, la pubblicità occupa lo spazio del formato (es. mezza pagina); se è maggiore, occupa quel numero di pagine intere.
+
+Sotto le scelte una riga riassume cosa succederà («→ La pubblicità occuperà 3 pagine intere (pagine del PDF 1–3)»). Ogni pagina del timone mostra la pagina del PDF che le corrisponde: con «da 2 a 3», la prima pagina occupata mostra la pagina 2 del PDF e la successiva la pagina 3. Se il PDF ha *meno* pagine del formato (es. una doppia pagina consegnata come pagina singola) non compare nessuna scelta.
 
 **PDF con più pagine creato da "+ Nuovo contenuto"**: il contenuto conserva tutte le pagine del PDF (una miniatura per pagina). Quando lo trascini dal pannello "Contenuti da assegnare" su una pagina, occupa automaticamente le N pagine consecutive da lì in poi, ognuna con la miniatura della propria pagina del PDF — se non c'è spazio per tutte, non viene piazzato e un messaggio spiega perché ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-la-percentuale)).
 
@@ -368,7 +382,7 @@ Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone 
 
 **Nuova rivista** (solo Admin): dal riquadro "Le tue riviste", bottone "+ Nuova rivista". Nome, periodicità, colore identificativo, soglia di allarme pubblicitario (opzionale), se il battente conta nel totale pagine dichiarato (vedi [§9bis](#9bis-copertina-e-battente) — default: no), note.
 
-**Nuovo numero**: dalla pagina di una rivista, bottone "+ Nuovo numero" (visibile ad Admin e Redattori con accesso a quella rivista). Titolo, data di uscita (opzionale), **scadenza stampa** (opzionale — vedi [§12bis](#12bis-modificare-una-rivista-redattore-di-riferimento-e-scadenza-stampa)), numero totale di pagine, note.
+**Nuovo numero**: dalla pagina di una rivista, bottone "+ Nuovo numero" (visibile ad Admin e Redattori con accesso a quella rivista). Titolo, data di uscita (opzionale), **scadenza stampa** (opzionale — vedi [§12bis](#12bis-modificare-una-rivista-redattore-di-riferimento-e-scadenza-stampa)), numero totale di pagine, note. Se cancelli del tutto il numero di pagine per riscriverlo, l'anteprima del peso si ferma finché non scrivi un valore valido; se provi a creare il numero con il campo vuoto compare l'errore sotto il campo (prima la pagina andava in errore).
 
 **Duplicare la struttura da un numero precedente**: nello stesso form di creazione numero, se la rivista ha già altri numeri, trovi un menu "Duplica struttura da un numero precedente". Selezionandone uno, il numero di pagine si pre-compila con quello del numero scelto (resta modificabile) e — dopo la creazione — ogni pagina eredita lo stesso tipo (editoriale/pubblicità/mista/bianca) della pagina corrispondente del numero di origine. **Non vengono copiati**: i contenuti assegnati, gli stati delle pagine, i PDF caricati — solo lo schema di che tipo di pagina è cosa, per non ripartire ogni volta da un timone completamente vuoto.
 

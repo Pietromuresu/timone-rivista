@@ -75,6 +75,16 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 | 43 | ~~Formato senza intervallo di validazione~~ **Risolto il 2026-10-26**: base e altezza ammesse tra 50 e 1000 mm (`config/peso_rivista.php` → `formato`), nei form e nel calcolo. Resta da correggere a mano il **numero 3 "Novembre 2026" del DB locale** (21 × 27): ora mostra l'errore invece di 5,1 g | `WeightLimits`, `WeightParameters::rules()` | Diagnosi in [10-debugging.md](10-debugging.md#peso-rivista) |
 | 44 | **Limiti opzionali nel calculator**: `MagazineWeightCalculator::calculate()` controlla grammature (30–400 g/m²) e formato (50–1000 mm) solo se riceve un `WeightLimits` | `app/Support/Weight/MagazineWeightCalculator.php` | Voluto per tenerlo puro (vedi `HANDOFF.md`, Decisioni). Ogni nuovo punto che calcola il peso deve passare `WeightLimits::fromConfig()` |
 
+## Fase 1 del batch "revisione con gli utenti" (aggiunto il 2026-10-26)
+
+| # | Problema | Dove | Note |
+|---|---|---|---|
+| 45 | `ContentCreate::_uploadErrored()` sovrascrive un metodo **interno** di Livewire (`WithFileUploads::_uploadErrored`, nome con underscore) per loggare e tradurre l'errore | `app/Livewire/Timone/ContentCreate.php` | Da ricontrollare a ogni aggiornamento di Livewire: se cambia firma o nome, il log `upload_failed` smette di essere scritto (gli upload continuano a funzionare) |
+| 46 | `RequestRootSignedUploadUrl` estende una classe interna di Livewire (`GenerateSignedUploadUrl`) | `app/Support/Uploads/RequestRootSignedUploadUrl.php` | Stesso rischio di #45. Coperto da `tests/Feature/UploadDiagnosticsTest.php` |
+| 47 | Le proporzioni delle miniature (`formato_base_mm`/`formato_altezza_mm`) sono lette dal modello `Issue` di `Grid`: dopo una modifica del formato nel pannello Peso servono un ricaricamento o un aggiornamento del timone | `Grid::render()` | Cosmetico; il formato cambia raramente |
+| 48 | MultiDrag/FLIP/zoom non hanno test automatici (niente Dusk) | `resources/js/timone-alpine.js` | Vedi la checklist manuale in `HANDOFF.md`, sessione 2026-10-26 "Fase 1" |
+| 49 | Le proprie modifiche fatte in `Grid` (spostamenti, stato, ecc.) non riallineano `lastKnownPagesUpdatedAt`: in modalità polling il client può mostrarsi il toast "aggiornato da un altro utente" per una modifica propria | `Grid.php` (tutte le chiamate a `markPagesUpdated()`) | Preesistente; corretto solo per i nuovi percorsi dei contenuti (`broadcastContentListChanged()`, `onLocalContentListChanged()`) |
+
 ## Cose che sembrano sbagliate ma hanno un motivo (non "correggerle")
 
 | Cosa | Perché è così |

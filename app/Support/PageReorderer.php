@@ -125,4 +125,32 @@ class PageReorderer
 
         return $changes;
     }
+
+    /**
+     * Destinazione per uno spostamento "di un passo" da tastiera (Fase 1,
+     * bug 4, 2026-10-26), nel formato atteso da move() per una pagina
+     * singola e da moveBlock() per un blocco: per un blocco la destinazione
+     * è la posizione in cui deve INIZIARE il blocco, quindi va calcolata
+     * dalla sua prima pagina, non da quella che ha il focus. Prima il
+     * timone passava "posizione della pagina ± 1" in entrambi i casi: con
+     * il focus sulla seconda pagina di un gruppo, freccia sinistra
+     * spostava il gruppo a DESTRA.
+     *
+     * @param  array<int, int>  $positions  page_id => posizione attuale
+     * @param  list<int>  $blockPageIds  pagine che si muovono insieme (una sola per una pagina non collegata)
+     * @return int|null  null se il blocco è già al bordo in quella direzione
+     */
+    public static function nudgeTarget(array $positions, array $blockPageIds, int $delta): ?int
+    {
+        $blockPositions = array_map(fn (int $id) => $positions[$id], $blockPageIds);
+        $start = min($blockPositions);
+        $end = max($blockPositions);
+        $step = $delta < 0 ? -1 : 1;
+
+        if (($step < 0 && $start <= 1) || ($step > 0 && $end >= count($positions))) {
+            return null;
+        }
+
+        return $start + $step;
+    }
 }

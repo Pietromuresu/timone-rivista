@@ -7,6 +7,7 @@ use App\Enums\PageStatus;
 use App\Enums\ThumbnailStatus;
 use App\Enums\PageContentType;
 use App\Events\ContentAssigned;
+use App\Events\ContentListChanged;
 use App\Events\ContentUnassigned;
 use App\Events\IssuePageCountUpdated;
 use App\Events\PageGroupsChanged;
@@ -610,6 +611,33 @@ class Grid extends Component
             movedByUserName: auth()->user()->name,
         ))->toOthers();
         $this->issue->markPagesUpdated();
+    }
+
+    /**
+     * Spostamento di un passo con le frecce (Fase 1, bug 4, 2026-10-26) —
+     * page-card/page-row. Il calcolo della destinazione è in
+     * PageReorderer::nudgeTarget() (puro, testato a sé): per una pagina di
+     * un gruppo collegato la destinazione è l'inizio del blocco, che
+     * movePage() poi sposta intero esattamente come per un drag&drop.
+     */
+    public function nudgePage(int $pageId, int $delta): void
+    {
+        $page = Page::where('issue_id', $this->issue->id)->find($pageId);
+
+        if ($page === null || $delta === 0) {
+            return;
+        }
+
+        $positions = $this->issue->pages()->pluck('position', 'id')->all();
+        $blockPageIds = $page->page_group_id !== null
+            ? Page::where('issue_id', $this->issue->id)->where('page_group_id', $page->page_group_id)->pluck('id')->all()
+            : [$page->id];
+
+        $target = PageReorderer::nudgeTarget($positions, $blockPageIds, $delta);
+
+        if ($target !== null) {
+            $this->movePage($pageId, $target);
+        }
     }
 
     #[On('echo-presence:issue.{issue.id},.PageMoved')]
@@ -1560,6 +1588,8 @@ class Grid extends Component
             action: 'content.archived',
             description: "Contenuto «{$content->title}» archiviato",
         );
+
+        $this->broadcastContentListChanged($content->id, 'archived');
     }
 
     public function unarchiveContent(int $contentId): void
@@ -1581,6 +1611,8 @@ class Grid extends Component
             action: 'content.unarchived',
             description: "Contenuto «{$content->title}» ripristinato dall'archivio",
         );
+
+        $this->broadcastContentListChanged($content->id, 'unarchived');
     }
 
     /**
@@ -1638,7 +1670,23 @@ class Grid extends Component
             description: "Contenuto «{$title}» eliminato definitivamente",
         );
 
+        $this->broadcastContentListChanged($contentId, 'deleted');
         $this->confirmDeleteContentId = null;
+    }
+
+    /**
+     * Fase 1, bug 3 (2026-10-26): archiviare/ripristinare/eliminare un
+     * contenuto non assegnato non avvisava gli altri utenti (né Reverb né
+     * il polling di fallback, che guarda `pages_updated_at`). Questo
+     * client si ri-renderizza da solo (l'azione è su questo componente):
+     * riallineiamo anche il riferimento del polling per non mostrarci un
+     * toast "da un altro utente" per una modifica nostra.
+     */
+    private function broadcastContentListChanged(int $contentId, string $action): void
+    {
+        broadcast(new ContentListChanged(issueId: $this->issue->id, contentId: $contentId, action: $action))->toOthers();
+        $this->issue->markPagesUpdated();
+        $this->lastKnownPagesUpdatedAt = $this->issue->fresh()->getRawOriginal('pages_updated_at');
     }
 
     /**
@@ -1907,6 +1955,30 @@ class Grid extends Component
         $this->notifyRemoteChange('Un contenuto è stato rimosso da un altro utente.');
     }
 
+    /**
+     * Fase 1, bug 3 (2026-10-26): contenuto creato/archiviato/eliminato da
+     * QUESTO utente in un altro componente della stessa pagina
+     * (ContentCreate, AdReservations) — evento Livewire locale, vedi
+     * ContentCreate::createContentAndFinish(). Il re-render (che ripesca
+     * pagine e contenuti) lo fa Livewire da solo dopo ogni listener; il
+     * corpo serve solo a riallineare il polling: `pages_updated_at` è
+     * appena stato toccato da noi, senza questo il prossimo
+     * checkForUpdates() lo scambierebbe per una modifica di un altro
+     * utente e mostrerebbe un toast falso.
+     */
+    #[On('content-created')]
+    #[On('content-list-changed')]
+    public function onLocalContentListChanged(): void
+    {
+        $this->lastKnownPagesUpdatedAt = $this->issue->fresh()->getRawOriginal('pages_updated_at');
+    }
+
+    #[On('echo-presence:issue.{issue.id},.ContentListChanged')]
+    public function onContentListChanged(): void
+    {
+        $this->notifyRemoteChange('L\'elenco dei contenuti è stato aggiornato da un altro utente.');
+    }
+
     #[On('echo-presence:issue.{issue.id},.ContentCreated')]
     public function onContentCreated(): void
     {
@@ -2118,8 +2190,16 @@ class Grid extends Component
         $pageNumbers = PageNumberer::assign($pages, $this->issue->magazine->battente_counted_in_total);
         $numberedPages = $pages->reject(fn (Page $page) => $page->role->isCoverPage())->values();
 
+        // Fase 1, bug 7 (2026-10-26): le miniature seguono le proporzioni
+        // del formato reale del numero (base × altezza del pannello Peso);
+        // 3/4 solo se il formato non è ancora stato impostato.
+        $pageAspectRatio = $this->issue->formato_base_mm && $this->issue->formato_altezza_mm
+            ? $this->issue->formato_base_mm.' / '.$this->issue->formato_altezza_mm
+            : '3 / 4';
+
         return view('livewire.timone.grid', [
             'pages' => $pages,
+            'pageAspectRatio' => $pageAspectRatio,
             'pageNumbers' => $pageNumbers,
             'spreads' => $this->viewMode === 'doppia' ? PageSpreadBuilder::build($pages) : null,
             'unassignedContents' => $unassignedContents,

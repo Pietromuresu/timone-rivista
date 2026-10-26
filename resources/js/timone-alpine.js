@@ -1,0 +1,480 @@
+import Sortable, { MultiDrag } from 'sortablejs';
+
+/**
+ * Registrazioni Alpine del timone (store, direttiva x-sortable, magic
+ * $animatedMove). Modulo a sé, importato PER PRIMO da app.js (Fase 1,
+ * bug 5, 2026-10-26 — vedi il commento lì): così il listener `alpine:init`
+ * esiste sempre prima che Livewire avvii Alpine al DOMContentLoaded,
+ * qualunque cosa succeda negli import successivi (Echo).
+ *
+ * Livewire 3 include e avvia già una propria istanza di Alpine.js
+ * internamente (bundle iniettato automaticamente a fine `<body>`, senza
+ * bisogno di `@livewireScripts`/`@livewireStyles` espliciti in questo
+ * progetto) — importare un secondo pacchetto `alpinejs` e chiamare
+ * `Alpine.start()` qui crea due istanze Alpine indipendenti: causava
+ * "Detected multiple instances of Alpine running" e, peggio, `$wire is not
+ * defined` sugli elementi che usano `$wire` (es. `x-sortable="$wire.swapMode"`),
+ * perché il magic `$wire` è registrato solo sull'istanza Alpine di
+ * Livewire — bug reale scoperto il 2026-07-29 che rompeva drag&drop e la
+ * modalità scambio. Il pattern corretto per registrare store/direttive
+ * custom senza importare un'altra copia di Alpine è agganciarsi
+ * all'evento `alpine:init`, che Livewire/Alpine emettono sull'istanza già
+ * presente prima di processare il DOM. Nessuna navigazione `wire:navigate`
+ * nel progetto: la pagina viene caricata per intero, quindi gli store sono
+ * registrati una volta sola per caricamento e non vanno "ripristinati".
+ */
+
+// Fase 1, bug 4 (2026-10-26): plugin MultiDrag, incluso nello stesso
+// pacchetto `sortablejs` già usato (nessuna dipendenza nuova). Serve a far
+// muovere VISIVAMENTE insieme tutte le pagine di un gruppo collegato o
+// della selezione multipla durante il trascinamento: prima si muoveva solo
+// la pagina afferrata e il resto del blocco "saltava" al posto giusto solo
+// al render successivo.
+Sortable.mount(new MultiDrag());
+
+/**
+ * Classe messa da MultiDrag sulle pagine che si muovono insieme a quella
+ * afferrata — stilizzata in resources/css/app.css.
+ */
+const MOVING_TOGETHER_CLASS = 'timone-moving-together';
+
+/**
+ * Livelli di zoom delle miniature (Fase 1, bug 7). Variabili CSS lette da
+ * grid.blade.php: `--timone-page-min` = larghezza minima di una colonna
+ * in vista griglia, `--timone-page-w` = larghezza di una pagina in vista
+ * doppia pagina. L'altezza non è qui: la dà l'aspect-ratio del formato
+ * reale del numero, impostato sulla card (page-card.blade.php).
+ */
+const ZOOM_LEVELS = {
+    s: { label: 'S', pageMin: '8.5rem', pageWidth: '10rem' },
+    m: { label: 'M', pageMin: '11.5rem', pageWidth: '13rem' },
+    l: { label: 'L', pageMin: '15rem', pageWidth: '17rem' },
+};
+const ZOOM_STORAGE_KEY = 'timone.zoom';
+
+/** Id delle pagine nell'ordine in cui compaiono ORA nel contenitore. */
+function orderedPageIds(container) {
+    return [...container.querySelectorAll(':scope > [data-page-id]')].map((node) => node.dataset.pageId);
+}
+
+/**
+ * Animazione FLIP (First-Last-Invert-Play) con la Web Animations API del
+ * browser, nessuna libreria: misura le pagine, esegue la mutazione (una
+ * chiamata Livewire che fa il morph del DOM), rimisura e anima ogni pagina
+ * dalla vecchia posizione alla nuova. Usata per lo spostamento da tastiera
+ * e come transizione finale dopo un drop (Fase 1, bug 4): così si vedono
+ * scorrere insieme TUTTE le pagine coinvolte, gruppo compreso, anche
+ * quando l'ordine finale lo decide il server (gruppo esteso, conflitto).
+ */
+async function flipMove(container, mutate) {
+    if (! container) {
+        return mutate();
+    }
+
+    const before = new Map();
+    container.querySelectorAll(':scope > [data-page-id]').forEach((node) => {
+        before.set(node.dataset.pageId, node.getBoundingClientRect());
+    });
+
+    const result = await mutate();
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return result;
+    }
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    container.querySelectorAll(':scope > [data-page-id]').forEach((node) => {
+        const first = before.get(node.dataset.pageId);
+
+        if (! first) return;
+
+        const last = node.getBoundingClientRect();
+        const dx = first.left - last.left;
+        const dy = first.top - last.top;
+
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+
+        node.animate(
+            [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+            { duration: 280, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
+        );
+    });
+
+    return result;
+}
+
+document.addEventListener('alpine:init', () => {
+    /**
+     * Indicatore "chi sta modificando cosa": stato puramente effimero,
+     * mai persistito né passato da Livewire, trasmesso via whisper (client
+     * event) sul canale presence `issue.{issueId}` già usato per la barra
+     * "utenti online" e per i broadcast server-side (PageMoved, ecc.).
+     */
+    Alpine.store('pagePresence', {
+        channel: null,
+        user: null,
+        editing: {},
+
+        // Vero mentre QUESTO client sta trascinando una pagina (Sortable
+        // onStart/onEnd, sotto) — usato dal polling di fallback in
+        // grid.blade.php per mettere in pausa wire:poll durante un drag: un
+        // poll a metà trascinamento potrebbe far ripartire il morph di
+        // Livewire sull'elemento che Sortable sta ancora manipolando a
+        // mano (2026-09-01).
+        dragging: false,
+
+        join(issueId, user) {
+            this.user = user;
+
+            if (! window.Echo || this.channel) return;
+
+            this.channel = window.Echo.join(`issue.${issueId}`)
+                .listenForWhisper('PageEditingStarted', ({ pageId, user }) => {
+                    this.editing[pageId] = user;
+                })
+                .listenForWhisper('PageEditingStopped', ({ pageId, userId }) => {
+                    if (this.editing[pageId]?.id === userId) {
+                        delete this.editing[pageId];
+                    }
+                })
+                .leaving((leavingUser) => {
+                    for (const pageId of Object.keys(this.editing)) {
+                        if (this.editing[pageId].id === leavingUser.id) {
+                            delete this.editing[pageId];
+                        }
+                    }
+                });
+        },
+
+        startEditing(pageId) {
+            if (! this.channel || ! this.user) return;
+
+            this.editing[pageId] = this.user;
+            this.channel.whisper('PageEditingStarted', { pageId, user: this.user });
+        },
+
+        stopEditing(pageId) {
+            if (! this.channel || ! this.user) return;
+
+            if (this.editing[pageId]?.id === this.user.id) {
+                delete this.editing[pageId];
+            }
+            this.channel.whisper('PageEditingStopped', { pageId, userId: this.user.id });
+        },
+
+        /**
+         * Solo l'editor altrui va mostrato: non ha senso segnalare a un
+         * utente che è lui stesso a modificare la pagina che sta guardando.
+         */
+        editorFor(pageId) {
+            const editor = this.editing[pageId];
+
+            return editor && editor.id !== this.user?.id ? editor : null;
+        },
+    });
+
+    /**
+     * Fallback quando i websocket (Reverb) non sono raggiungibili: espone
+     * solo `connected` (letto da grid.blade.php per montare/smontare
+     * l'elemento `wire:poll.1s="checkForUpdates"` — vedi lì per il
+     * perché di `x-if` invece di un polling gestito qui in JS). Prima del
+     * 2026-09-01 questo store gestiva anche direttamente un
+     * `setInterval`/`$wire.call` (vedi HANDOFF.md per la versione
+     * precedente) — sostituito da `wire:poll`, nativo di Livewire, che si
+     * occupa da solo di schedulare/fermare la richiesta periodica; questo
+     * store resta responsabile SOLO di rilevare lo stato della connessione
+     * Reverb, non di far girare il timer.
+     * Attivo solo se la connessione non è "connected" (dopo un breve periodo
+     * di grazia iniziale, per non scattare durante il normale handshake) o
+     * se Echo/Reverb non è configurato affatto.
+     */
+    Alpine.store('realtimeFallback', {
+        connected: true,
+        graceTimer: null,
+
+        watch() {
+            const connection = window.Echo?.connector?.pusher?.connection;
+
+            if (! connection) {
+                this.enterFallback();
+
+                return;
+            }
+
+            this.graceTimer = setTimeout(() => {
+                if (connection.state !== 'connected') this.enterFallback();
+            }, 5000);
+
+            connection.bind('state_change', ({ current }) => {
+                if (current === 'connected') {
+                    this.exitFallback();
+                } else if (['unavailable', 'failed', 'disconnected'].includes(current)) {
+                    this.enterFallback();
+                }
+            });
+        },
+
+        enterFallback() {
+            this.connected = false;
+        },
+
+        exitFallback() {
+            clearTimeout(this.graceTimer);
+            this.connected = true;
+        },
+    });
+
+    /**
+     * Zoom delle miniature del timone S/M/L (Fase 1, bug 7): preferenza
+     * personale del singolo utente su questo browser, quindi localStorage
+     * e non Livewire/database — non deve propagarsi agli altri utenti né
+     * sopravvivere a un cambio di computer. try/catch su ogni accesso:
+     * in navigazione privata o con i dati del sito bloccati localStorage
+     * può lanciare, e lo zoom deve comunque funzionare (solo senza essere
+     * ricordato). Le variabili CSS vanno su <html>, fuori dall'albero che
+     * Livewire ri-renderizza: un morph non può mai cancellarle.
+     */
+    Alpine.store('timoneZoom', {
+        levels: ZOOM_LEVELS,
+        level: 'm',
+
+        init() {
+            try {
+                const saved = window.localStorage.getItem(ZOOM_STORAGE_KEY);
+
+                if (saved && ZOOM_LEVELS[saved]) this.level = saved;
+            } catch (error) {
+                // Preferenza non leggibile: si resta sul livello predefinito.
+            }
+
+            this.apply();
+        },
+
+        set(level) {
+            if (! ZOOM_LEVELS[level]) return;
+
+            this.level = level;
+            this.apply();
+
+            try {
+                window.localStorage.setItem(ZOOM_STORAGE_KEY, level);
+            } catch (error) {
+                // Non ricordata, ma applicata comunque per questa sessione.
+            }
+        },
+
+        apply() {
+            const { pageMin, pageWidth } = ZOOM_LEVELS[this.level];
+            document.documentElement.style.setProperty('--timone-page-min', pageMin);
+            document.documentElement.style.setProperty('--timone-page-w', pageWidth);
+        },
+    });
+
+    /**
+     * `$animatedMove('nudgePage', id, -1)` — spostamento da tastiera
+     * animato (Fase 1, bug 4): chiama il metodo Livewire indicato dentro un
+     * FLIP sul contenitore x-sortable della pagina, poi il focus torna
+     * sulla pagina spostata, così le frecce si possono premere più volte di
+     * fila. Nome del metodo + argomenti invece di una closure: niente `=>`
+     * negli attributi HTML (alcuni test leggono il markup con regex).
+     */
+    Alpine.magic('animatedMove', (el) => (method, ...args) => {
+        const pageId = el.closest('[data-page-id]')?.dataset.pageId;
+        const wire = Alpine.evaluate(el, '$wire');
+
+        return flipMove(el.closest('[x-sortable]'), () => wire.call(method, ...args)).then((result) => {
+            if (pageId) {
+                el.closest('[x-sortable]')?.querySelector(`:scope > [data-page-id="${pageId}"]`)?.focus();
+            }
+
+            return result;
+        });
+    });
+
+    // L'espressione opzionale (es. x-sortable="$wire.swapMode") disabilita il
+    // drag&drop reattivamente mentre resta vera — usata per la modalità
+    // scambio, che sostituisce il drag con una selezione a click: tenere
+    // Sortable attivo in contemporanea creerebbe due modi conflittuali di
+    // riordinare (un mousedown sul drag-handle avvierebbe comunque un drag
+    // invece della sola selezione).
+    Alpine.directive('sortable', (el, { expression }, { effect, evaluateLater, evaluate, cleanup }) => {
+        let orderBeforeDrag = [];
+
+        /**
+         * Pagine che devono muoversi insieme a quella afferrata (Fase 1,
+         * bug 4): tutta la selezione multipla se la pagina ne fa parte
+         * (stessa condizione di prima per il "blocco"), altrimenti il suo
+         * gruppo collegato (data-group-id, page-card/page-row). Il server
+         * resta l'unica fonte di verità sullo spostamento vero
+         * (Grid::movePage()/moveSelectedBlock() estendono comunque la
+         * selezione al gruppo intero): questa è solo l'anteprima visiva.
+         */
+        function companionsOf(item) {
+            const pageId = item.dataset.pageId;
+            const selectionMode = evaluate('$wire.selectionMode');
+            const selectedPageIds = (evaluate('$wire.selectedPageIds') || []).map(String);
+
+            if (selectionMode && selectedPageIds.length > 1 && selectedPageIds.includes(pageId)) {
+                return [...el.querySelectorAll(':scope > [data-page-id]')].filter((node) => selectedPageIds.includes(node.dataset.pageId));
+            }
+
+            const groupId = item.dataset.groupId;
+
+            if (groupId) {
+                return [...el.querySelectorAll(`:scope > [data-page-id][data-group-id="${groupId}"]`)];
+            }
+
+            return [];
+        }
+
+        function clearCompanions() {
+            el.querySelectorAll(`:scope > .${MOVING_TOGETHER_CLASS}`).forEach((node) => Sortable.utils.deselect(node));
+        }
+
+        // Fase di cattura sul contenitore: gira PRIMA del pointerdown di
+        // Sortable (in bubbling sullo stesso elemento), quindi quando il
+        // drag parte MultiDrag trova già selezionate le pagine compagne.
+        const onPointerDown = (event) => {
+            const handle = event.target.closest('.drag-handle');
+            const item = handle?.closest('[data-page-id]');
+
+            clearCompanions();
+
+            if (! item || item.parentNode !== el) return;
+
+            const companions = companionsOf(item);
+
+            if (companions.length > 1) {
+                companions.forEach((node) => Sortable.utils.select(node));
+            }
+        };
+
+        // Un click sulla maniglia senza trascinare non deve lasciare le
+        // compagne evidenziate (MultiDrag le considererebbe una selezione).
+        const onPointerUp = () => setTimeout(() => {
+            if (! Alpine.store('pagePresence').dragging) clearCompanions();
+        }, 0);
+
+        el.addEventListener('pointerdown', onPointerDown, true);
+        document.addEventListener('pointerup', onPointerUp);
+
+        const sortable = Sortable.create(el, {
+            animation: 150,
+            handle: '.drag-handle',
+            // Limita gli elementi trascinabili/ordinabili a quelli con
+            // data-page-id: necessario per la vista "doppia pagina", che
+            // usa elementi "spacer" senza data-page-id (flex-basis:100%)
+            // per andare a capo visivamente tra un'apertura e la
+            // successiva pur restando tutte le pagine figlie dirette dello
+            // stesso contenitore Sortable (vedi grid.blade.php).
+            draggable: '[data-page-id]',
+            multiDrag: true,
+            selectedClass: MOVING_TOGETHER_CLASS,
+            // La "selezione" di MultiDrag la gestiamo noi (onPointerDown):
+            // niente deselezione implicita al click altrove.
+            avoidImplicitDeselect: true,
+            // Header fisso (Fase 1, bug 1): l'auto-scroll deve partire già
+            // sotto l'header, non solo negli ultimi 30px della finestra
+            // (default di Sortable) che ora sono coperti dall'header stesso.
+            scrollSensitivity: 120,
+            scrollSpeed: 18,
+            /**
+             * Immagine "fantasma" del trascinamento nativo: il browser
+             * fotografa solo l'elemento afferrato. Per un gruppo/blocco
+             * componiamo al volo un'immagine con TUTTE le pagine che si
+             * muovono, affiancate (Fase 1, bug 4). Deve stare nel DOM nel
+             * momento di setDragImage(), poi si rimuove subito.
+             */
+            setData(dataTransfer, dragEl) {
+                dataTransfer.setData('Text', '');
+
+                const companions = [...el.querySelectorAll(`:scope > .${MOVING_TOGETHER_CLASS}`)];
+
+                if (companions.length < 2 || typeof dataTransfer.setDragImage !== 'function') return;
+
+                const ghost = document.createElement('div');
+                ghost.style.cssText = 'position:fixed;top:-10000px;left:-10000px;display:flex;gap:4px;padding:4px;pointer-events:none;';
+
+                companions.forEach((node) => {
+                    const rect = node.getBoundingClientRect();
+                    const copy = node.cloneNode(true);
+                    copy.classList.remove(MOVING_TOGETHER_CLASS);
+                    copy.style.width = `${rect.width}px`;
+                    copy.style.height = `${rect.height}px`;
+                    copy.style.flex = 'none';
+                    ghost.appendChild(copy);
+                });
+
+                document.body.appendChild(ghost);
+                dataTransfer.setDragImage(ghost, 20, 20);
+                setTimeout(() => ghost.remove(), 0);
+            },
+            onStart(evt) {
+                orderBeforeDrag = orderedPageIds(el);
+                Alpine.store('pagePresence').dragging = true;
+                Alpine.store('pagePresence').startEditing(evt.item.dataset.pageId);
+            },
+            onEnd(evt) {
+                Alpine.store('pagePresence').dragging = false;
+
+                const pageId = evt.item.dataset.pageId;
+                Alpine.store('pagePresence').stopEditing(pageId);
+
+                const movedItems = evt.items?.length ? evt.items : [evt.item];
+                const orderAfterDrag = orderedPageIds(el);
+
+                setTimeout(clearCompanions, 0);
+
+                if (orderAfterDrag.join(',') === orderBeforeDrag.join(',')) return;
+
+                // Posizione calcolata sull'ordine REALE delle pagine nel
+                // DOM, non su evt.newIndex: quest'ultimo conta anche gli
+                // "spacer" senza data-page-id della vista doppia pagina
+                // (Sortable.index() senza selettore), e con MultiDrag
+                // sarebbe l'indice della sola pagina afferrata. Il primo
+                // elemento del blocco = posizione di partenza del blocco,
+                // esattamente come la interpreta PageReorderer::moveBlock().
+                const newPosition = Math.min(...movedItems.map((node) => orderAfterDrag.indexOf(node.dataset.pageId))) + 1;
+
+                // Selezione multipla: l'intera selezione si sposta come
+                // blocco unico (Fase 5, 2026-07-31) — stessa condizione di
+                // prima. Un gruppo collegato passa invece da movePage(),
+                // che lato server riconosce il gruppo e lo sposta intero.
+                const selectionMode = evaluate('$wire.selectionMode');
+                const selectedPageIds = (evaluate('$wire.selectedPageIds') || []).map(String);
+                const isBlockDrag = selectionMode && selectedPageIds.includes(String(pageId)) && selectedPageIds.length > 1;
+
+                el.dispatchEvent(new CustomEvent(isBlockDrag ? 'block-dropped' : 'page-dropped', {
+                    detail: isBlockDrag
+                        ? { anchorPageId: pageId, newPosition }
+                        : { pageId, newPosition },
+                }));
+            },
+        });
+
+        if (expression) {
+            const getDisabled = evaluateLater(expression);
+            effect(() => getDisabled((disabled) => sortable.option('disabled', !!disabled)));
+        }
+
+        cleanup(() => {
+            el.removeEventListener('pointerdown', onPointerDown, true);
+            document.removeEventListener('pointerup', onPointerUp);
+            sortable.destroy();
+        });
+    });
+
+    /**
+     * Transizione finale dopo un drop: `$flipAfterDrop('movePage', id, posizione)`
+     * in grid.blade.php. Sortable ha già messo il DOM nell'ordine scelto
+     * dall'utente; il server può comunque decidere un ordine diverso
+     * (gruppo esteso, conflitto, pagina bloccata) e il FLIP fa scorrere le
+     * pagine dalla posizione mostrata a quella vera invece di farle saltare.
+     */
+    Alpine.magic('flipAfterDrop', (el) => (method, ...args) => {
+        const wire = Alpine.evaluate(el, '$wire');
+
+        return flipMove(el.closest('[x-sortable]') ?? el, () => wire.call(method, ...args));
+    });
+});

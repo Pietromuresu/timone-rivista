@@ -163,6 +163,29 @@ Con Docker non c'è nulla da fare a mano. Il `Dockerfile` esegue `chown -R www-d
 
 Non serve `php artisan storage:link`: tutti i file stanno sul disco `local` (privato) e sono serviti dai controller.
 
+### 6bis. Checklist: "in produzione non si caricano media" (Fase 1, 2026-10-26)
+
+Prima cosa da fare, sul server: `docker compose exec app php artisan timone:diagnose-upload` (oppure `php artisan timone:diagnose-upload` senza Docker). Stampa ✅/⚠️/❌ per ognuno dei controlli sotto che è leggibile da PHP ed esce con codice 1 se qualcosa è fallito. Poi riprova un upload e cerca nel log la voce **`upload_failed`** (`docker compose exec app grep -A40 upload_failed storage/logs/laravel.log | tail -60`): contiene l'indirizzo con cui è arrivata la richiesta, `APP_URL`, `X-Forwarded-Proto`, i limiti PHP e i permessi dei dischi, scritti nel momento esatto del fallimento.
+
+Come funziona l'upload (per orientarsi): il browser invia il file a `POST /livewire/upload-file?expires=…&signature=…` (URL firmato generato da Livewire, `WithFileUploads`); Livewire lo valida con `config/livewire.php` → `temporary_file_upload.rules` (`max:102400`, mimes) e lo salva sul disco temporaneo (`temporary_file_upload.disk` = `null` → `FILESYSTEM_DISK`, cartella `livewire-tmp`). Al salvataggio del contenuto `ContentCreate` lo rivalida (`FILE_RULES`, max 20 MB) e `App\Support\ContentCreator::storeFile()` lo copia sul disco **`local`** (`storage/app/private/contents/{id}`). Se l'upload temporaneo fallisce il browser chiama `ContentCreate::_uploadErrored()`, che scrive `upload_failed` nel log e mostra all'utente «Il file non è arrivato al server…».
+
+Cause in ordine di probabilità:
+
+| # | Causa | Controllo sul server | Cosa guardare / comando |
+|---|---|---|---|
+| 1 | **`APP_URL` diverso dall'indirizzo reale** (http/https, IP invece del nome, porta, `localhost`) | `grep APP_URL .env` e confronto con la barra del browser | Log `upload_failed`: `APP_URL … — richiesta arrivata su …`; nella console del browser il `POST /livewire/upload-file` risponde **401**. `AppServiceProvider` forza tutte le URL su `APP_URL`: dal 2026-10-26 l'URL di upload è firmato sull'indirizzo reale (`App\Support\Uploads\RequestRootSignedUploadUrl`), ma un `APP_URL` sbagliato rompe comunque altre URL (miniature, link). Correggi e `php artisan config:clear` |
+| 2 | **Proxy HTTPS che non invia `X-Forwarded-Proto`** (o proxy non fidato) | Configurazione del reverse proxy sull'host | Log `upload_failed`: `x_forwarded_proto` vuoto e richiesta su `http://` mentre il browser è su `https://` → firma non valida (401) o contenuto misto bloccato. `bootstrap/app.php` fida già tutti i proxy (`trustProxies(at: '*')`): serve che il proxy mandi `proxy_set_header X-Forwarded-Proto $scheme;` (vedi §5 HTTPS sopra) |
+| 3 | **`upload_max_filesize` / `post_max_size` di PHP** troppo bassi | `timone:diagnose-upload` → riga «Limiti PHP»; `docker compose exec app php -i \| grep -E 'upload_max\|post_max'` | Log PHP: `POST Content-Length of … exceeds the limit`. Valori in `docker/php/uploads.ini` (100M/110M). Il riquadro di caricamento mostra il limite effettivo e rifiuta subito i file più grandi |
+| 4 | **`client_max_body_size` di nginx** (container e/o reverse proxy sull'host) | `grep client_max_body_size docker/nginx/default.conf /etc/nginx -r` | Browser: risposta **413** al `POST /livewire/upload-file`; log nginx: `client intended to send too large body`. Deve essere ≥ `post_max_size` (oggi 120m nel container: va messo uguale anche nel proxy dell'host) |
+| 5 | **Permessi su `storage/`** (in particolare `storage/app/private/livewire-tmp` e `storage/app/private/contents`) | `timone:diagnose-upload` → righe «Disco temporaneo Livewire» e «Disco finale dei file» | Log: `failed to open stream: Permission denied` / risposta 500. `docker compose exec -u root app chown -R www-data:www-data storage bootstrap/cache` |
+| 6 | **Cartella temporanea di PHP non scrivibile** (`upload_tmp_dir`) | `timone:diagnose-upload` → «Cartella temporanea PHP» | Log PHP: `Missing a temporary folder` / `UPLOAD_ERR_NO_TMP_DIR` |
+| 7 | **Disco diverso tra locale e produzione** (`FILESYSTEM_DISK` ≠ `local`, es. `public` o `s3`) | `grep FILESYSTEM_DISK .env` | `timone:diagnose-upload` segnala ⚠️: l'upload temporaneo finirebbe su un disco e i file definitivi sempre su `local` |
+| 8 | **Regole `livewire.temporary_file_upload.rules`** più strette del file (dimensione o tipo) | `config/livewire.php` | Risposta **422** all'upload; l'utente vede il messaggio di validazione di Livewire (in italiano, `lang/it`); log `upload_failed` con `validation_errors` valorizzato |
+| 9 | **Imagick/Ghostscript non leggono i PDF** (estensione mancante o `policy.xml` che vieta i PDF) | `timone:diagnose-upload` → «Lettura PDF (Imagick)» (prova davvero un PDF di una pagina) | L'utente vede «Impossibile leggere il numero di pagine di questo PDF». Vedi la `policy.xml` patchata nel `Dockerfile` |
+| 10 | **`storage:link` mancante** | `ls -la public/storage` | **Non è una causa per questo progetto**: PDF e miniature sono serviti dalle route `content-files.*`/`page-files.*`, non da `/storage`. Elencato per escluderlo |
+| 11 | **Upload più lento di `max_upload_time`** (10 minuti in questo progetto) | `config/livewire.php` → `max_upload_time` | La firma dell'URL scade: 401 su linee molto lente |
+| 12 | **Asset JS vecchi o non caricati** | Console del browser | Senza `app.js` aggiornato il riquadro non mostra il limite e gli errori; vedi [10-debugging.md](10-debugging.md#drag-drop-presence-o-aggiornamenti-realtime-non-funzionano-lato-browser) |
+
 ### 7. Scheduler, code, backup
 
 - Code e scheduler: già gestiti dai servizi `worker` e `scheduler`. **Niente supervisor né crontab per Laravel.**

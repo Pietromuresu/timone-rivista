@@ -11,28 +11,33 @@ use App\Enums\PageStatus;
 use App\Events\ContentAssigned;
 use App\Events\ContentCreated;
 use App\Events\PageGroupsChanged;
+use App\Livewire\Concerns\NormalizesEmptyNumericInput;
 use App\Models\Content;
 use App\Models\Issue;
 use App\Models\Page;
 use App\Models\PageFile;
 use App\Models\PageGroup;
 use App\Support\ActivityLogger;
+use App\Support\AdPdfPagePlan;
+use App\Support\ContentCreator;
 use App\Support\ContentPageAttacher;
+use App\Support\ContentPlacer;
 use App\Support\PageGroupLinker;
 use App\Support\PageInserter;
-use App\Support\PageRoleAssigner;
-use App\Support\ContentCreator;
-use App\Support\ContentPlacer;
 use App\Support\PageOccupancy;
+use App\Support\PageRoleAssigner;
+use App\Support\Uploads\UploadEnvironmentInspector;
+use App\Support\Uploads\UploadLimits;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 /**
  * Componente Livewire a sé, non un'altra proprietà di Grid.php: prima
@@ -53,7 +58,10 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
  */
 class ContentCreate extends Component
 {
-    use WithFileUploads;
+    use NormalizesEmptyNumericInput;
+    use WithFileUploads {
+        _uploadErrored as livewireUploadErrored;
+    }
 
     public Issue $issue;
 
@@ -103,6 +111,19 @@ class ContentCreate extends Component
     public ?int $pdfPageCount = null;
 
     /**
+     * Fase 1, bug 8 (2026-10-26): quali pagine di un PDF pubblicitario
+     * usare quando il PDF ne ha più di quante ne occupa il formato —
+     * AdPdfPagePlan::ALL ("usa tutte") o ::RANGE ("solo da X a Y"). Usate
+     * solo se AdPdfPagePlan::needsChoice(); `?int` con default null per i
+     * campi svuotabili (vedi NormalizesEmptyNumericInput).
+     */
+    public string $pdfPageChoice = AdPdfPagePlan::ALL;
+
+    public ?int $pdfPageFrom = null;
+
+    public ?int $pdfPageTo = null;
+
+    /**
      * Punto 4 (2026-09-02): valorizzata quando il form si apre dal bottone
      * "carica materiale" di una card/riga specifica (vedi openForPage()),
      * null quando si apre dal bottone libero "+ Nuovo contenuto" in cima
@@ -120,7 +141,14 @@ class ContentCreate extends Component
      * salvataggio sia alla validazione immediata del file appena scelto o
      * trascinato (updatedFile(), bug 2): un solo punto da cambiare.
      */
-    private const FILE_RULES = 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:20480';
+    private const FILE_RULES = 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:'.self::FILE_MAX_KILOBYTES;
+
+    /**
+     * Limite del modulo (20 MB) — pubblico perché lo leggono anche
+     * App\Support\Uploads\UploadLimits (limite effettivo mostrato e
+     * controllato nel browser) e `timone:diagnose-upload` (Fase 1, bug 9).
+     */
+    public const FILE_MAX_KILOBYTES = 20480;
 
     /**
      * Stato del riepilogo di conflitto per un caricamento PDF multipagina
@@ -174,7 +202,7 @@ class ContentCreate extends Component
             'title', 'section_id', 'author', 'expected_length',
             'client', 'agency', 'preferred_position', 'occupied_percentage_override', 'commercial_notes',
             'file', 'showSectionForm', 'editingSectionId', 'sectionName',
-            'page_occupancy', 'pdfPageCount',
+            'page_occupancy', 'pdfPageCount', 'pdfPageChoice', 'pdfPageFrom', 'pdfPageTo',
         ]);
         $this->type = 'articolo';
         $this->editorial_status = 'da_scrivere';
@@ -241,6 +269,13 @@ class ContentCreate extends Component
             return;
         }
 
+        // Bug 8: proposta iniziale per la scelta delle pagine di una
+        // pubblicità — "usa tutte", con l'intervallo già riempito sull'intero
+        // PDF se l'utente passa a "solo alcune".
+        $this->pdfPageChoice = AdPdfPagePlan::ALL;
+        $this->pdfPageFrom = $this->pdfPageCount !== null ? 1 : null;
+        $this->pdfPageTo = $this->pdfPageCount;
+
         if ($this->pdfPageCount !== null && $this->type === ContentType::Articolo->value && $this->page_occupancy === '') {
             $this->page_occupancy = PageOccupancy::from($this->pdfPageCount)->value;
         }
@@ -269,17 +304,45 @@ class ContentCreate extends Component
         // vincoli occupazione/PDF verificati PRIMA di qualunque scrittura o
         // modale di conflitto. Un ValidationException qui finisce nel form.
         $pdfPageCount = $this->file !== null ? ContentCreator::pdfPageCount($this->file) : null;
+        $validated += $this->chosenPdfPages($validated, $pdfPageCount);
         ContentCreator::resolveOccupancy($validated, $pdfPageCount);
+
+        // Bug 8: le pagine del timone da occupare sono quelle SCELTE del PDF
+        // (es. 2 su 3), non sempre tutte quelle del file.
+        $usedPdfPages = ContentCreator::pagePlan($validated, $pdfPageCount)?->pageCount();
 
         $anchorPage = $this->anchorPageId !== null ? Page::find($this->anchorPageId) : null;
 
-        if ($anchorPage !== null && $anchorPage->issue_id === $this->issue->id && ($pdfPageCount ?? 0) > 1) {
-            $this->openMultipageConflict($anchorPage, $pdfPageCount, $validated);
+        if ($anchorPage !== null && $anchorPage->issue_id === $this->issue->id && ($usedPdfPages ?? 0) > 1) {
+            $this->openMultipageConflict($anchorPage, $usedPdfPages, $validated, $pdfPageCount);
 
             return;
         }
 
         $this->createContentAndFinish($validated, $pdfPageCount, targetPages: null);
+    }
+
+    /**
+     * Fase 1, bug 8: per una pubblicità con un PDF più lungo del formato,
+     * traduce la scelta del modulo in `pdf_page_from`/`pdf_page_to` per
+     * ContentCreator (che resta l'unico punto in cui si decide quali pagine
+     * salvare). Chiavi semplici e non un oggetto: finiscono anche nello
+     * stato serializzato di Livewire della modale di conflitto.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array{pdf_page_from?: int, pdf_page_to?: int}
+     */
+    private function chosenPdfPages(array $validated, ?int $pdfPageCount): array
+    {
+        $format = AdFormat::tryFrom((string) ($validated['format'] ?? ''));
+
+        if ($validated['type'] !== ContentType::Pubblicita->value || $format === null || ! AdPdfPagePlan::needsChoice($format, $pdfPageCount)) {
+            return [];
+        }
+
+        $plan = AdPdfPagePlan::fromChoice($pdfPageCount, $this->pdfPageChoice, $this->pdfPageFrom, $this->pdfPageTo);
+
+        return ['pdf_page_from' => $plan->from, 'pdf_page_to' => $plan->to];
     }
 
     /**
@@ -304,7 +367,7 @@ class ContentCreate extends Component
      * "$p->files->isNotEmpty()" nel vecchio Grid::uploadPageFile(), esteso
      * al nuovo concetto di anteprima.
      */
-    private function openMultipageConflict(Page $anchorPage, int $pdfPageCount, array $validated): void
+    private function openMultipageConflict(Page $anchorPage, int $pdfPageCount, array $validated, ?int $sourcePdfPageCount = null): void
     {
         $targetPages = $this->multipageTargetPages($anchorPage, $pdfPageCount);
 
@@ -315,7 +378,12 @@ class ContentCreate extends Component
         $this->multipageUploadConflict = [
             'anchorPageId' => $anchorPage->id,
             'initiatingPosition' => $anchorPage->position,
+            // Pagine del PDF USATE (bug 8: possono essere meno di quelle
+            // del file) — è il numero di pagine del timone da occupare.
             'totalPdfPages' => $pdfPageCount,
+            // Pagine del file intero, che ContentCreator rimisura come
+            // riferimento per l'intervallo scelto.
+            'sourcePdfPageCount' => $sourcePdfPageCount ?? $pdfPageCount,
             'availablePages' => $targetPages->count(),
             'targetPositions' => $targetPages->pluck('position')->all(),
             'conflictingPositions' => $conflicting->pluck('position')->values()->all(),
@@ -392,7 +460,7 @@ class ContentCreate extends Component
             return;
         }
 
-        $this->createContentAndFinish($conflict['validated'], $conflict['totalPdfPages'], $selectedPages, $file, $conflict['initiatingPosition']);
+        $this->createContentAndFinish($conflict['validated'], $conflict['sourcePdfPageCount'] ?? $conflict['totalPdfPages'], $selectedPages, $file, $conflict['initiatingPosition']);
     }
 
     /**
@@ -476,7 +544,7 @@ class ContentCreate extends Component
             return;
         }
 
-        $this->createContentAndFinish($conflict['validated'], $conflict['totalPdfPages'], $selectedPages, $file, $conflict['initiatingPosition']);
+        $this->createContentAndFinish($conflict['validated'], $conflict['sourcePdfPageCount'] ?? $conflict['totalPdfPages'], $selectedPages, $file, $conflict['initiatingPosition']);
     }
 
     /**
@@ -564,6 +632,15 @@ class ContentCreate extends Component
             $this->dispatch('thumbnail-work-started');
         }
 
+        // Fase 1, bug 3 (2026-10-26): il broadcast sopra è `toOthers()` e
+        // Grid (che mostra "Contenuti da assegnare" e le pagine) è un
+        // componente DIVERSO da questo — Livewire ri-renderizza solo il
+        // componente che ha ricevuto la richiesta, quindi chi creava il
+        // contenuto non lo vedeva comparire finché non ricaricava la
+        // pagina. Evento Livewire locale (stessa pagina, nessun giro
+        // server/Reverb), ascoltato da Grid e AdReservations.
+        $this->dispatch('content-created', contentId: $content->id);
+
         $this->showForm = false;
         $this->anchorPageId = null;
         $this->reset('file', 'pdfPageCount');
@@ -617,12 +694,15 @@ class ContentCreate extends Component
      */
     private function attachConfirmedPages(Content $content, Collection $targetPages, ?int $initiatingPosition): void
     {
-        $filesByPdfPage = $content->files()->get()->keyBy('pdf_page_number');
+        // Per posizione nell'ordine delle pagine PDF salvate (bug 8: possono
+        // essere un intervallo che non parte da 1), stesso criterio di
+        // ContentPlacer::place().
+        $filesInPdfOrder = $content->files()->get()->keyBy('pdf_page_number')->sortKeys()->values();
         $initiatingPosition ??= $targetPages->min('position');
         $skippedForSpace = 0;
 
         foreach ($targetPages->values() as $targetPage) {
-            $contentFile = $filesByPdfPage->get($targetPage->position - $initiatingPosition + 1);
+            $contentFile = $filesInPdfOrder->get($targetPage->position - $initiatingPosition);
             $percentage = ContentPageAttacher::attach($content, $targetPage, $contentFile?->id);
 
             if ($percentage === null) {
@@ -787,6 +867,77 @@ class ContentCreate extends Component
         return $trimmed !== '' && ctype_digit($trimmed) ? (int) $trimmed : null;
     }
 
+    /**
+     * Fase 1, bug 9 (2026-10-26): chiamato dal JS di Livewire quando
+     * l'upload temporaneo fallisce. Prima un fallimento "prima della
+     * validazione" (401 firma non valida, 413 file oltre il limite di
+     * nginx/PHP, 500 permessi) arrivava qui senza dettagli e diventava il
+     * generico "The file failed to upload." — nessuna traccia nel log, nessun
+     * indizio per chi gestisce il server. Ora: voce «upload_failed» nel log
+     * con il contesto utile (indirizzo reale vs APP_URL, limiti PHP,
+     * permessi dei dischi, vedi UploadEnvironmentInspector) e un messaggio
+     * comprensibile per l'utente. Gli errori di validazione veri (422: tipo
+     * o dimensione secondo le regole Livewire) restano quelli di Livewire,
+     * già tradotti in lang/it.
+     */
+    public function _uploadErrored($name, $errorsInJson, $isMultiple)
+    {
+        Log::warning('upload_failed', [
+            'component' => static::class,
+            'property' => $name,
+            'issue_id' => $this->issue->id,
+            'user_id' => auth()->id(),
+            'validation_errors' => $errorsInJson,
+            'request_url' => request()->fullUrl(),
+            'x_forwarded_proto' => request()->header('X-Forwarded-Proto'),
+            'environment' => collect(UploadEnvironmentInspector::inspect(request(), self::FILE_MAX_KILOBYTES, probePdf: false))
+                ->mapWithKeys(fn (array $check) => [$check['check'] => strtoupper($check['status']).' — '.$check['detail']])
+                ->all(),
+        ]);
+
+        if ($errorsInJson !== null) {
+            return $this->livewireUploadErrored($name, $errorsInJson, $isMultiple);
+        }
+
+        $this->dispatch('upload:errored', name: $name)->self();
+
+        throw ValidationException::withMessages([
+            $name => 'Il file non è arrivato al server: il caricamento è stato rifiutato prima di poterlo controllare. '
+                .'Riprova; se succede di nuovo avvisa l\'amministratore indicando l\'ora del tentativo '
+                .'(nel log dell\'applicazione c\'è una voce «upload_failed» con la causa).',
+        ]);
+    }
+
+    /**
+     * Stato della scelta "quali pagine del PDF" per la vista (bug 8), null
+     * se non serve: articolo, nessun PDF, formato non ancora scelto, o PDF
+     * non più lungo del formato.
+     *
+     * @return array{pdfPageCount: int, formatSpan: int, formatLabel: string, isCover: bool, usedPages: int|null}|null
+     */
+    private function pdfChoiceState(): ?array
+    {
+        $format = AdFormat::tryFrom($this->format);
+
+        if ($this->type !== ContentType::Pubblicita->value || $format === null || ! AdPdfPagePlan::needsChoice($format, $this->pdfPageCount)) {
+            return null;
+        }
+
+        try {
+            $usedPages = AdPdfPagePlan::fromChoice($this->pdfPageCount, $this->pdfPageChoice, $this->pdfPageFrom, $this->pdfPageTo)->pageCount();
+        } catch (ValidationException) {
+            $usedPages = null; // intervallo in corso di digitazione: nessun riepilogo
+        }
+
+        return [
+            'pdfPageCount' => $this->pdfPageCount,
+            'formatSpan' => AdPdfPagePlan::formatSpan($format),
+            'formatLabel' => $format->label(),
+            'isCover' => $format === AdFormat::CopertinaSecondaTerzaQuarta,
+            'usedPages' => $usedPages,
+        ];
+    }
+
     #[On('echo-presence:issue.{issue.id},.ContentCreated')]
     public function onContentCreated(): void
     {
@@ -803,6 +954,10 @@ class ContentCreate extends Component
             'adFormats' => AdFormat::cases(),
             'confirmationStatuses' => AdConfirmationStatus::cases(),
             'occupancyOptions' => PageOccupancy::options($this->issue->total_pages),
+            // Fase 1, bug 9: limite VERO (il più stretto tra PHP, Livewire e
+            // questo modulo), controllato già nel browser prima dell'invio.
+            'uploadLimit' => UploadLimits::effective(self::FILE_MAX_KILOBYTES),
+            'pdfChoice' => $this->pdfChoiceState(),
         ]);
     }
 }

@@ -153,7 +153,7 @@
                              (App\Support\PageOccupancy::forAdFormat()) — obbligatorio
                              e senza default, come l'occupazione di un articolo. --}}
                         <x-input-label for="format" value="Formato / occupazione (obbligatorio)" />
-                        <select id="format" wire:model="format" class="mt-1 block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm">
+                        <select id="format" wire:model.live="format" class="mt-1 block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm">
                             <option value="">— Scegli il formato —</option>
                             @foreach ($adFormats as $adFormat)
                                 <option value="{{ $adFormat->value }}">{{ $adFormat->label() }} ({{ $adFormat->defaultPercentage() }}%)</option>
@@ -198,12 +198,30 @@
                  vengono rifiutati con un messaggio invece di prenderne uno a
                  caso. La validazione tipo/dimensione resta quella server
                  (stesse regole dell'input), il messaggio compare sotto. --}}
+            {{-- Fase 1, bug 9 (2026-10-26): il limite di dimensione è quello
+                 VERO ($uploadLimit, il più stretto tra PHP, Livewire e il
+                 modulo — App\Support\Uploads\UploadLimits) e viene
+                 controllato qui prima dell'invio: un file oltre il limite di
+                 PHP/nginx veniva scartato dal server senza spiegazioni.
+                 tooLarge() vale sia per il trascinamento (send()) sia per il
+                 selettore classico (x-on:change.capture sotto: in fase di
+                 cattura sul contenitore, quindi PRIMA che wire:model avvii
+                 l'upload; stopPropagation() lo ferma). Se l'upload fallisce
+                 comunque, il messaggio dettagliato arriva dal server
+                 (ContentCreate::_uploadErrored(), sotto in $errors). --}}
             <div
                 x-data="{
                     dragging: false,
                     uploading: false,
                     progress: 0,
                     clientError: null,
+                    maxBytes: @js($uploadLimit['bytes']),
+                    maxLabel: @js($uploadLimit['bytes'] ? \App\Support\Uploads\UploadLimits::humanMegabytes($uploadLimit['bytes']) : null),
+                    tooLarge(file) {
+                        if (! this.maxBytes || ! file || file.size <= this.maxBytes) return false;
+                        this.clientError = `Il file pesa ${(file.size / 1024 / 1024).toFixed(1).replace('.', ',')} MB: il massimo accettato è ${this.maxLabel}. Riduci il PDF (es. esportalo ottimizzato per la stampa a risoluzione più bassa) e riprova.`;
+                        return true;
+                    },
                     send(files) {
                         this.dragging = false;
                         this.clientError = null;
@@ -212,19 +230,21 @@
                             this.clientError = 'Trascina un solo file alla volta: ogni contenuto ha un solo PDF o immagine.';
                             return;
                         }
+                        if (this.tooLarge(files[0])) return;
                         this.uploading = true;
                         this.progress = 0;
                         $wire.upload('file', files[0],
                             () => { this.uploading = false; },
-                            () => { this.uploading = false; this.clientError = 'Caricamento non riuscito: controlla che sia un PDF o un\'immagine (JPG, PNG, WebP) di massimo 20 MB.'; },
+                            () => { this.uploading = false; },
                             (event) => { this.progress = event.detail.progress; },
                         );
                     },
                 }"
+                x-on:change.capture="if ($event.target === $refs.fileInput) { clientError = null; if (tooLarge($event.target.files[0])) { $event.stopPropagation(); $event.target.value = ''; } }"
                 x-on:livewire-upload-start="uploading = true; progress = 0; clientError = null"
                 x-on:livewire-upload-progress="progress = $event.detail.progress"
                 x-on:livewire-upload-finish="uploading = false"
-                x-on:livewire-upload-error="uploading = false; clientError = 'Caricamento non riuscito: controlla che sia un PDF o un\'immagine (JPG, PNG, WebP) di massimo 20 MB.'"
+                x-on:livewire-upload-error="uploading = false"
             >
                 <x-input-label for="file" value="Allega PDF/immagine (opzionale)" />
                 <div
@@ -244,7 +264,7 @@
                     <span class="text-2xl" aria-hidden="true">📄</span>
                     <span x-show="! dragging"><strong>Trascina qui il PDF o l'immagine</strong> oppure clicca per sceglierlo</span>
                     <span x-show="dragging" x-cloak><strong>Rilascia per caricare</strong></span>
-                    <span class="text-xs text-gray-400">PDF, JPG, PNG, WebP — max 20 MB</span>
+                    <span class="text-xs text-gray-400">PDF, JPG, PNG, WebP{{ $uploadLimit['bytes'] ? ' — max '.\App\Support\Uploads\UploadLimits::humanMegabytes($uploadLimit['bytes']) : '' }}</span>
                     @if ($file)
                         <span class="mt-1 text-xs text-emerald-700 dark:text-emerald-400">✓ {{ $file->getClientOriginalName() }}</span>
                     @endif
@@ -261,6 +281,54 @@
                 <p x-show="clientError" x-cloak x-text="clientError" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
                 <x-input-error class="mt-1" :messages="$errors->get('file')" />
             </div>
+
+            {{-- Fase 1, bug 8 (2026-10-26): PDF pubblicitario con più pagine
+                 di quante ne occupa il formato — prima era un errore
+                 bloccante, ora una scelta (App\Support\AdPdfPagePlan). Le
+                 pagine scelte mantengono il loro numero nel PDF: ogni pagina
+                 del timone mostra la pagina del PDF corrispondente.
+                 $pdfChoice è null quando non serve (vedi
+                 ContentCreate::pdfChoiceState()). --}}
+            @if ($pdfChoice)
+                <fieldset class="rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/20 p-3 space-y-2 text-sm" data-testid="pdf-page-choice">
+                    <legend class="px-1 font-medium text-indigo-800 dark:text-indigo-300">
+                        📄 Il PDF ha {{ $pdfChoice['pdfPageCount'] }} pagine, il formato «{{ $pdfChoice['formatLabel'] }}» ne occupa {{ $pdfChoice['formatSpan'] }}
+                    </legend>
+
+                    <label class="flex items-start gap-2">
+                        <input type="radio" wire:model.live="pdfPageChoice" value="{{ \App\Support\AdPdfPagePlan::ALL }}" class="mt-0.5 text-indigo-600 focus:ring-indigo-500" />
+                        <span>
+                            @if ($pdfChoice['isCover'])
+                                Usa tutte le {{ $pdfChoice['pdfPageCount'] }} pagine: la prima sulla copertina, le altre sulle pagine successive
+                            @else
+                                Usa tutte le {{ $pdfChoice['pdfPageCount'] }} pagine (la pubblicità occuperà {{ $pdfChoice['pdfPageCount'] }} pagine)
+                            @endif
+                        </span>
+                    </label>
+
+                    <label class="flex flex-wrap items-center gap-2">
+                        <input type="radio" wire:model.live="pdfPageChoice" value="{{ \App\Support\AdPdfPagePlan::RANGE }}" class="text-indigo-600 focus:ring-indigo-500" />
+                        <span>Usa solo le pagine da</span>
+                        <input type="number" min="1" max="{{ $pdfChoice['pdfPageCount'] }}" wire:model.live.debounce.300ms="pdfPageFrom" x-on:focus="$wire.set('pdfPageChoice', '{{ \App\Support\AdPdfPagePlan::RANGE }}')" aria-label="Prima pagina del PDF da usare" class="w-16 text-sm rounded border-gray-300 dark:border-gray-600 px-1 py-0.5" />
+                        <span>a</span>
+                        <input type="number" min="1" max="{{ $pdfChoice['pdfPageCount'] }}" wire:model.live.debounce.300ms="pdfPageTo" x-on:focus="$wire.set('pdfPageChoice', '{{ \App\Support\AdPdfPagePlan::RANGE }}')" aria-label="Ultima pagina del PDF da usare" class="w-16 text-sm rounded border-gray-300 dark:border-gray-600 px-1 py-0.5" />
+                    </label>
+                    @if ($pdfChoice['isCover'])
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Per usare una sola pagina sulla copertina, indica la stessa pagina in entrambi i campi (es. da 1 a 1).</p>
+                    @endif
+
+                    @if ($pdfChoice['usedPages'] !== null)
+                        <p class="text-xs text-indigo-700 dark:text-indigo-300">
+                            → La pubblicità occuperà {{ $pdfChoice['usedPages'] === $pdfChoice['formatSpan'] ? 'lo spazio del formato' : $pdfChoice['usedPages'].' pagine intere' }}
+                            ({{ $pdfChoice['usedPages'] === 1 ? 'pagina' : 'pagine' }} del PDF {{ $pdfPageChoice === \App\Support\AdPdfPagePlan::ALL ? '1–'.$pdfChoice['pdfPageCount'] : $pdfPageFrom.'–'.$pdfPageTo }}).
+                        </p>
+                    @endif
+
+                    <x-input-error :messages="$errors->get('pdfPageChoice')" />
+                    <x-input-error :messages="$errors->get('pdfPageFrom')" />
+                    <x-input-error :messages="$errors->get('pdfPageTo')" />
+                </fieldset>
+            @endif
 
             <x-primary-button>Crea contenuto</x-primary-button>
         </form>

@@ -4,12 +4,14 @@ namespace App\Livewire\Timone;
 
 use App\Enums\AdMaterialStatus;
 use App\Enums\IssueStatus;
+use App\Events\ContentListChanged;
 use App\Models\Advertisement;
 use App\Models\Issue;
 use App\Support\ActivityLogger;
 use App\Support\AdMaterialStatusResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -27,6 +29,10 @@ use Livewire\Component;
  * da solo (stesso principio di ActivityLogPanel: pannello occasionale, non
  * vale la complessità di ascoltare ContentCreated/ContentAssigned/
  * ContentUnassigned/PageFileUploaded solo per rifare la stessa query).
+ * Ascolta invece gli eventi Livewire LOCALI `content-created`/
+ * `content-list-changed` (Fase 1, bug 3, 2026-10-26): costano zero (nessun
+ * Echo) e senza di loro una pubblicità appena creata da questo stesso
+ * utente non compariva nel pannello aperto.
  */
 class AdReservations extends Component
 {
@@ -37,6 +43,13 @@ class AdReservations extends Component
     public function mount(Issue $issue): void
     {
         $this->issue = $issue;
+    }
+
+    #[On('content-created')]
+    #[On('content-list-changed')]
+    public function onLocalContentListChanged(): void
+    {
+        // Corpo vuoto: il re-render ripesca le pubblicità dal database.
     }
 
     public function toggle(): void
@@ -66,6 +79,14 @@ class AdReservations extends Component
 
         $client = $advertisement->client;
         $advertisement->content->delete(); // cascata su advertisements (content_id, cascadeOnDelete)
+
+        // Fase 1, bug 3: la prenotazione eliminata compariva ancora tra i
+        // "Contenuti da assegnare" di Grid (componente diverso) finché non
+        // si ricaricava la pagina — evento locale per questo utente,
+        // broadcast + pages_updated_at per gli altri (Reverb o polling).
+        broadcast(new ContentListChanged(issueId: $this->issue->id, contentId: $contentId, action: 'deleted'))->toOthers();
+        $this->issue->markPagesUpdated();
+        $this->dispatch('content-list-changed');
 
         ActivityLogger::log(
             issue: $this->issue,

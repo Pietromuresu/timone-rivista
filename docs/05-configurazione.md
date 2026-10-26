@@ -27,7 +27,7 @@ Legenda colonna *Obbl.*: **Sì** = senza, l'app o lo stack non partono o una fun
 | `APP_ENV` | Prod | `production` | `local` / `production` | `config/app.php:36` | `production` sul server |
 | `APP_KEY` | **Sì** | nessuno | `base64:<44 caratteri>` | `config/app.php:107` (cifratura sessioni/cookie, firma degli snapshot Livewire) | Generata da `setup.sh` (`openssl rand -base64 32`) oppure `php artisan key:generate`. **Non va mai cambiata in produzione**: invaliderebbe sessioni e dati cifrati |
 | `APP_DEBUG` | Prod | `false` | `true` / `false` | `config/app.php:49` | **`false` in produzione** (`.env.example` ha `true`) |
-| `APP_URL` | **Sì** | `http://localhost` | `https://timone.example.org` | `config/app.php:62`; `AppServiceProvider::boot()` forza root URL e schema https; `{{APP_URL}}` nel manuale | URL pubblico reale. ⚠️ DA VERIFICARE: URL di produzione |
+| `APP_URL` | **Sì** | `http://localhost` | `https://timone.example.org` | `config/app.php:62`; `AppServiceProvider::boot()` forza root URL e schema https (tranne l'URL firmato dell'upload temporaneo Livewire, firmato sull'indirizzo reale della richiesta dal 2026-10-26: `App\Support\Uploads\RequestRootSignedUploadUrl`); `{{APP_URL}}` nel manuale | URL pubblico reale, **identico** a quello nella barra del browser (schema, nome, porta): `php artisan timone:diagnose-upload` e la voce di log `upload_failed` mostrano le differenze. ⚠️ DA VERIFICARE: URL di produzione |
 | `APP_TIMEZONE` | No | `UTC` | `Europe/Rome` | `config/app.php:75`; **orario dello scheduler** (07:30) | Decisione di business: oggi i solleciti partono alle 07:30 UTC |
 | `APP_LOCALE` | No | `en` | `it` | `config/app.php:88` | `.env.example`: `it` (traduzioni in `lang/it/`) |
 | `APP_FALLBACK_LOCALE` | No | `en` | `en` | `config/app.php:90` | — |
@@ -91,10 +91,10 @@ Legenda colonna *Obbl.*: **Sì** = senza, l'app o lo stack non partono o una fun
 | `REVERB_SCHEME` | No | `https` | `http` | idem | `http` sulla rete interna Docker |
 | `REVERB_SERVER_HOST` | No | `0.0.0.0` | `0.0.0.0` | bind del processo `reverb:start` | — |
 | `REVERB_SERVER_PORT` | No | `8080` | `8080` | idem; deve coincidere con `ports` e healthcheck del compose | — |
-| `VITE_REVERB_APP_KEY` | **Sì** | — | — | `resources/js/echo.js:8` (build) | Nel compose è **sovrascritta** dal build arg `${REVERB_APP_KEY}`: il valore nel `.env` serve solo fuori Docker |
-| `VITE_REVERB_HOST` | **Sì** | `localhost` (compose) | `timone.example.org` | `echo.js:9`, host a cui **il browser** si connette | Hostname pubblico. ⚠️ DA VERIFICARE in produzione |
-| `VITE_REVERB_PORT` | No | `8080` (compose) | `443` | `echo.js:10-11` | Porta pubblica del WebSocket |
-| `VITE_REVERB_SCHEME` | No | `http` (compose); `https` se non impostata in `echo.js` | `https` | `echo.js:12` (`forceTLS`) | `https` se il sito è in HTTPS (altrimenti il browser blocca un `ws://` da una pagina `https://`) |
+| `VITE_REVERB_APP_KEY` | **Sì** (per il realtime) | — | — | `resources/js/echo.js` (build) | Nel compose è **sovrascritta** dal build arg `${REVERB_APP_KEY}`: il valore nel `.env` serve solo fuori Docker. Se manca al build, dal 2026-10-26 il timone resta usabile in polling (avviso in console `[timone] VITE_REVERB_APP_KEY non impostata…`); prima interrompeva tutto `app.js` |
+| `VITE_REVERB_HOST` | **Sì** | `localhost` (compose) | `timone.example.org` | `echo.js`, host a cui **il browser** si connette | Hostname pubblico. ⚠️ DA VERIFICARE in produzione |
+| `VITE_REVERB_PORT` | No | `8080` (compose) | `443` | `echo.js` | Porta pubblica del WebSocket |
+| `VITE_REVERB_SCHEME` | No | `http` (compose); `https` se non impostata in `echo.js` | `https` | `echo.js` (`forceTLS`) | `https` se il sito è in HTTPS (altrimenti il browser blocca un `ws://` da una pagina `https://`) |
 | `VITE_APP_NAME` | No | — | `"${APP_NAME}"` | nessun uso trovato in `resources/js` | Residuo dello scaffold |
 
 ### Mail

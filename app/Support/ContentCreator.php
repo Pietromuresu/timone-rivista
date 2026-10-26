@@ -90,15 +90,12 @@ final class ContentCreator
                 throw ValidationException::withMessages(['format' => 'Il formato della pubblicità è obbligatorio: determina quanta pagina occupa.']);
             }
 
-            $occupancy = PageOccupancy::forAdFormat($format);
+            // Fase 1, bug 8 (2026-10-26): un PDF con più pagine del formato
+            // non è più un errore — l'occupazione segue le pagine scelte
+            // dall'utente (App\Support\AdPdfPagePlan).
+            $plan = self::pagePlan($data, $pdfPageCount);
 
-            if ($pdfPageCount !== null && $pdfPageCount > $occupancy->pagesSpanned()) {
-                throw ValidationException::withMessages([
-                    'file' => "Il PDF ha {$pdfPageCount} pagine, ma il formato «{$format->label()}» ne occupa ".$occupancy->pagesSpanned().': controlla il file o il formato.',
-                ]);
-            }
-
-            return $occupancy;
+            return $plan !== null ? $plan->occupancy($format) : PageOccupancy::forAdFormat($format);
         }
 
         $occupancy = PageOccupancy::tryFrom($data['page_occupancy'] ?? null);
@@ -123,6 +120,38 @@ final class ContentCreator
     }
 
     /**
+     * Pagine del PDF da salvare (Fase 1, bug 8): tutte, tranne per una
+     * pubblicità il cui PDF supera l'occupazione del formato — lì servono
+     * `pdf_page_from`/`pdf_page_to` in $data (scelta "usa tutte" = da 1 a N,
+     * scelta "solo alcune" = l'intervallo indicato), altrimenti errore sul
+     * campo della scelta. Null se non c'è un PDF.
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws ValidationException
+     */
+    public static function pagePlan(array $data, ?int $pdfPageCount): ?AdPdfPagePlan
+    {
+        if ($pdfPageCount === null) {
+            return null;
+        }
+
+        $format = AdFormat::tryFrom((string) ($data['format'] ?? ''));
+
+        if ($data['type'] !== ContentType::Pubblicita->value || $format === null || ! AdPdfPagePlan::needsChoice($format, $pdfPageCount)) {
+            return AdPdfPagePlan::whole($pdfPageCount);
+        }
+
+        if (! isset($data['pdf_page_from'], $data['pdf_page_to'])) {
+            throw ValidationException::withMessages([
+                'pdfPageChoice' => "Il PDF ha {$pdfPageCount} pagine e il formato «{$format->label()}» ne occupa ".AdPdfPagePlan::formatSpan($format).': scegli se usarle tutte o solo alcune.',
+            ]);
+        }
+
+        return AdPdfPagePlan::fromChoice($pdfPageCount, AdPdfPagePlan::RANGE, (int) $data['pdf_page_from'], (int) $data['pdf_page_to']);
+    }
+
+    /**
      * Crea Content + Article/Advertisement e, se c'è un file, un
      * ContentFile per ogni pagina sorgente del PDF (o uno solo per
      * un'immagine), accodando una miniatura per ciascuno.
@@ -139,6 +168,18 @@ final class ContentCreator
         }
 
         $occupancy = self::resolveOccupancy($data, $pdfPageCount);
+        $plan = self::pagePlan($data, $pdfPageCount);
+
+        // Fase 1, bug 8: se l'utente ha scelto di usare più pagine di quante
+        // ne preveda il formato (es. una "mezza pagina" consegnata su 3
+        // pagine intere), ogni pagina è occupata per intero — la percentuale
+        // del listino (50%) non avrebbe senso su ciascuna. Una percentuale
+        // indicata a mano resta comunque prioritaria.
+        $format = AdFormat::tryFrom((string) ($data['format'] ?? ''));
+
+        if ($plan !== null && $format !== null && $data['type'] === ContentType::Pubblicita->value && $plan->expandsFormat($format) && ($data['occupied_percentage_override'] ?? null) === null) {
+            $data['occupied_percentage_override'] = 100;
+        }
 
         $content = DB::transaction(function () use ($issue, $data, $occupancy) {
             $content = Content::create([
@@ -182,7 +223,8 @@ final class ContentCreator
         );
 
         if ($file !== null) {
-            foreach (range(1, $pdfPageCount ?? 1) as $pdfPageNumber) {
+            // Solo le pagine scelte (bug 8), col loro numero ORIGINALE nel PDF.
+            foreach ($plan?->pdfPages() ?? [1] as $pdfPageNumber) {
                 self::storeFile($issue, $content, $file, $pdfPageNumber, $pdfPageCount ?? 1, $userId);
             }
         }

@@ -4,6 +4,7 @@ namespace App\Livewire\Magazines;
 
 use App\Enums\Periodicity;
 use App\Enums\UserRole;
+use App\Livewire\Concerns\NormalizesEmptyNumericInput;
 use App\Models\Magazine;
 use App\Models\User;
 use App\Support\ActivityLogger;
@@ -26,6 +27,8 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class Edit extends Component
 {
+    use NormalizesEmptyNumericInput;
+
     public Magazine $magazine;
 
     public string $name = '';

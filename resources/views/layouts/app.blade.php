@@ -16,16 +16,27 @@
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-            @include('layouts.navigation')
+            {{-- Fase 1, bug 1 (2026-10-26): header fisso in alto. `sticky`
+                 e non `fixed`: resta nel flusso, quindi il contenuto non va
+                 compensato con un padding da tenere allineato all'altezza
+                 (che cambia col menu mobile aperto). z-40: sopra le pagine
+                 del timone (badge z-10, menu export z-10), sotto modali,
+                 dropdown e toast (z-50). Il drag&drop nativo disegna il
+                 fantasma sopra tutto; l'auto-scroll di Sortable parte già
+                 a 120px dal bordo (resources/js/timone-alpine.js), quindi
+                 anche sotto l'header. --}}
+            <div class="sticky top-0 z-40 shadow-sm">
+                @include('layouts.navigation')
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="bg-white dark:bg-gray-800 shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endisset
+                <!-- Page Heading -->
+                @isset($header)
+                    <header class="bg-white dark:bg-gray-800 shadow">
+                        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                            {{ $header }}
+                        </div>
+                    </header>
+                @endisset
+            </div>
 
             <!-- Page Content -->
             <main>

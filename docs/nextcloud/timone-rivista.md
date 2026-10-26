@@ -103,11 +103,22 @@ docker compose exec app php artisan migrate:status
 | Errore 500 | storage/logs/laravel.log |
 | Errore 502 | docker compose restart nginx (tiene il vecchio IP del container app) |
 | Azioni nel timone che falliscono | Container reverb attivo? (log: "Could not resolve host: reverb") |
-| Drag&drop morto, console "You must pass your app key" | REVERB_APP_KEY nel .env, poi rebuild |
+| Drag&drop morto, console "You must pass your app key" (versioni prima del 2026-10-26) o "VITE_REVERB_APP_KEY non impostata" | REVERB_APP_KEY nel .env, poi rebuild. Dal 2026-10-26 il timone funziona comunque, in polling |
+| Console: "Cannot read properties of undefined (reading 'editorFor')" | app.js non caricato o vecchio: rebuild degli asset (docker compose up -d --build); vedi docs/10-debugging.md |
+| Non si caricano PDF/immagini | docker compose exec app php artisan timone:diagnose-upload, poi cercare upload_failed in storage/logs/laravel.log (checklist in docs/09-deploy.md §6bis). Causa più probabile: APP_URL diverso dall'indirizzo usato nel browser |
 | Miniature ferme | Container worker attivo? thumbnail_status in tabella content_files |
 | Mail non arrivate | MAIL_MAILER (log = non inviate), queue:failed, redattore di riferimento impostato sulla rivista |
 | migrate si ferma su page_occupancy | php artisan timone:missing-occupancy, poi valorizzare i contenuti elencati |
 | Modifiche al codice non visibili | Immagini non ricostruite: docker compose build e docker compose up -d |
+
+## Novità per la redazione (2026-10-26)
+
+- La barra in alto resta sempre visibile mentre si scorre il timone.
+- Bottoni S / M / L accanto a Griglia / Doppia pagina / Lista: ingrandiscono le pagine. La scelta vale solo per il proprio browser. Le pagine hanno le proporzioni del formato reale del numero.
+- Trascinando una pagina di un gruppo collegato (🔗) o di una selezione multipla, tutte le pagine coinvolte si muovono insieme (bordo tratteggiato blu). Con le frecce della tastiera si sposta di un posto l'intero gruppo.
+- Un contenuto appena creato compare subito tra i "Contenuti da assegnare", anche per i colleghi.
+- Il riquadro per allegare un file indica il peso massimo accettato dal server; un file troppo pesante viene rifiutato subito, con il suo peso e il massimo.
+- Una pubblicità con un PDF di più pagine del suo formato non viene più rifiutata: il modulo chiede se usare tutte le pagine (la pubblicità ne occuperà tante quante il PDF) o solo alcune (da pagina X a pagina Y). Ogni pagina del timone mostra la pagina del PDF giusta.
 
 ## Punti di attenzione
 

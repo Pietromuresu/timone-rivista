@@ -79,14 +79,14 @@ File coinvolti, in ordine di esecuzione:
 2. `ContentCreate::updatedFile()` (`app/Livewire/Timone/ContentCreate.php:225`): valida e conta le pagine del PDF (`ContentCreator::pdfPageCount()` → `PdfPageMeasurer::pageCount()`, che **richiede Imagick**). Propone l'occupazione uguale al numero di pagine.
 3. `ContentCreate::save()` (`:261`):
    - `authorize('update', issue)`;
-   - `ContentCreator::resolveOccupancy()`: l'occupazione è **obbligatoria**. Per la pubblicità deriva dal formato; con un PDF multipagina deve coincidere con il numero di pagine.
-   - Se il form è stato aperto da una pagina ("📎 Carica materiale", quindi `anchorPageId` valorizzato) e il PDF ha più di una pagina, apre la **modale di conflitto multipagina** (`openMultipageConflict`). Le opzioni sono: sovrascrivere, saltare le pagine occupate, oppure "sposta dopo" (`confirmMultipageUploadWithShift`, che usa `App\Support\PageInserter`).
+   - `ContentCreator::resolveOccupancy()`: l'occupazione è **obbligatoria**. Per un articolo, con un PDF multipagina deve coincidere con il numero di pagine. Per la pubblicità deriva dal formato; **dal 2026-10-26 (bug 8)** se il PDF ha più pagine di quante ne occupa il formato il modulo chiede quali usare (`App\Support\AdPdfPagePlan`): **tutte** (occupazione = N pagine intere, percentuale 100 se non indicata a mano) oppure **da X a Y** (occupazione del formato se Y−X+1 coincide con la sua, altrimenti Y−X+1 pagine). La scelta arriva a `ContentCreator` come `pdf_page_from`/`pdf_page_to`; senza scelta l'errore è sul campo `pdfPageChoice`, non più sul file. Un PDF con *meno* pagine del formato resta com'era (occupazione del formato).
+   - Se il form è stato aperto da una pagina ("📎 Carica materiale", quindi `anchorPageId` valorizzato) e le pagine del PDF **usate** sono più di una, apre la **modale di conflitto multipagina** (`openMultipageConflict`). Le opzioni sono: sovrascrivere, saltare le pagine occupate, oppure "sposta dopo" (`confirmMultipageUploadWithShift`, che usa `App\Support\PageInserter`).
    - Altrimenti chiama `createContentAndFinish()`.
 4. `App\Support\ContentCreator::create()` (`app/Support/ContentCreator.php:135`):
    - in transazione: `Content` + `Article` oppure `Advertisement`;
    - `ActivityLogger::log('content.created')`;
-   - per **ogni pagina del PDF**, `storeFile()` salva una **copia completa del file** in `storage/app/private/contents/{content_id}/{uuid}.{ext}`, crea un `ContentFile` (`pdf_page_number` = N) e accoda **`GenerateContentFileThumbnail`**. Conseguenza: un PDF di 64 pagine da 100 MB occupa circa 6,4 GB su disco. Vedi [11-debito-tecnico.md](11-debito-tecnico.md).
-5. Se ancorato a una pagina: `ContentPlacer::place()` (vedi flusso 6).
+   - per **ogni pagina del PDF**, `storeFile()` salva una **copia completa del file** in `storage/app/private/contents/{content_id}/{uuid}.{ext}`, crea un `ContentFile` (`pdf_page_number` = numero ORIGINALE della pagina nel PDF: con un intervallo 2–3 i file sono 2 e 3) e accoda **`GenerateContentFileThumbnail`**. Conseguenza: un PDF di 64 pagine da 100 MB occupa circa 6,4 GB su disco. Vedi [11-debito-tecnico.md](11-debito-tecnico.md).
+5. Se ancorato a una pagina: `ContentPlacer::place()` (vedi flusso 6). Le pagine del timone ricevono i `ContentFile` **in ordine** di `pdf_page_number` (la prima pagina del timone riceve la prima pagina scelta, non la "pagina 1" del PDF) — stesso criterio in `ContentCreate::attachConfirmedPages()`.
 6. Broadcast `ContentCreated` / `ContentFileUploaded` / `ContentAssigned`.
 7. Il worker esegue `App\Jobs\GenerateContentFileThumbnail` (vedi [08-job-e-scheduler.md](08-job-e-scheduler.md)):
    - miniatura PNG 150 dpi della pagina `pdf_page_number`;

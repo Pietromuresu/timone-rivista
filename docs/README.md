@@ -61,6 +61,7 @@
 | [11-debito-tecnico.md](11-debito-tecnico.md) | Debito tecnico e rischi ordinati per priorità |
 | [12-glossario.md](12-glossario.md) | Termini di dominio e valori degli enum |
 | [DA-VERIFICARE.md](DA-VERIFICARE.md) | Domande aperte da fare prima del passaggio di consegne |
+| [CHANGELOG.md](CHANGELOG.md) | Modifiche visibili e tecniche, per fase, dal batch "revisione con gli utenti" (2026-10-26) in poi |
 | [nextcloud/timone-rivista.md](nextcloud/timone-rivista.md) | Scheda sintetica per Nextcloud |
 
 Documenti preesistenti nella root del repo, ancora validi e complementari a questi:

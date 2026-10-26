@@ -61,6 +61,7 @@ Il percorso è sempre: **rivista → numero → timone**.
   - **si consulta lo storico degli spostamenti** delle pagine, e la **cronologia generale** di tutte le altre azioni (chi ha fatto cosa e quando);
   - **si modifica il numero totale di pagine** anche a lavorazione avviata, con anteprima dell'impatto prima di confermare una riduzione;
   - **si esporta il timone completo in PDF**, con filtri opzionali (solo pubblicità, solo pagine non approvate, con o senza miniature);
+  - **si sceglie la dimensione delle pagine** (bottoni S / M / L, ricordati su questo browser): le pagine hanno le proporzioni del formato reale del numero;
   - **compaiono avvisi automatici** quando c'è qualcosa da controllare (una pagina già approvata ma ancora vuota, un contenuto su pagine non consecutive);
   - **si blocca una pagina** (🔓/🔒) per impedirne spostamento, modifica o eliminazione — utile per una pagina già mandata in stampa.
 - **Gestione utenti** (`/utenti`, solo per chi ha ruolo Admin): creare account, cambiare ruolo, decidere a quali riviste ogni persona ha accesso.

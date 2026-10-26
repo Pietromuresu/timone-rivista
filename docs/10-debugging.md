@@ -91,13 +91,27 @@ docker compose exec redis redis-cli llen queues:default    # job in attesa (pref
 
 | Causa | Come riconoscerla | Soluzione |
 |---|---|---|
-| `VITE_REVERB_APP_KEY` vuota nel bundle | Console: `You must pass your app key`. **Tutto** `app.js` si interrompe: niente Alpine store, niente Sortable | Verifica `REVERB_APP_KEY` nel `.env`, poi `docker compose up -d --build` |
+| `VITE_REVERB_APP_KEY` vuota nel bundle | Console: `[timone] VITE_REVERB_APP_KEY non impostata…` e avviso giallo "aggiornamento in tempo reale non disponibile". **Fino al 2026-10-26** `new Echo()` lanciava `You must pass your app key` e interrompeva **tutto** `app.js`: niente Alpine store (errore `$store.pagePresence` undefined / `editorFor`), niente Sortable. Ora gli store sono in un modulo caricato per primo (`resources/js/timone-alpine.js`) ed `echo.js` non lancia più: il timone funziona in polling | Verifica `REVERB_APP_KEY` nel `.env`, poi `docker compose up -d --build` |
 | `VITE_REVERB_HOST/PORT/SCHEME` sbagliati per l'URL pubblico | Network → WS: connessione fallita verso `localhost:8080`, oppure `ws://` bloccato su una pagina `https://` (mixed content) | Allinea le `VITE_REVERB_*` al dominio/proxy reale e ricostruisci (vedi [09-deploy.md](09-deploy.md#5-https-e-websocket)) |
 | `/livewire/livewire.js` restituisce 404 | Network | La location statica `.js` di nginx deve avere `try_files ... /index.php` (già presente in `docker/nginx/default.conf`; bug del 2026-07-29) |
-| Due istanze di Alpine | Console: `Detected multiple instances of Alpine running`, `$wire is not defined` | Non importare `alpinejs` in `app.js` (vedi commento `resources/js/app.js:5-19`) |
+| Due istanze di Alpine | Console: `Detected multiple instances of Alpine running`, `$wire is not defined` | Non importare `alpinejs` in `app.js` (vedi commento in testa a `resources/js/timone-alpine.js`) |
 | Asset da un Vite dev server non attivo | Gli `<script>` puntano a `localhost:5173` | Cancella `public/hot` (solo in locale) |
 | Asset vecchi dopo un deploy | Comportamento "vecchio" solo per qualche utente | Refresh forzato. Gli asset hanno nomi hashati, ma la cache nginx è di 7 giorni sugli statici |
 | WebSocket giù | Avviso giallo nel timone "⚠️ Aggiornamento in tempo reale non disponibile" (`grid.blade.php:618-622`); parte il polling ogni 1 s (`grid.blade.php:95`) | L'app continua a funzionare con il polling: risolvi Reverb |
+
+### Errore Alpine `$store.pagePresence` undefined (`editorFor`)
+
+Sintomo: in console `Cannot read properties of undefined (reading 'editorFor')` (o `startEditing`, `connected`), drag&drop morto. **Causa trovata il 2026-10-26**: gli store Alpine erano registrati nel corpo di `resources/js/app.js`, che con gli `import` ES viene eseguito **dopo** `./bootstrap` → `./echo`; se `new Echo()` lanciava (chiave Reverb assente al build) il modulo si interrompeva prima di registrare il listener `alpine:init`, e Livewire avviava comunque Alpine al `DOMContentLoaded` senza store. Correzione: store, direttiva `x-sortable` e magic in `resources/js/timone-alpine.js`, importato **per primo** da `app.js`; `echo.js` in try/catch; espressioni Blade con `?.` come rete di sicurezza. Nessun `wire:navigate` nel progetto: gli store sono registrati una volta per caricamento pagina.
+
+Se ricompare: (1) console → il primo errore della pagina è quello vero; (2) `app.js` è stato caricato? (Network; `public/hot` rimasto in locale fa puntare gli asset a un Vite dev server spento); (3) asset ricostruiti dopo l'aggiornamento (`docker compose up -d --build`).
+
+### Input numerico svuotato → errore della pagina
+
+Sintomo storico (risolto il 2026-10-26): svuotando "Numero totale di pagine" nella creazione numero la pagina andava in errore (`PropertyNotFoundException` / "must not be accessed before initialization"). Causa: Livewire, ricevendo `''` su una proprietà `int`, la "unset"-ta; e in idratazione non riassegna un `null` a una proprietà tipizzata (resta il default di classe). Regola per i nuovi campi numerici legati con `wire:model`: proprietà `?int` con default `= null` (valore iniziale in `mount()`) + trait `App\Livewire\Concerns\NormalizesEmptyNumericInput`; validazione `required|integer` per l'errore inline. Per testo libero numerico il progetto usa proprietà `string` + parsing (es. `Grid::$newTotalPages`). Test: `tests/Feature/Livewire/EmptyNumericInputTest.php`.
+
+### Upload in produzione ("non si caricano media")
+
+Checklist completa con comandi e righe di log: [09-deploy.md §6bis](09-deploy.md#6bis-checklist-in-produzione-non-si-caricano-media-fase-1-2026-10-26). In breve: `php artisan timone:diagnose-upload` sul server, poi cerca `upload_failed` in `storage/logs/laravel.log` dopo un tentativo.
 
 ### Upload PDF bloccato / "si blocca al caricamento"
 
@@ -107,7 +121,7 @@ docker compose exec redis redis-cli llen queues:default    # job in attesa (pref
 | 413 da nginx o dal proxy | log di nginx | `client_max_body_size` |
 | Upload lento oltre 10 minuti | `max_upload_time` in `config/livewire.php:92` | Alzalo |
 | "PDF illeggibile" | Imagick o Ghostscript assenti, policy PDF attiva, PDF corrotto | `php -m`, `Imagick::queryFormats("PDF")`; prova il PDF in locale con `gs` |
-| Pubblicità con PDF di più pagine del formato | Messaggio di validazione | È voluto (`HANDOFF.md`, "Limite noto": il formato è l'occupazione) |
+| Pubblicità con PDF di più pagine del formato | Riquadro "📄 Il PDF ha N pagine, il formato … ne occupa F" nel modulo | Non è un errore dal 2026-10-26: scegliere "usa tutte" o "solo da X a Y" (`App\Support\AdPdfPagePlan`). Un errore rosso sotto quel riquadro indica un intervallo non valido |
 | Occupazione non scelta | Errore sotto il menu "Occupazione" | È voluto: l'occupazione è obbligatoria (`MANUALE_UTENTE.md` §5bis) |
 
 ### Miniature che restano "in elaborazione" o falliscono
@@ -250,7 +264,19 @@ Non correggere i valori con un UPDATE alla cieca: vanno ricontrollati sulla sche
 9. **Adminer** sempre esposto sulla porta 8081.
 10. **`pagefiles:prune-orphaned`** guarda solo `page_files`: vedi il rischio in [08-job-e-scheduler.md](08-job-e-scheduler.md#pagefilesprune-orphaned---dry-run).
 11. **Copie del PDF per ogni pagina**: consumo di disco proporzionale a dimensione × pagine.
-12. **Nessun test browser** (niente Dusk): drag&drop, focus/anelli di selezione e drop zone sono verificati solo a mano.
+12. **Nessun test browser** (niente Dusk): drag&drop, focus/anelli di selezione e drop zone sono verificati solo a mano. Dal 2026-10-26 anche l'animazione dei gruppi (MultiDrag di SortableJS, FLIP con la Web Animations API) e lo zoom S/M/L (`resources/js/timone-alpine.js`): i test PHP verificano solo markup e logica server (`nudgePage`, `PageReorderer::nudgeTarget()`).
+
+## Eseguire i test che richiedono Imagick (senza Imagick in locale)
+
+I test che contano le pagine dei PDF (`ContentCreateMultipageUploadTest`, `ContentFreeFormPdfDistributionTest`, `ContentCreateAdPdfChoiceTest`, …) vengono saltati se `ext-imagick` manca (es. MAMP). Si possono eseguire in un container usa-e-getta dall'immagine `app` (che ha imagick, ghostscript e pdo_sqlite), montando il repo e il `vendor/` dell'host (con le dev-dependency):
+
+```bash
+docker run --rm --entrypoint sh -v "$PWD":/app -w /app \
+  -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
+  timone-rivista-app:latest -c 'php vendor/bin/pest'
+```
+
+Non tocca i container in esecuzione. Il 2026-10-26: 701 test passati, 0 saltati.
 
 ## Test che falliscono con "Could not resolve host: reverb"
 

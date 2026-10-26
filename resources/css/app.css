@@ -11,6 +11,44 @@
 [x-cloak] { display: none !important; }
 
 /*
+ * Fase 1, bug 6 (2026-10-26): testo bianco negli input dentro le pagine del
+ * timone. Il preflight di Tailwind dà agli input `color: inherit` e il
+ * plugin @tailwindcss/forms uno sfondo bianco: un input dentro un
+ * contenitore con `text-white` (la didascalia scura sopra la miniatura PDF
+ * in page-card) ereditava il bianco su sfondo bianco; in dark mode, al
+ * contrario, gli input con solo `dark:bg-gray-900` ereditavano un testo
+ * scuro dal contenitore. Qui ogni campo di testo/select riceve colore e
+ * sfondo espliciti e leggibili in entrambi i temi. Stessi selettori del
+ * plugin forms (stessa specificità, dichiarati dopo → vincono su di lui),
+ * ma restano in @layer base: le classi utility esplicite (es. il colore di
+ * stato sulla select della card) continuano a vincere su questa regola.
+ * Checkbox/radio/color/file esclusi: il loro colore è quello di spunta.
+ */
+@layer base {
+    [type='text'], [type='email'], [type='url'], [type='password'], [type='number'],
+    [type='date'], [type='datetime-local'], [type='month'], [type='search'],
+    [type='tel'], [type='time'], [type='week'], input:where(:not([type])),
+    textarea, select {
+        @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+    }
+
+    ::placeholder {
+        @apply text-gray-400 dark:text-gray-500;
+    }
+}
+
+/*
+ * Fase 1, bug 4 (2026-10-26): pagine che si muovono insieme a quella
+ * afferrata (gruppo collegato o selezione multipla) — classe messa e tolta
+ * dal plugin MultiDrag di SortableJS (resources/js/timone-alpine.js).
+ * Riconoscibile anche senza colore: bordo tratteggiato oltre all'anello.
+ */
+.timone-moving-together {
+    outline: 3px dashed theme('colors.indigo.500');
+    outline-offset: 2px;
+}
+
+/*
  * Fase 6.1: stile per il markdown di MANUALE_UTENTE.md renderizzato in
  * resources/views/documentation/show.blade.php. Deve stare qui (non in un
  * <style> inline nella vista): @apply è una direttiva PostCSS, valutata solo
