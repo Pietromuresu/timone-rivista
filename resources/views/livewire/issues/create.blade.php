@@ -57,6 +57,51 @@
                         @endif
                     </div>
 
+                    {{-- Carta e peso: pre-compilata con i default della rivista,
+                         copiata sul numero al salvataggio (vedi Issues\Create::$weight). --}}
+                    <details open wire:ignore.self class="rounded-lg border border-gray-200 dark:border-gray-700">
+                        <summary class="cursor-pointer select-none px-4 py-3 font-medium text-gray-700 dark:text-gray-300">⚖️ Carta e peso</summary>
+                        <div class="px-4 pb-4 space-y-4">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Valori proposti dalla rivista: puoi cambiarli solo per questo numero. Le pagine interne sono le pagine totali meno le pagine di copertina.
+                            </p>
+
+                            @if ($modifiedWeightFields !== [])
+                                <div class="flex justify-end">
+                                    <button type="button" wire:click="restoreMagazineDefaults" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Ripristina default rivista</button>
+                                </div>
+                            @endif
+
+                            {{-- Carta: si inserisce la grammatura scritta sulla carta (g/m²),
+                                 il peso a pagina sotto ogni campo è calcolato (WeightPreview). --}}
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Carta</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                @foreach (\App\Support\Weight\WeightParameters::PAPER_FIELDS as $field)
+                                    <x-weight-field :field="$field" :model="'weight.'.$field" :modified="in_array($field, $modifiedWeightFields, true)" :paper="$weightPreview->paper[$field] ?? null" live />
+                                @endforeach
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                @foreach (['formato_base_mm', 'formato_altezza_mm'] as $field)
+                                    <x-weight-field :field="$field" :model="'weight.'.$field" :modified="in_array($field, $modifiedWeightFields, true)" live />
+                                @endforeach
+                                <x-weight-field field="n_copie" model="weight.n_copie" live />
+                                <x-weight-field field="n_bancali" model="weight.n_bancali" live />
+                            </div>
+
+                            <details wire:ignore.self class="rounded-md border border-gray-100 dark:border-gray-700">
+                                <summary class="cursor-pointer select-none px-3 py-2 text-sm text-gray-600 dark:text-gray-400">Avanzate (maggiorazione e tolleranze)</summary>
+                                <div class="px-3 pb-3 grid grid-cols-2 gap-4">
+                                    @foreach (\App\Support\Weight\WeightParameters::ADVANCED_FIELDS as $field)
+                                        <x-weight-field :field="$field" :model="'weight.'.$field" :modified="in_array($field, $modifiedWeightFields, true)" live />
+                                    @endforeach
+                                </div>
+                            </details>
+
+                            <x-weight-preview :preview="$weightPreview" />
+                        </div>
+                    </details>
+
                     <div>
                         <x-input-label for="notes" value="Note (opzionale)" />
                         <textarea id="notes" wire:model="notes" rows="3" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"></textarea>

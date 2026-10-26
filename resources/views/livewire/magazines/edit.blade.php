@@ -58,6 +58,33 @@
                         <x-input-error class="mt-2" :messages="$errors->get('battente_counted_in_total')" />
                     </div>
 
+                    {{-- Default del calcolo peso: copiati su ogni nuovo numero (Issues\Create). --}}
+                    <fieldset class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-4">
+                        <legend class="px-1 font-medium text-gray-700 dark:text-gray-300">⚖️ Carta e peso — valori di default</legend>
+                        <p class="text-xs font-medium text-amber-700 dark:text-amber-400">
+                            Valgono solo per i nuovi numeri: i numeri già creati mantengono i propri parametri (si modificano dal pannello Peso di ciascun numero).
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Inserisci la grammatura scritta sulla carta (es. 80 per l'interno, 170 per la copertina): il peso di ogni pagina è calcolato automaticamente.</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            @foreach (\App\Support\Weight\WeightParameters::PAPER_FIELDS as $field)
+                                <x-weight-field :field="$field" :model="'weight.'.$field" :paper="$weightPreview->paper[$field] ?? null" live />
+                            @endforeach
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            @foreach (array_diff(\App\Support\Weight\WeightParameters::FIELDS, \App\Support\Weight\WeightParameters::PAPER_FIELDS) as $field)
+                                <x-weight-field :field="$field" :model="'weight.'.$field" live />
+                            @endforeach
+                        </div>
+
+                        {{-- Pagine di prova: solo per l'anteprima, la rivista non ha un numero di pagine
+                             proprio (Magazines\Edit::$previewTotalPages, mai salvato). --}}
+                        <div class="max-w-xs">
+                            <x-input-label for="previewTotalPages" value="Pagine totali per l'anteprima (non salvate)" />
+                            <input id="previewTotalPages" type="text" inputmode="numeric" wire:model.live.debounce.300ms="previewTotalPages" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm" />
+                        </div>
+                        <x-weight-preview :preview="$weightPreview" title="Anteprima con questi default" />
+                    </fieldset>
+
                     <div>
                         <x-input-label for="notes" value="Note (opzionale)" />
                         <textarea id="notes" wire:model="notes" rows="3" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"></textarea>

@@ -4,7 +4,7 @@
 
 Elenco unico delle informazioni **non deducibili dal repository**, o deducibili solo in parte. Ogni voce indica dove compare nella documentazione. Sono le domande da fare a chi passa le consegne **prima** che se ne vada. Le voci sono raggruppate per tema e ordinate per urgenza.
 
-Totale: **17 domande** (35 marcature `⚠️ DA VERIFICARE` nei file).
+Totale: **22 domande**: 17 sul progetto (35 marcature `⚠️ DA VERIFICARE` nei file) e 5 sul calcolo del peso rivista (sezione dedicata).
 
 ## Ambienti e accessi (bloccanti per operare)
 
@@ -42,6 +42,16 @@ Totale: **17 domande** (35 marcature `⚠️ DA VERIFICARE` nei file).
 | DV-15 | In modalità `./setup.sh dev`, le modifiche PHP sono visibili senza riavviare `app`? (OPcache `validate_timestamps=0` non è sovrascritto in dev) | [01-setup-locale.md](01-setup-locale.md#5-differenze-tra-setupsh-e-setupsh-dev), [10-debugging.md](10-debugging.md#cache--config-stale), [11-debito-tecnico.md](11-debito-tecnico.md) (#20) | Modifica un testo in una view o un controller e ricarica; `docker compose exec app php -i \| grep validate_timestamps` |
 | DV-16 | Il container **`scheduler`** esegue davvero `timone:send-deadline-reminders` ogni giorno? (`HANDOFF.md`: validato solo a livello di sintassi) | [08-job-e-scheduler.md](08-job-e-scheduler.md#scheduler) | `docker compose logs scheduler` sul server; `issues.deadline_reminder_sent_at` valorizzati |
 | DV-17 | Un PDF molto pesante può superare il **timeout di 60 s** del worker durante il rendering delle miniature? | [08-job-e-scheduler.md](08-job-e-scheduler.md#infrastruttura-asincrona) | Log del worker (`run too long`), `failed_jobs` |
+
+## Calcolo peso rivista — da confermare con chi gestisce stampa e spedizioni
+
+| # | Domanda | Dove compare | A chi chiedere |
+|---|---|---|---|
+| DV-18 | Cosa rappresenta esattamente il **+2 % di maggiorazione** dell'Excel (inchiostro, colla/legatura, cellophane, altro)? È lo stesso per tutte le testate? | [03-dominio-e-flussi.md](03-dominio-e-flussi.md#calcolo-peso-rivista), [11-debito-tecnico.md](11-debito-tecnico.md) (#33) | Tipografia / chi ha creato il foglio Excel |
+| DV-19 | **Tolleranza della grammatura** reale: quanto scosta la carta usata (scheda tecnica della cartiera)? Il default del 4 % e quello di 1 mm sul formato sono corretti? | [11-debito-tecnico.md](11-debito-tecnico.md) (#34) | Ufficio acquisti carta / tipografia |
+| DV-20 | **Peso reale dei bancali**: 20 kg vale per tutti? Legno o plastica, con o senza imballo? | [11-debito-tecnico.md](11-debito-tecnico.md) (#35) | Chi organizza le spedizioni |
+| DV-21 | Gli **scaglioni** 250/350/500/1000 g sono quelli **postali in vigore** per il contratto di spedizione? Il limite è **inclusivo** (500,0 g → scaglione 500)? | [05-configurazione.md](05-configurazione.md#configpeso_rivistaphp-calcolo-peso-rivista), [11-debito-tecnico.md](11-debito-tecnico.md) (#36) | Ufficio spedizioni / contratto con il vettore |
+| DV-22 | Nel timone, il **numero totale di pagine comprende le copertine**? Es. NM: 208 interne + 6 di copertina = 214 nel timone. Il calcolo assume di sì | [03-dominio-e-flussi.md](03-dominio-e-flussi.md#calcolo-peso-rivista), [11-debito-tecnico.md](11-debito-tecnico.md) (#37) | Redazione |
 
 ## Altre cose da chiedere (non marcate nei file, ma utili)
 

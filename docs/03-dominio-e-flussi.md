@@ -160,3 +160,209 @@ Limite noto: non è consapevole dei gruppi di pagine (`HANDOFF.md`, "Debito noto
 ## Flusso 14 — Manuale in-app
 
 `GET /manuale` → `DocumentationController::show` legge `config('app.manual_path')` (= `MANUALE_UTENTE.md`), sostituisce `{{APP_URL}}` e lo converte con `App\Support\ManualRenderer` (CommonMark, HTML grezzo escapato). Se il file manca, mostra un messaggio + `report()` invece di un 500. `.dockerignore` include esplicitamente `!MANUALE_UTENTE.md`.
+
+## Calcolo peso rivista
+
+Peso teorico di una copia del numero, con margine d'errore, scaglione di spedizione e peso della tiratura. Riproduce il foglio Excel usato in redazione. Tutto il calcolo sta in `app/Support/Weight/MagazineWeightCalculator.php`, una classe pura senza Eloquent, Livewire né `config()`: scaglioni e limiti di plausibilità di grammature e formato (`WeightLimits`) arrivano come parametri.
+
+### Formule
+
+Unità di misura:
+
+| Termine | Unità |
+|---|---|
+| Formato (base, altezza) | salvato in **mm interi** (`formato_base_mm`, `formato_altezza_mm`); nel calcolo viene diviso per 10 (cm) |
+| Grammatura | g/m² |
+| Pagine | facciate |
+| Pesi della copia | g |
+| Tiratura | kg |
+
+```text
+area_cm2         = (formato_base_mm / 10) × (formato_altezza_mm / 10)
+peso_interno_g   = area_cm2 × grammatura_interno   / 10000 × (pagine_interno   / 2)
+peso_copertina_g = area_cm2 × grammatura_copertina / 10000 × (pagine_copertina / 2)
+peso_copia_g     = (peso_interno_g + peso_copertina_g) × (1 + maggiorazione_percentuale / 100)
+peso_netto_kg    = peso_copia_g × n_copie / 1000
+peso_lordo_kg    = peso_netto_kg + n_bancali × peso_bancale_kg
+```
+
+Da dove vengono i numeri della formula:
+
+- **`area × grammatura / 10000`**: è il peso in grammi di **un foglio**, perché cm² × g/m² diviso 10000 cm²/m² dà grammi.
+- **`/ 2`**: ogni foglio fisico ha due facciate, cioè due pagine.
+- Le costanti di conversione sono in `MagazineWeightCalculator` (`MM_PER_CM`, `CM2_PER_M2`, `PAGES_PER_SHEET`, `GRAMS_PER_KG`).
+- **Maggiorazione e peso del bancale sono parametri**, non costanti: `maggiorazione_percentuale` (default 2,00) e `peso_bancale_kg` (default 20,00).
+
+### Grammatura, formato e peso di una pagina
+
+Si inserisce la **grammatura** scritta sulla carta (g/m², es. 80 per l'interno, 170 per la copertina), **non** il peso di una pagina: il peso a pagina lo calcola il sistema da formato e grammatura. Una pagina è mezzo foglio (un foglio ha due facciate):
+
+```text
+peso_pagina_g = (base_mm / 1000) × (altezza_mm / 1000) × grammatura / 2
+              = MagazineWeightCalculator::pesoPagina(base_mm, altezza_mm, grammatura)
+```
+
+Interno e copertina pesano diversamente perché hanno grammature diverse. Esempi:
+
+| Formato | Interno 80 g/m² | Copertina 170 g/m² |
+|---|---|---|
+| NM 210 × 270 mm | 2,268 g/pag. × 208 pag. = 471,744 g | 4,8195 g/pag. × 6 pag. = 28,917 g |
+| 210 × 297 mm | 2,4948 g/pag. | 5,30145 g/pag. |
+
+NM: (471,744 + 28,917) × 1,02 = **510,67422 g**. `pesoPagina()` è il mattone dell'unica formula: `weights()` calcola interno e copertina con `pesoPagine()` (= `pesoPagina() × pagine`), e l'anteprima nei form mostra lo stesso valore sotto ogni grammatura (es. "80 g/m² → 2,268 g a pagina · 208 pagine = 471,7 g", `App\Support\Weight\WeightPreview` + `PaperLine`). Nessun altro punto (Livewire, Blade, JS) ricalcola pesi.
+
+**Errori di unità**: due errori danno un peso copia di pochi grammi invece di ~500 g:
+- grammatura scritta come peso di una pagina: 0,8 al posto di 80 → (21 × 27 × 0,8) / 10000 × 104 = 4,717 g invece di 471,744 g;
+- formato scritto in centimetri: 21 × 27 al posto di 210 × 270 mm → area 100 volte più piccola, NM = 5,107 g invece di 510,674 g.
+
+Per questo grammature e formato hanno un intervallo ammesso in `config/peso_rivista.php` (limiti inclusi): `grammatura.min`/`max` = 30–400 g/m², `formato.min`/`max` = 50–1000 mm per base e altezza. Entrambi passano da `App\Support\Weight\WeightLimits` (due `ParameterRange` con i rispettivi messaggi):
+- **nei form** (validazione server, `WeightParameters::rules()` / `messages()`):
+  - grammatura sotto 30 → "Inserisci la grammatura della carta in g/m² (es. 80), non il peso di una pagina. Il peso a pagina viene calcolato automaticamente."; sopra 400 → "Valore troppo alto per una carta da rivista, controlla l'unità di misura.";
+  - formato sotto 50 → "Inserisci il formato in millimetri (es. 210 × 270), non in centimetri."; sopra 1000 → "Valore troppo alto per il formato di una rivista, controlla l'unità di misura (millimetri).";
+- **nel calcolo** (`MagazineWeightCalculator::calculate(..., WeightLimits)`): un valore fuori intervallo già salvato nel DB dà un risultato **incompleto** con errore esplicito (es. "Formato base 21 mm fuori dall'intervallo ammesso (50–1000 mm). Inserisci il formato in millimetri…"), mai un peso plausibile ma sbagliato. `Issue::weight()`, il pannello e le anteprime passano sempre `WeightLimits::fromConfig()`. Con un formato fuori intervallo, anche la riga del peso a pagina non mostra un peso ma rimanda al formato.
+
+I campi accettano sia la virgola sia il punto decimale (`80`, `80,5`, `80.5`): `WeightParameters::normalizeInput()` converte la virgola prima di validazione, anteprima e salvataggio.
+
+Le **pagine interne** non sono un campo salvato. Valgono `issues.total_pages − issues.pagine_copertina` (`Issue::weightInput()`, `app/Models/Issue.php:189`), perché nel timone le copertine occupano posizioni fisiche dentro `total_pages` (vedi Flusso 4 e `Issue::displayedTotalPages()`). Si usa il parametro `pagine_copertina` e non il conteggio dei ruoli copertina, perché Copertina II/III e Battente si assegnano a mano e spesso mancano. Se le pagine con ruolo copertina o battente nel timone non coincidono con `pagine_copertina`, il pannello mostra solo un **avviso**.
+
+**Precisione**: tutti i calcoli usano float nativi, senza bcmath. I decimal arrivano da Eloquent come stringhe e vengono convertiti in un punto solo, `MagazineWeightInput::fromArray()`. Nessun passaggio intermedio è arrotondato. L'arrotondamento avviene solo in visualizzazione (`app/Support/Weight/WeightFormatter.php`):
+
+| Valore | Formato |
+|---|---|
+| Peso copia | 1 decimale |
+| Margine | grammo intero per eccesso |
+| kg | 2 decimali |
+
+La formattazione è italiana: virgola per i decimali, punto per le migliaia.
+
+### Margine d'errore (caso peggiore)
+
+Il peso è teorico: la carta reale scosta dalla grammatura nominale, il refilo varia e la maggiorazione è una stima. Il margine **non** è un'approssimazione lineare. La formula completa viene ricalcolata due volte:
+
+```text
+peso_max = formula con  base + tolleranza_formato_mm,  altezza + tolleranza_formato_mm,
+                        grammature × (1 + tolleranza_grammatura_perc / 100),
+                        maggiorazione + tolleranza_maggiorazione_perc
+peso_min = formula con  base − tolleranza_formato_mm,  altezza − tolleranza_formato_mm,
+                        grammature × (1 − tolleranza_grammatura_perc / 100),
+                        maggiorazione − tolleranza_maggiorazione_perc
+errore_sopra_g = peso_max − peso_nominale
+errore_sotto_g = peso_nominale − peso_min
+margine_g      = ceil(max(errore_sopra_g, errore_sotto_g))
+```
+
+| Tolleranza | Default | Cosa rappresenta |
+|---|---|---|
+| `tolleranza_formato_mm` | 1,00 mm | variazione del refilo su base e altezza |
+| `tolleranza_grammatura_perc` | 4,00 % | scostamento della carta reale dalla grammatura nominale (interno e copertina) |
+| `tolleranza_maggiorazione_perc` | 1,00 punti % | incertezza sulla maggiorazione (2 % ± 1 → tra 1 % e 3 %) |
+
+Prima del `ceil` il valore viene arrotondato a 9 decimali (`CEIL_GUARD_DECIMALS`): così il rumore del double non fa salire di un grammo un margine esattamente intero.
+
+### Scaglioni
+
+Limiti in `config/peso_rivista.php` (`scaglioni`, oggi 250, 350, 500, 1000 g). Una copia ricade nel **primo scaglione il cui limite è maggiore o uguale** al peso (`MagazineWeightCalculator::bracketFor()`):
+
+| Peso | Scaglione |
+|---|---|
+| 249,9 g | 250 |
+| 250,0 g | 250 (limite incluso) |
+| 250,01 g | 350 |
+| 509 g | 1000 |
+| 1000,0 g | 1000 |
+| 1000,1 g | Fuori scaglione |
+
+Campi del risultato:
+
+| Campo | Significato |
+|---|---|
+| `scaglione` | scaglione del peso nominale |
+| `scaglionePeggiore` | scaglione di `peso_max` |
+| `aRischio` | `scaglionePeggiore ≠ scaglione` |
+| `grammiAlLimite` | limite dello scaglione − peso nominale (positivo = spazio residuo) |
+
+Badge nel pannello:
+- **verde**: dentro lo scaglione anche nel caso peggiore;
+- **giallo**: a rischio, con il messaggio "Rischio di passare allo scaglione X g";
+- **rosso**: fuori scaglione.
+
+### Validazioni (`MagazineWeightCalculator`, errori e avvisi)
+
+**Errori bloccanti**: il risultato è `complete = false`, senza pesi e senza eccezioni.
+- base o altezza fuori da `WeightLimits` (50–1000 mm) e grammature fuori da `WeightLimits` (30–400 g/m²); quando il calcolo è chiamato senza limiti (solo test unitari) si controlla soltanto che siano > 0;
+- pagine interne o di copertina **dispari** ("mezzo foglio");
+- pagine interne negative (`total_pages` < `pagine_copertina`);
+- tolleranze negative;
+- maggiorazione − tolleranza maggiorazione < 0;
+- tolleranza formato ≥ formato;
+- tolleranza grammatura ≥ 100 %.
+
+**Avvisi**:
+- pagine interne non multiple di 4 (segnature);
+- ruoli copertina nel timone diversi da `pagine_copertina`;
+- bancali senza peso del bancale.
+
+**Parametri mancanti**: risultato `complete = false` con l'elenco `missing`. In UI compare "Parametri peso da configurare". `n_copie` e `n_bancali` non sono obbligatori: senza, manca solo il peso della tiratura.
+
+### Flusso dei parametri
+
+1. **Default della rivista** (`magazines.*`): si impostano in `/riviste/{slug}/modifica` (`App\Livewire\Magazines\Edit`), con la nota "Valgono solo per i nuovi numeri". Le modifiche vanno in cronologia con l'azione `magazine.weight_defaults_changed`. Anche qui c'è il peso a pagina sotto le grammature e un'anteprima, calcolata su "Pagine totali per l'anteprima (non salvate)" (`Magazines\Edit::$previewTotalPages`, proposte dall'ultimo numero della rivista) e confrontata con i default salvati.
+2. **Copia alla creazione del numero**: `App\Livewire\Issues\Create::mount()` pre-compila `$weight` con `WeightParameters::formValuesFrom($magazine)`. La sezione "Carta e peso" del form permette di cambiarli; i campi diversi dal default mostrano il badge "modificato" (`modifiedWeightFields()`) e l'anteprima live usa `wire:model.live.debounce.300ms`. Al salvataggio, `Issue::create([... ...WeightParameters::toDatabase($validated['weight'])])`.
+3. **Modifica sul numero**: pulsante "Modifica parametri" del pannello Peso → modale → `WeightPanel::saveParams()`. Serve il permesso `update` sull'issue, cioè Admin o Redattore della rivista. Le modifiche vanno in cronologia con l'azione `issue.weight_params_changed`. La modale si apre con la sezione **"Carta"** (grammatura interno, grammatura copertina, pagine copertina), con sotto ogni grammatura il peso a pagina e il totale della sezione. Tutti i campi aggiornano con debounce 300 ms un'**anteprima prima del salvataggio** (`WeightPreview::fromForm(..., saved: $issue->weight())`): peso copia ± margine, scaglione e differenza dal valore salvato (es. "−60,1 g rispetto al valore salvato (510,7 g), passa da scaglione 1.000 g a 500 g."). I campi diversi dal default della rivista hanno il badge "modificato"; "Ripristina default rivista" (`WeightPanel::restoreMagazineDefaults()`) ricarica nella modale formato, carta, maggiorazione e tolleranze attuali della rivista, senza salvare e senza toccare tiratura e peso reale. **Il salvataggio scrive solo sul numero, mai sui default della rivista.** Pagine copertina: numero pari tra 2 e 12 (`config/peso_rivista.php` → `pagine_copertina`).
+4. **Ricalcolo quando cambiano le pagine**: il pannello ricalcola sempre da `total_pages` e si ri-renderizza su tre eventi:
+   - `IssuePageCountUpdated` via Reverb, per le modifiche di altri utenti;
+   - l'evento Livewire `issue-page-count-changed`, emesso da `Grid::resizePages()` (`app/Livewire/Timone/Grid.php:341`) per il proprio client;
+   - lo stesso evento emesso da `Grid::checkForUpdates()` (`:1150`), cioè dal polling di fallback senza Reverb.
+
+**Regola: cambiare i default della rivista non tocca i numeri già creati.** Il numero ha una **copia** dei parametri e `Issue::weightInput()` legge solo le colonne dell'issue. Motivo: se cambia la carta della testata, i numeri già usciti non devono cambiare peso. È coperto da `tests/Feature/Livewire/IssueWeightTest.php` ("changing the magazine defaults does not change the weight of an existing issue").
+
+### Calibrazione con il peso reale
+
+1. Dopo la stampa, si pesa una copia e si inserisce il valore in "Peso reale misurato (g)" nella modale del pannello (`issues.peso_reale_g`).
+2. Il pannello mostra lo scostamento in g e in % rispetto al teorico, più la **maggiorazione suggerita**:
+   `maggiorazione_suggerita = (peso_reale_g / (peso_interno_g + peso_copertina_g) − 1) × 100`
+   cioè la maggiorazione che avrebbe dato esattamente il peso reale (`MagazineWeightCalculator::suggestedSurcharge()`).
+3. Il pulsante "Copia nei default della rivista" chiede conferma (`wire:confirm`) e scrive la maggiorazione **solo nei default della rivista**, arrotondata a 2 decimali (`WeightPanel::applySuggestedSurcharge()`, solo per chi può modificare la rivista, cioè l'Admin). Non modifica mai il numero corrente né gli altri numeri.
+
+**Perché non si applica da sola**: una singola pesata può essere sbagliata (copia anomala, bilancia, carta di un lotto diverso). La decisione resta a una persona, e vale solo per i numeri futuri.
+
+### Simulazione +/- pagine
+
+Il campo "Simula +/- pagine interne" chiama `MagazineWeightCalculator::simulate()` e mostra peso e scaglione con N pagine in più o in meno. È un calcolo puro, non scrive su database.
+
+`addablePages()` indica quante pagine si possono ancora aggiungere restando nello scaglione attuale:
+- a passi di 2 pagine (un foglio);
+- sia sul peso nominale sia sul peso massimo (margine compreso);
+- `null` se il numero è già fuori scaglione.
+
+### Casi di verifica (foglio Excel)
+
+Tolleranze di default (1 mm, 4 %, 1 punto). Gli stessi valori sono in `tests/Unit/MagazineWeightCalculatorTest.php`.
+
+| Caso | Formato | Interno pag. / g | Cop. pag. / g | Copie | Bancali | Interno g | Copertina g | Copia g | Netto kg | Lordo kg | ± g | Scaglione |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| NM | 210 × 270 mm | 208 / 80 | 6 / 170 | 8200 | 5 | 471,744 | 28,917 | 510,67422 | 4187,528604 | 4287,528604 | 31 | 1000 (peggiore 1000) |
+| GL | 210 × 297 mm | 80 / 80 | 4 / 170 | 6200 | 5 | 199,584 | 21,2058 | 225,205596 | 1396,2746952 | 1496,2746952 | 14 | 250 (peggiore 250) |
+| F&C | 210 × 297 mm | 112 / 80 | 4 / 170 | 9500 | 5 | 279,4176 | 21,2058 | 306,635868 | 2913,040746 | 3013,040746 | 19 | 350 (peggiore 350) |
+
+Esempio a mano, GL:
+- area = 21 × 29,7 = 623,7 cm²
+- interno = 623,7 × 80 / 10000 × 40 = 199,584 g
+- copertina = 623,7 × 170 / 10000 × 2 = 21,2058 g
+- copia = 220,7898 × 1,02 = 225,205596 g
+- netto = 225,205596 × 6200 / 1000 = 1396,2746952 kg
+- lordo = 1396,2746952 + 5 × 20 = 1496,2746952 kg
+
+Nel timone, per ottenere le 208 pagine interne di NM, il numero deve avere `total_pages` = 214 (208 + 6 di copertina).
+
+### File coinvolti, in ordine di esecuzione
+
+1. `config/peso_rivista.php`: scaglioni, intervallo grammature, limiti pagine copertina.
+2. `app/Livewire/Magazines/Edit.php` + `resources/views/livewire/magazines/edit.blade.php`: default della rivista.
+3. `app/Livewire/Issues/Create.php` + `resources/views/livewire/issues/create.blade.php`: copia dei default, anteprima.
+4. `app/Models/Issue.php` → `weightInput()` / `weight()`: costruisce l'input dalle colonne dell'issue e da `total_pages`.
+5. `app/Support/Weight/MagazineWeightInput.php` (DTO readonly) → `MagazineWeightCalculator.php` → `MagazineWeightResult.php` (DTO readonly).
+6. `app/Support/Weight/WeightParameters.php`: elenco campi, etichette, regole e messaggi di validazione, normalizzazione della virgola, campi "modificati", condivisi dai tre form. `WeightLimits.php` + `ParameterRange.php`: limiti di grammature e formato (config) con i messaggi, condivisi da validazione e calcolo. `WeightPreview.php` + `PaperLine.php`: anteprima dei form (peso a pagina, differenza dal salvato).
+7. `app/Livewire/Timone/WeightPanel.php` + `resources/views/livewire/timone/weight-panel.blade.php`: pannello, modale, calibrazione, simulazione. Montato in `resources/views/livewire/issues/show.blade.php`.
+8. `resources/views/components/weight-summary.blade.php`, `weight-field.blade.php` (campo + riga peso a pagina) e `weight-preview.blade.php` (anteprima + differenza): componenti Blade condivisi. `app/Support/Weight/WeightFormatter.php`: formattazione.
+9. `app/Livewire/Timone/Grid.php:341` e `:1150`: evento `issue-page-count-changed`.

@@ -18,7 +18,7 @@ app/
 │   ├── Magazines/         Index (dashboard), Show, Create, Edit
 │   ├── Issues/            Show (contenitore del timone), Create
 │   ├── Timone/            Grid (il timone vero e proprio), ContentCreate, CoverSection,
-│   │                      AdReservations, ActivityLogPanel, PageFileHistory
+│   │                      AdReservations, ActivityLogPanel, PageFileHistory, WeightPanel (pannello Peso)
 │   └── Users/             Index, Create, Edit (solo Admin)
 ├── Mail/                  IssueDeadlineReminder (mail di sollecito scadenza stampa)
 ├── Models/                14 modelli Eloquent (vedi 04-database.md)
@@ -26,10 +26,12 @@ app/
 ├── Policies/              MagazinePolicy, IssuePolicy, UserPolicy (auto-discovery)
 ├── Providers/             AppServiceProvider: registra l'observer, forza root URL da APP_URL
 ├── Support/               23 classi di logica di dominio "pura" (statiche, testabili senza Livewire)
+│   └── Weight/            Calcolo peso rivista: calculator puro, DTO readonly di input e risultato, parametri, limiti di grammature e formato (WeightLimits/ParameterRange), anteprima dei form (WeightPreview/PaperLine), formattazione
 └── View/Components/       AppLayout, GuestLayout (Breeze)
 bootstrap/app.php          Routing, trustProxies('*'), health check /up
 config/timone.php          Configurazione specifica del progetto (2 chiavi)
-database/migrations/       33 migration (vedi 04-database.md)
+config/peso_rivista.php    Scaglioni di peso per il calcolo peso rivista
+database/migrations/       35 migration (vedi 04-database.md)
 database/seeders/          DatabaseSeeder: dataset demo (NON usare in produzione)
 database/factories/        Factory per tutti i modelli di dominio
 docker/                    nginx/default.conf, php/{opcache,uploads}.ini, mysql/backup.sh

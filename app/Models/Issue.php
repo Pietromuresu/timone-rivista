@@ -4,6 +4,11 @@ namespace App\Models;
 
 use App\Enums\IssueStatus;
 use App\Enums\PageRole;
+use App\Support\Weight\MagazineWeightCalculator;
+use App\Support\Weight\MagazineWeightInput;
+use App\Support\Weight\MagazineWeightResult;
+use App\Support\Weight\WeightLimits;
+use App\Support\Weight\WeightParameters;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +28,21 @@ class Issue extends Model
         'total_pages',
         'notes',
         'reorder_version',
+        // Parametri del peso (WeightParameters::FIELDS + ISSUE_ONLY_FIELDS),
+        // vedi weightInput() per il perché sono una copia e non un riferimento.
+        'formato_base_mm',
+        'formato_altezza_mm',
+        'grammatura_interno',
+        'grammatura_copertina',
+        'pagine_copertina',
+        'maggiorazione_percentuale',
+        'peso_bancale_kg',
+        'tolleranza_grammatura_perc',
+        'tolleranza_formato_mm',
+        'tolleranza_maggiorazione_perc',
+        'n_copie',
+        'n_bancali',
+        'peso_reale_g',
     ];
 
     protected function casts(): array
@@ -34,6 +54,12 @@ class Issue extends Model
             'status' => IssueStatus::class,
             'total_pages' => 'integer',
             'reorder_version' => 'integer',
+            // Stessa scelta di Magazine::casts(): cast solo sugli interi.
+            'formato_base_mm' => 'integer',
+            'formato_altezza_mm' => 'integer',
+            'pagine_copertina' => 'integer',
+            'n_copie' => 'integer',
+            'n_bancali' => 'integer',
         ];
     }
 
@@ -140,5 +166,52 @@ class Issue extends Model
             : $this->pages()->where('role', PageRole::Battente->value)->count();
 
         return $this->total_pages - $coverCount - $battenteCount;
+    }
+
+    /**
+     * Input del calcolo del peso teorico di una copia di QUESTO numero.
+     *
+     * I parametri (formato, carta, maggiorazione, tolleranze, tiratura) sono
+     * letti SOLO dalle colonne dell'issue, mai dalla rivista: vengono copiati
+     * dai default della rivista alla creazione del numero (Issues\Create) e
+     * da lì sono indipendenti. Motivo: se domani cambia la carta della
+     * testata, i numeri già usciti non devono cambiare peso — modificare i
+     * default della rivista vale solo per i numeri creati dopo (coperto da
+     * tests/Feature/Livewire/IssueWeightTest.php).
+     *
+     * Le pagine interne NON sono un parametro salvato: nel timone le
+     * copertine occupano posizioni fisiche dentro total_pages (vedi
+     * displayedTotalPages() e HANDOFF.md, sessione 2026-09-01), quindi
+     * interne = total_pages − pagine_copertina del numero. Si usa il
+     * parametro e non il conteggio dei ruoli copertina perché Copertina2/3 e
+     * Battente si assegnano a mano e spesso mancano; il conteggio dei ruoli
+     * serve solo per un avviso di incoerenza.
+     */
+    public function weightInput(): MagazineWeightInput
+    {
+        $pagineInterno = $this->pagine_copertina !== null
+            ? $this->total_pages - $this->pagine_copertina
+            : null;
+
+        $coverRoles = array_map(fn (PageRole $role) => $role->value, array_filter(
+            PageRole::cases(),
+            fn (PageRole $role) => $role !== PageRole::Interna,
+        ));
+
+        return MagazineWeightInput::fromArray(
+            $this->only([...WeightParameters::FIELDS, ...WeightParameters::ISSUE_ONLY_FIELDS]),
+            $pagineInterno,
+            $this->pages()->whereIn('role', $coverRoles)->count(),
+        );
+    }
+
+    /**
+     * Passa sempre i limiti della config: una grammatura o un formato
+     * sporchi già salvati (0,8 invece di 80, 21 invece di 210) devono dare
+     * un risultato incompleto, non un peso di pochi grammi (vedi WeightLimits).
+     */
+    public function weight(): MagazineWeightResult
+    {
+        return MagazineWeightCalculator::calculate($this->weightInput(), config('peso_rivista.scaglioni'), WeightLimits::fromConfig());
     }
 }

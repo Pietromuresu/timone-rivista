@@ -3,7 +3,7 @@
 [← Indice](README.md) · Vedi anche: [03-dominio-e-flussi.md](03-dominio-e-flussi.md), [09-deploy.md](09-deploy.md), [10-debugging.md](10-debugging.md)
 
 - **Motore**: MySQL 8.4 (`docker-compose.yml`, servizio `mysql`, volume `mysql_data`). Nei test si usa SQLite in-memory (`phpunit.xml`).
-- **Schema**: 33 migration in `database/migrations/`, tutte Laravel standard. **Nessuna query raw, nessuna stored procedure, view o trigger** (grep di `DB::raw|whereRaw|selectRaw` vuoto, confermato dall'audit in `HANDOFF.md` §Fase 6.2). L'unico uso di `DB::table` è dentro la migration `2026_10_12_100001`.
+- **Schema**: 35 migration in `database/migrations/`, tutte Laravel standard. **Nessuna query raw, nessuna stored procedure, view o trigger** (grep di `DB::raw|whereRaw|selectRaw` vuoto, confermato dall'audit in `HANDOFF.md` §Fase 6.2). L'unico uso di `DB::table` è dentro la migration `2026_10_12_100001`.
 - **Charset/collation**: default di Laravel (`config/database.php`, `DB_CHARSET`/`DB_COLLATION` non impostati in `.env.example`).
 
 ## Schema ER testuale
@@ -40,6 +40,55 @@ Colonne `id` e `timestamps` omesse. FK = foreign key. "Scrive" e "Legge" indican
 - **Scopo**: rivista.
 - **Colonne**: `name`, `slug` (unique, usato nelle URL), `periodicity` (`mensile`/`settimanale`/`altro`), `color` (hex), `ad_threshold_percentage` (decimal 5,2, nullable: soglia di allarme del carico pubblicitario), `battente_counted_in_total` (bool), `notes`, `redattore_id` (FK users, nullOnDelete: destinatario dei solleciti).
 - **Scrive**: `Magazines\Create`/`Edit`, `Grid::updateAdThreshold`.
+
+### Parametri del peso su `magazines` e `issues` (migration `2026_10_26_*`)
+
+Aggiunti da due migration:
+- `database/migrations/2026_10_26_100000_add_weight_defaults_to_magazines_table.php` (default sulla rivista);
+- `database/migrations/2026_10_26_100001_add_weight_params_to_issues_table.php` (copia sul numero).
+
+Il loro `down()` elimina con `dropColumn` esattamente le colonne aggiunte, quindi i valori inseriti vanno persi. Up, down e di nuovo up sono stati verificati su SQLite il 2026-10-26.
+
+Logica e flusso: [03-dominio-e-flussi.md](03-dominio-e-flussi.md#calcolo-peso-rivista).
+
+Colonne presenti **con lo stesso nome** su entrambe le tabelle (`App\Support\Weight\WeightParameters::FIELDS`). Sono tutte nullable: un valore vuoto produce in UI "Parametri peso da configurare".
+
+| Colonna | Tipo | Unità | Default DB |
+|---|---|---|---|
+| `formato_base_mm` | unsignedSmallInteger | mm interi (210 = 21 cm) | NULL |
+| `formato_altezza_mm` | unsignedSmallInteger | mm interi | NULL |
+| `grammatura_interno` | decimal(6,2) | g/m² | NULL |
+| `grammatura_copertina` | decimal(6,2) | g/m² | NULL |
+| `pagine_copertina` | unsignedTinyInteger | pagine | 4 |
+| `maggiorazione_percentuale` | decimal(5,2) | % | 2.00 |
+| `peso_bancale_kg` | decimal(6,2) | kg | 20.00 |
+| `tolleranza_grammatura_perc` | decimal(4,2) | ± % | 4.00 |
+| `tolleranza_formato_mm` | decimal(4,2) | ± mm | 1.00 |
+| `tolleranza_maggiorazione_perc` | decimal(4,2) | ± punti % | 1.00 |
+
+Solo su `issues` (`WeightParameters::ISSUE_ONLY_FIELDS`):
+
+| Colonna | Tipo | Unità | Default DB |
+|---|---|---|---|
+| `n_copie` | unsignedInteger | copie (tiratura) | NULL |
+| `n_bancali` | unsignedSmallInteger | bancali | NULL |
+| `peso_reale_g` | decimal(8,2) | g, peso misurato a stampa avvenuta | NULL |
+
+Chi le scrive:
+
+| Colonne | Scritte da |
+|---|---|
+| Default su `magazines` | `App\Livewire\Magazines\Edit::save()`; `maggiorazione_percentuale` anche da `App\Livewire\Timone\WeightPanel::applySuggestedSurcharge()` (calibrazione, solo Admin) |
+| Parametri su `issues` | `App\Livewire\Issues\Create::save()` (copia dei default della rivista) e `WeightPanel::saveParams()` |
+
+Le pagine interne **non** sono una colonna: si derivano da `issues.total_pages − issues.pagine_copertina`.
+
+Cast: solo gli interi (`formato_*_mm`, `pagine_copertina`, `n_copie`, `n_bancali`). I decimal restano grezzi, senza cast `decimal:2`, per evitare la deprecation di `brick/math` (vedi [11-debito-tecnico.md](11-debito-tecnico.md)); li converte a float `MagazineWeightInput::fromArray()`.
+
+Numeri e riviste **già esistenti** al momento della migration:
+- ricevono i default di colonna (pagine copertina 4, maggiorazione 2, tolleranze, peso bancale);
+- formato e grammature restano **NULL**: nessun valore viene indovinato per le riviste esistenti;
+- finché non vengono impostati, il pannello mostra "Parametri peso da configurare".
 
 ### `magazine_user`
 - **Scopo**: pivot di accesso utente ↔ rivista.

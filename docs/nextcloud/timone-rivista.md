@@ -119,10 +119,95 @@ docker compose exec app php artisan migrate:status
 - Ogni pagina di un PDF multipagina salva una copia intera del PDF: tenere d'occhio il disco.
 - Mai lanciare docker compose down -v in produzione: cancella database e file.
 
+## Calcolo peso rivista
+
+Per ogni numero il gestionale calcola il peso teorico di una copia, il margine di errore (± grammi), lo scaglione di spedizione e il peso della tiratura. Usa le stesse formule del foglio Excel usato finora.
+
+### Dove si impostano carta e formato
+
+| Dove | Cosa | Quando modificarlo |
+|---|---|---|
+| Rivista, pagina "Modifica rivista", sezione "Carta e peso — valori di default" (solo Admin) | Formato in mm, grammatura interno e copertina, pagine di copertina, maggiorazione, peso bancale, tolleranze | Quando cambia la carta o il formato della testata. Vale solo per i numeri creati dopo |
+| Nuovo numero, sezione "Carta e peso" del form | Gli stessi valori, già compilati con quelli della rivista, più n. copie e n. bancali | Quando un singolo numero esce con carta, copertina o tiratura diverse. Un badge "modificato" segnala i valori diversi dalla rivista |
+| Numero già creato, pannello "Peso", pulsante "Modifica parametri" | Tutti i parametri del numero, più il peso reale misurato. In cima c'è la sezione "Carta": grammatura interno, grammatura copertina, pagine copertina | Per correggere un numero, cambiarne la carta o inserire il peso reale dopo la stampa |
+
+**Grammatura**: si inserisce la grammatura scritta sulla carta (es. 80 per l'interno, 170 per la copertina), il sistema calcola da solo il peso di ogni pagina. Non va inserito il peso di una pagina: con 0,8 al posto di 80 il peso della copia risulterebbe di pochi grammi. Il sistema accetta solo grammature tra 30 e 400 g/m² e, sotto 30, lo dice esplicitamente. Si può scrivere sia con la virgola sia con il punto (80,5 o 80.5).
+
+Sotto ogni grammatura compare il peso a pagina calcolato, per esempio nel formato 210 × 270 mm:
+
+```text
+80 g/m² → 2,268 g a pagina · 208 pagine = 471,7 g
+170 g/m² → 4,820 g a pagina · 6 pagine = 28,9 g
+```
+
+Le pagine di copertina devono essere un numero pari tra 2 e 12.
+
+Il formato si inserisce in millimetri: 210 × 270, non 21 × 27. Il sistema accetta solo valori tra 50 e 1000 mm e, sotto 50, chiede esplicitamente i millimetri.
+
+### Cambiare la carta di un singolo numero
+
+1. Nella pagina del numero, riquadro "Peso", premere "Modifica parametri".
+2. Nella sezione "Carta" cambiare grammatura interno, grammatura copertina o pagine copertina.
+3. Prima di salvare, l'anteprima in fondo mostra il nuovo peso, il margine, lo scaglione e la differenza dal peso salvato (es. "−60,1 g rispetto al valore salvato (510,7 g), passa da scaglione 1.000 g a 500 g.").
+4. I valori diversi dalla rivista hanno il badge "modificato". "Ripristina default rivista" li riporta ai valori della rivista (non salva da solo).
+5. "Salva" modifica solo questo numero, mai i valori della rivista. La modifica resta nella cronologia.
+
+Le pagine interne non si inseriscono: sono le pagine totali del timone meno le pagine di copertina (esempio: 214 pagine nel timone con 6 di copertina = 208 interne). Se si cambiano le pagine del timone, il peso si aggiorna da solo.
+
+Cambiare i valori della rivista non modifica mai i numeri già creati: ogni numero conserva i suoi.
+
+### Come leggere il pannello Peso
+
+```text
+Peso copia     510,7 g  ± 31 g   (481 – 541 g)
+Scaglione      1000 g   ⚠ a 10,7 g oltre lo scaglione 500 g
+Interno        208 pag. × 80 g/m²   471,7 g
+Copertina      6 pag. × 170 g/m²    28,9 g
+Maggiorazione  +2%                  10,0 g
+Tiratura       8.200 copie → 4.187,53 kg netti / 4.287,53 kg lordi (5 bancali)
+```
+
+| Colore del badge scaglione | Significato |
+|---|---|
+| Verde | La copia sta nello scaglione anche nel caso peggiore |
+| Giallo | A rischio: con il margine d'errore potrebbe passare allo scaglione successivo (compare "Rischio di passare allo scaglione X g") |
+| Rosso | Fuori scaglione: oltre 1000 g |
+
+Se compare "Parametri peso da configurare", mancano dei valori (di solito il formato o le grammature): vanno inseriti con "Modifica parametri".
+
+Il peso è teorico e non preciso al grammo: la carta reale pesa un po' più o un po' meno della grammatura dichiarata e il taglio varia di qualche decimo di millimetro. Il "± g" indica di quanto può scostarsi nel caso peggiore.
+
+### Peso reale dopo la stampa
+
+1. Pesare una copia stampata e inserire il valore in "Peso reale misurato (g)" con "Modifica parametri".
+2. Il pannello mostra la differenza dal teorico e la maggiorazione che avrebbe dato il peso esatto ("Usa questa maggiorazione per i prossimi numeri").
+3. Se la differenza si ripete su più numeri, un Admin può premere "Copia nei default della rivista". Viene chiesta conferma e il valore vale solo per i numeri creati dopo.
+
+Il suggerimento non viene mai applicato da solo: una singola pesata può essere sbagliata.
+
+### Restare in uno scaglione con la simulazione
+
+Nel pannello Peso, il campo "Simula +/- pagine interne" accetta per esempio 8 o -4. Mostra il peso e lo scaglione che si avrebbero aggiungendo o togliendo quelle pagine, senza modificare nulla.
+
+Sotto, il pannello indica quante pagine si possono ancora aggiungere restando nello scaglione attuale, sia sul peso teorico sia considerando il margine. Il conteggio va a passi di 2 pagine; in tipografia si lavora di solito a multipli di 4.
+
+### Scaglioni
+
+| Peso della copia | Scaglione |
+|---|---|
+| fino a 250,0 g | 250 g |
+| da 250,01 a 350,0 g | 350 g |
+| da 350,01 a 500,0 g | 500 g |
+| da 500,01 a 1000,0 g | 1000 g |
+| oltre 1000,0 g | Fuori scaglione |
+
+Gli scaglioni sono definiti nel file config/peso_rivista.php del repository: per cambiarli serve uno sviluppatore. Il limite è incluso (500,0 g sta nello scaglione 500). Da confermare con l'ufficio spedizioni: vedi docs/DA-VERIFICARE.md, domande DV-18 – DV-22.
+
 ## Documentazione completa nel repo
 
 - docs/README.md (indice)
 - docs/01-setup-locale.md
+- docs/03-dominio-e-flussi.md (sezione "Calcolo peso rivista": formule, margine, casi di verifica)
 - docs/09-deploy.md
 - docs/10-debugging.md
 - docs/11-debito-tecnico.md

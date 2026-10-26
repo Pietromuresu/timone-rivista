@@ -6,6 +6,10 @@ use App\Enums\Periodicity;
 use App\Enums\UserRole;
 use App\Models\Magazine;
 use App\Models\User;
+use App\Support\ActivityLogger;
+use App\Support\Weight\WeightLimits;
+use App\Support\Weight\WeightParameters;
+use App\Support\Weight\WeightPreview;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -38,6 +42,22 @@ class Edit extends Component
 
     public ?int $redattore_id = null;
 
+    /**
+     * Default del calcolo peso della rivista (WeightParameters::FIELDS).
+     * Valgono SOLO per i numeri creati dopo il salvataggio: i numeri
+     * esistenti hanno una propria copia dei parametri (Issue::weightInput()).
+     *
+     * @var array<string, string>
+     */
+    public array $weight = [];
+
+    /**
+     * Pagine totali usate SOLO per l'anteprima del peso (mai salvate): la
+     * rivista non ha un numero di pagine proprio, quindi si propone quello
+     * dell'ultimo numero e l'utente può cambiarlo per provare.
+     */
+    public string $previewTotalPages = '';
+
     public function mount(Magazine $magazine): void
     {
         $this->authorize('update', $magazine);
@@ -59,6 +79,8 @@ class Edit extends Component
         // reale), questo è solo un secondo strato difensivo a costo zero.
         $this->battente_counted_in_total = (bool) $magazine->battente_counted_in_total;
         $this->redattore_id = $magazine->redattore_id;
+        $this->weight = WeightParameters::formValuesFrom($magazine);
+        $this->previewTotalPages = (string) ($magazine->issues()->orderByDesc('issue_date')->value('total_pages') ?? '');
     }
 
     public function save()
@@ -69,7 +91,10 @@ class Edit extends Component
             $this->ad_threshold_percentage = null;
         }
 
-        $validated = $this->validate([
+        // "80,5" → "80.5" prima di validare, così virgola e punto salvano lo stesso valore.
+        $this->weight = WeightParameters::normalizeInput($this->weight);
+
+        $validated = $this->validate(WeightParameters::prefixedRules('weight') + [
             'name' => 'required|string|max:180',
             'periodicity' => 'required|in:'.implode(',', array_column(Periodicity::cases(), 'value')),
             'color' => 'required|string|max:7',
@@ -77,9 +102,14 @@ class Edit extends Component
             'notes' => 'nullable|string|max:2000',
             'battente_counted_in_total' => 'boolean',
             'redattore_id' => 'nullable|exists:users,id',
-        ]);
+        ], WeightParameters::messages('weight'));
 
-        $this->magazine->update($validated);
+        $weightValues = WeightParameters::toDatabase($validated['weight']);
+        unset($validated['weight']);
+
+        $this->logWeightDefaultsChange($weightValues);
+
+        $this->magazine->update($validated + $weightValues);
 
         // Fase 5.2: il redattore di riferimento deve poter vedere/gestire la
         // sua rivista, non solo comparire come etichetta — canAccessMagazine()
@@ -97,11 +127,65 @@ class Edit extends Component
         return redirect()->route('magazines.show', $this->magazine);
     }
 
+    /**
+     * Le modifiche ai default del peso finiscono nella cronologia generale
+     * (activity_logs, senza issue: è un'impostazione della rivista), così
+     * si sa chi ha cambiato carta/formato e da quando vale per i nuovi numeri.
+     *
+     * @param  array<string, mixed>  $newValues
+     */
+    private function logWeightDefaultsChange(array $newValues): void
+    {
+        $old = [];
+        $new = [];
+
+        foreach ($newValues as $field => $value) {
+            if (! WeightParameters::equals($this->magazine->getOriginal($field), $value)) {
+                $old[$field] = $this->magazine->getOriginal($field);
+                $new[$field] = $value;
+            }
+        }
+
+        if ($new === []) {
+            return;
+        }
+
+        ActivityLogger::log(
+            issue: null,
+            entityType: 'Magazine',
+            entityId: $this->magazine->id,
+            action: 'magazine.weight_defaults_changed',
+            description: "Default peso della rivista «{$this->magazine->name}» modificati (valgono per i nuovi numeri)",
+            old: $old,
+            new: $new,
+        );
+    }
+
     public function render(): View
     {
         return view('livewire.magazines.edit', [
+            'weightPreview' => $this->weightPreview(),
             'periodicities' => Periodicity::cases(),
             'redattori' => User::where('role', UserRole::Redattore)->orWhere('role', UserRole::Admin)->orderBy('name')->get(),
         ]);
+    }
+
+    /**
+     * Anteprima con i default in modifica, confrontata con i default
+     * salvati sulla stessa quantità di pagine di prova.
+     */
+    private function weightPreview(): WeightPreview
+    {
+        $pages = ctype_digit(trim($this->previewTotalPages)) ? (int) trim($this->previewTotalPages) : null;
+        $brackets = config('peso_rivista.scaglioni');
+        $limits = WeightLimits::fromConfig();
+
+        return WeightPreview::fromForm(
+            $this->weight,
+            $pages,
+            $brackets,
+            $limits,
+            saved: WeightPreview::fromForm(WeightParameters::formValuesFrom($this->magazine), $pages, $brackets, $limits)->result,
+        );
     }
 }

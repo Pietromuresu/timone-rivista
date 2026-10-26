@@ -24,6 +24,18 @@ class Magazine extends Model
         'notes',
         'battente_counted_in_total',
         'redattore_id',
+        // Default del calcolo peso (App\Support\Weight\WeightParameters::FIELDS):
+        // copiati su ogni NUOVO numero, mai riletti dai numeri esistenti.
+        'formato_base_mm',
+        'formato_altezza_mm',
+        'grammatura_interno',
+        'grammatura_copertina',
+        'pagine_copertina',
+        'maggiorazione_percentuale',
+        'peso_bancale_kg',
+        'tolleranza_grammatura_perc',
+        'tolleranza_formato_mm',
+        'tolleranza_maggiorazione_perc',
     ];
 
     protected function casts(): array
@@ -32,6 +44,14 @@ class Magazine extends Model
             'periodicity' => Periodicity::class,
             'ad_threshold_percentage' => 'decimal:2',
             'battente_counted_in_total' => 'boolean',
+            // Parametri peso: solo gli interi hanno un cast. I decimal restano
+            // grezzi (stringa/float a seconda del driver) di proposito: il cast
+            // `decimal:2` produce la deprecation di brick/math già documentata
+            // in HANDOFF.md, e la conversione a float avviene comunque in un
+            // punto solo (App\Support\Weight\MagazineWeightInput::fromArray).
+            'formato_base_mm' => 'integer',
+            'formato_altezza_mm' => 'integer',
+            'pagine_copertina' => 'integer',
         ];
     }
 

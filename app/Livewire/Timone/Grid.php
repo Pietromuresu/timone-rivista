@@ -336,6 +336,9 @@ class Grid extends Component
             changedByUserName: auth()->user()->name,
         ))->toOthers();
         $this->issue->markPagesUpdated();
+        // Pannello Peso (Timone\WeightPanel): IssuePageCountUpdated va solo
+        // agli ALTRI client (toOthers), questo evento aggiorna anche il proprio.
+        $this->dispatch('issue-page-count-changed');
 
         $this->showPageCountEditor = false;
     }
@@ -1143,6 +1146,8 @@ class Grid extends Component
         }
 
         $this->lastKnownPagesUpdatedAt = $latest;
+        // Fallback senza Reverb: il pannello Peso non ha un proprio polling.
+        $this->dispatch('issue-page-count-changed');
         // Stesso motivo di onPageMoved()/pollRefresh() (versione precedente):
         // un altro utente potrebbe aver riordinato le pagine nel frattempo,
         // il lock ottimistico va riallineato o un successivo movePage() di

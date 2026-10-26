@@ -89,6 +89,7 @@ Rimane da fare, sempre nel Punto 4: `AdPercentageRecalculated` — **risolto sen
 - **`docker-php-ext-install` deve includere `pcntl`** — non presente di default in `php:8.2-fpm-alpine`. Senza, `php artisan reverb:start` crasha con `Undefined constant "...SIGINT"` (Reverb usa `pcntl_signal()` per lo shutdown pulito). Nessuna dipendenza di sistema extra richiesta (estensione core, basta l'apt/apk build-deps già presente per le altre estensioni).
 - **`mysqldump` va lanciato con `--no-tablespaces`** quando l'utente applicativo (non root) non ha il privilegio globale `PROCESS` — altrimenti stampa `Error: 'Access denied; you need ... PROCESS privilege'` nel log del backup. Il dump risultante è comunque completo anche senza il flag (verificato: tutte le `CREATE TABLE`/`INSERT` presenti), ma l'errore nel log è fuorviante/allarmante per chi monitora i backup — `docker/mysql/backup.sh` ora lo usa.
 - **Limite scoperto testando le azioni di massa (2026-07-29) dentro Docker reale, non nei test Pest**: ogni mutazione su `Grid.php` (singola o in loop bulk) chiama `broadcast(...)->toOthers()` in modo sincrono e non protetto — se il servizio Reverb non è raggiungibile (es. porta 8080 occupata da un altro container sulla stessa macchina, come mi è capitato durante la verifica manuale), la chiamata lancia un'eccezione che interrompe l'intera richiesta. In un'azione bulk questo significa che le pagine già processate nel loop **restano modificate** (l'`UPDATE` è già committato, non c'è una transazione che avvolga l'intero batch) mentre quelle successive nel loop non vengono più raggiunte, e l'utente vede un errore Livewire generico invece del messaggio di esito previsto (`bulkResultMessage`). **Non è un problema introdotto da questa sessione**: la stessa fragilità esiste già su ogni singola mutazione esistente (`movePage`, `assignContent`, `changePageStatus`, ecc., tutte con lo stesso pattern `broadcast()->toOthers()` non protetto) — le azioni di massa la rendono solo più visibile perché un fallimento a metà batch lascia uno stato "parzialmente applicato" più difficile da spiegare all'utente di un singolo comando fallito. **Scelta consapevole**: non corretto in questa sessione (richiederebbe rivedere la gestione degli errori di broadcasting in tutto il componente, fuori scope per la funzionalità richiesta) — da tenere presente se in futuro capitano segnalazioni di "azione di massa a metà" in produzione con Reverb temporaneamente irraggiungibile.
+- **Limiti di grammature e formato passati al calcolo come parametro, non letti dentro il calculator (2026-10-26)**: `MagazineWeightCalculator::calculate()` resta puro (nessun `config()`), quindi i limiti `WeightLimits` (prima solo `GrammageRange`, poi generalizzato) arrivano come terzo parametro opzionale, come gli scaglioni. `null` = nessun controllo di intervallo, usato solo dai test unitari storici del calcolo puro: **ogni chiamata applicativa deve passare `WeightLimits::fromConfig()`** (oggi `Issue::weight()`, `WeightPanel::render()` per calculate/simulate/addablePages, `WeightPreview::fromForm()`). Scelta pragmatica invece di un oggetto "impostazioni peso" iniettato: avrebbe cambiato la firma di tutte le chiamate e dei 40+ test esistenti per un solo valore in più. Se si aggiunge un nuovo punto che calcola il peso, dimenticare il range significa tornare a mostrare pesi plausibili-ma-sbagliati per dati sporchi.
 
 ## Come avviare in locale (senza Docker, per sviluppo rapido)
 
@@ -1216,3 +1217,115 @@ Questi file non sostituiscono `HANDOFF.md`, `MANUALE_UTENTE.md`, `DOCKER.md` e `
 **Nota su questo file**: la riga "Ultimo aggiornamento" in testa (ferma al 2026-09-01) e la menzione di "Laravel 11" in "Stato generale" sono superate (il progetto è su Laravel 12.64). Non le ho corrette per non riscrivere la cronologia esistente.
 
 **Repository di riferimento**: su indicazione dell'utente, la documentazione in `docs/` indica come repository `https://its.git/pietro/timone-rivista` (clone, accessi, scheda Nextcloud). Il remote `origin` del clone locale punta ancora al vecchio indirizzo GitHub e non è stato modificato. Per allinearlo: `git remote set-url origin https://its.git/pietro/timone-rivista`.
+
+----
+## Sessione 2026-10-26 (continuazione) — Calcolo peso rivista
+
+Richiesta dell'utente: per ogni numero, peso teorico di una copia al grammo con margine d'errore ± g calcolato nel caso peggiore, scaglione di peso (250/350/500/1000 g) con avviso di rischio, peso della tiratura netto e lordo. Doveva riprodurre esattamente il foglio Excel in uso. Fase 0 (esplorazione + piano) mostrata all'utente, che ha delegato le tre decisioni aperte ("fai come ritieni più opportuno"). Ho applicato le raccomandazioni proposte:
+
+1. **Pagine interne = `total_pages − pagine_copertina`** del numero.
+   - Nel timone le copertine occupano posizioni dentro `total_pages` (decisione A della sessione 2026-09-01).
+   - Non si contano i ruoli copertina, perché Copertina2/3/Battente sono assegnati a mano e spesso mancano.
+   - Il conteggio dei ruoli serve solo per un avviso.
+2. **Codice in `app/Support/Weight/`**, non in `app/Services/` come diceva il prompt, per coerenza con `CLAUDE.md` regola 2. **Nomi di colonna in italiano** come da prompt, anche se il resto dello schema è in inglese.
+3. **Permessi**:
+   - copiare la maggiorazione suggerita nei default della rivista richiede `update` sulla rivista, cioè solo Admin;
+   - la simulazione "pagine aggiungibili" va a passi di 2 pagine, sia sul peso nominale sia sul peso massimo;
+   - `MANUALE_UTENTE.md` aggiornato.
+
+**File nuovi**:
+- migration `2026_10_26_100000_add_weight_defaults_to_magazines_table.php` e `2026_10_26_100001_add_weight_params_to_issues_table.php`;
+- `config/peso_rivista.php`;
+- in `app/Support/Weight/`:
+  - `MagazineWeightCalculator`: puro, senza `config()`; gli scaglioni arrivano come parametro;
+  - `MagazineWeightInput` e `MagazineWeightResult`: DTO readonly;
+  - `WeightParameters`: campi, etichette e regole, condivisi dai tre form;
+  - `WeightFormatter`;
+- `app/Livewire/Timone/WeightPanel.php` + vista;
+- componenti Blade `weight-field` e `weight-summary`;
+- test: `tests/Unit/MagazineWeightCalculatorTest.php` (34) e `tests/Feature/Livewire/IssueWeightTest.php` (12).
+
+**File modificati**:
+- `Magazine` e `Issue`: fillable, cast, `Issue::weightInput()`/`weight()`;
+- `Issues\Create` + vista: sezione "Carta e peso", anteprima live, badge "modificato";
+- `Magazines\Edit` + vista: default di peso;
+- `Grid.php`: solo 2 `dispatch('issue-page-count-changed')`, in `resizePages()` e `checkForUpdates()`;
+- `issues/show.blade.php`;
+- `MagazineFactory`: stato `withWeightDefaults()`.
+
+**Scelte consapevoli**:
+- **float nativi, non bcmath**: precisione molto oltre la tolleranza 0.0001 richiesta, conversione centralizzata in `MagazineWeightInput::fromArray()`;
+- **nessun cast `decimal:2`** sulle nuove colonne, per evitare la deprecation di `brick/math` già nota;
+- **margine**: `ceil()` preceduto da un `round(…, 9)`, per evitare che il rumore del double aggiunga un grammo;
+- **cronologia**: modifiche ai parametri tramite `ActivityLogger` esistente (`issue.weight_params_changed`, `magazine.weight_defaults_changed`);
+- **realtime**: nessun evento per la modifica dei parametri, quindi gli altri utenti la vedono solo al prossimo render;
+- **riviste esistenti**: non è stato possibile identificare NM, GL e F&C (nel repo ci sono solo le riviste demo), quindi formato e grammature restano NULL e il pannello mostra "Parametri peso da configurare".
+
+**Verifica**:
+- suite locale **583 passed, 33 skipped** (gli skip sono i test che richiedono Imagick), 0 falliti;
+- migration up → rollback → up verificate su SQLite temporaneo;
+- `npm run build` pulito;
+- comando tinker di ricalcolo verificato (NM: 510.67422 g, ± 31 g, scaglione 1000, 208 pagine interne).
+
+**Non verificato in un browser reale** (niente Dusk): apertura/chiusura dei `<details>` durante l'anteprima live (protetti con `wire:ignore.self`), modale, `wire:confirm`.
+
+**Documentazione aggiornata**:
+- `docs/03` (sezione "Calcolo peso rivista"), `docs/04`, `docs/05`, `docs/10`, `docs/11` (#33-42), `docs/12`, `docs/02`;
+- `docs/DA-VERIFICARE.md` (DV-18…DV-22: significato del +2 %, tolleranza della carta, peso dei bancali, scaglioni postali e limite inclusivo, copertine dentro `total_pages`);
+- `docs/nextcloud/timone-rivista.md`;
+- `MANUALE_UTENTE.md` (§9ter, §12, §12bis).
+
+## Sessione 2026-10-26 (continuazione) — Grammature modificabili dalla modale del numero e protezione dagli errori di unità
+
+**Problema**: un numero da 208 pagine interne + 6 di copertina mostrava circa 4,7 g perché nella grammatura interno era stato inserito 0,8 (pensando al peso di una pagina) invece di 80 g/m². La formula (= Excel) **non** è cambiata: è stato aggiunto ciò che impedisce l'errore di unità e lo rende visibile.
+
+**Fase 0 (sola lettura)**:
+- campi grammatura/pagine copertina presenti in creazione numero, modale del pannello Peso e impostazioni rivista, tutti tramite `x-weight-field` (`type="number"`, quindi virgola non accettata ovunque) e un'unica `WeightParameters::rules()` (`gt:0`: 0,8 era accettato);
+- una sola implementazione della formula (`MagazineWeightCalculator::weights()`), nessun ricalcolo in Livewire/Blade/JS;
+- DB locale: **nessuna** grammatura < 30 o > 400 (riviste 1-3 senza parametri, numero 3 a 80/170). Però, dopo l'implementazione, il numero **3 "Novembre 2026" (rivista 2) risulta con formato 21 × 27 invece di 210 × 270 mm**: peso 5,1 g. È lo stesso tipo di errore di unità sul formato (cm invece di mm), **non corretto** (sola lettura, da correggere a mano dalla modale) e non coperto da validazione: vedi `docs/11-debito-tecnico.md` #43.
+
+**Cosa è stato fatto**:
+- `config/peso_rivista.php`: nuove chiavi `grammatura.min/max` (30/400) e `pagine_copertina.min/max` (2/12);
+- `App\Support\Weight\GrammageRange` (nuovo): intervallo da config + messaggi, condiviso da validazione e calcolo;
+- `MagazineWeightCalculator`: metodi pubblici `pesoPagina(base_mm, altezza_mm, grammatura)` e `pesoPagine(...)`, usati da `weights()` (stessa formula, un solo punto); `calculate()/simulate()/addablePages()` accettano un `?GrammageRange`: grammatura fuori intervallo → risultato incompleto con errore esplicito ("Grammatura interno 0,8 g/m² fuori dall'intervallo ammesso (30–400 g/m²). Inserisci la grammatura…");
+- `WeightParameters`: regole grammatura `numeric|min:30|max:400` e pagine copertina `integer|min:2|max:12|multiple_of:2` lette da config, `messages()` con i messaggi specifici richiesti, `prefixedRules()`, `normalizeInput()`/`normalizeDecimal()` (virgola → punto prima di validazione/anteprima/salvataggio, anche nel confronto del badge "modificato"), `modifiedFields()`, costante `PAPER_FIELDS`;
+- `App\Support\Weight\WeightPreview` + `PaperLine` (nuovi): anteprima pura di un form (risultato, peso a pagina di interno/copertina, differenza e cambio scaglione rispetto al salvato), usata dai tre componenti Livewire, che restano sottili;
+- `Issue::weight()` passa `GrammageRange::fromConfig()`;
+- `Timone\WeightPanel`: modale con sezione "Carta" in cima, peso a pagina sotto ogni grammatura, anteprima live (debounce 300 ms) con differenza dal salvato, badge "modificato" e `restoreMagazineDefaults()` ("Ripristina default rivista", non salva); il salvataggio continua a scrivere solo sull'issue;
+- `Issues\Create`: stessa sezione "Carta", peso a pagina, anteprima tramite `WeightPreview`, "Ripristina default rivista";
+- `Magazines\Edit`: peso a pagina e anteprima con `$previewTotalPages` (pagine di prova non salvate, proposte dall'ultimo numero), confrontata con i default salvati;
+- Blade: `weight-field` diventa `type="text"` con `inputmode` (decimal/numeric) e mostra la riga `PaperLine`; nuovo componente `weight-preview` (riepilogo + differenza); `WeightFormatter::pageGrams()` (3 decimali) e `signedGrams()`.
+
+**Test aggiunti** (i casi Excel esistenti restano verdi):
+- `tests/Unit/MagazineWeightCalculatorTest.php`: `pesoPagina` (210×270 a 80 → 2.268, a 170 → 4.8195; 210×297 a 80 → 2.4948, a 170 → 5.30145), interno/copertina = pesoPagina × pagine, regressione 208@80 + 6@170, 21×27, +2% → 510.67422 g con range attivo, 0,8 e 450 → incompleto con errore, limiti inclusivi, simulate/addablePages con range;
+- `tests/Unit/WeightPreviewTest.php` (nuovo, 7): righe peso a pagina, virgola = punto, fuori range senza peso, senza pagine totali, differenza con cambio scaglione, `normalizeInput`;
+- `tests/Feature/Livewire/IssueWeightTest.php` (+16 casi): sezione Carta con peso a pagina in modale, 0,8 → messaggio sull'unità, 450 → errore, limiti presi da config, pagine copertina 0/5/14 rifiutate, "80,5" e "80.5" → stesso valore salvato (modale, creazione, rivista), modifica dalla modale cambia il peso del numero e **non** i default della rivista (né la cronologia della rivista), anteprima "−60,1 g … passa da scaglione 1.000 g a 500 g" senza salvare, badge + ripristino, 0,8 già nel DB → nessun peso mostrato, creazione e impostazioni rivista.
+
+**Verifica**: suite completa nel container usa-e-getta (`docker run … timone-rivista-app:latest vendor/bin/pest`): **651 passed (1943 assertions), 0 falliti, 0 skipped**. Pint pulito sui file toccati.
+
+**Scelte consapevoli / limiti**:
+- pagine copertina ora tra 2 e 12 (confermato dall'utente): 0 non è più accettato;
+- il formato (mm) **non** ha ancora un intervallo di validazione (#43);
+- i container `app`/`worker` in esecuzione usano il codice copiato nell'immagine, non un bind mount: per vedere la modifica nel browser serve ricostruire l'immagine (`setup.sh` / `docker compose up -d --build`), non fatto in questa sessione;
+- non verificato in un browser reale (niente Dusk): conservazione dello stato aperto della modale durante i re-render live dei campi.
+
+**Documentazione aggiornata**: `docs/03` (grammatura, formato e peso a pagina con esempio NM; modifica dalla modale), `docs/05` (chiavi `grammatura`, `pagine_copertina`), `docs/10` (sintomo "peso di pochi grammi", errore "fuori dall'intervallo", query di diagnosi), `docs/11` (#43, #44), `docs/12` (grammatura vs peso a pagina), `docs/02`, `docs/nextcloud/timone-rivista.md`, `MANUALE_UTENTE.md` (§9ter, §12, §12bis). `CHANGELOG.md` non esiste nel progetto: non creato.
+
+## Sessione 2026-10-26 (continuazione) — Intervallo anche sul formato (cm invece di mm)
+
+**Perché**: nella sessione precedente il "peso di pochi grammi" del DB locale si è rivelato dovuto al **formato in centimetri** (numero 3 "Novembre 2026": 21 × 27 → 5,1 g), non a una grammatura sbagliata. L'utente ha lasciato decidere; scelta: stessa protezione delle grammature anche per il formato.
+
+**Cosa è stato fatto**:
+- `config/peso_rivista.php`: nuova chiave `formato.min/max` = 50/1000 mm (sotto 50 è quasi certamente cm: anche un A3 è 42 cm);
+- `GrammageRange` **sostituita** da `App\Support\Weight\ParameterRange` (intervallo generico + messaggi) e `WeightLimits` (raccoglie `grammatura` e `formato`, `fromConfig()`/`fromValues()`, costanti dei messaggi): due errori di unità identici nella forma, un solo meccanismo invece di due classi quasi uguali (Open/Closed: un nuovo limite = una nuova `ParameterRange`);
+- `MagazineWeightCalculator::calculate/simulate/addablePages(..., ?WeightLimits)`: formato fuori intervallo → risultato incompleto con errore "Formato base 21 mm fuori dall'intervallo ammesso (50–1000 mm). Inserisci il formato in millimetri (es. 210 × 270), non in centimetri."; errori generati da `rangeErrors()` per formato e grammature;
+- `WeightParameters::rules()`: formato `nullable|integer|min:50|max:1000` da config (prima `min:1|max:65535`), messaggi specifici in `messages()`;
+- `WeightPreview`: con formato fuori intervallo la riga del peso a pagina non mostra un peso ma "Peso a pagina non calcolabile: controlla il formato. …" (`weight-field` la mostra in rosso);
+- **dati non toccati**: il numero 3 del DB locale va corretto a mano dalla modale (ora il pannello mostra l'errore invece di 5,1 g).
+
+**Test aggiunti**: unit — formato in cm → incompleto con i due errori esatti; documentazione del perché (senza limiti 21 × 27 dà 5,1067422 g); anteprima con formato in cm senza peso a pagina. Feature — formato 21 / 2700 rifiutati in modale con il messaggio sui millimetri; formato 21 × 27 già nel DB → pannello con errore, nessun peso.
+
+**Verifica**: suite completa nel container usa-e-getta: **656 passed (1965 assertions), 0 falliti**. Pint pulito. Immagine Docker ricostruita e container riavviati (`docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`, nessuna migration nuova); come già documentato in `docs/10-debugging.md` è servito `docker compose restart nginx` (502 per il vecchio IP di `app` in cache), poi `/login` → 200. Nell'app in esecuzione il numero 3 ora restituisce `complete = false` con i due errori sul formato invece di 5,1 g.
+
+**Documentazione aggiornata**: `docs/03`, `docs/02`, `docs/05` (chiave `formato`), `docs/10`, `docs/11` (#43 risolto, #44 aggiornato), `docs/nextcloud/timone-rivista.md`, `MANUALE_UTENTE.md`, decisione architetturale in questo file.
+

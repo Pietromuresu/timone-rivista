@@ -184,6 +184,57 @@ Le uniche esterne o collaterali sono Reverb, SMTP e Imagick/Ghostscript: vedi le
 - Per misurare: in tinker `DB::enableQueryLog()` + `Livewire::test(...)` in ambiente di test, oppure Debugbar in locale (non installato).
 - Disco pieno (copie multiple dei PDF): `df -h`, `docker system df -v`.
 
+### Peso rivista
+
+Come funziona: [03-dominio-e-flussi.md](03-dominio-e-flussi.md#calcolo-peso-rivista). Campi: [04-database.md](04-database.md#parametri-del-peso-su-magazines-e-issues-migration-2026_10_26_).
+
+| Sintomo | Causa probabile | Dove guardare | Soluzione |
+|---|---|---|---|
+| **Peso di pochi grammi** (es. 4,7 g o 5,1 g per un numero da ~200 pagine) | Errore di unità di misura. 1) **Grammatura inserita come peso a pagina**: 0,8 invece di 80 g/m² → (21 × 27 × 0,8) / 10000 × 104 = 4,717 g invece di 471,744 g. 2) **Formato in cm invece che in mm** (21 × 27 invece di 210 × 270): area 100 volte più piccola → ~5,1 g invece di 510,7 g. Dal 2026-10-26 entrambi sono bloccati dalla validazione (grammature 30–400 g/m², formato 50–1000 mm) e un valore sporco già nel DB fa mostrare un errore invece del peso; il sintomo può quindi comparire solo se i limiti in `config/peso_rivista.php` sono stati allargati | Campi "Grammatura interno/copertina (g/m²)", "Base (mm)", "Altezza (mm)" della modale "Modifica parametri" del pannello Peso del numero: sotto ogni grammatura la riga "… g/m² → … g a pagina" rende evidente un valore fuori scala (21 × 27 mm a 80 g/m² → 0,023 g a pagina, invece di 2,268). Query sotto per trovare tutti i numeri sospetti | Correggi i valori **del numero** dalla modale (grammatura scritta sulla carta, es. 80/170; formato in mm, es. 210 × 270). Se il valore sbagliato veniva dai default della rivista, correggi anche "Modifica rivista", altrimenti i prossimi numeri lo ricopiano |
+| Il pannello mostra "Grammatura … fuori dall'intervallo ammesso (30–400 g/m²)" o "Formato base/altezza … fuori dall'intervallo ammesso (50–1000 mm)" | Valore salvato prima della validazione (es. il numero 3 del DB locale aveva 21 × 27), o limiti in `config/peso_rivista.php` cambiati | Modale "Modifica parametri" del numero | Inserisci la grammatura in g/m² e il formato in mm. Comportamento voluto: un dato sporco non deve produrre un peso plausibile ma sbagliato |
+| Peso diverso dall'Excel | 1) Si stanno guardando i parametri della **rivista** invece che del **numero**: il peso usa solo le colonne dell'issue, copiate alla creazione. 2) Formato inserito in cm invece che in mm (`21` invece di `210`): il peso risulta 100 volte più piccolo. 3) Maggiorazione diversa da 2. 4) `pagine_copertina` del numero diverso da quello dell'Excel, quindi pagine interne diverse | Modale "Modifica parametri" del pannello Peso, oppure tinker (sotto): `weightInput()` mostra i valori usati | Correggi i parametri **del numero**. Ricorda che pagine interne = `total_pages − pagine_copertina` (es. NM: 214 − 6 = 208) |
+| Il pannello mostra "Parametri peso da configurare" | Colonne NULL sul numero: tipicamente un numero creato prima delle migration `2026_10_26_*`, o una rivista senza default al momento della creazione | Riga "Mancano: …" nel pannello; `issues.formato_base_mm` ecc. in Adminer | Imposta i valori dal pannello del numero. Per i numeri futuri, imposta i default in "Modifica rivista" |
+| Il peso non si aggiorna dopo aver cambiato le pagine | Il pannello si ri-renderizza solo su `IssuePageCountUpdated` (Reverb) o sull'evento Livewire `issue-page-count-changed` (emesso da `Grid::resizePages()` e `Grid::checkForUpdates()`) | Console del browser (Reverb connesso?); `docker compose logs reverb` | Ricarica la pagina, che ricalcola sempre da `issues.total_pages`. Se succede spesso, vedi la sezione "Drag&drop, presence o aggiornamenti realtime" sopra |
+| I parametri modificati da un altro utente non compaiono | Limite noto: `saveParams()` non emette eventi realtime | — | Ricarica la pagina (vedi [11-debito-tecnico.md](11-debito-tecnico.md)) |
+| "Le pagine interne (N) devono essere un numero pari" | `total_pages − pagine_copertina` è dispari (es. 213 pagine totali con 6 di copertina) | Pannello Peso; "Modifica pagine totali" nel timone | Porta le pagine totali a un numero pari, oppure correggi `pagine_copertina` (4 o 6). Non è un bug: mezzo foglio non si stampa |
+| "Le pagine interne risulterebbero negative" | `total_pages` < `pagine_copertina` (numero appena creato con 0 pagine) | Pagine totali del numero | Imposta il numero di pagine del timone |
+| Avviso "Nel timone ci sono X pagine con ruolo copertina…" | I ruoli Copertina II/III/Battente non sono assegnati nel pannello Copertina, oppure `pagine_copertina` è sbagliato | Pannello "Copertina & battente" | Solo un avviso: il peso usa comunque `pagine_copertina` |
+| Peso reale molto diverso dal teorico | Grammatura reale della carta diversa dalla nominale (scheda tecnica della cartiera); maggiorazione da ricalibrare; peso reale inserito male (copia anomala, tara della bilancia) | Blocco calibrazione del pannello: scostamento in g e % | Se lo scostamento è sistematico su più numeri, usa "Copia nei default della rivista" (solo Admin) per la maggiorazione suggerita, oppure correggi la grammatura. Non viene mai applicato da solo |
+| "La maggiorazione suggerita è fuori dall'intervallo ammesso" | Peso reale inferiore alla sola carta (suggerimento negativo) o assurdo | `issues.peso_reale_g` | Ricontrolla il peso reale inserito |
+| Lo scaglione di un numero vecchio è cambiato | Sono stati modificati gli scaglioni in `config/peso_rivista.php`: lo scaglione non è salvato | `git log config/peso_rivista.php` | Comportamento voluto (vedi [05-configurazione.md](05-configurazione.md#configpeso_rivistaphp-calcolo-peso-rivista)) |
+
+**Ricalcolare a mano un numero** (sostituisci `ID` con l'id dell'issue, visibile nell'URL `/riviste/{slug}/numeri/{ID}`):
+
+```bash
+docker compose exec app php artisan tinker --execute='$r = App\Models\Issue::findOrFail(ID)->weight(); dump($r->complete, $r->missing, $r->errors, $r->pesoCopiaG, $r->margineG, $r->scaglione, $r->input->pagineInterno);'
+# tutti i valori di input e di risultato:
+docker compose exec app php artisan tinker --execute='dump(App\Models\Issue::findOrFail(ID)->weight());'
+```
+
+`weight()` è di sola lettura e non scrive nulla. Il comando è stato verificato il 2026-10-26: su un numero NM-like stampa `true`, `[]`, `[]`, `510.67422`, `31`, `1000`, `208`.
+
+**Trovare numeri e riviste con grammature o formato fuori scala** (sola lettura; i limiti 30–400 sono quelli di `config/peso_rivista.php`, il formato sotto 50 mm è quasi certamente in cm):
+
+```bash
+docker compose exec app php artisan tinker --execute='
+$bad = fn ($q) => $q->where(fn ($w) => $w->where("grammatura_interno", "<", 30)->orWhere("grammatura_interno", ">", 400)->orWhere("grammatura_copertina", "<", 30)->orWhere("grammatura_copertina", ">", 400)->orWhere("formato_base_mm", "<", 50)->orWhere("formato_altezza_mm", "<", 50));
+foreach ($bad(DB::table("issues"))->get(["id", "magazine_id", "title", "formato_base_mm", "formato_altezza_mm", "grammatura_interno", "grammatura_copertina"]) as $r) echo "numero ", json_encode($r), "\n";
+foreach ($bad(DB::table("magazines"))->get(["id", "name", "formato_base_mm", "formato_altezza_mm", "grammatura_interno", "grammatura_copertina"]) as $r) echo "rivista ", json_encode($r), "\n";'
+```
+
+Oppure in SQL (Adminer):
+
+```sql
+SELECT id, magazine_id, title, formato_base_mm, formato_altezza_mm, grammatura_interno, grammatura_copertina
+FROM issues
+WHERE grammatura_interno < 30 OR grammatura_interno > 400
+   OR grammatura_copertina < 30 OR grammatura_copertina > 400
+   OR formato_base_mm < 50 OR formato_altezza_mm < 50;
+-- stessa WHERE su `magazines` (colonne id, name, …) per i default delle riviste
+```
+
+Non correggere i valori con un UPDATE alla cieca: vanno ricontrollati sulla scheda della carta e corretti dalla modale del numero, così la modifica resta in cronologia (`issue.weight_params_changed`).
+
 ---
 
 ## Punti fragili specifici di questo progetto

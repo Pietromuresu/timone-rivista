@@ -310,6 +310,41 @@ Una pagina bloccata (🔒) non può ricevere né perdere un ruolo finché non la
 
 ---
 
+## 9ter. Peso della rivista
+
+Riquadro **"⚖️ Peso"** in cima alla pagina del numero. Mostra il **peso teorico di una copia**, il **margine d'errore** (± grammi), lo **scaglione** di spedizione e il peso della **tiratura**, con le stesse formule del foglio Excel usato finora.
+
+- **Peso copia**: es. "510,7 g ± 31 g (481 – 541 g)". Il peso è teorico: la carta reale e il taglio non sono mai esatti, e il "±" è lo scostamento massimo nel caso peggiore. Il riquadro "ℹ️ Come è calcolato il margine" elenca le tolleranze usate.
+- **Scaglione**: badge **verde** se la copia resta nello scaglione anche nel caso peggiore; **giallo** se il margine potrebbe farla passare allo scaglione successivo ("Rischio di passare allo scaglione X g"); **rosso** se supera 1000 g (fuori scaglione). Scaglioni: 250, 350, 500, 1000 g. Il limite è incluso: 500,0 g sta nello scaglione 500.
+- **Interno / Copertina / Maggiorazione / Tiratura**: il dettaglio del calcolo. Le **pagine interne** sono le pagine totali del numero meno le pagine di copertina (es. 214 − 6 = 208): quando cambi le pagine totali ([§9](#9-modificare-il-numero-totale-di-pagine)) il peso si aggiorna da solo.
+
+**Modificare i parametri di questo numero** (Admin e Redattore): bottone **"Modifica parametri"**.
+- In cima c'è la sezione **"Carta"**: grammatura interno, grammatura copertina e pagine copertina (numero pari tra 2 e 12: 4, o 6 con bandella).
+- **Grammatura**: scrivi quella stampata sulla carta, in g/m² (es. **80** per l'interno, **170** per la copertina), **non il peso di una pagina**: il peso a pagina lo calcola il sistema e lo mostra sotto il campo, es. "80 g/m² → 2,268 g a pagina · 208 pagine = 471,7 g". Valori sotto 30 o sopra 400 vengono rifiutati con un messaggio che spiega l'errore. Puoi usare la virgola o il punto (`80,5` o `80.5`).
+- Poi formato in **millimetri** (210 × 270, non 21 × 27: valori sotto 50 vengono rifiutati perché quasi certamente in centimetri), n. copie, n. bancali e peso reale. Maggiorazione e tolleranze stanno sotto "Avanzate".
+- Mentre scrivi, l'**anteprima** in fondo alla finestra mostra il nuovo peso, il margine e lo scaglione **prima di salvare**, con la differenza dal peso salvato (es. "+12,4 g rispetto al valore salvato …, passa da scaglione 500 g a 1.000 g.").
+- I valori diversi da quelli della rivista hanno il badge **"modificato"**; **"Ripristina default rivista"** li riporta a quelli della rivista (poi devi comunque premere "Salva").
+- **"Salva" modifica solo questo numero**, mai i valori della rivista.
+- Le pagine interne devono essere un numero **pari** (un foglio ha due facciate): un numero dispari blocca il calcolo con un messaggio rosso. Se non sono un multiplo di 4 compare solo un avviso.
+- Ogni modifica resta nella cronologia ([§10](#10-consultare-lo-storico-spostamenti-e-la-cronologia-generale)).
+
+**"Parametri peso da configurare"**: mancano dei valori, di solito il formato o le grammature (succede per i numeri creati prima di questa funzione). Inseriscili con "Modifica parametri".
+
+**"Grammatura … fuori dall'intervallo ammesso"** o **"Formato … fuori dall'intervallo ammesso"** al posto del peso: sul numero è salvato un valore con l'unità sbagliata (il peso di una pagina, es. 0,8, invece della grammatura 80; oppure il formato in centimetri, 21 invece di 210). Correggilo con "Modifica parametri".
+
+**Peso reale dopo la stampa**:
+1. Pesa una copia e inserisci il valore in "Peso reale misurato (g)".
+2. Il riquadro mostra la differenza dal teorico e la **maggiorazione** che avrebbe dato il peso esatto.
+3. Un Admin può salvarla con **"Copia nei default della rivista"**, dopo una conferma. Vale solo per i numeri creati da quel momento.
+
+Il suggerimento non viene mai applicato da solo.
+
+**Simulazione**: nel campo "Simula +/- pagine interne" scrivi per esempio `8` o `-4` per vedere peso e scaglione con quelle pagine in più o in meno. Non modifica nulla. Sotto, il riquadro indica quante pagine puoi ancora aggiungere restando nello scaglione attuale (a passi di 2 pagine).
+
+I valori di partenza vengono dalla rivista ([§12bis](#12bis-modificare-una-rivista-redattore-di-riferimento-e-scadenza-stampa)) e si possono cambiare già quando crei il numero ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)), nella sezione "Carta e peso".
+
+---
+
 ## 10. Consultare lo storico spostamenti e la cronologia generale
 
 Bottone **"📜 Storico spostamenti"** nella barra del timone: apre un elenco degli ultimi 50 spostamenti di pagina fatti su questo numero, con chi li ha fatti, da quale posizione a quale, e quando.
@@ -337,6 +372,8 @@ Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone 
 
 **Duplicare la struttura da un numero precedente**: nello stesso form di creazione numero, se la rivista ha già altri numeri, trovi un menu "Duplica struttura da un numero precedente". Selezionandone uno, il numero di pagine si pre-compila con quello del numero scelto (resta modificabile) e — dopo la creazione — ogni pagina eredita lo stesso tipo (editoriale/pubblicità/mista/bianca) della pagina corrispondente del numero di origine. **Non vengono copiati**: i contenuti assegnati, gli stati delle pagine, i PDF caricati — solo lo schema di che tipo di pagina è cosa, per non ripartire ogni volta da un timone completamente vuoto.
 
+**Carta e peso**: nel form di creazione del numero, la sezione richiudibile "⚖️ Carta e peso" è già compilata con i valori di default della rivista: formato in mm, grammature, pagine di copertina, poi n. copie e n. bancali, e sotto "Avanzate" maggiorazione e tolleranze. Puoi cambiarli solo per questo numero; i campi diversi dalla rivista mostrano il badge "modificato" e "Ripristina default rivista" li riporta ai valori della rivista. Sotto ogni grammatura compare il peso a pagina e sotto la sezione un'anteprima del peso che si aggiorna mentre scrivi. Dettagli in [§9ter](#9ter-peso-della-rivista).
+
 ---
 
 ## 12bis. Modificare una rivista, redattore di riferimento e scadenza stampa
@@ -348,6 +385,8 @@ Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone 
 **Scadenza stampa di un numero**: si imposta in creazione ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)) o, per un numero già esistente, con il campo **"📅 Scadenza stampa"** nella barra in alto sopra il timone. Quando la scadenza si avvicina (di default 3 giorni prima — l'esatto preavviso è un'impostazione tecnica dell'installazione, non modificabile dall'interfaccia), il **redattore di riferimento della rivista** riceve automaticamente una mail con il numero, la rivista e un link diretto al timone. La mail parte **una sola volta per scadenza**: se la sposti, può ripartire per la nuova data; se il redattore l'ha già ricevuta per la scadenza attuale, vedrai una ✉️ accanto al campo data.
 
 Se una rivista non ha un redattore assegnato, nessuna mail viene inviata per i suoi numeri finché non gliene assegni uno.
+
+**Carta e peso — valori di default** (nella stessa pagina "Modifica rivista"): formato, grammature, pagine di copertina, maggiorazione, peso del bancale e tolleranze usati per il peso della rivista ([§9ter](#9ter-peso-della-rivista)). **Valgono solo per i nuovi numeri**: vengono copiati su ogni numero creato dopo, mentre i numeri già esistenti mantengono i propri valori. Anche qui le grammature vanno in g/m² (es. 80 e 170) e sotto ognuna compare il peso a pagina; l'anteprima del peso usa "Pagine totali per l'anteprima (non salvate)", proposte dall'ultimo numero della rivista.
 
 ---
 

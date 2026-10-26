@@ -123,6 +123,27 @@ Legenda colonna *Obbl.*: **Sì** = senza, l'app o lo stack non partono o una fun
 | `TIMONE_PDF_FORMAT_TOLERANCE_MM` | No | `1.5` | `1.5` | `config/timone.php` → `GenerateContentFileThumbnail`/`GeneratePageFileThumbnail::checkFormat()` | Tolleranza in mm oltre l'abbondanza di 3 mm per lato. Decisione della redazione |
 | `TIMONE_DEADLINE_REMINDER_DAYS_BEFORE` | No | `3` | `3` | `config/timone.php` → `SendDeadlineReminders` | **Assente da `.env.example`** (vedi sotto). Decisione della redazione |
 
+### `config/peso_rivista.php` (calcolo peso rivista)
+
+Non legge variabili d'ambiente: è un file di configurazione versionato. Si cambia con un commit e un deploy, non dal `.env`.
+
+| Chiave | Valore attuale | A cosa serve | Letta da |
+|---|---|---|---|
+| `scaglioni` | `[250, 350, 500, 1000]` | Limiti superiori in grammi degli scaglioni di peso, in ordine crescente. Una copia ricade nel primo scaglione il cui limite è ≥ al suo peso; oltre l'ultimo limite è "Fuori scaglione" | `Issue::weight()`, `Issues\Create::weightPreview()`, `Magazines\Edit::weightPreview()`, `Timone\WeightPanel::render()`, che la passano a `MagazineWeightCalculator::calculate()` (direttamente o via `WeightPreview::fromForm()`) |
+| `grammatura.min` / `grammatura.max` | `30` / `400` (g/m², limiti inclusi) | Intervallo ammesso per grammatura interno e copertina. Sotto il minimo la validazione dice di inserire la grammatura (es. 80) e non il peso di una pagina; sopra il massimo di controllare l'unità di misura. Una grammatura fuori intervallo già nel DB rende il calcolo **incompleto** invece di dare un peso sbagliato | `App\Support\Weight\WeightLimits::fromConfig()`, usato da `WeightParameters::rules()` (form) e da `Issue::weight()`, `WeightPanel::render()` e dalle anteprime (calcolo) |
+| `formato.min` / `formato.max` | `50` / `1000` (mm, limiti inclusi) | Intervallo ammesso per base e altezza. Sotto 50 mm il valore è quasi certamente in centimetri (21 invece di 210): la validazione chiede i millimetri e un formato fuori intervallo già nel DB rende il calcolo **incompleto** | Come `grammatura` (`WeightLimits::fromConfig()`) |
+| `pagine_copertina.min` / `pagine_copertina.max` | `2` / `12` | Pagine di copertina ammesse nei form (numero pari, `multiple_of:2`) | `WeightParameters::rules()` / `messages()` |
+
+**Come aggiungere o cambiare uno scaglione**: modifica l'array (es. `[250, 350, 500, 750, 1000]`), poi esegui il deploy (vedi [09-deploy.md](09-deploy.md#c-deploy-di-un-aggiornamento)).
+- L'ordine nel file non è vincolante: il calcolatore ordina i limiti prima di usarli.
+- Se in produzione si usa `php artisan config:cache` (oggi non lo si fa), serve anche `php artisan config:clear` o di nuovo `config:cache` in ogni container PHP.
+
+**Cambiare i limiti di grammature o formato**: se si alzano o abbassano `grammatura.*` o `formato.*`, i numeri con valori ora fuori intervallo mostrano subito l'errore nel pannello Peso (nessun peso) finché non si correggono dalla modale del numero. La query per trovarli è in [10-debugging.md](10-debugging.md#peso-rivista).
+
+**Cosa succede ai numeri esistenti**: lo scaglione **non è salvato** su nessun numero, viene ricalcolato a ogni visualizzazione. Cambiare gli scaglioni cambia subito scaglione, badge e avviso "a rischio" di **tutti** i numeri, anche quelli già usciti. Il loro **peso** invece non cambia, perché dipende solo dai parametri salvati sul numero.
+
+I valori di default dei parametri di peso (maggiorazione 2 %, peso bancale 20 kg, tolleranze, 4 pagine di copertina) **non** sono in config. Sono default di colonna delle migration `2026_10_26_*` e poi valori modificabili per rivista e per numero (vedi [04-database.md](04-database.md#parametri-del-peso-su-magazines-e-issues-migration-2026_10_26_)).
+
 ### Variabili non-`.env` rilevanti
 
 | Chiave | Dove | Note |

@@ -58,6 +58,23 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 | 31 | Nessun vincolo DB sulla somma delle percentuali per pagina | `page_content` | Validazione solo applicativa (`PagePercentageAllocator`) |
 | 32 | `HANDOFF.md` ha la riga "Ultimo aggiornamento" ferma al 2026-09-01 e cita "Laravel 11" nello "Stato generale" | `HANDOFF.md` righe 3 e 7 | Il progetto è su Laravel 12 dal 2026-07-27 (stesso file, sezione dedicata) |
 
+## Calcolo peso rivista — assunzioni non verificate e limiti (aggiunto il 2026-10-26)
+
+| # | Assunzione o limite | Dove | Note |
+|---|---|---|---|
+| 33 | **Significato del +2 % di maggiorazione** (inchiostro? colla/legatura? cellophane?) non documentato: riprodotto dall'Excel com'è | default di `maggiorazione_percentuale` nelle migration `2026_10_26_*` | Da confermare con la tipografia ([DA-VERIFICARE.md](DA-VERIFICARE.md), DV-18). La calibrazione col peso reale serve a correggerlo nel tempo |
+| 34 | **Tolleranze di default** 4 % sulla grammatura, 1 mm sul formato, ±1 punto sulla maggiorazione: valori del prompt di sviluppo, non presi da schede tecniche | default di colonna, `tolleranza_*` | Il margine ± g dipende interamente da questi valori (DV-19) |
+| 35 | **Peso del bancale** 20 kg fisso per tutti i bancali | `peso_bancale_kg` | Dall'Excel; da verificare con chi spedisce (DV-20) |
+| 36 | **Scaglioni** 250/350/500/1000 g con limite **inclusivo**: non verificati contro il listino postale in vigore | `config/peso_rivista.php` | DV-21 |
+| 37 | **Pagine interne = `total_pages − pagine_copertina`**: presuppone che nel timone le copertine occupino posizioni dentro `total_pages` (oggi è così, vedi Flusso 4 di [03-dominio-e-flussi.md](03-dominio-e-flussi.md)) | `Issue::weightInput()` | Se la redazione inserisse nel timone solo le pagine interne, il peso sarebbe sottostimato di `pagine_copertina` pagine (DV-22) |
+| 38 | **Riviste esistenti senza parametri**: non è stato possibile riconoscere con certezza NM, GL e F&C (nel repo ci sono solo le riviste demo del seeder) | migration `2026_10_26_*` | Formato e grammature vanno inseriti a mano in "Modifica rivista" e in ogni numero esistente |
+| 39 | **Nessun aggiornamento realtime della modifica dei parametri**: `WeightPanel::saveParams()` non emette eventi broadcast, quindi gli altri utenti vedono i nuovi parametri solo al prossimo render (ricarica o cambio pagine) | `app/Livewire/Timone/WeightPanel.php` | Scelta per non aggiungere un evento e un listener in `Grid` per un dato che cambia di rado |
+| 40 | **Simulazione a passi di 2 pagine** (un foglio), non di segnatura | `MagazineWeightCalculator::addablePages()` | In stampa si aggiungono di solito 4/8/16 pagine: il dato "pagine aggiungibili" è un massimo teorico |
+| 41 | Le modifiche ai parametri di peso **sono** nella cronologia (`activity_logs`, azioni `issue.weight_params_changed` e `magazine.weight_defaults_changed`), ma le modifiche **agli altri campi** della rivista in `Magazines\Edit` (nome, colore, soglia, redattore) continuano a non essere registrate | `app/Livewire/Magazines/Edit.php` | Preesistente, non esteso per restare nel perimetro della funzionalità |
+| 42 | Decimal dei parametri di peso senza cast `decimal:2` | `app/Models/Magazine.php`, `app/Models/Issue.php` | Voluto: evita la deprecation di `brick/math` (#30). La conversione a float è centralizzata in `MagazineWeightInput::fromArray()` |
+| 43 | ~~Formato senza intervallo di validazione~~ **Risolto il 2026-10-26**: base e altezza ammesse tra 50 e 1000 mm (`config/peso_rivista.php` → `formato`), nei form e nel calcolo. Resta da correggere a mano il **numero 3 "Novembre 2026" del DB locale** (21 × 27): ora mostra l'errore invece di 5,1 g | `WeightLimits`, `WeightParameters::rules()` | Diagnosi in [10-debugging.md](10-debugging.md#peso-rivista) |
+| 44 | **Limiti opzionali nel calculator**: `MagazineWeightCalculator::calculate()` controlla grammature (30–400 g/m²) e formato (50–1000 mm) solo se riceve un `WeightLimits` | `app/Support/Weight/MagazineWeightCalculator.php` | Voluto per tenerlo puro (vedi `HANDOFF.md`, Decisioni). Ogni nuovo punto che calcola il peso deve passare `WeightLimits::fromConfig()` |
+
 ## Cose che sembrano sbagliate ma hanno un motivo (non "correggerle")
 
 | Cosa | Perché è così |
