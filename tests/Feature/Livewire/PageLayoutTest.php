@@ -68,12 +68,14 @@ test('each block shows the preview of its own file', function () {
         ->assertSeeHtml('src="'.route('content-files.thumbnail', $articleFile).'"');
 });
 
-test('block controls are compact (shown on hover or keyboard focus) and placeholders stay dashed', function () {
+// Revisione 2, Fase 1, bug 3: i comandi dei blocchi sono nel menu «⋯»
+// (prima comparivano al passaggio del mouse, tagliati nei blocchi piccoli).
+test('block controls are in the block menu and placeholders stay dashed', function () {
     $issue = reorderableIssue();
     layoutContent($issue, 2, 3, AdFormat::UnQuartoPagina, placeholder: true);
 
     Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
-        ->assertSeeHtml('group-hover/block:inline-flex group-focus-within/block:inline-flex')
+        ->assertSeeHtml('data-testid="content-menu-button"')
         ->assertSeeHtml('border-dashed border-amber-500')
         ->assertSee('Da assegnare');
 });

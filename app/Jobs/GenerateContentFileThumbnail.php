@@ -8,6 +8,7 @@ use App\Enums\ThumbnailStatus;
 use App\Events\ContentFileUploaded;
 use App\Models\ContentFile;
 use App\Support\PdfFormatChecker;
+use App\Support\ContentFileAspectRatio;
 use App\Support\PdfPageMeasurer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -77,6 +78,10 @@ class GenerateContentFileThumbnail implements ShouldQueue
                 'thumbnail_path' => $thumbnailRelativePath,
                 'thumbnail_status' => ThumbnailStatus::Ready,
             ]);
+            // Revisione 2, Fase 2.4: proporzioni della pagina, misurate una
+            // volta qui, per decidere come ritagliare l'anteprima nel suo
+            // rettangolo (App\Support\PageGrid\ThumbnailFit).
+            $this->contentFile->update(['aspect_ratio' => ContentFileAspectRatio::measure($this->contentFile)]);
         } catch (Throwable $e) {
             report($e);
             $this->contentFile->update(['thumbnail_status' => ThumbnailStatus::Failed]);

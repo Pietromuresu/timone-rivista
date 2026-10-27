@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Livewire\Timone\ContentCreate;
+use App\Support\ContentFormRules;
 use App\Support\Uploads\UploadEnvironmentInspector;
 use Illuminate\Console\Command;
 
@@ -24,7 +24,7 @@ class DiagnoseUploads extends Command
     public function handle(): int
     {
         $results = UploadEnvironmentInspector::inspect(
-            componentMaxKilobytes: ContentCreate::FILE_MAX_KILOBYTES,
+            componentMaxKilobytes: ContentFormRules::maxKilobytes(),
             probePdf: ! $this->option('no-pdf'),
         );
 

@@ -22,14 +22,16 @@
                  (che cambia col menu mobile aperto). z-40: sopra le pagine
                  del timone (badge z-10, menu export z-10), sotto modali,
                  dropdown e toast (z-50). Il drag&drop nativo disegna il
-                 fantasma sopra tutto; l'auto-scroll di Sortable parte già
-                 a 120px dal bordo (resources/js/timone-alpine.js), quindi
-                 anche sotto l'header. --}}
+                 fantasma sopra tutto. data-sticky-top: l'auto-scroll
+                 durante il trascinamento parte dal fondo della fascia
+                 sticky, non dal bordo della finestra coperto dall'header
+                 (resources/js/drag-autoscroll.js, revisione 2, Fase 1, bug 4). --}}
             {{-- Fase 6 (2026-10-27): l'altezza reale dell'header (cambia col
                  menu mobile) va in --app-header-height, così la barra di
                  riepilogo del timone (sticky) si ferma subito sotto. --}}
             <div
                 class="sticky top-0 z-40 shadow-sm"
+                data-sticky-top
                 x-data
                 x-init="const set = () => document.documentElement.style.setProperty('--app-header-height', $el.offsetHeight + 'px'); set(); new ResizeObserver(set).observe($el)"
             >

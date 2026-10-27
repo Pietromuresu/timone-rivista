@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Imagick;
+use Symfony\Component\Process\Process;
 use Throwable;
 
 /**
@@ -25,8 +26,23 @@ class PdfPageMeasurer
 
     private const MM_PER_INCH = 25.4;
 
+    /**
+     * Revisione 2, Fase 1, bug 5 (2026-10-27): il conteggio gira DENTRO la
+     * richiesta di upload (serve subito per l'occupazione proposta), e
+     * pingImage() di Imagick su un PDF fa rasterizzare a Ghostscript TUTTE
+     * le pagine: misurato nel container ~0,24 s a pagina, quindi decine di
+     * secondi per un PDF di stampa da 100 MB. Ghostscript da solo legge il
+     * conteggio dall'albero delle pagine senza disegnarle (~0,03 s in
+     * tutto). Imagick resta come ripiego (gs assente, PDF che gs non apre).
+     */
     public static function pageCount(string $absolutePath): ?int
     {
+        $fast = self::ghostscriptPageCount($absolutePath);
+
+        if ($fast !== null) {
+            return $fast;
+        }
+
         try {
             $imagick = new Imagick;
             $imagick->pingImage($absolutePath);
@@ -39,6 +55,38 @@ class PdfPageMeasurer
 
             return null;
         }
+    }
+
+    /**
+     * Numero di pagine letto da Ghostscript senza rasterizzare; null se gs
+     * non c'è o non riesce (un file non PDF stampa errori e conta 0).
+     * -dSAFER con permesso di lettura del solo file indicato; il percorso
+     * è escapato come stringa PostScript.
+     */
+    private static function ghostscriptPageCount(string $absolutePath): ?int
+    {
+        $escaped = addcslashes($absolutePath, '\\()');
+
+        try {
+            $process = new Process([
+                'gs', '-q', '-dNODISPLAY', '-dSAFER', '-dNOPAUSE', '-dBATCH',
+                '--permit-file-read='.$absolutePath,
+                '-c', "({$escaped}) (r) file runpdfbegin pdfpagecount = quit",
+            ]);
+            $process->setTimeout(30);
+            $process->run();
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! $process->isSuccessful()) {
+            return null;
+        }
+
+        $lines = preg_split('/\R/', trim($process->getOutput()));
+        $last = trim((string) end($lines));
+
+        return ctype_digit($last) && (int) $last > 0 ? (int) $last : null;
     }
 
     /**

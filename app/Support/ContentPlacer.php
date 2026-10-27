@@ -48,26 +48,10 @@ final class ContentPlacer
 
         $span = $occupancy->pagesSpanned();
         $distribution = $occupancy->distribution();
-
-        $targetPages = $startPage->isCover()
-            ? self::coverTargets($startPage, $span)
-            : self::internalTargets($startPage, $span);
+        $targetPages = self::checkedTargets($occupancy, $startPage, $content->displayLabel(), $content->id);
 
         if (is_string($targetPages)) {
-            return str_replace('{content}', $content->displayLabel(), $targetPages);
-        }
-
-        foreach ($targetPages->values() as $index => $page) {
-            if ($page->isLocked()) {
-                return 'La '.$page->label()." è bloccata: sbloccala o scegli un'altra pagina di partenza (nessuna pagina è stata modificata).";
-            }
-
-            $occupied = $page->contents()->pluck('occupied_twelfths')->all();
-
-            if (! PageCapacity::fits($occupied, $distribution[$index])) {
-                return PageCapacity::insufficientSpaceMessage($page->label(), $distribution[$index], PageCapacity::free($occupied), $content->displayLabel())
-                    .' Nessuna pagina è stata modificata.';
-            }
+            return $targetPages;
         }
 
         // files() è ordinata dalla più recente e keyBy() tiene l'ULTIMA
@@ -110,6 +94,72 @@ final class ContentPlacer
         });
 
         return ['pages' => $targetPages, 'twelfths' => $distribution, 'group' => $group];
+    }
+
+    /**
+     * Revisione 2, Fase 2.5 (2026-10-27): stesso controllo di place() SENZA
+     * scrivere nulla, per un contenuto che non esiste ancora (campo
+     * «Posizione» del modulo di creazione: se non ci sta, errore e nessun
+     * salvataggio). null = ci sta.
+     */
+    public static function check(PageOccupancy $occupancy, Page $startPage, string $label): ?string
+    {
+        $targets = self::checkedTargets($occupancy, $startPage, $label, null);
+
+        return is_string($targets) ? $targets : null;
+    }
+
+    /**
+     * Pagine da occupare dalla pagina di partenza, verificate (esistono,
+     * non bloccate, con spazio per la loro quota). $ignoreContentId: il
+     * contenuto stesso, se è già su quelle pagine (spostamento dalla modale).
+     *
+     * @return Collection<int, Page>|string
+     */
+    private static function checkedTargets(PageOccupancy $occupancy, Page $startPage, string $label, ?int $ignoreContentId): Collection|string
+    {
+        $span = $occupancy->pagesSpanned();
+        $distribution = $occupancy->distribution();
+
+        $targetPages = $startPage->isCover()
+            ? self::coverTargets($startPage, $span)
+            : self::internalTargets($startPage, $span);
+
+        if (is_string($targetPages)) {
+            return str_replace('{content}', $label, $targetPages);
+        }
+
+        foreach ($targetPages->values() as $index => $page) {
+            if ($page->isLocked()) {
+                return 'La '.$page->label()." è bloccata: sbloccala o scegli un'altra pagina di partenza (nessuna pagina è stata modificata).";
+            }
+
+            $others = $page->contents()->with('advertisement')->get()->reject(fn (Content $c) => $c->id === $ignoreContentId);
+            $occupied = $others->map(fn (Content $c) => (int) $c->pivot->occupied_twelfths)->all();
+
+            if (! PageCapacity::fits($occupied, $distribution[$index])) {
+                return PageCapacity::insufficientSpaceMessage($page->label(), $distribution[$index], PageCapacity::free($occupied), $label)
+                    .' '.self::occupantsSentence($others, $distribution[$index] - PageCapacity::free($occupied))
+                    .' Nessuna pagina è stata modificata.';
+            }
+        }
+
+        return $targetPages;
+    }
+
+    /**
+     * "Sulla pagina ci sono già «X» (1/2) e «Y» (1/4): manca 1/4 di pagina."
+     * (revisione 2, Fase 2.5: l'errore dice cosa occupa la pagina e quanto
+     * spazio manca).
+     *
+     * @param  Collection<int, Content>  $occupants
+     */
+    private static function occupantsSentence(Collection $occupants, int $missingTwelfths): string
+    {
+        $list = $occupants->map(fn (Content $c) => '«'.$c->displayLabel().'» ('.Twelfths::fractionLabel((int) $c->pivot->occupied_twelfths).')')->values()->all();
+        $who = count($list) > 1 ? implode(', ', array_slice($list, 0, -1)).' e '.end($list) : ($list[0] ?? '');
+
+        return ($who !== '' ? "Sulla pagina ci sono già {$who}: " : '').'manca '.Twelfths::pagesLabel($missingTwelfths).'.';
     }
 
     /**

@@ -235,6 +235,69 @@ document.addEventListener('alpine:init', () => {
      * ricordato). Le variabili CSS vanno su <html>, fuori dall'albero che
      * Livewire ri-renderizza: un morph non può mai cancellarle.
      */
+    /**
+     * Campo di upload di un file con barra di avanzamento e controllo della
+     * dimensione PRIMA dell'invio (revisione 2, Fase 1, bug 5, 2026-10-27).
+     * Era scritto dentro content-create.blade.php (Fase 1, bug 9); estratto
+     * qui per usarlo uguale anche nella modale di modifica (content-edit),
+     * che prima mostrava solo "Caricamento…" e lasciava partire file oltre
+     * il limite. maxBytes/maxLabel: limite effettivo (UploadLimits). Gli
+     * eventi livewire-upload-* arrivano dall'<input wire:model> interno.
+     */
+    Alpine.data('fileUpload', ({ maxBytes = null, maxLabel = null, property = 'file' } = {}) => ({
+        dragging: false,
+        uploading: false,
+        progress: 0,
+        clientError: null,
+
+        tooLarge(file) {
+            if (! maxBytes || ! file || file.size <= maxBytes) return false;
+
+            this.clientError = `Il file pesa ${(file.size / 1024 / 1024).toFixed(1).replace('.', ',')} MB: il massimo accettato è ${maxLabel}. Riduci il PDF (es. esportalo ottimizzato per la stampa a risoluzione più bassa) e riprova.`;
+
+            return true;
+        },
+
+        /** File trascinati sulla drop zone. */
+        send(files) {
+            this.dragging = false;
+            this.clientError = null;
+
+            if (! files || files.length === 0) return;
+
+            if (files.length > 1) {
+                this.clientError = 'Trascina un solo file alla volta: ogni contenuto ha un solo PDF o immagine.';
+
+                return;
+            }
+
+            if (this.tooLarge(files[0])) return;
+
+            this.uploading = true;
+            this.progress = 0;
+            this.$wire.upload(property, files[0],
+                () => { this.uploading = false; },
+                () => { this.uploading = false; },
+                (event) => { this.progress = event.detail.progress; },
+            );
+        },
+
+        /**
+         * Selettore classico: in fase di cattura sul contenitore, quindi
+         * PRIMA che wire:model avvii l'upload; stopPropagation() lo ferma.
+         */
+        checkPicked(event) {
+            if (event.target.type !== 'file') return;
+
+            this.clientError = null;
+
+            if (this.tooLarge(event.target.files[0])) {
+                event.stopPropagation();
+                event.target.value = '';
+            }
+        },
+    }));
+
     Alpine.store('timoneZoom', {
         levels: ZOOM_LEVELS,
         level: 'm',
@@ -374,11 +437,11 @@ document.addEventListener('alpine:init', () => {
             // La "selezione" di MultiDrag la gestiamo noi (onPointerDown):
             // niente deselezione implicita al click altrove.
             avoidImplicitDeselect: true,
-            // Header fisso (Fase 1, bug 1): l'auto-scroll deve partire già
-            // sotto l'header, non solo negli ultimi 30px della finestra
-            // (default di Sortable) che ora sono coperti dall'header stesso.
-            scrollSensitivity: 120,
-            scrollSpeed: 18,
+            // Revisione 2, Fase 1, bug 4 (2026-10-27): niente auto-scroll di
+            // Sortable. Con il drag nativo lasciava la finestra allo scroll
+            // del browser, che sotto la fascia sticky non partiva: ora un
+            // unico gestore per tutti i drag (resources/js/drag-autoscroll.js).
+            scroll: false,
             /**
              * Immagine "fantasma" del trascinamento nativo: il browser
              * fotografa solo l'elemento afferrato. Per un gruppo/blocco

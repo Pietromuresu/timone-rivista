@@ -29,6 +29,19 @@ Se in una sessione noti che del codice già scritto viola uno di questi principi
 
 Queste regole si aggiungono al modo di lavorare già stabilito (procedere a fasi, mostrare il risultato prima di passare alla successiva), non lo sostituiscono. Se applicare SOLID alla lettera in un punto specifico richiederebbe una complessità sproporzionata rispetto al beneficio per un progetto di queste dimensioni, dillo esplicitamente e motiva la scelta pragmatica presa — quella motivazione va comunque documentata secondo la regola 1 sopra (tipicamente in "Decisioni architetturali da ricordare" in `HANDOFF.md`).
 
+## 4. Non modificare `app/Providers/AppServiceProvider.php` né la configurazione di URL/proxy/dischi/sessione
+
+La produzione dipende da questi file. Introdotta il 2026-10-27 dal batch "revisione con gli utenti 2" (`CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI_2.md`, regola 1). Non aggiungere, togliere o spostare nulla, neanche per "pulizia" o riformattazione (attenzione a Pint/formatter lanciati su intere cartelle). File protetti:
+
+- `app/Providers/AppServiceProvider.php`
+- `bootstrap/app.php` (trusted proxies, middleware globali)
+- `config/app.php` (URL, schema)
+- `config/session.php`
+- `config/filesystems.php` (disco di default e dischi)
+- la configurazione dei trusted proxies (`TrustProxies`, oggi in `bootstrap/app.php`)
+
+Se una funzionalità sembra richiedere una modifica lì, fermati e proponi un'alternativa (service provider dedicato, config locale al componente o in `config/timone.php`). Prima di ogni consegna esegui `git diff --stat` e conferma esplicitamente che questi file non sono cambiati.
+
 ## Riferimenti rapidi
 
 - Stato e cronologia completa del progetto: `HANDOFF.md`.

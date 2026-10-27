@@ -50,6 +50,25 @@ return [
     | perché sono abitudini redazionali che possono cambiare.
     |
     */
+    /*
+    |--------------------------------------------------------------------------
+    | Dimensione massima di un file caricato (revisione 2, Fase 1, bug 5)
+    |--------------------------------------------------------------------------
+    |
+    | In KB, come la regola `max:` di Laravel. UNICO punto del limite
+    | applicativo: lo leggono la regola del modulo contenuti
+    | (App\Support\ContentFormRules::maxKilobytes()), l'upload temporaneo
+    | di Livewire (config/livewire.php) e il limite mostrato/controllato nel
+    | browser (App\Support\Uploads\UploadLimits). Prima il modulo era
+    | fermo a 20 MB mentre PHP, nginx e Livewire accettavano 100 MB: i PDF
+    | di stampa ad alta risoluzione venivano rifiutati. Il server deve
+    | accettare un po' di più (upload_max_filesize/post_max_size ≥ 110M,
+    | client_max_body_size 110M): vedi docs/09-deploy.md e
+    | `php artisan timone:diagnose-upload`.
+    |
+    */
+    'upload_max_kb' => (int) env('TIMONE_UPLOAD_MAX_KB', 102400),
+
     'ad_placement' => [
         'cover_order' => ['II', 'III', 'IV', 'I'],
         'start_page' => (int) env('TIMONE_AD_PLACEMENT_START_PAGE', 2),

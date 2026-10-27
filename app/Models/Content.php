@@ -23,6 +23,8 @@ class Content extends Model
         'title',
         'occupancy_twelfths',
         'is_placeholder',
+        // Revisione 2, Fase 2.4: scelta manuale "a pagina intera"/"nel formato" (App\Enums\FileFit), null = automatico.
+        'file_fit',
         'archived_at',
     ];
 
@@ -33,6 +35,7 @@ class Content extends Model
             'archived_at' => 'datetime',
             'occupancy_twelfths' => 'integer',
             'is_placeholder' => 'boolean',
+            'file_fit' => \App\Enums\FileFit::class,
         ];
     }
 
@@ -120,7 +123,7 @@ class Content extends Model
             // content_file_id (Punto 4, 2026-09-02): quale file di questo
             // contenuto è rilevante per ciascuna pagina — vedi
             // PageContent::contentFile().
-            ->withPivot('occupied_twelfths', 'content_file_id', 'position')
+            ->withPivot('occupied_twelfths', 'content_file_id', 'position', 'grid_x', 'grid_y', 'grid_w', 'grid_h')
             ->withTimestamps();
     }
 

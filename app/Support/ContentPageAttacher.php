@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Content;
 use App\Models\Page;
+use App\Support\PageGrid\PageGridPositions;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -50,6 +51,9 @@ class ContentPageAttacher
         ]);
 
         self::syncPageContentType($page);
+        // Revisione 2, Fase 2.3: il nuovo contenuto riceve il suo rettangolo
+        // nel primo posto libero della griglia 6×6; gli altri non si muovono.
+        PageGridPositions::persist($page);
 
         return $twelfths;
     }

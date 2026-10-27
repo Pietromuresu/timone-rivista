@@ -73,7 +73,7 @@ Rollback: git checkout del commit precedente, docker compose build, docker compo
 |---|---|---|---|
 | SMTP | Mail di sollecito scadenza stampa, reset password | MAIL_* nel .env | Solleciti persi (vengono marcati come inviati già all'accodamento); reset password in errore |
 | Reverb (interno, container reverb) | Aggiornamenti in tempo reale tra utenti | REVERB_*, VITE_REVERB_* | Le azioni nel timone vanno in errore; i client passano al polling ogni secondo |
-| Imagick + Ghostscript (dentro l'immagine) | Miniature, conteggio pagine e controllo formato dei PDF | nessuna | PDF rifiutati o miniature "fallite" |
+| Imagick + Ghostscript (dentro l'immagine) | Miniature e controllo formato dei PDF (Imagick, in coda); conteggio pagine al caricamento (Ghostscript, veloce) | nessuna | PDF rifiutati o miniature "fallite"; senza Ghostscript il caricamento di un PDF grande diventa lento |
 
 Non ci sono API di terze parti (pagamenti, S3, ecc.).
 
@@ -109,6 +109,7 @@ docker compose exec app php artisan migrate:status
 | Deploy della modifica "occupazione a frazioni" (2026-10-27) | Prima del migrate: docker compose run --rm --no-deps app php artisan timone:occupancy-dry-run (mostra per ogni contenuto e pagina la vecchia percentuale e la nuova frazione; le righe ⚠️ sono pagine da sistemare a mano) |
 | Pagina con «⚠ Oltre capienza» in rosso | Dato vecchio arrotondato alla frazione più vicina: ridurre a mano lo spazio di uno dei contenuti dal menu sulla pagina |
 | Non si caricano PDF/immagini | docker compose exec app php artisan timone:diagnose-upload, poi cercare upload_failed in storage/logs/laravel.log (checklist in docs/09-deploy.md §6bis). Causa più probabile: APP_URL diverso dall'indirizzo usato nel browser |
+| Non si caricano file grandi (fino a 100 MB) | Limite dell'app: config/timone.php → upload_max_kb (100 MB). Sul server: upload_max_filesize e post_max_size ≥ 110M, max_input_time ≥ 300, max_execution_time ≥ 120, client_max_body_size ≥ 110M in nginx (o LimitRequestBody in apache), timeout del proxy ≥ 300 s, almeno 2 GB liberi per livewire-tmp. timone:diagnose-upload avvisa se PHP è sotto soglia (docs/09-deploy.md §6ter) |
 | Miniature ferme | Container worker attivo? thumbnail_status in tabella content_files |
 | Mail non arrivate | MAIL_MAILER (log = non inviate), queue:failed, redattore di riferimento impostato sulla rivista |
 | migrate si ferma su page_occupancy | php artisan timone:missing-occupancy, poi valorizzare i contenuti elencati |
@@ -182,9 +183,28 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 
 - Nella griglia e nella doppia pagina ogni contenuto occupa un riquadro grande quanto il suo spazio: una mezza pagina è metà della pagina, un terzo un terzo.
 - Le pubblicità verticali (mezza pagina verticale, 1/3 verticale, 2/3) sono colonne alte quanto la pagina; gli altri contenuti sono righe una sotto l'altra; il piedino sta in fondo. Lo spazio ancora libero è un riquadro tratteggiato con scritto «libero».
-- Ogni riquadro mostra l'anteprima del suo PDF; cliccandola si apre il file. Passando sopra un riquadro compaiono i comandi (spazio, modifica, estendi, rimuovi).
-- Con più contenuti sulla stessa pagina, le frecce ↑ e ↓ (tra i comandi del riquadro) cambiano l'ordine: un contenuto più in alto o più in basso, una colonna più a sinistra o più a destra. Il piedino resta sempre in fondo. L'ordine resta salvato e lo vedono anche i colleghi.
+- Ogni riquadro mostra l'anteprima del suo PDF. I comandi (spazio, posizione, ruota, apri il file, modifica, estendi, rimuovi) sono nel menu «⋯» nell'angolo del riquadro (dal 2026-10-27, vedi sopra e sotto).
+- La posizione nella pagina si cambia con le frecce ← ↑ ↓ → del menu «⋯» (griglia 6×6, revisione 2, vedi sotto). La posizione resta salvata e la vedono anche i colleghi.
 - È una rappresentazione dello spazio, non l'impaginato definitivo: gli articoli sono sempre disegnati orizzontali.
+- Il PDF esportato dal timone («📄 Esporta PDF») è un foglio da stampare: in testa i numeri del riepilogo, poi copertine e pagine interne in doppie pagine come la rivista, con la stessa disposizione dei contenuti e, se scelte, le miniature di ciascun contenuto. Un pallino colorato accanto al numero indica lo stato della pagina.
+
+## Novità per la redazione (revisione 2, Fase 1, 2026-10-27)
+
+- Nuovo numero: scrivendo il numero di pagine (o le pubblicità previste, le copie, i bancali, le grammature) le cifre non si perdono più. Gli avvisi come «Non è un multiplo di 4» compaiono quando si esce dal campo, non mentre si scrive.
+- Si può creare un numero con tante pubblicità previste (es. 60) senza l'errore «Text too long».
+- Comandi di un contenuto nella pagina: ogni riquadro ha nell'angolo in alto a destra un bottone «⋯». Cliccandolo si apre un menu sopra tutto con: spazio occupato su quella pagina, sposta prima / sposta dopo, modifica, estendi a un'altra pagina, rimuovi. Funziona anche con riquadri piccoli (1/4) e con lo zoom S. Esc o un clic fuori lo chiudono.
+- Trascinando un contenuto, una pagina, un gruppo o una copertina verso il bordo basso della finestra (o subito sotto la riga di riepilogo in alto) la pagina scorre da sola, più veloce vicino al bordo: si arriva alle ultime pagine e alle copertine III e IV senza rilasciare.
+- File fino a 100 MB (prima 20 MB): si possono caricare i PDF di stampa ad alta risoluzione. Una barra mostra l'avanzamento, anche quando si sostituisce il file dalla finestra «Modifica contenuto»; un file troppo grande viene rifiutato con un messaggio che indica il limite.
+
+## Novità per la redazione (revisione 2, Fase 2, 2026-10-27)
+
+- Cliccando su un contenuto dentro una pagina si seleziona la pagina, come cliccando sulla pagina. Il file non si apre più così: per aprirlo, menu «⋯» del contenuto → «👁 Apri il file» (si apre in una nuova scheda). Se il contenuto non ha un file l'occhio è grigio e dice «Nessun file caricato».
+- La riga di riepilogo e i comandi del timone (zoom S/M/L, Griglia/Doppia pagina/Lista, Pagine interne, Esporta PDF…) restano fermi in alto mentre si scorre, così non serve tornare in cima. Sul telefono scorrono con la pagina.
+- Frecce di posizionamento: ogni pagina è divisa in una griglia di 6×6 caselle e ogni contenuto occupa un riquadro esatto (mezza pagina verticale = metà sinistra o destra, piedino = striscia in fondo, vetrina = un quarto). Nel menu «⋯» le frecce ← ↑ ↓ → spostano il contenuto di un passo; se nel posto c'è un altro contenuto della stessa larghezza (o altezza) i due si scambiano. Una freccia grigia vuol dire che non si può (fuori pagina o posto occupato). «⟳ Ruota» passa da verticale a orizzontale: per una mezza pagina o un 1/3 cambia anche il formato della pubblicità.
+- Un contenuto da 3/4 di pagina non è un riquadro ma una forma a L: riempie lo spazio lasciato dagli altri e non ha frecce.
+- Anteprime: se il PDF di un annuncio è impaginato su una pagina intera, nel riquadro si vede solo la parte che corrisponde alla sua posizione (una mezza verticale a sinistra mostra la metà sinistra del PDF). Se il file è già della misura dell'annuncio si vede intero. Se il sistema sbaglia: ✏️ Modifica → «Anteprima nel riquadro».
+- Posizione già dalla creazione: nel modulo «+ Nuovo contenuto» e nella finestra «Modifica contenuto» c'è «Posizione nel timone»: si sceglie la pagina (o la copertina) e il contenuto va lì subito. Se non c'è posto il contenuto non viene creato (o spostato) e il messaggio dice cosa occupa la pagina e quanto spazio manca. «Da assegnare» lo lascia tra i contenuti da assegnare.
+- Prima dell'aggiornamento sul server: docker compose run --rm --no-deps app php artisan timone:grid-dry-run (mostra dove finisce ogni contenuto sulla griglia, senza scrivere nulla). Dopo, facoltativo: php artisan timone:file-ratios per ritagliare anche le anteprime dei file già caricati.
 
 ## Punti di attenzione
 

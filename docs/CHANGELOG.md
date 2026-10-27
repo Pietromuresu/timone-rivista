@@ -138,3 +138,35 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 ## Restyling dell'export PDF del timone (2026-10-27)
 
 - Pagine tutte uguali con le proporzioni del formato, affiancate in doppie pagine come la rivista; contenuti disegnati come blocchi con miniatura e nome; stato come pallino colorato; intestazione con i numeri del riepilogo (pagine, spazio libero, % pubblicità, da assegnare, copertine, peso); legenda compatta; «Foglio N di M». Tecnico: `exports/partials/timone-sheet.blade.php`, `PageSpreadBuilder::slots()`, `ExportPageLayout` con etichette.
+
+## Revisione 2, Fase 1 — Bug (2026-10-27)
+
+### Visibili agli utenti
+- **Nuovo numero**: scrivendo nel campo pagine (e nelle pubblicità previste, copie, bancali, grammature) le cifre non si perdono più e il cursore non salta; l'anteprima si aggiorna 0,6 s dopo l'ultima cifra; gli avvisi («non è un multiplo di 4», «non ci stanno», grammatura fuori scala) compaiono quando si esce dal campo, non mentre si scrive.
+- **Nuovo numero con tante pubblicità previste**: non dà più «Text too long» (es. 60 mezze pagine su 120 pagine). Le note del numero hanno un messaggio chiaro se superano 2000 caratteri.
+- **Comandi dei contenuti nella pagina**: ogni blocco ha un bottone «⋯» nell'angolo che apre i comandi (spazio, sposta prima/dopo, modifica, estendi, rimuovi) sopra tutto, anche per i blocchi da 1/4 allo zoom più piccolo. Prima con due contenuti frazionari sulla stessa pagina i comandi erano tagliati e non cliccabili.
+- **Trascinamento**: avvicinando il puntatore al bordo inferiore della finestra, o al bordo inferiore della barra di riepilogo in alto, la pagina scorre da sola, più veloce vicino al bordo. Vale per contenuti, pagine, gruppi di pagine e copertine.
+- **File fino a 100 MB** (prima 20 MB nel modulo contenuti). Barra di avanzamento anche nella modale di modifica; messaggio con il limite se il file è troppo grande.
+
+### Tecniche
+- `Issues\Create::$total_pages` da `?int` a `string` + `totalPages()`; componente `<x-live-field>`; `wire:model.live.debounce.600ms` (anche in `x-weight-field`).
+- `activity_logs.description` → TEXT (migration `2026_10_27_500000`, reversibile); descrizione breve in `PlaceholderAdCreator`, posizioni in `new_values.placed`.
+- `partials/content-controls.blade.php` (comandi condivisi tra vista lista e menu), menu `@teleport('body')` + `x-anchor` in `page-card`.
+- `resources/js/drag-autoscroll.js`; Sortable con `scroll: false`; `data-sticky-top` su header e barra di riepilogo.
+- `config/timone.php` → `upload_max_kb` (unico limite, anche per `config/livewire.php`); `ContentFormRules::maxKilobytes()/fileRule()/temporaryUploadMessage()`; `max_upload_time` 30; `Alpine.data('fileUpload')`; `PdfPageMeasurer::pageCount()` con Ghostscript; `timone:diagnose-upload` con soglie (PHP ≥ limite + 10%, tempi, spazio disco); `docker/php/uploads.ini` 110M/120M, `max_input_time` 300, `max_execution_time` 120.
+- Nessuna dipendenza nuova; nessuna modifica a `AppServiceProvider` e agli altri file protetti.
+
+## Revisione 2, Fase 2 — Interazione con pagine e contenuti (2026-10-27)
+
+### Visibili agli utenti
+- **Click su un contenuto = click sulla pagina** (seleziona la pagina, non apre più il file). Il file si apre dall'**occhio 👁** nel menu «⋯» del contenuto, in una nuova scheda; senza file l'occhio è grigio con «Nessun file caricato».
+- **Comandi del timone sempre visibili**: riepilogo e comandi (zoom, viste, pagine interne, esporta…) in un'unica fascia ferma sotto la barra in alto (non sul telefono).
+- **Griglia 6×6**: ogni contenuto ha un rettangolo esatto (mezza verticale 3×6, piedino 6×2, vetrina 3×3…); nel menu «⋯» frecce ← ↑ ↓ → (con scambio tra contenuti che formano un rettangolo) e «⟳ Ruota» (mezza pagina e 1/3 cambiano anche formato). 3/4 di pagina come forma a L. Le posizioni attuali sono state convertite senza cambiamenti visibili, tranne le vetrine 1/4 che diventano quadrate.
+- **Anteprima ritagliata in base alla posizione**: un PDF a pagina intera mostra solo la parte del riquadro; un file già nella misura dell'annuncio si vede intero. Scelta manuale nella modale («Anteprima nel riquadro»).
+- **«Posizione nel timone»** nel modulo di creazione e nella modale di modifica: il contenuto va subito da quella pagina (o copertina) in poi; se non c'è posto, errore con chi occupa la pagina e quanto manca, e nulla viene salvato.
+
+### Tecniche
+- `app/Support/PageGrid/` (`GridRect`, `GridShapes`, `PageGridPlanner`, `PageGridPositions`, `GridConversion`, `ThumbnailFit`); migration `2026_10_27_600000_add_grid_cells_to_page_content_table` (con conversione) e `2026_10_27_610000_add_file_fit_columns`; comandi `timone:grid-dry-run`, `timone:file-ratios`.
+- `Grid::moveContentOnGrid()/rotateContentOnGrid()` al posto di `moveContentInPage()`; rimossi `App\Support\PageContentOrder` e i suoi test; `AdFormat::rotated()`; `ContentPlacer::check()` e messaggio con gli occupanti; `ContentUpdater::update(..., moveTo)`; `App\Support\PlacementChoice`; `Issue::pageAspectRatio()`; `ContentFileAspectRatio` nel job delle miniature; `ContentFileController::show` con `inline` esplicito.
+- `phpunit.xml`: `memory_limit` 512M per i test.
+

@@ -69,6 +69,12 @@
 | **Peso reale / calibrazione** | Peso misurato su bilancia a stampa avvenuta, usato per suggerire una maggiorazione più precisa | `peso_reale_g`, `maggiorazioneSuggerita` |
 | **Presence** | Chi è online sullo stesso numero | canale `presence-issue.{id}` |
 | **Whisper** | Messaggio effimero client-to-client via Reverb ("X sta modificando pagina N") | `resources/js/app.js`, store `pagePresence` |
+| **Menu «⋯» del blocco** | Bottone nell'angolo di ogni contenuto disegnato nella pagina: apre, sopra tutto, i comandi del contenuto (spazio, ordine, modifica, estendi, rimuovi). Revisione 2, Fase 1 | `partials/page-card.blade.php`, `partials/content-controls.blade.php` |
+| **Fascia sticky** | Parte alta della pagina che resta ferma scorrendo: header dell'app e barra di riepilogo del timone (`data-sticky-top`). L'auto-scroll del trascinamento parte dal suo bordo inferiore | `layouts/app.blade.php`, `partials/summary-bar.blade.php`, `resources/js/drag-autoscroll.js` |
+| **Griglia 6×6** | La pagina divisa in 6 colonne × 6 righe: ogni contenuto è un rettangolo di celle (1 dodicesimo = 3 celle; mezza verticale 3×6, piedino 6×2, vetrina 3×3). Revisione 2, Fase 2.3 | `page_content.grid_*`, `App\Support\PageGrid` |
+| **Forma a L** | Come si disegna un contenuto da 3/4, 7/12 o 11/12 di pagina, che non è un rettangolo nella griglia: riempie lo spazio lasciato dagli altri, non ha frecce | `PageGridPlanner::resolve()` (kind `fluid`) |
+| **A pagina intera / nel formato** | Come è stato esportato il file di un annuncio: impaginato su una pagina intera con l'annuncio in una zona (si mostra solo la parte del riquadro) oppure già della misura dell'annuncio (si mostra intero) | `App\Enums\FileFit`, `ThumbnailFit` |
+| **Limite di upload** | Dimensione massima di un file caricato: 100 MB, in un solo punto (`upload_max_kb`). PHP e nginx devono accettare almeno 110 MB | `config/timone.php`, `ContentFormRules::maxKilobytes()`, `timone:diagnose-upload` |
 
 ## Abbreviazioni e termini tecnici
 

@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use App\Enums\ContentOrientation;
 use App\Enums\CoverSlot;
 use App\Enums\PageContentType;
 use App\Enums\PageFillStatus;
 use App\Enums\PageStatus;
 use App\Enums\ThumbnailStatus;
 use App\Support\PageCapacity;
-use App\Support\PageLayoutPlanner;
+use App\Support\PageGrid\PageGridPlanner;
+use App\Support\PageGrid\PageGridPositions;
+use App\Support\PageGrid\ThumbnailFit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -115,12 +116,15 @@ class Page extends Model
             // content_file_id (Punto 4, 2026-09-02): quale file di quel
             // contenuto è rilevante per QUESTA pagina — vedi
             // PageContent::contentFile().
-            ->withPivot('occupied_twelfths', 'content_file_id', 'position')
+            // grid_* (revisione 2, Fase 2.3): rettangolo del contenuto sulla
+            // griglia 6×6 della pagina (App\Support\PageGrid).
+            ->withPivot('occupied_twelfths', 'content_file_id', 'position', 'grid_x', 'grid_y', 'grid_w', 'grid_h')
             ->withTimestamps()
-            // Fase 7b: ordine scelto dall'utente (page_content.position, frecce
-            // sul blocco), che è l'ordine dei blocchi nella card
-            // (PageLayoutPlanner); le righe senza posizione vanno in coda,
-            // nell'ordine di assegnazione (Fase 7a).
+            // Fase 7b: ordine di assegnazione sulla pagina (page_content.position;
+            // le righe senza posizione in coda). Dalla revisione 2, Fase 2.3, la
+            // disposizione sta nelle colonne grid_*: l'ordine decide solo chi
+            // viene sistemato prima quando un contenuto non ha ancora un
+            // rettangolo (App\Support\PageGrid\PageGridPlanner).
             ->orderByRaw('page_content.position is null')
             ->orderBy('page_content.position')
             ->orderBy('page_content.id');
@@ -210,41 +214,68 @@ class Page extends Model
             : $content->files->sortByDesc('created_at')->first();
     }
 
+    /** Disposizione già calcolata in questo render (vedi layout()). */
+    private ?array $gridLayoutCache = null;
+
     /**
-     * Disposizione dei contenuti nella card (Fase 7a, 2026-10-27): un
-     * blocco per contenuto, in % della card, calcolato da
-     * PageLayoutPlanner con dodicesimi e orientamento (pubblicità: dal
-     * formato; articoli: orizzontali), più l'eventuale spazio libero.
-     * Usa le relazioni già caricate da Grid::render().
+     * Disposizione dei contenuti nella card sulla griglia 6×6 (revisione 2,
+     * Fase 2.3, 2026-10-27; prima calcolata con PageLayoutPlanner, Fase
+     * 7a): un blocco per contenuto con il suo rettangolo (in celle e in %
+     * della card), i pezzi se è a L, l'anteprima del PROPRIO file, quali
+     * frecce sono possibili e se si può ruotare; più lo spazio libero.
+     * Usa le relazioni già caricate da Grid::render() ed è memorizzata
+     * sull'istanza: card, menu dei comandi ed export la chiedono più volte
+     * nello stesso render.
      *
-     * @return array{blocks: list<array{content: Content, rect: array, imageUrl: string|null, file: ContentFile|null}>, free: array|null, overfull: bool}
+     * @return array{blocks: list<array{content: Content, kind: string, cells: \App\Support\PageGrid\GridRect, rect: array, pieces: list<array>, file: ContentFile|null, imageUrl: string|null, moves: array<string, bool>, canRotate: bool}>, free: list<array>, overfull: bool}
      */
     public function layout(): array
     {
-        $items = $this->contents->map(fn (Content $content) => [
-            'id' => $content->id,
-            'twelfths' => (int) $content->pivot->occupied_twelfths,
-            'orientation' => $content->advertisement?->format?->orientation() ?? ContentOrientation::Horizontal,
-        ])->values()->all();
+        if ($this->gridLayoutCache !== null) {
+            return $this->gridLayoutCache;
+        }
 
-        $plan = PageLayoutPlanner::plan($items);
+        $plan = PageGridPositions::resolve($this);
+        $rects = PageGridPlanner::rectsOf($plan);
         $byId = $this->contents->keyBy('id');
+        $blocks = [];
 
-        return [
-            'blocks' => array_map(function (array $rect) use ($byId) {
-                $content = $byId[$rect['id']];
-                $file = $this->previewFileFor($content);
+        foreach ($plan['blocks'] as $id => $block) {
+            $content = $byId[$id];
+            $file = $this->previewFileFor($content);
+            $movable = $block['kind'] === 'rect';
+            // Fase 2.4: a pagina intera → solo la porzione del rettangolo; nel
+            // formato → intero senza tagli (ThumbnailFit).
+            $fit = ThumbnailFit::resolve($file?->aspect_ratio, $content->file_fit, $this->issue->pageAspectRatio());
 
-                return [
-                    'content' => $content,
-                    'rect' => $rect,
-                    'file' => $file,
-                    'imageUrl' => $file?->thumbnail_status === ThumbnailStatus::Ready ? route('content-files.thumbnail', $file) : null,
-                ];
-            }, $plan['blocks']),
-            'free' => $plan['free'],
+            $blocks[] = [
+                'content' => $content,
+                'kind' => $block['kind'],
+                'cells' => $block['rect'],
+                'rect' => $block['rect']->toPercent(),
+                'pieces' => array_map(fn ($piece) => $piece->toPercent(), $block['pieces']),
+                'file' => $file,
+                'imageUrl' => $file?->thumbnail_status === ThumbnailStatus::Ready ? route('content-files.thumbnail', $file) : null,
+                'fit' => $fit,
+                'imageStyle' => ThumbnailFit::imageStyle($fit, $block['rect']),
+                'moves' => collect(PageGridPlanner::DIRECTIONS)
+                    ->mapWithKeys(fn (string $direction) => [$direction => $movable && PageGridPlanner::moveTarget($rects, $id, $direction) !== null])
+                    ->all(),
+                'canRotate' => $movable && PageGridPlanner::rotateTarget($rects, $id) !== null,
+            ];
+        }
+
+        return $this->gridLayoutCache = [
+            'blocks' => $blocks,
+            'free' => array_map(fn ($rect) => $rect->toPercent(), $plan['free']),
             'overfull' => $plan['overfull'],
         ];
+    }
+
+    /** Blocco della disposizione di un contenuto (menu dei comandi). */
+    public function layoutBlockFor(Content $content): ?array
+    {
+        return collect($this->layout()['blocks'])->first(fn (array $block) => $block['content']->id === $content->id);
     }
 
     /**

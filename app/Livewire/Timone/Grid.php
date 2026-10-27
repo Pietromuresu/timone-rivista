@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Timone;
 
+use App\Enums\ContentOrientation;
 use App\Enums\ContentType;
 use App\Enums\CoverSlot;
 use App\Enums\PageStatus;
@@ -33,7 +34,8 @@ use App\Support\ContentPlacer;
 use App\Support\IssueCovers;
 use App\Support\IssueSummary;
 use App\Support\PageCapacity;
-use App\Support\PageContentOrder;
+use App\Support\PageGrid\PageGridPlanner;
+use App\Support\PageGrid\PageGridPositions;
 use App\Support\PageCountResizer;
 use App\Support\PageGroupLinker;
 use App\Support\PageGroupResolver;
@@ -2033,6 +2035,9 @@ class Grid extends Component
         $oldTwelfths = (int) $current->pivot->occupied_twelfths;
 
         $page->contents()->updateExistingPivot($contentId, ['occupied_twelfths' => $twelfths]);
+        // Revisione 2, Fase 2.3: nuova misura → nuovo rettangolo, nello stesso
+        // angolo se ci sta, altrimenti nel primo posto libero.
+        PageGridPositions::persist($page);
 
         ActivityLogger::log(
             issue: $this->issue,
@@ -2056,14 +2061,16 @@ class Grid extends Component
     }
 
     /**
-     * Fase 7b (2026-10-27): sposta un contenuto di un posto (prima/dopo)
-     * nell'ordine della pagina, che decide la disposizione dei blocchi
-     * (PageLayoutPlanner). Rinumera tutti i contenuti della pagina 1…n, così
-     * anche le righe senza posizione (assegnate prima della 7b o da un
-     * attach() senza posizione) ottengono un ordine esplicito. Una pagina
-     * bloccata non si modifica, come per lo spazio occupato.
+     * Revisione 2, Fase 2.3 (2026-10-27; sostituisce le frecce ↑/↓ della
+     * Fase 7b): sposta un contenuto di un passo sulla griglia 6×6 della
+     * pagina (up/down/left/right). Se il posto è occupato da un contenuto
+     * con cui forma un rettangolo, i due si scambiano; mai sovrapposizioni
+     * (calcolo in App\Support\PageGrid\PageGridPlanner::moveTarget(),
+     * ricontrollato qui lato server anche se il bottone era attivo: un
+     * collega può aver cambiato la pagina nel frattempo). Pagina bloccata
+     * → errore `locked`.
      */
-    public function moveContentInPage(int $pageId, int $contentId, int $delta): void
+    public function moveContentOnGrid(int $pageId, int $contentId, string $direction): void
     {
         $this->authorize('update', $this->issue);
 
@@ -2073,28 +2080,88 @@ class Grid extends Component
             return;
         }
 
-        $contents = $page->contents()->get();
-        $order = PageContentOrder::move($contents->pluck('id')->all(), $contentId, $delta);
+        $content = $page->contents()->where('content_id', $contentId)->first();
 
-        if ($order === null) {
+        if ($content === null || ! in_array($direction, PageGridPlanner::DIRECTIONS, true)) {
             return;
         }
 
-        DB::transaction(function () use ($page, $order) {
-            foreach ($order as $index => $id) {
-                $page->contents()->updateExistingPivot($id, ['position' => $index + 1]);
-            }
-        });
+        $changes = PageGridPositions::move($page, $contentId, $direction);
 
-        $moved = $contents->firstWhere('id', $contentId);
+        if ($changes === null) {
+            $this->addError('grid', "«{$content->displayLabel()}» non può andare ".self::DIRECTION_LABELS[$direction].': uscirebbe dalla pagina o si sovrapporrebbe a un altro contenuto.');
 
+            return;
+        }
+
+        $this->logGridChange($page, $content, 'page.content_moved', "«{$content->displayLabel()}» spostato ".self::DIRECTION_LABELS[$direction]." sulla {$page->label()}".(count($changes) > 1 ? ' (scambiato con un altro contenuto)' : ''), $changes);
+    }
+
+    /**
+     * Ruota un contenuto (larghezza ↔ altezza) sulla griglia. Per una
+     * pubblicità con un formato orientato il formato segue la nuova forma
+     * (mezza orizzontale ↔ verticale, 1/3 orizzontale/piedino ↔ verticale:
+     * AdFormat::rotated(), scelta dell'utente); per 2/3 e articoli cambia
+     * solo la forma sulla pagina.
+     */
+    public function rotateContentOnGrid(int $pageId, int $contentId): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $page = Page::findOrFail($pageId);
+
+        if ($page->issue_id !== $this->issue->id || $this->blockIfLocked($page)) {
+            return;
+        }
+
+        $content = $page->contents()->with('advertisement')->where('content_id', $contentId)->first();
+
+        if ($content === null) {
+            return;
+        }
+
+        $rect = PageGridPositions::rotate($page, $contentId);
+
+        if ($rect === null) {
+            $this->addError('grid', "«{$content->displayLabel()}» non si può ruotare qui: è quadrato o ruotato non ci sta sulla pagina.");
+
+            return;
+        }
+
+        $formatNote = '';
+        $format = $content->advertisement?->format;
+        $wantsVertical = $rect->h > $rect->w;
+
+        if ($format !== null && $format->rotated() !== null && ($format->orientation() === ContentOrientation::Vertical) !== $wantsVertical) {
+            $content->advertisement->update(['format' => $format->rotated()]);
+            $formatNote = ' (formato: '.$format->label().' → '.$format->rotated()->label().')';
+        }
+
+        $this->logGridChange($page, $content, 'page.content_rotated', "«{$content->displayLabel()}» ruotato sulla {$page->label()}{$formatNote}", [$contentId => $rect]);
+    }
+
+    private const DIRECTION_LABELS = [
+        PageGridPlanner::UP => 'più in alto',
+        PageGridPlanner::DOWN => 'più in basso',
+        PageGridPlanner::LEFT => 'più a sinistra',
+        PageGridPlanner::RIGHT => 'più a destra',
+    ];
+
+    /**
+     * Cronologia + propagazione agli altri utenti (broadcast e
+     * pages_updated_at per il polling), comune a frecce e rotazione.
+     *
+     * @param  array<int, \App\Support\PageGrid\GridRect>  $changes
+     */
+    private function logGridChange(Page $page, Content $content, string $action, string $description, array $changes): void
+    {
         ActivityLogger::log(
             issue: $this->issue,
             entityType: 'Page',
             entityId: $page->id,
-            action: 'page.contents_reordered',
-            description: "«{$moved->displayLabel()}» spostato ".($delta < 0 ? 'prima' : 'dopo')." nell'ordine della {$page->label()}",
-            new: ['order' => $order],
+            action: $action,
+            description: $description,
+            new: ['cells' => array_map(fn ($rect) => $rect->toArray(), $changes)],
         );
 
         broadcast(new PageContentsReordered(issueId: $this->issue->id, pageId: $page->id))->toOthers();
@@ -2106,7 +2173,7 @@ class Grid extends Component
     public function onPageContentsReordered(): void
     {
         // render() ridisegna la disposizione dal database.
-        $this->notifyRemoteChange('L\'ordine dei contenuti di una pagina è stato cambiato da un altro utente.');
+        $this->notifyRemoteChange('La disposizione dei contenuti di una pagina è stata cambiata da un altro utente.');
     }
 
     public function unassignContent(int $contentId, int $pageId): void
@@ -2324,6 +2391,11 @@ class Grid extends Component
             ->get()
             ->sortBy(fn (Page $cover) => $cover->cover_slot->order())
             ->values();
+
+        // Revisione 2, Fase 2.4: Page::layout() legge il formato del numero
+        // per il ritaglio delle anteprime; senza questa relazione ogni card
+        // farebbe una query.
+        $pages->concat($covers)->each(fn (Page $page) => $page->setRelation('issue', $this->issue));
 
         // Fase 6 (2026-10-27): caricati TUTTI e filtrati in memoria per il
         // pannello. Prima il filtro "Cerca per titolo" stava nella query, e

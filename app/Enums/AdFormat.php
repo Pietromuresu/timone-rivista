@@ -92,6 +92,28 @@ enum AdFormat: string
      * resto (pagine intere, mezza orizzontale, vetrina, formati senza
      * misure) si impila in righe.
      */
+    /**
+     * Formato dopo una rotazione sulla griglia della pagina (revisione 2,
+     * Fase 2.3, scelta dell'utente: ruotare una pubblicità ne cambia il
+     * formato, così formato, cruscotto ed export restano coerenti con ciò
+     * che si vede). Il piedino ruotato diventa 1/3 verticale; ruotato di
+     * nuovo torna 1/3 orizzontale (non piedino: il piedino è un 1/3
+     * orizzontale ancorato in fondo, posizione che la rotazione non
+     * conosce). null = formato senza versione ruotata: per 2/3 la rotazione
+     * cambia solo la forma sulla pagina, per gli altri (quadrati, pagina
+     * intera…) non si ruota.
+     */
+    public function rotated(): ?self
+    {
+        return match ($this) {
+            self::MezzaPaginaOrizzontale => self::MezzaPaginaVerticale,
+            self::MezzaPaginaVerticale => self::MezzaPaginaOrizzontale,
+            self::UnTerzoPaginaOrizzontale, self::Piedino => self::UnTerzoPaginaVerticale,
+            self::UnTerzoPaginaVerticale => self::UnTerzoPaginaOrizzontale,
+            default => null,
+        };
+    }
+
     public function orientation(): ContentOrientation
     {
         if ($this === self::Piedino) {

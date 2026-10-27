@@ -116,7 +116,7 @@ test('duplicating structure from a previous issue copies page content types by p
 
     Livewire::actingAs($user)->test(Create::class, ['magazine' => $magazine])
         ->set('duplicateFromIssueId', $source->id)
-        ->assertSet('total_pages', 6) // pre-compilato dalla issue scelta
+        ->assertSet('total_pages', '6') // pre-compilato dalla issue scelta
         ->set('title', 'Numero duplicato')
         ->call('save')
         ->assertRedirect();

@@ -145,6 +145,27 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 | 78 | ~~Nell'export PDF una pagina mostrava UNA sola miniatura~~ — risolto il 2026-10-27 su segnalazione dell'utente: un blocco con la propria miniatura per contenuto | `exports/timone.blade.php` | — |
 | 79 | Miniature WEBP assenti dall'export dove la GD non supporta WEBP (es. container di sviluppo) | `App\Support\ExportThumbnail` | Convertirle richiederebbe Imagick/GD con WEBP; per i PDF la miniatura è sempre PNG |
 
+## Revisione 2, Fase 1 — bug (aggiunto il 2026-10-27)
+
+- **Verifiche nel browser fuori dal repo**: focus del campo pagine, menu «⋯» a tutti gli zoom e auto-scroll sono stati verificati con uno script CDP su Chrome headless, tenuto nella cartella temporanea della sessione e non nel repo. Il progetto resta senza test browser (niente Dusk, regola «nessuna dipendenza nuova»); i test PHP coprono markup e logica server. Se i bug del browser tornano spesso, valutare Dusk o Playwright (dipendenza da approvare).
+- **Auto-scroll con eventi sintetici**: il gestore `drag-autoscroll.js` è verificato con `DragEvent` sintetici (stesso codice degli eventi veri); il drag nativo reale con il mouse non è automatizzabile in Chrome headless senza intercettare il drag. Da riprovare a mano su Chrome, Firefox e Safari.
+- **Avvisi solo al blur** solo nel modulo di creazione numero (e nel componente `x-weight-field`, quindi anche modale Peso e impostazioni rivista). Altri moduli con anteprime live (`ContentCreate` pagine del PDF, occupazione) usano ancora `debounce.300ms` e mostrano gli avvisi durante la digitazione: non segnalato dagli utenti.
+- **Proprietà `?int` con `wire:model.live`** ancora presenti: `HasOccupancyFields::$whole_pages`, `ContentCreate::$pdfPageFrom/$pdfPageTo` (con debounce 300 ms). Hanno lo stesso rischio teorico di cifre perse scrivendo numeri a più cifre molto velocemente; non toccate perché fuori dal perimetro del bug (form del numero). Da convertire a `string` + parsing se gli utenti lo segnalano.
+- **Conteggio pagine nella richiesta di upload**: ora con Ghostscript (~0,03 s), ma resta sincrono. Se `gs` manca sul server il ripiego Imagick può impiegare decine di secondi su PDF di stampa (avviso in `timone:diagnose-upload` solo indiretto, tramite «Lettura PDF (Imagick)»).
+- **`TIMONE_UPLOAD_MAX_KB` assente da `.env.example`** (regola del batch: niente modifiche a `.env*` senza dirlo). Facoltativa con default 100 MB.
+
+## Revisione 2, Fase 2 — interazione con pagine e contenuti (aggiunto il 2026-10-27)
+
+- **`PageLayoutPlanner` (Fase 7a) resta solo per la conversione** (`GridConversion`, dry-run `timone:grid-dry-run`): da togliere quando tutte le installazioni avranno fatto la migration `2026_10_27_600000`.
+- **Posizione di partenza solo come preferenza nella ridisposizione**: quando i rettangoli salvati lasciano lo spazio nella forma sbagliata (es. due vetrine in diagonale + una mezza pagina) il planner ridispone tutta la pagina; un contenuto spostato a mano può quindi cambiare posto. Raro, documentato in `PageGridPlanner::resolve()`.
+- **Forma a L in ordine di lettura**: un 3/4 prende le celle libere riga per riga; con altri contenuti in posizioni strane la L può avere più di due pezzi. Accettabile per una rappresentazione dello spazio.
+- **Rotazione del piedino**: piedino → 1/3 verticale → 1/3 orizzontale (non torna piedino: il piedino è un 1/3 orizzontale ancorato in fondo, la rotazione non lo sa).
+- **Ritaglio non applicato nell'export PDF del timone** (dompdf): lì le miniature restano adattate al blocco. La Fase 5 rifà l'esportazione della rivista con il ritaglio.
+- **File caricati prima della Fase 2.4**: senza `aspect_ratio` l'anteprima resta intera finché non si esegue `timone:file-ratios`.
+- **Frecce solo col mouse/Tab nel menu**: nessuna scorciatoia da tastiera dedicata (la Fase 4 parla di «tastiera» per i permessi del commerciale).
+- **Fascia sticky non sticky sotto i 640 px**: su un telefono occuperebbe un terzo dello schermo.
+- **`placement` controllato prima di creare, scritto dopo**: tra il controllo e la scrittura un collega può occupare la pagina; in quel caso il contenuto viene creato e resta da assegnare con un errore (stesso comportamento del vecchio percorso «📎 Carica materiale»). Una transazione unica non era possibile: `ContentCreator` salva i file e accoda i job delle miniature.
+
 ## Cose che sembrano sbagliate ma hanno un motivo (non "correggerle")
 
 | Cosa | Perché è così |

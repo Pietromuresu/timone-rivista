@@ -26,6 +26,7 @@ use App\Support\ContentPageAttacher;
 use App\Support\ContentPlacer;
 use App\Support\PageGroupLinker;
 use App\Support\PageInserter;
+use App\Support\PlacementChoice;
 use App\Support\Twelfths;
 use App\Support\Uploads\UploadEnvironmentInspector;
 use App\Support\Uploads\UploadLimits;
@@ -134,20 +135,24 @@ class ContentCreate extends Component
     public ?int $anchorPageId = null;
 
     /**
-     * Stesso ventaglio mimes già usato prima del Punto 4 (solo lì pdf-only,
-     * perché quell'upload era sempre un PDF di pagina) più le immagini,
-     * ammesse da Fase 4.1. Costante perché la stessa regola serve sia al
-     * salvataggio sia alla validazione immediata del file appena scelto o
-     * trascinato (updatedFile(), bug 2): un solo punto da cambiare.
+     * Revisione 2, Fase 2.5 (2026-10-27): «Posizione nel timone» scelta già
+     * creando il contenuto ('' = da assegnare, 'p:N', 'c:II'…:
+     * App\Support\PlacementChoice). Se non c'è spazio il contenuto NON
+     * viene creato. Ignorata quando il modulo è aperto da una pagina
+     * («📎 Carica materiale», $anchorPageId), che ha già la sua pagina.
      */
-    private const FILE_RULES = ContentFormRules::FILE;
+    public string $placement = '';
 
     /**
-     * Limite del modulo (20 MB) — pubblico perché lo leggono anche
-     * App\Support\Uploads\UploadLimits (limite effettivo mostrato e
-     * controllato nel browser) e `timone:diagnose-upload` (Fase 1, bug 9).
+     * Stesso ventaglio mimes già usato prima del Punto 4 (solo lì pdf-only,
+     * perché quell'upload era sempre un PDF di pagina) più le immagini,
+     * ammesse da Fase 4.1. La stessa regola (ContentFormRules::fileRule())
+     * serve sia al salvataggio sia alla validazione immediata del file appena
+     * scelto o trascinato (updatedFile(), bug 2): un solo punto da cambiare.
+     * Il limite di dimensione è timone.upload_max_kb (revisione 2, Fase 1,
+     * bug 5), letto anche da App\Support\Uploads\UploadLimits e da
+     * `timone:diagnose-upload`.
      */
-    public const FILE_MAX_KILOBYTES = ContentFormRules::FILE_MAX_KILOBYTES;
 
     /**
      * Stato del riepilogo di conflitto per un caricamento PDF multipagina
@@ -256,7 +261,7 @@ class ContentCreate extends Component
             return;
         }
 
-        $this->validateOnly('file', ['file' => self::FILE_RULES]);
+        $this->validateOnly('file', ['file' => ContentFormRules::fileRule()], ContentFormRules::messages());
 
         try {
             $this->pdfPageCount = ContentCreator::pdfPageCount($this->file);
@@ -319,7 +324,30 @@ class ContentCreate extends Component
         // modale di conflitto. Un ValidationException qui finisce nel form.
         $pdfPageCount = $this->file !== null ? ContentCreator::pdfPageCount($this->file) : null;
         $validated += $this->chosenPdfPages($validated, $pdfPageCount);
-        ContentCreator::resolveOccupancy($validated, $pdfPageCount);
+        $occupancy = ContentCreator::resolveOccupancy($validated, $pdfPageCount);
+
+        // Fase 2.5: posizione scelta nel modulo → verificata PRIMA di creare
+        // qualunque cosa (stesso controllo dell'assegnazione manuale,
+        // ContentPlacer); se non ci sta, errore e nessun salvataggio.
+        $placementPage = null;
+
+        if ($this->anchorPageId === null && $this->placement !== '') {
+            $placementPage = PlacementChoice::page($this->issue, $this->placement);
+
+            if ($placementPage === null) {
+                $this->addError('placement', 'Posizione non valida: scegli una pagina o una copertina dall\'elenco.');
+
+                return;
+            }
+
+            $label = trim((string) ($validated['client'] ?? '')) !== '' ? trim($validated['client']) : $validated['title'];
+
+            if (($problem = ContentPlacer::check($occupancy, $placementPage, $label)) !== null) {
+                $this->addError('placement', $problem);
+
+                return;
+            }
+        }
 
         // Bug 8: le pagine del timone da occupare sono quelle SCELTE del PDF
         // (es. 2 su 3), non sempre tutte quelle del file.
@@ -337,7 +365,7 @@ class ContentCreate extends Component
             return;
         }
 
-        $this->createContentAndFinish($validated, $pdfPageCount, targetPages: null);
+        $this->createContentAndFinish($validated, $pdfPageCount, targetPages: null, placementPage: $placementPage);
     }
 
     /**
@@ -620,7 +648,7 @@ class ContentCreate extends Component
      *
      * @param  Collection<int, Page>|null  $targetPages
      */
-    private function createContentAndFinish(array $validated, ?int $pdfPageCount, ?Collection $targetPages, ?TemporaryUploadedFile $file = null, ?int $initiatingPosition = null): void
+    private function createContentAndFinish(array $validated, ?int $pdfPageCount, ?Collection $targetPages, ?TemporaryUploadedFile $file = null, ?int $initiatingPosition = null, ?Page $placementPage = null): void
     {
         $file ??= $this->file;
 
@@ -630,6 +658,9 @@ class ContentCreate extends Component
             $this->attachConfirmedPages($content, $targetPages, $initiatingPosition);
         } elseif ($this->anchorPageId !== null) {
             $this->placeOnAnchorPage($content);
+        } elseif ($placementPage !== null) {
+            // Fase 2.5: già verificato in save(); stesso servizio del drag.
+            $this->placeOnPage($content, $placementPage);
         }
 
         broadcast(new ContentCreated(
@@ -660,7 +691,7 @@ class ContentCreate extends Component
 
         $this->showForm = false;
         $this->anchorPageId = null;
-        $this->reset('file', 'pdfPageCount');
+        $this->reset('file', 'pdfPageCount', 'placement');
     }
 
     private function placeOnAnchorPage(Content $content): void
@@ -671,6 +702,15 @@ class ContentCreate extends Component
             return;
         }
 
+        $this->placeOnPage($content, $anchorPage);
+    }
+
+    /**
+     * Posiziona dalla pagina indicata con ContentPlacer (stesso servizio
+     * dell'assegnazione manuale) e avvisa gli altri utenti.
+     */
+    private function placeOnPage(Content $content, Page $anchorPage): void
+    {
         $result = ContentPlacer::place($content, $anchorPage);
 
         if (is_string($result)) {
@@ -887,10 +927,16 @@ class ContentCreate extends Component
             'validation_errors' => $errorsInJson,
             'request_url' => request()->fullUrl(),
             'x_forwarded_proto' => request()->header('X-Forwarded-Proto'),
-            'environment' => collect(UploadEnvironmentInspector::inspect(request(), self::FILE_MAX_KILOBYTES, probePdf: false))
+            'environment' => collect(UploadEnvironmentInspector::inspect(request(), ContentFormRules::maxKilobytes(), probePdf: false))
                 ->mapWithKeys(fn (array $check) => [$check['check'] => strtoupper($check['status']).' — '.$check['detail']])
                 ->all(),
         ]);
+
+        if (($tooLarge = ContentFormRules::temporaryUploadMessage($errorsInJson)) !== null) {
+            $this->dispatch('upload:errored', name: $name)->self();
+
+            throw ValidationException::withMessages([$name => $tooLarge]);
+        }
 
         if ($errorsInJson !== null) {
             return $this->livewireUploadErrored($name, $errorsInJson, $isMultiple);
@@ -946,6 +992,8 @@ class ContentCreate extends Component
     public function render(): View
     {
         return view('livewire.timone.content-create', [
+            // Fase 2.5: solo a modulo aperto (sono una query per le pagine).
+            'placementOptions' => $this->showForm ? PlacementChoice::options($this->issue) : [],
             'sections' => $this->issue->magazine->sections()->orderBy('name')->get(),
             'editorialStatuses' => EditorialStatus::cases(),
             'adFormats' => AdFormat::cases(),
@@ -956,7 +1004,7 @@ class ContentCreate extends Component
             'occupancyPreview' => $this->occupancyPreview(),
             // Fase 1, bug 9: limite VERO (il più stretto tra PHP, Livewire e
             // questo modulo), controllato già nel browser prima dell'invio.
-            'uploadLimit' => UploadLimits::effective(self::FILE_MAX_KILOBYTES),
+            'uploadLimit' => UploadLimits::effective(ContentFormRules::maxKilobytes()),
             'pdfChoice' => $this->pdfChoiceState(),
         ]);
     }

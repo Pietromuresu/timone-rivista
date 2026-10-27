@@ -81,7 +81,11 @@ return [
         // (solo pagina): quel componente ha già una propria validazione
         // `mimes:pdf` più stretta subito dopo, quindi un'immagine che
         // superasse questo gate globale verrebbe comunque respinta lì.
-        'rules' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:102400'], // 100MB
+        // Revisione 2, Fase 1, bug 5 (2026-10-27): il `max:` viene da
+        // config/timone.php (upload_max_kb), unico punto del limite. Letto
+        // con require perché durante il caricamento della config config()
+        // non garantisce che timone.php sia già stato letto.
+        'rules' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:'.(require __DIR__.'/timone.php')['upload_max_kb']],
         'directory' => null,   // Example: 'tmp'                      | Default: 'livewire-tmp'
         'middleware' => null,  // Example: 'throttle:5,1'             | Default: 'throttle:60,1'
         'preview_mimes' => [   // Supported file types for temporary pre-signed file URLs...
@@ -89,7 +93,9 @@ return [
             'mov', 'avi', 'wmv', 'mp3', 'm4a',
             'jpg', 'jpeg', 'mpga', 'webp', 'wma',
         ],
-        'max_upload_time' => 10, // margine per upload di 32MB su connessioni lente
+        // Minuti di validità dell'URL firmato di upload: 30 per un PDF da
+        // 100 MB su una connessione lenta (revisione 2, Fase 1, bug 5; era 10).
+        'max_upload_time' => 30,
         'cleanup' => true, // Should cleanup temporary uploads older than 24 hrs...
     ],
 

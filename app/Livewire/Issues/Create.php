@@ -31,22 +31,21 @@ class Create extends Component
     public ?string $print_deadline_at = '';
 
     /**
-     * `?int`, non `int` (Fase 1, bug 2, 2026-10-26): svuotando il campo il
-     * browser invia '' — su una proprietà `int` Livewire non può né
-     * assegnarla né convertirla e la "unset"-ta (vedi HandleComponents::
-     * setComponentPropertyAwareOfTypes()), quindi il render successivo
-     * esplodeva con PropertyNotFoundException. Con `?int` Livewire la porta
-     * a null, la validazione `required` mostra l'errore inline al
-     * salvataggio e anteprima peso/avviso multiplo-di-4 restano spenti
-     * finché il valore non è valido.
-     *
-     * Default di classe `null` e 32 impostato in mount(): in idratazione
-     * Livewire NON riassegna un null dello snapshot a una proprietà
-     * tipizzata (HandleComponents::hydrateProperties, `continue` su
-     * is_null), quindi con `= 32` qui il campo svuotato tornava a 32 alla
-     * richiesta successiva e il salvataggio passava senza errore.
+     * Stringa, non `?int` (revisione 2, Fase 1, bug 1, 2026-10-27): il
+     * campo è un input live e con una proprietà intera il server
+     * restituiva il valore CONVERTITO (32, non "32"). Livewire confronta
+     * quello che ha inviato con quello che torna: diversi → lo tratta come
+     * una modifica fatta dal server e lo riscrive nel campo. Se intanto
+     * l'utente aveva scritto un'altra cifra, la risposta di "1" arrivata
+     * dopo aver digitato "12" rimetteva "1": cifre perse e cursore che
+     * salta, percepito come "focus perso" (riprodotto in Chrome scrivendo
+     * "1234" e ottenendo "13"). Con una stringa il server rimanda
+     * esattamente ciò che ha ricevuto e il campo non viene più toccato.
+     * Il valore numerico si legge sempre da totalPages(); '' = vuoto
+     * (prima `null`, Fase 1 bug 2 del batch precedente: una stringa non ha
+     * il problema dell'"unset" delle proprietà `int` svuotate).
      */
-    public ?int $total_pages = null;
+    public string $total_pages = '';
 
     public string $notes = '';
 
@@ -80,7 +79,7 @@ class Create extends Component
         abort_unless(auth()->user()->canAccessMagazine($magazine), 403);
 
         $this->magazine = $magazine;
-        $this->total_pages = 32;
+        $this->total_pages = '32';
         $this->weight = WeightParameters::formValuesFrom($magazine)
             + array_fill_keys(WeightParameters::ISSUE_ONLY_FIELDS, '');
         $this->plannedAds = array_fill_keys(array_column(PlannedAdKind::cases(), 'value'), '');
@@ -100,7 +99,7 @@ class Create extends Component
         $source = $this->magazine->issues()->find($this->duplicateFromIssueId);
 
         if ($source !== null) {
-            $this->total_pages = $source->total_pages;
+            $this->total_pages = (string) $source->total_pages;
         }
     }
 
@@ -131,6 +130,9 @@ class Create extends Component
         ], WeightParameters::messages('weight') + [
             'plannedAds.*.integer' => 'Indica un numero intero di pubblicità.',
             'plannedAds.*.min' => 'Il numero di pubblicità non può essere negativo.',
+            // Le note sono l'unico testo libero del modulo (colonna TEXT):
+            // un limite esplicito invece di un errore del database.
+            'notes.max' => 'Le note possono essere lunghe al massimo :max caratteri.',
         ]);
 
         // Stesso piano dell'anteprima: se non ci stanno, errore bloccante
@@ -148,7 +150,7 @@ class Create extends Component
             'title' => $validated['title'],
             'issue_date' => $validated['issue_date'],
             'print_deadline_at' => $validated['print_deadline_at'],
-            'total_pages' => $validated['total_pages'],
+            'total_pages' => (int) $validated['total_pages'],
             'notes' => $validated['notes'],
             'status' => IssueStatus::Bozza,
             ...WeightParameters::toDatabase($validated['weight']),
@@ -192,7 +194,20 @@ class Create extends Component
             'modifiedWeightFields' => $this->modifiedWeightFields(),
             'plannedAdKinds' => PlannedAdKind::cases(),
             'adPlan' => $this->placementPlan(),
+            'totalPagesValue' => $this->totalPages(),
         ]);
+    }
+
+    /**
+     * Pagine interne come intero, null finché il campo non contiene un
+     * numero intero valido (vuoto, "3.5", "-2"): anteprime e avvisi restano
+     * spenti, l'errore lo dà la validazione al salvataggio.
+     */
+    private function totalPages(): ?int
+    {
+        $value = trim($this->total_pages);
+
+        return ctype_digit($value) && (int) $value <= 2000 ? (int) $value : null;
     }
 
     /**
@@ -204,11 +219,11 @@ class Create extends Component
     {
         $counts = $this->plannedAdCounts();
 
-        if (array_sum($counts) === 0 || $this->total_pages === null || $this->total_pages < 0) {
+        if (array_sum($counts) === 0 || $this->totalPages() === null) {
             return null;
         }
 
-        return AdPlacementService::plan($this->total_pages, $counts);
+        return AdPlacementService::plan($this->totalPages(), $counts);
     }
 
     /** @return array<string, int> valori non numerici o negativi = 0 (li segnala la validazione) */
@@ -236,7 +251,7 @@ class Create extends Component
     {
         return WeightPreview::fromForm(
             $this->weight,
-            $this->total_pages,
+            $this->totalPages(),
             config('peso_rivista.scaglioni'),
             WeightLimits::fromConfig(),
         );

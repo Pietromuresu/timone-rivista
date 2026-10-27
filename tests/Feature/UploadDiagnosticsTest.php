@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Timone\ContentCreate;
+use App\Support\ContentFormRules;
 use App\Support\Uploads\RequestRootSignedUploadUrl;
 use App\Support\Uploads\UploadLimits;
 use Illuminate\Http\Request;
@@ -75,7 +76,7 @@ test('a validation error from the temporary upload keeps the Livewire message an
 
 test('the drop zone knows the effective size limit', function () {
     $issue = reorderableIssue();
-    $limit = UploadLimits::effective(ContentCreate::FILE_MAX_KILOBYTES);
+    $limit = UploadLimits::effective(ContentFormRules::maxKilobytes());
 
     Livewire::actingAs(editorFor($issue))->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')

@@ -109,7 +109,19 @@
                         'hint' => $isAd ? 'Cambiando formato viene riproposto lo spazio del formato; puoi correggerlo.' : null,
                     ])
 
-                    <div>
+                    @include('livewire.timone.partials.placement-field', ['placementId' => 'edit_placement'])
+
+                    {{-- Revisione 2, Fase 1, bug 5 (2026-10-27): barra di avanzamento e
+                         controllo del limite prima dell'invio, stessa logica del modulo
+                         di creazione (Alpine.data('fileUpload')). --}}
+                    <div
+                        x-data="fileUpload({ maxBytes: @js($uploadLimit['bytes']), maxLabel: @js($uploadLimit['bytes'] ? \App\Support\Uploads\UploadLimits::humanMegabytes($uploadLimit['bytes']) : null) })"
+                        x-on:change.capture="checkPicked($event)"
+                        x-on:livewire-upload-start="uploading = true; progress = 0; clientError = null"
+                        x-on:livewire-upload-progress="progress = $event.detail.progress"
+                        x-on:livewire-upload-finish="uploading = false"
+                        x-on:livewire-upload-error="uploading = false"
+                    >
                         <x-input-label for="edit_file" value="Materiale di stampa (PDF o immagine)" />
                         @php $currentFiles = $content->files->sortBy('pdf_page_number'); @endphp
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" data-testid="current-material">
@@ -121,8 +133,29 @@
                             @endif
                         </p>
                         <input id="edit_file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" wire:model="file" class="mt-1 block w-full text-xs text-gray-700 dark:text-gray-300" />
-                        <p class="mt-1 text-xs text-gray-400">Scegliendo un file sostituisci quello attuale. Un PDF di più pagine deve attraversare lo stesso numero di pagine dell'occupazione.</p>
-                        <div wire:loading wire:target="file" class="mt-1 text-xs text-indigo-600">Caricamento…</div>
+                        <p class="mt-1 text-xs text-gray-400">Scegliendo un file sostituisci quello attuale. Un PDF di più pagine deve attraversare lo stesso numero di pagine dell'occupazione.{{ $uploadLimit['bytes'] ? ' Massimo '.\App\Support\Uploads\UploadLimits::humanMegabytes($uploadLimit['bytes']).'.' : '' }}</p>
+                        <div x-show="uploading" x-cloak class="mt-2" data-testid="upload-progress">
+                            <div class="h-2 w-full rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                                <div class="h-2 bg-indigo-600 transition-all" :style="`width: ${progress}%`"></div>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500" x-text="`Caricamento… ${progress}%`"></p>
+                        </div>
+                        <p x-show="clientError" x-cloak x-text="clientError" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                        {{-- Revisione 2, Fase 2.4: come mostrare il file nel suo riquadro
+                             sulla pagina. Automatico = dalle proporzioni della prima
+                             pagina del file (tolleranza 5%). --}}
+                        @if ($currentFiles->isNotEmpty())
+                            <div class="mt-3">
+                                <x-input-label for="edit_file_fit" value="Anteprima nel riquadro" class="text-xs" />
+                                <select id="edit_file_fit" wire:model="file_fit" class="mt-1 block w-full text-sm rounded-md border-gray-300 dark:border-gray-700" data-testid="file-fit">
+                                    <option value="">Automatico{{ $detectedFit ? ' (rilevato: '.$detectedFit->shortLabel().')' : '' }}</option>
+                                    @foreach ($fileFits as $fit)
+                                        <option value="{{ $fit->value }}">{{ $fit->label() }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="mt-1 text-xs text-gray-400">A pagina intera: il PDF è impaginato a pagina piena con l'annuncio in una zona, si vede solo la parte del riquadro. Nel formato: il file è già della misura dell'annuncio e si vede intero.</p>
+                            </div>
+                        @endif
                         <x-input-error class="mt-1" :messages="$errors->get('file')" />
                     </div>
 

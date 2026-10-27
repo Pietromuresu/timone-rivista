@@ -19,6 +19,9 @@
                 $label = $block['placeholder'] ? \Illuminate\Support\Str::before($block['label'], ' — ') : $block['label'];
                 $border = $block['placeholder'] ? 'border: 0.7pt dashed #d97706;' : 'border: 0.4pt solid #ffffff;';
             @endphp
+            @foreach ($block['extra'] as $piece)
+                <div class="block" style="left: {{ $piece['x'] }}pt; top: {{ $piece['y'] }}pt; width: {{ $piece['w'] }}pt; height: {{ $piece['h'] }}pt; background-color: {{ $fill }}; {{ $border }}"></div>
+            @endforeach
             <div class="block" style="left: {{ $block['x'] }}pt; top: {{ $block['y'] }}pt; width: {{ $block['w'] }}pt; height: {{ $block['h'] }}pt; background-color: {{ $fill }}; {{ $border }}">
                 @if ($block['src'])
                     <img src="{{ $block['src'] }}" alt="" />
@@ -38,9 +41,9 @@
                 @endif
             </div>
         @endforeach
-        @if ($layout['free'])
-            <div class="free" style="left: {{ $layout['free']['x'] }}pt; top: {{ $layout['free']['y'] }}pt; width: {{ $layout['free']['w'] }}pt; height: {{ $layout['free']['h'] }}pt;"></div>
-        @endif
+        @foreach ($layout['free'] as $free)
+            <div class="free" style="left: {{ $free['x'] }}pt; top: {{ $free['y'] }}pt; width: {{ $free['w'] }}pt; height: {{ $free['h'] }}pt;"></div>
+        @endforeach
     @elseif ($legacyThumb)
         <img src="{{ $legacyThumb }}" alt="" style="width: 100%; height: 100%;" />
     @else

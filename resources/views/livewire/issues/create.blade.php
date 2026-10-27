@@ -46,24 +46,29 @@
                         <x-input-error class="mt-2" :messages="$errors->get('print_deadline_at')" />
                     </div>
 
-                    <div>
+                    {{-- Revisione 2, Fase 1 bug 1 (2026-10-27): debounce 600 ms per
+                         l'anteprima e avviso «multiplo di 4» solo all'uscita dal campo
+                         (x-live-field). La causa vera delle cifre perse era il tipo
+                         della proprietà: vedi Issues\Create::$total_pages. --}}
+                    <x-live-field>
                         <x-input-label for="total_pages" value="Numero di pagine interne (copertine escluse)" />
                         {{-- Fase 2 (2026-10-26): solo pagine interne, numerate da 1. Le
                              copertine I–IV si creano sempre da sole, a parte. --}}
                         <p class="text-xs text-gray-500 dark:text-gray-400">Le quattro copertine (I, II, III, IV) si aggiungono da sole e non vanno contate qui.</p>
-                        <x-text-input id="total_pages" wire:model.live="total_pages" type="number" min="0" max="2000" class="mt-1 block w-32" required />
+                        <x-text-input id="total_pages" wire:model.live.debounce.600ms="total_pages" type="number" min="0" max="2000" class="mt-1 block w-32" required />
                         <x-input-error class="mt-2" :messages="$errors->get('total_pages')" />
-                        @if ($total_pages !== null && $total_pages > 0 && $total_pages % 4 !== 0)
-                            <p class="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                        @if ($totalPagesValue !== null && $totalPagesValue > 0 && $totalPagesValue % 4 !== 0)
+                            <p x-show="! editing" class="mt-1 text-xs text-amber-600 dark:text-amber-400" data-testid="not-multiple-of-four">
                                 ⚠️ Non è un multiplo di 4 — consentito per i casi speciali, ma da verificare.
                             </p>
                         @endif
-                    </div>
+                    </x-live-field>
 
                     {{-- Fase 5 (2026-10-27): pubblicità previste. Diventano segnaposto
                          già posizionati nel timone (App\Support\AdPlacement\PlaceholderAdCreator)
                          con la regola di AdPlacementService; l'anteprima qui sotto usa lo
                          stesso piano ($adPlan), non un calcolo nel Blade. --}}
+                    <x-live-field>
                     <fieldset class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                         <legend class="px-1 font-medium text-sm text-gray-700 dark:text-gray-300">📢 Pubblicità previste (opzionale)</legend>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Vengono create come pubblicità «da assegnare» e già messe nel timone: le prime 4 (prima le pagine intere, poi le frazioni) occupano tutte le copertine II, III, IV e I; le altre vanno nelle pagine interne una sì e una no da pagina 2. Dopo puoi spostarle e completarle a mano.</p>
@@ -71,7 +76,7 @@
                             @foreach ($plannedAdKinds as $kind)
                                 <div>
                                     <x-input-label for="planned-{{ $kind->value }}" :value="$kind->label()" class="text-xs" />
-                                    <x-text-input id="planned-{{ $kind->value }}" wire:model.live.debounce.300ms="plannedAds.{{ $kind->value }}" type="number" min="0" placeholder="0" class="mt-1 block w-full text-sm" />
+                                    <x-text-input id="planned-{{ $kind->value }}" wire:model.live.debounce.600ms="plannedAds.{{ $kind->value }}" type="number" min="0" placeholder="0" class="mt-1 block w-full text-sm" />
                                     <x-input-error class="mt-1" :messages="$errors->get('plannedAds.'.$kind->value)" />
                                 </div>
                             @endforeach
@@ -90,17 +95,18 @@
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Posizioni: {{ implode(', ', $adPlan->labels()) }}</p>
                                 @endif
                                 @if (! $adPlan->fits())
-                                    <p class="mt-1 text-xs font-medium text-red-600 dark:text-red-400">⚠️ Non ci stanno: {{ count($adPlan->unplaced) }} {{ count($adPlan->unplaced) === 1 ? 'resterebbe' : 'resterebbero' }} senza posto. Riduci le pubblicità o aumenta le pagine.</p>
+                                    <p x-show="! editing" class="mt-1 text-xs font-medium text-red-600 dark:text-red-400">⚠️ Non ci stanno: {{ count($adPlan->unplaced) }} {{ count($adPlan->unplaced) === 1 ? 'resterebbe' : 'resterebbero' }} senza posto. Riduci le pubblicità o aumenta le pagine.</p>
                                 @endif
                                 @foreach ($adPlan->warnings as $warning)
                                     @if ($adPlan->fits())
-                                        <p class="mt-1 text-xs text-amber-700 dark:text-amber-400">⚠️ {{ $warning }}</p>
+                                        <p x-show="! editing" class="mt-1 text-xs text-amber-700 dark:text-amber-400">⚠️ {{ $warning }}</p>
                                     @endif
                                 @endforeach
                             </div>
                         @endif
                         <x-input-error class="mt-2" :messages="$errors->get('plannedAds')" />
                     </fieldset>
+                    </x-live-field>
 
                     {{-- Carta e peso: pre-compilata con i default della rivista,
                          copiata sul numero al salvataggio (vedi Issues\Create::$weight). --}}

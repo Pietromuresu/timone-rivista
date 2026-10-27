@@ -54,7 +54,7 @@
         .sheet { position: relative; overflow: hidden; background-color: #ffffff; border: 0.6pt solid #9ca3af; }
         /* Una sola linea di piega tra le due pagine di un'apertura: due bordi
            da 0.3pt sovrapposti sparivano in stampa/rasterizzazione. */
-        .sheet.left { border-right: 0.6pt solid #9ca3af; }
+        .sheet.left { border-right: 0.9pt solid #9ca3af; }
         .sheet.right { border-left: none; }
         .sheet.locked { border-color: #4b5563; border-width: 1pt; }
         .sheet.cover { border-color: #818cf8; border-width: 0.8pt; }

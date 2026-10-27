@@ -124,6 +124,7 @@ Legenda colonna *Obbl.*: **Sì** = senza, l'app o lo stack non partono o una fun
 | `TIMONE_DEADLINE_REMINDER_DAYS_BEFORE` | No | `3` | `3` | `config/timone.php` → `SendDeadlineReminders` | **Assente da `.env.example`** (vedi sotto). Decisione della redazione |
 | `TIMONE_AD_PLACEMENT_START_PAGE` | No | `2` | `2` | `config/timone.php` `ad_placement.start_page` → `App\Support\AdPlacement\AdPlacementService` | Prima pagina interna della sequenza alternata delle pubblicità previste (Fase 5). Decisione della redazione |
 | `TIMONE_AD_PLACEMENT_STEP` | No | `2` | `2` | `config/timone.php` `ad_placement.step` → `AdPlacementService` | Passo della sequenza (2 = una pagina sì e una no). Decisione della redazione |
+| `TIMONE_UPLOAD_MAX_KB` | No | `102400` | `102400` | `config/timone.php` `upload_max_kb` → `App\Support\ContentFormRules::maxKilobytes()`, `config/livewire.php` (`temporary_file_upload.rules`), limite mostrato nel riquadro di caricamento (`UploadLimits`) | Dimensione massima di un file caricato, in KB (revisione 2, Fase 1, 2026-10-27; prima il modulo era fermo a 20 MB). **Assente da `.env.example`**: il default va bene. Se lo alzi, alza anche PHP e nginx ([09-deploy.md §6ter](09-deploy.md#6ter-valori-server-per-file-fino-a-100-mb-revisione-2-fase-1-2026-10-27)) |
 
 `ad_placement.cover_order` (`['II', 'III', 'IV', 'I']`, senza variabile d'ambiente: è una lista) è l'ordine in cui le prime pubblicità previste (di qualsiasi formato, prima le pagine intere) occupano tutte le copertine; la I è l'ultima scelta e il sistema segnala quando la usa. Si cambia in `config/timone.php`.
 
@@ -153,13 +154,14 @@ I valori di default dei parametri di peso (maggiorazione 2 %, peso bancale 20 kg
 | Chiave | Dove | Note |
 |---|---|---|
 | `app.manual_path` | `config/app.php:23` | `base_path('MANUALE_UTENTE.md')`; modificabile solo nei test |
-| `livewire.temporary_file_upload.rules` | `config/livewire.php:84` | `mimes:pdf,jpg,jpeg,png,webp`, `max:102400` (100 MB). Va allineato con `docker/php/uploads.ini` (100M/110M) e `client_max_body_size 120m` in nginx |
-| `livewire.temporary_file_upload.max_upload_time` | `config/livewire.php:92` | 10 (minuti) |
+| `livewire.temporary_file_upload.rules` | `config/livewire.php:88` | `mimes:pdf,jpg,jpeg,png,webp`, `max:` letto da `config/timone.php` → `upload_max_kb` (100 MB). PHP e nginx devono accettare almeno il 10% in più: `docker/php/uploads.ini` (110M/120M) e `client_max_body_size 120m` in nginx |
+| `livewire.temporary_file_upload.max_upload_time` | `config/livewire.php:98` | 30 (minuti; era 10) |
 
 ## Discrepanze tra `.env.example` e il codice
 
 **Usate nel codice, assenti in `.env.example`:**
 - `TIMONE_DEADLINE_REMINDER_DAYS_BEFORE` (`config/timone.php`). Funziona con il default 3, ma non è documentata dove un sistemista la cercherebbe.
+- `TIMONE_UPLOAD_MAX_KB` (`config/timone.php`, revisione 2 Fase 1, 2026-10-27). Facoltativa, default 102400 (100 MB). Non aggiunta a `.env.example` per la regola del batch «non modificare `.env`/`.env.example` senza dirlo»: segnalata nella consegna.
 - `SESSION_SECURE_COOKIE`, `LOG_DAILY_DAYS`: default di Laravel, rilevanti in produzione.
 - Tutte le altre variabili lette in `config/*.php` e assenti dall'esempio (`PUSHER_*`, `ABLY_KEY`, `POSTMARK_*`, `RESEND_KEY`, `SQS_*`, `DYNAMODB_*`, `SLACK_*`, `PAPERTRAIL_*`, `REVERB_SCALING_*`, ecc.) sono default dello scaffold Laravel per driver non usati da questo progetto.
 

@@ -26,8 +26,13 @@ use ReflectionProperty;
  * Attenzione al default di classe: in idratazione Livewire non riassegna
  * un null dello snapshot a una proprietà tipizzata (lascia il default).
  * Una proprietà che deve poter tornare null va quindi dichiarata `= null`
- * e il suo valore iniziale impostato in mount() — vedi
- * Issues\Create::$total_pages.
+ * e il suo valore iniziale impostato in mount().
+ *
+ * Per un input numerico LIVE (wire:model.live) una proprietà intera non va
+ * bene comunque: il server rimanda il valore convertito ("12" → 12),
+ * Livewire lo prende per una modifica del server e riscrive il campo
+ * mentre l'utente digita (revisione 2, Fase 1, bug 1, 2026-10-27). Lì si
+ * usa una proprietà `string` + parsing — vedi Issues\Create::$total_pages.
  *
  * Non copre valori non numerici ("abc"): Livewire in quel caso rilancia il
  * TypeError. Un `<input type="number">` non li invia mai (il browser manda

@@ -63,6 +63,27 @@
         "
     @endauth
 >
+    {{-- Revisione 2, Fase 2.2 (2026-10-27): un'unica fascia sticky sotto
+         l'header con il riepilogo (Fase 6) e i comandi del timone (zoom,
+         viste, pagine interne, esporta…), che prima scorrevano via con le
+         pagine. z-30: sopra le card, sotto header (z-40) e modali (z-50).
+         data-sticky-top: l'auto-scroll del drag parte dal suo fondo
+         (resources/js/drag-autoscroll.js). La sua altezza, misurata qui, va
+         in --timone-sticky-height e quindi in scroll-padding-top
+         (resources/css/app.css): una pagina portata in vista col focus o
+         con scrollIntoView non finisce sotto la fascia. Sticky da 640 px in
+         su (sm:): su un telefono la fascia va su più righe (~280 px) e
+         coprirebbe un terzo dello schermo; lì scorre con la pagina e la
+         misura vale 0. --}}
+    <div
+        class="sm:sticky z-30 -mx-1 px-3 py-2 space-y-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur shadow-sm"
+        style="top: var(--app-header-height, 0px);"
+        data-sticky-top
+        data-testid="timone-sticky-band"
+        x-data
+        x-init="const set = () => document.documentElement.style.setProperty('--timone-sticky-height', (getComputedStyle($el).position === 'sticky' ? $el.offsetHeight : 0) + 'px'); set(); new ResizeObserver(set).observe($el); window.addEventListener('resize', set)"
+        x-on:remove="document.documentElement.style.removeProperty('--timone-sticky-height')"
+    >
     @include('livewire.timone.partials.summary-bar')
 
     {{-- Toast leggero per un cambiamento arrivato da un altro utente
@@ -97,10 +118,13 @@
         <div wire:poll.1s="checkForUpdates" aria-hidden="true" style="display: none;"></div>
     </template>
 
-    <div class="flex items-center justify-between gap-3 flex-wrap">
+    {{-- Bottoni più compatti dentro la fascia sticky (selettori [&_…] di
+         Tailwind 3.4): occupa meno altezza sopra le pagine senza cambiare il
+         markup dei singoli bottoni. --}}
+    <div class="flex items-center justify-between gap-x-3 gap-y-1.5 flex-wrap border-t border-gray-100 dark:border-gray-700 pt-2 [&_button]:!py-1 [&_button]:!px-2 [&_button]:!text-xs" data-testid="timone-toolbar">
         {{-- Fase 2 (2026-10-26): pagine interne e copertine contate a parte,
              così nessuno deve sommare o sottrarre a mente. --}}
-        <h3 class="font-medium text-gray-700 dark:text-gray-300">
+        <h3 class="font-medium text-sm text-gray-700 dark:text-gray-300">
             Timone &middot; {{ $issue->total_pages }} pagine interne
             <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
                 &middot; copertine {{ $covers->count() }}
@@ -108,7 +132,7 @@
             </span>
         </h3>
 
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
             <div class="flex items-center gap-1.5 text-xs" title="{{ $issue->deadline_reminder_sent_at ? 'Sollecito già inviato per questa scadenza' : '' }}">
                 <label for="print-deadline-{{ $issue->id }}" class="text-gray-500 dark:text-gray-400">📅 Scadenza stampa</label>
                 <input
@@ -253,6 +277,8 @@
             </div>
         </div>
     </div>
+
+    </div>{{-- /timone-sticky-band --}}
 
     {{-- Componente a sé (bottone + pannello insieme, non separabili come
          gli altri toggle qui sopra che sono proprietà di Grid.php) — la
@@ -552,6 +578,12 @@
 
     @error('pdfRequired')
         <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">📄 {{ $message }}</p>
+    @enderror
+
+    {{-- Revisione 2, Fase 2.3: freccia o rotazione rifiutata dal server
+         (es. un collega ha appena occupato quel posto). --}}
+    @error('grid')
+        <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2" data-testid="grid-error">↔ {{ $message }}</p>
     @enderror
 
     @error('link')

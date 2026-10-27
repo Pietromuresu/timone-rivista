@@ -23,6 +23,16 @@ final class UploadEnvironmentInspector
     /** Disco su cui ContentCreator salva i file definitivi. */
     public const FINAL_DISK = 'local';
 
+    /** PHP deve accettare il limite dell'app + 10% (revisione 2, Fase 1, bug 5). */
+    private const PHP_MARGIN = 1.1;
+
+    private const PHP_MIN_INPUT_SECONDS = 300;
+
+    private const PHP_MIN_EXECUTION_SECONDS = 120;
+
+    /** Upload al limite massimo che devono poter stare insieme in livewire-tmp. */
+    private const TEMP_SPACE_FILES = 20;
+
     /**
      * PDF minimo di una pagina, per verificare che Imagick+Ghostscript
      * leggano davvero un PDF (la policy di ImageMagick può vietarlo).
@@ -38,7 +48,9 @@ final class UploadEnvironmentInspector
         return array_values(array_filter([
             self::appUrl($request),
             self::phpLimits($componentMaxKilobytes),
+            self::phpTimes(),
             self::temporaryDisk(),
+            self::temporaryDiskSpace($componentMaxKilobytes),
             self::finalDisk(),
             self::phpTempDir(),
             $probePdf ? self::pdfSupport() : null,
@@ -89,6 +101,11 @@ final class UploadEnvironmentInspector
         $appBytes = $componentMaxKilobytes !== null ? $componentMaxKilobytes * 1024 : ($livewireKb ?? 0) * 1024;
         $phpBytes = min(array_filter([$upload, $post]) ?: [PHP_INT_MAX]);
         $effective = UploadLimits::effective($componentMaxKilobytes);
+        // Revisione 2, Fase 1, bug 5 (2026-10-27): PHP deve accettare
+        // almeno il 10% in più del limite dell'app (110M per 100 MB), così
+        // a rifiutare un file troppo grande è sempre l'app, con il suo
+        // messaggio, e la richiesta multipart (file + campi) ci sta.
+        $threshold = (int) ceil(round($appBytes * self::PHP_MARGIN / 1048576, 6)) * 1048576;
 
         $detail = sprintf(
             'upload_max_filesize = %s, post_max_size = %s, regola Livewire = %s, limite effettivo = %s (%s)',
@@ -99,11 +116,68 @@ final class UploadEnvironmentInspector
             $effective['source'] ?? '-',
         );
 
+        $belowThreshold = $phpBytes < $threshold;
+
         return self::result(
             'Limiti PHP',
-            $phpBytes < $appBytes ? 'warn' : 'ok',
-            $detail,
-            $phpBytes < $appBytes ? 'PHP accetta file più piccoli di quanto prevede l\'app: alza upload_max_filesize/post_max_size (docker/php/uploads.ini) e client_max_body_size di nginx.' : 'Verifica anche client_max_body_size di nginx (non leggibile da PHP).',
+            $belowThreshold ? 'warn' : 'ok',
+            $detail.', soglia consigliata ≥ '.UploadLimits::humanMegabytes($threshold),
+            $belowThreshold
+                ? 'Sotto soglia: imposta upload_max_filesize e post_max_size ≥ '.UploadLimits::humanMegabytes($threshold).' (docker/php/uploads.ini o php.ini del server) e client_max_body_size di nginx almeno uguale. Vedi docs/09-deploy.md.'
+                : 'Verifica anche client_max_body_size di nginx (non leggibile da PHP).',
+        );
+    }
+
+    /**
+     * max_input_time: secondi per RICEVERE la richiesta (un PDF da 100 MB
+     * su una linea lenta); max_execution_time: secondi per elaborarla.
+     * 0 / -1 = nessun limite. Soglie in PHP_MIN_INPUT_SECONDS /
+     * PHP_MIN_EXECUTION_SECONDS, le stesse di docker/php/uploads.ini.
+     */
+    private static function phpTimes(): array
+    {
+        $input = (int) ini_get('max_input_time');
+        $execution = (int) ini_get('max_execution_time');
+        $inputOk = $input <= 0 || $input >= self::PHP_MIN_INPUT_SECONDS;
+        $executionOk = $execution <= 0 || $execution >= self::PHP_MIN_EXECUTION_SECONDS;
+
+        return self::result(
+            'Tempi PHP',
+            $inputOk && $executionOk ? 'ok' : 'warn',
+            sprintf('max_input_time = %s, max_execution_time = %s', $input < 0 ? 'illimitato (-1)' : $input.' s', $execution === 0 ? 'illimitato (0)' : $execution.' s'),
+            $inputOk && $executionOk
+                ? 'Controlla anche i timeout di nginx/proxy (fastcgi_read_timeout, proxy_read_timeout): non sono leggibili da PHP.'
+                : 'Sotto soglia: imposta max_input_time ≥ '.self::PHP_MIN_INPUT_SECONDS.' e max_execution_time ≥ '.self::PHP_MIN_EXECUTION_SECONDS.' (docker/php/uploads.ini o php.ini del server), altrimenti l\'upload di un file grande si interrompe a metà.',
+        );
+    }
+
+    /**
+     * Spazio libero dove Livewire appoggia i file in arrivo (livewire-tmp):
+     * ogni upload ci resta fino al salvataggio (pulizia dopo 24 h), quindi
+     * con più utenti che caricano PDF da 100 MB serve margine.
+     */
+    private static function temporaryDiskSpace(?int $componentMaxKilobytes): ?array
+    {
+        $disk = config('livewire.temporary_file_upload.disk') ?: config('filesystems.default');
+
+        if (config("filesystems.disks.{$disk}.driver") !== 'local') {
+            return null;
+        }
+
+        $path = Storage::disk($disk)->path('');
+        $free = @disk_free_space($path);
+
+        if ($free === false) {
+            return self::result('Spazio disco temporaneo', 'info', "Spazio libero non leggibile su {$path}");
+        }
+
+        $needed = ($componentMaxKilobytes ?? UploadLimits::ruleMaxKilobytes(config('livewire.temporary_file_upload.rules') ?? []) ?? 0) * 1024 * self::TEMP_SPACE_FILES;
+
+        return self::result(
+            'Spazio disco temporaneo',
+            $free >= $needed ? 'ok' : 'warn',
+            sprintf('%s liberi su %s (consigliati almeno %s: %d file al limite massimo)', UploadLimits::humanMegabytes((int) $free), $path, UploadLimits::humanMegabytes((int) $needed), self::TEMP_SPACE_FILES),
+            $free >= $needed ? '' : 'Libera spazio o sposta storage/ su un volume più grande: un upload senza spazio fallisce senza un messaggio chiaro.',
         );
     }
 

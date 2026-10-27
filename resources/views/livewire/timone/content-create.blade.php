@@ -166,6 +166,12 @@
                 </div>
             @endif
 
+            {{-- Fase 2.5: non quando il modulo è aperto da una pagina (📌 sopra:
+                 la pagina c'è già). --}}
+            @unless ($anchorPageId)
+                @include('livewire.timone.partials.placement-field', ['placementId' => 'placement'])
+            @endunless
+
             {{-- Bug 2 (2026-10-12): drop zone per il file, solo Alpine +
                  l'upload nativo di Livewire, nessuna libreria. Il file
                  trascinato va nella STESSA proprietà `file` dell'input
@@ -184,43 +190,15 @@
                  controllato qui prima dell'invio: un file oltre il limite di
                  PHP/nginx veniva scartato dal server senza spiegazioni.
                  tooLarge() vale sia per il trascinamento (send()) sia per il
-                 selettore classico (x-on:change.capture sotto: in fase di
-                 cattura sul contenitore, quindi PRIMA che wire:model avvii
-                 l'upload; stopPropagation() lo ferma). Se l'upload fallisce
+                 selettore classico (checkPicked(), in fase di cattura). Se l'upload fallisce
                  comunque, il messaggio dettagliato arriva dal server
                  (ContentCreate::_uploadErrored(), sotto in $errors). --}}
+            {{-- Revisione 2, Fase 1, bug 5 (2026-10-27): la logica è in
+                 Alpine.data('fileUpload') (resources/js/timone-alpine.js),
+                 condivisa con la modale di modifica. --}}
             <div
-                x-data="{
-                    dragging: false,
-                    uploading: false,
-                    progress: 0,
-                    clientError: null,
-                    maxBytes: @js($uploadLimit['bytes']),
-                    maxLabel: @js($uploadLimit['bytes'] ? \App\Support\Uploads\UploadLimits::humanMegabytes($uploadLimit['bytes']) : null),
-                    tooLarge(file) {
-                        if (! this.maxBytes || ! file || file.size <= this.maxBytes) return false;
-                        this.clientError = `Il file pesa ${(file.size / 1024 / 1024).toFixed(1).replace('.', ',')} MB: il massimo accettato è ${this.maxLabel}. Riduci il PDF (es. esportalo ottimizzato per la stampa a risoluzione più bassa) e riprova.`;
-                        return true;
-                    },
-                    send(files) {
-                        this.dragging = false;
-                        this.clientError = null;
-                        if (! files || files.length === 0) return;
-                        if (files.length > 1) {
-                            this.clientError = 'Trascina un solo file alla volta: ogni contenuto ha un solo PDF o immagine.';
-                            return;
-                        }
-                        if (this.tooLarge(files[0])) return;
-                        this.uploading = true;
-                        this.progress = 0;
-                        $wire.upload('file', files[0],
-                            () => { this.uploading = false; },
-                            () => { this.uploading = false; },
-                            (event) => { this.progress = event.detail.progress; },
-                        );
-                    },
-                }"
-                x-on:change.capture="if ($event.target === $refs.fileInput) { clientError = null; if (tooLarge($event.target.files[0])) { $event.stopPropagation(); $event.target.value = ''; } }"
+                x-data="fileUpload({ maxBytes: @js($uploadLimit['bytes']), maxLabel: @js($uploadLimit['bytes'] ? \App\Support\Uploads\UploadLimits::humanMegabytes($uploadLimit['bytes']) : null) })"
+                x-on:change.capture="checkPicked($event)"
                 x-on:livewire-upload-start="uploading = true; progress = 0; clientError = null"
                 x-on:livewire-upload-progress="progress = $event.detail.progress"
                 x-on:livewire-upload-finish="uploading = false"

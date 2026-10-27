@@ -51,14 +51,22 @@ final class PlaceholderAdCreator
             }
         });
 
+        // Revisione 2, Fase 1, bug 2 (2026-10-27): la descrizione elencava
+        // tutte le posizioni e con decine di pubblicità superava i 255
+        // caratteri della colonna ("Text too long" alla creazione del
+        // numero). Ora è una frase di lunghezza fissa; le posizioni restano
+        // complete nei dati strutturati (new_values.placed).
+        $coverCount = count(array_filter($plan->placements, fn ($placement) => $placement['cover'] !== null));
+        $internalCount = count($plan->placements) - $coverCount;
+
         ActivityLogger::log(
             issue: $issue,
             entityType: 'Issue',
             entityId: $issue->id,
             action: 'issue.placeholder_ads_created',
-            description: $plan->count().' pubblicità previste create come segnaposto'
-                .($plan->placements !== [] ? ' ('.implode(', ', $plan->labels()).')' : '')
-                .($plan->unplaced !== [] ? '; '.count($plan->unplaced).' senza posto' : ''),
+            description: $plan->count().' pubblicità previste create come segnaposto: '
+                .$coverCount.' sulle copertine, '.$internalCount.' nelle pagine interne'
+                .($plan->unplaced !== [] ? ', '.count($plan->unplaced).' senza posto' : ''),
             new: ['counts' => array_filter($counts), 'placed' => $plan->labels(), 'unplaced' => count($plan->unplaced)],
         );
 

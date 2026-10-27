@@ -17,6 +17,10 @@ class PageContent extends Pivot
         'occupied_twelfths',
         'position',
         'content_file_id',
+        'grid_x',
+        'grid_y',
+        'grid_w',
+        'grid_h',
     ];
 
     protected function casts(): array
@@ -24,6 +28,10 @@ class PageContent extends Pivot
         return [
             'occupied_twelfths' => 'integer',
             'position' => 'integer',
+            'grid_x' => 'integer',
+            'grid_y' => 'integer',
+            'grid_w' => 'integer',
+            'grid_h' => 'integer',
         ];
     }
 

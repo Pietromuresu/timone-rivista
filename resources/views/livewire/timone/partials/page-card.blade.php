@@ -228,12 +228,13 @@
     </div>
 
     {{--
-        Fase 7a (2026-10-27, approccio "B" scelto dall'utente): ogni contenuto
-        è un blocco proporzionale alla sua occupazione reale su questa pagina
-        (Page::layout() → App\Support\PageLayoutPlanner): colonne a tutta
-        altezza per i formati verticali (mezza/1/3 verticale, 2/3), righe
-        impilate per gli altri, il piedino in fondo, lo spazio libero come
-        riquadro tratteggiato. Ogni blocco mostra l'anteprima del PROPRIO
+        Disposizione dei contenuti: dalla revisione 2, Fase 2.3 (2026-10-27)
+        ogni contenuto ha un rettangolo sulla griglia 6×6 della pagina
+        (Page::layout() → App\Support\PageGrid\PageGridPlanner; prima
+        impilamento calcolato della Fase 7a): 1/2 verticale 3×6, 1/3
+        orizzontale 6×2, 1/4 3×3…, spostabile con le frecce del menu «⋯». Lo
+        spazio libero è tratteggiato, un 3/4 (forma a L) riempie le celle
+        lasciate dagli altri. Ogni blocco mostra l'anteprima del PROPRIO
         file (prima un'unica immagine copriva tutta la card) e, sopra, la
         riga del contenuto in modalità compatta. Senza contenuti resta la
         scritta di sempre; una pagina legacy con solo un PageFile diretto
@@ -252,30 +253,51 @@
                     $blockTone = $content->type->value === 'articolo'
                         ? 'bg-sky-50 text-sky-950 dark:bg-sky-950/60 dark:text-sky-50'
                         : 'bg-amber-50 text-amber-950 dark:bg-amber-950/60 dark:text-amber-50';
+                    $blockBorder = match (true) {
+                        $block['kind'] === 'overflow' => 'border-2 border-dashed border-red-600',
+                        $content->isPlaceholder() => 'border-dashed border-amber-500',
+                        default => 'border-white/80 dark:border-gray-900/80',
+                    };
                 @endphp
+                {{-- Revisione 2, Fase 2.3: forma a L (3/4, 7/12, 11/12) — i pezzi
+                     oltre a quello principale, stesso colore, senza testo. --}}
+                @if ($block['kind'] === 'fluid')
+                    @foreach ($block['pieces'] as $piece)
+                        @continue($piece === $rect)
+                        <div
+                            wire:key="page-{{ $page->id }}-block-{{ $content->id }}-piece-{{ $loop->index }}"
+                            class="absolute border {{ $blockBorder }} {{ $blockTone }}"
+                            style="left: {{ $piece['x'] }}%; top: {{ $piece['y'] }}%; width: {{ $piece['w'] }}%; height: {{ $piece['h'] }}%;"
+                            data-testid="layout-piece"
+                            aria-hidden="true"
+                        ></div>
+                    @endforeach
+                @endif
                 <div
                     wire:key="page-{{ $page->id }}-block-{{ $content->id }}"
-                    class="group/block absolute overflow-hidden border {{ $content->isPlaceholder() ? 'border-dashed border-amber-500' : 'border-white/80 dark:border-gray-900/80' }} {{ $block['imageUrl'] ? 'bg-gray-200 dark:bg-gray-700' : $blockTone }}"
+                    class="group/block absolute overflow-hidden border {{ $blockBorder }} {{ $block['imageUrl'] ? 'bg-gray-200 dark:bg-gray-700' : $blockTone }}"
                     style="left: {{ $rect['x'] }}%; top: {{ $rect['y'] }}%; width: {{ $rect['w'] }}%; height: {{ $rect['h'] }}%;"
                     title="{{ $content->displayLabel() }} — {{ \App\Support\Twelfths::pagesLabel((int) $content->pivot->occupied_twelfths) }}"
                     data-testid="layout-block"
                     data-content-id="{{ $content->id }}"
                     data-twelfths="{{ (int) $content->pivot->occupied_twelfths }}"
                     tabindex="0"
+                    x-data="{ menuOpen: false }"
                     x-on:keydown.arrow-left.stop
                     x-on:keydown.arrow-right.stop
                 >
                     @if ($block['imageUrl'])
-                        <a
-                            href="{{ route('content-files.show', $blockFile).($blockFile->pdf_page_number > 1 ? '#page='.$blockFile->pdf_page_number : '') }}"
-                            target="_blank"
-                            rel="noopener"
-                            x-on:click.stop
-                            class="absolute inset-0 block"
-                            title="{{ $blockFile->original_name }} — apri in una nuova scheda"
-                        >
-                            <img src="{{ $block['imageUrl'] }}" alt="" class="w-full h-full object-cover" />
-                        </a>
+                        {{-- Revisione 2, Fase 2.1 (2026-10-27): l'anteprima non è più
+                             un link. Il click su un contenuto risale alla card e
+                             seleziona la pagina come un click sulla pagina
+                             (Grid::clickPage()); il file si apre dall'occhio 👁 nel
+                             menu «⋯» (partials/content-controls). --}}
+                        {{-- Fase 2.4: ritaglio in base al rettangolo — file a pagina
+                             intera → solo la sua porzione, file nel formato → intero
+                             (Page::layout() → App\Support\PageGrid\ThumbnailFit). --}}
+                        <div class="absolute inset-0 overflow-hidden" data-fit="{{ $block['fit']->value }}">
+                            <img src="{{ $block['imageUrl'] }}" alt="" style="{{ $block['imageStyle'] }}" />
+                        </div>
                         <div class="absolute inset-x-0 bottom-0 max-h-full overflow-hidden bg-black/60 px-0.5 py-px">
                             @include('livewire.timone.partials.page-content-entry', ['variant' => 'overlay', 'compact' => true])
                         </div>
@@ -284,17 +306,68 @@
                             @include('livewire.timone.partials.page-content-entry', ['variant' => 'card', 'compact' => true])
                         </div>
                     @endif
+
+                    {{-- Revisione 2, Fase 1, bug 3 (2026-10-27): con due contenuti
+                         frazionari sulla stessa pagina (1/2+1/2, 1/4×4…) i comandi
+                         dentro il blocco venivano tagliati dall'overflow-hidden e la
+                         select dello spazio non era cliccabile. Ora ogni blocco ha
+                         sempre, nell'angolo, un bottone «⋯» abbastanza grande da
+                         cliccare a ogni zoom; il menu si apre nel <body>
+                         (@teleport) agganciato al bottone (x-anchor, plugin già
+                         incluso in Livewire), sopra header e pagine vicine. wire:*
+                         e $wire funzionano anche lì: Livewire risale al componente
+                         attraverso il teleport. --}}
+                    {{-- I click e i tasti qui dentro non risalgono alla card
+                         (.stop: selezione pagina, frecce di spostamento), quindi
+                         click.outside/Esc "globali" non bastano: un evento
+                         content-menu-opened chiude gli altri menu aperti ed Esc è
+                         gestito su bottone e menu stessi. --}}
+                    @unless ($locked)
+                        <button
+                            type="button"
+                            x-ref="menuTrigger"
+                            x-on:click.stop="menuOpen = ! menuOpen; if (menuOpen) $dispatch('content-menu-opened', '{{ $page->id }}-{{ $content->id }}')"
+                            x-on:content-menu-opened.window="if ($event.detail !== '{{ $page->id }}-{{ $content->id }}') menuOpen = false"
+                            x-on:keydown.escape="menuOpen = false"
+                            x-on:keydown.stop
+                            :aria-expanded="menuOpen"
+                            aria-haspopup="menu"
+                            aria-label="Comandi di {{ $content->displayLabel() }}"
+                            title="Comandi del contenuto"
+                            class="absolute top-0 right-0 z-10 flex h-4 min-w-[1rem] items-center justify-center rounded-bl bg-white/90 px-0.5 text-[11px] font-bold leading-none text-gray-800 shadow-sm hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800/90 dark:text-gray-100"
+                            data-testid="content-menu-button"
+                        >⋯</button>
+                        @teleport('body')
+                            <div>
+                                <template x-if="menuOpen">
+                                    <div
+                                        x-anchor.bottom-end.offset.2="$refs.menuTrigger"
+                                        x-on:click.outside="if (! $refs.menuTrigger.contains($event.target)) menuOpen = false"
+                                        x-on:keydown.escape="menuOpen = false; $refs.menuTrigger.focus()"
+                                        x-on:keydown.stop
+                                        role="menu"
+                                        class="z-[60] w-56 rounded-lg border border-gray-200 bg-white p-1 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                        data-testid="content-menu"
+                                    >
+                                        <p class="truncate px-2 pt-1 pb-1.5 text-xs font-semibold border-b border-gray-100 dark:border-gray-700 mb-1">{{ $content->type->value === 'articolo' ? '📄' : '📢' }} {{ $content->displayLabel() }}</p>
+                                        @include('livewire.timone.partials.content-controls', ['variant' => 'popover'])
+                                    </div>
+                                </template>
+                            </div>
+                        @endteleport
+                    @endunless
                 </div>
             @endforeach
 
-            @if ($layout['free'])
+            {{-- Spazio libero: celle non occupate, in pochi rettangoli. --}}
+            @foreach ($layout['free'] as $free)
                 <div
                     class="absolute border border-dashed border-gray-400/80 dark:border-gray-500/80 flex items-center justify-center text-[9px] text-gray-500 dark:text-gray-400 pointer-events-none"
-                    style="left: {{ $layout['free']['x'] }}%; top: {{ $layout['free']['y'] }}%; width: {{ $layout['free']['w'] }}%; height: {{ $layout['free']['h'] }}%;"
+                    style="left: {{ $free['x'] }}%; top: {{ $free['y'] }}%; width: {{ $free['w'] }}%; height: {{ $free['h'] }}%;"
                     data-testid="layout-free"
                     aria-hidden="true"
-                >libero</div>
-            @endif
+                >{{ $loop->first ? 'libero' : '' }}</div>
+            @endforeach
         @elseif ($previewImageUrl)
             <a
                 href="{{ $fileUrl }}"

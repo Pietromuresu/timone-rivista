@@ -43,6 +43,8 @@ class ContentFile extends Model
         'format_check_status',
         'measured_width_mm',
         'measured_height_mm',
+        // Revisione 2, Fase 2.4: larghezza/altezza della pagina del file (ritaglio anteprima).
+        'aspect_ratio',
         'format_override_confirmed_by',
         'format_override_confirmed_at',
     ];
@@ -56,6 +58,7 @@ class ContentFile extends Model
             'format_check_status' => FormatCheckStatus::class,
             'measured_width_mm' => 'decimal:1',
             'measured_height_mm' => 'decimal:1',
+            'aspect_ratio' => 'float',
             'format_override_confirmed_at' => 'datetime',
         ];
     }

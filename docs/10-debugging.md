@@ -110,6 +110,40 @@ Se ricompare: (1) console → il primo errore della pagina è quello vero; (2) `
 
 Sintomo storico (risolto il 2026-10-26): svuotando "Numero totale di pagine" nella creazione numero la pagina andava in errore (`PropertyNotFoundException` / "must not be accessed before initialization"). Causa: Livewire, ricevendo `''` su una proprietà `int`, la "unset"-ta; e in idratazione non riassegna un `null` a una proprietà tipizzata (resta il default di classe). Regola per i nuovi campi numerici legati con `wire:model`: proprietà `?int` con default `= null` (valore iniziale in `mount()`) + trait `App\Livewire\Concerns\NormalizesEmptyNumericInput`; validazione `required|integer` per l'errore inline. Per testo libero numerico il progetto usa proprietà `string` + parsing (es. `Grid::$newTotalPages`). Test: `tests/Feature/Livewire/EmptyNumericInputTest.php`.
 
+### Focus perso / cifre che spariscono negli input Livewire (revisione 2, 2026-10-27)
+
+Sintomo: in "Nuovo numero", scrivendo velocemente nel campo pagine il cursore saltava e alcune cifre sparivano ("1234" diventava "13"); l'avviso «Non è un multiplo di 4» compariva al primo carattere. **Causa trovata riproducendo in Chrome**: il campo era `wire:model.live` su una proprietà `?int`. Il server rimandava il valore convertito (`12`, non `"12"`); Livewire confronta il valore inviato con quello ricevuto e, se diversi, considera la proprietà cambiata dal server e riscrive il campo. Se nel frattempo l'utente aveva scritto un'altra cifra, la risposta arrivata in ritardo la cancellava. Il nodo dell'input non veniva sostituito: non era un problema di `wire:key` né di `@if`.
+
+Regole che ne derivano:
+- un input numerico **live** va legato a una proprietà `string`, con il parsing in un metodo (es. `Issues\Create::totalPages()`), mai a `int`/`?int`;
+- anteprime con `wire:model.live.debounce.600ms`;
+- avvisi che dipendono dal valore dentro `<x-live-field>` con `x-show="! editing"`: compaiono all'uscita dal campo, non mentre si scrive (`resources/views/components/live-field.blade.php`).
+
+Per riprodurre un problema simile serve un browser vero (i test Livewire non simulano le richieste sovrapposte): scrivi più cifre in meno di mezzo secondo e confronta il valore finale. Test di regressione lato PHP: `tests/Feature/Livewire/IssueCreateLiveInputTest.php` (il valore torna identico a come è stato inviato).
+
+### Auto-scroll durante il trascinamento (revisione 2, 2026-10-27)
+
+Sintomo: trascinando un contenuto o una pagina verso il bordo della finestra la pagina non scorreva, quindi non si arrivava alle ultime pagine né alle copertine III/IV. **Causa**: il timone usa il drag&drop nativo del browser (SortableJS senza `forceFallback` per le pagine, `draggable="true"` per contenuti e copertine). Con il drag nativo, l'auto-scroll di Sortable lascia la finestra allo scroll del browser, che parte solo a pochi pixel dal bordo: in alto quei pixel sono sotto la fascia sticky (header + riepilogo). Correzione: un unico gestore per tutti i drag (`resources/js/drag-autoscroll.js`) su `dragover`, con la zona sensibile che parte dal fondo degli elementi `data-sticky-top` e velocità crescente verso il bordo; Sortable ha `scroll: false`.
+
+Se non scorre:
+1. gli asset sono aggiornati (`npm run build` / `docker compose up -d --build`)?
+2. Un nuovo elemento sticky in alto deve avere `data-sticky-top`, altrimenti la zona sensibile finisce sotto di lui.
+3. Se la lista delle pagine viene messa in un `div` con `overflow-y: auto`, il gestore scorre quel `div` (il primo antenato scrollabile del punto sotto il puntatore), non la finestra.
+
+Verifica rapida in console durante un drag: `document.dispatchEvent(new DragEvent('dragover', { clientY: innerHeight - 5 }))` dopo un `dragstart` deve far scorrere la pagina.
+
+### Griglia 6×6: contenuti nel posto sbagliato, frecce grigie (revisione 2, 2026-10-27)
+
+| Sintomo | Causa probabile | Dove guardare / come risolvere |
+|---|---|---|
+| Dopo l'aggiornamento un contenuto è in un posto diverso da prima | Il suo rettangolo della Fase 7a non era esatto in celle (es. una vetrina 1/4 disegnata come riga a tutta larghezza): è stato messo nel primo posto libero | `php artisan timone:grid-dry-run --issue=ID` → righe «riposizionata»; spostarlo con le frecce |
+| Freccia grigia | Si uscirebbe dalla pagina, o il posto è occupato da un contenuto con cui non forma un rettangolo (scambio impossibile) | Il tooltip lo dice; `PageGridPlanner::moveTarget()` |
+| Un 3/4 non ha frecce | È una forma a L: riempie lo spazio lasciato dagli altri | Spostare gli altri contenuti |
+| Striscia rossa tratteggiata in fondo alla pagina | Pagina oltre capienza (dati vecchi): quel contenuto non ci sta | Ridurre lo spazio di un contenuto |
+| «⟳ Ruota» grigio | Quadrato (vetrina, pagina intera) o ruotato non c'è posto | — |
+| Anteprima intera invece che ritagliata (o viceversa) | `content_files.aspect_ratio` vuoto (file vecchio) o proporzioni oltre il 5% da quelle del numero (formato del numero nel pannello Peso) | `php artisan timone:file-ratios --dry-run`; override nella modale «Anteprima nel riquadro» |
+| Click sull'anteprima non apre più il PDF | Voluto (Fase 2.1): il click seleziona la pagina | Menu «⋯» → 👁 Apri il file |
+
 ### Upload in produzione ("non si caricano media")
 
 Checklist completa con comandi e righe di log: [09-deploy.md §6bis](09-deploy.md#6bis-checklist-in-produzione-non-si-caricano-media-fase-1-2026-10-26). In breve: `php artisan timone:diagnose-upload` sul server, poi cerca `upload_failed` in `storage/logs/laravel.log` dopo un tentativo.
@@ -118,9 +152,12 @@ Checklist completa con comandi e righe di log: [09-deploy.md §6bis](09-deploy.m
 
 | Causa | Dove guardare | Soluzione |
 |---|---|---|
-| File > 100 MB (`upload_max_filesize`) o richiesta > 110 MB (`post_max_size`) | `docker compose logs app`: `POST Content-Length ... exceeds the limit` | Limiti in `docker/php/uploads.ini`, `config/livewire.php:84` (`max:102400`) e `client_max_body_size 120m` (nginx, e nel reverse proxy se presente): **vanno alzati insieme** |
-| 413 da nginx o dal proxy | log di nginx | `client_max_body_size` |
-| Upload lento oltre 10 minuti | `max_upload_time` in `config/livewire.php:92` | Alzalo |
+| File oltre il limite dell'app | Messaggio «Il file supera il limite di 100 MB…» (nel browser prima dell'invio, o dal server) | È voluto: limite in `config/timone.php` → `upload_max_kb` (unico punto). Per alzarlo vanno alzati anche PHP e nginx: [09-deploy.md §6ter](09-deploy.md#6ter-valori-server-per-file-fino-a-100-mb-revisione-2-fase-1-2026-10-27) |
+| File > `upload_max_filesize` (110M) o richiesta > `post_max_size` (120M) | `docker compose logs app`: `POST Content-Length ... exceeds the limit` | `php artisan timone:diagnose-upload` → «Limiti PHP» (avvisa sotto soglia); valori in `docker/php/uploads.ini` e `client_max_body_size 120m` (nginx, e nel reverse proxy se presente): **vanno alzati insieme** |
+| 413 da nginx o dal proxy | log di nginx | `client_max_body_size` ≥ 110M (apache: `LimitRequestBody`) |
+| Upload grande interrotto a metà | `timone:diagnose-upload` → «Tempi PHP»; timeout del proxy | `max_input_time` ≥ 300, `max_execution_time` ≥ 120, `proxy_read_timeout`/`fastcgi_read_timeout` ≥ 300 s; `max_upload_time` di Livewire (30 minuti) |
+| Upload che fallisce senza messaggio con più utenti | `timone:diagnose-upload` → «Spazio disco temporaneo» | Spazio libero per `livewire-tmp` ≥ 2 GB |
+| Richiesta di upload lenta prima del salvataggio | Conteggio pagine del PDF | Dal 2026-10-27 lo fa Ghostscript senza rasterizzare (`PdfPageMeasurer::pageCount()`); se `gs` manca ripiega su Imagick, che su un PDF di stampa può impiegare decine di secondi: installa `ghostscript` |
 | "PDF illeggibile" | Imagick o Ghostscript assenti, policy PDF attiva, PDF corrotto | `php -m`, `Imagick::queryFormats("PDF")`; prova il PDF in locale con `gs` |
 | Pubblicità con PDF di più pagine del formato | Riquadro "📄 Il PDF ha N pagine, il formato … ne occupa F" nel modulo | Non è un errore dal 2026-10-26: scegliere "usa tutte" o "solo da X a Y" (`App\Support\AdPdfPagePlan`). Un errore rosso sotto quel riquadro indica un intervallo non valido |
 | Occupazione non indicata | Errore sotto i campi "Pagine intere"/"Frazione" | È voluto: l'occupazione è obbligatoria, almeno uno dei due campi > 0 (`MANUALE_UTENTE.md` §5bis) |
@@ -301,7 +338,11 @@ Non correggere i valori con un UPDATE alla cieca: vanno ricontrollati sulla sche
 9. **Adminer** sempre esposto sulla porta 8081.
 10. **`pagefiles:prune-orphaned`** guarda solo `page_files`: vedi il rischio in [08-job-e-scheduler.md](08-job-e-scheduler.md#pagefilesprune-orphaned---dry-run).
 11. **Copie del PDF per ogni pagina**: consumo di disco proporzionale a dimensione × pagine.
-12. **Nessun test browser** (niente Dusk): drag&drop, focus/anelli di selezione e drop zone sono verificati solo a mano. Dal 2026-10-26 anche l'animazione dei gruppi (MultiDrag di SortableJS, FLIP con la Web Animations API) e lo zoom S/M/L (`resources/js/timone-alpine.js`): i test PHP verificano solo markup e logica server (`nudgePage`, `PageReorderer::nudgeTarget()`).
+12. **Nessun test browser** (niente Dusk): drag&drop, auto-scroll, menu «⋯» dei blocchi, focus/anelli di selezione e drop zone sono verificati solo a mano (dal 2026-10-27 con uno script CDP su Chrome headless, non nel repo: vedi HANDOFF.md, revisione 2 Fase 1). Dal 2026-10-26 anche l'animazione dei gruppi (MultiDrag di SortableJS, FLIP con la Web Animations API) e lo zoom S/M/L (`resources/js/timone-alpine.js`): i test PHP verificano solo markup e logica server (`nudgePage`, `PageReorderer::nudgeTarget()`).
+
+## Test in locale: memoria esaurita
+
+Con oltre 850 test il PHP locale (MAMP, `memory_limit` 128M) si fermava con «Allowed memory size … exhausted» nella raccolta dei test. Dal 2026-10-27 `phpunit.xml` imposta `memory_limit` 512M per i test (`<ini>`), quindi `php artisan test` funziona di nuovo. Se ricapita: `php -d memory_limit=1G vendor/bin/pest`.
 
 ## Eseguire i test che richiedono Imagick (senza Imagick in locale)
 

@@ -30,7 +30,9 @@ test('the form shows a drop zone backed by the same file input (click still open
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->assertSeeHtml('data-testid="file-drop-zone"')
-        ->assertSeeHtml("\$wire.upload('file'")
+        // Revisione 2, Fase 1, bug 5: il $wire.upload('file', …) del drop è in
+        // Alpine.data('fileUpload') (resources/js/timone-alpine.js).
+        ->assertSeeHtml('x-data="fileUpload(')
         ->assertSeeHtml('x-ref="fileInput" wire:model="file"');
 });
 
@@ -40,8 +42,12 @@ test('a dropped file that is too large is rejected right away with the same rule
 
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
-        ->set('file', UploadedFile::fake()->create('enorme.pdf', 25000, 'application/pdf'))
-        ->assertHasErrors(['file' => 'max']);
+        // Revisione 2, Fase 1, bug 5: limite 100 MB (timone.upload_max_kb), prima 20 MB.
+        ->set('file', UploadedFile::fake()->create('enorme.pdf', 101 * 1024, 'application/pdf'))
+        // Fermato già dall'upload temporaneo di Livewire (stesso limite): il
+        // messaggio è comunque quello chiaro, con il limite in MB.
+        ->assertHasErrors('file')
+        ->assertSee('Il file supera il limite di 100 MB');
 
     expect(Content::count())->toBe(0);
 });

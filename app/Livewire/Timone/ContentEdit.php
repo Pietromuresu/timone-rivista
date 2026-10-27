@@ -6,6 +6,7 @@ use App\Enums\AdConfirmationStatus;
 use App\Enums\AdFormat;
 use App\Enums\ContentType;
 use App\Enums\EditorialStatus;
+use App\Enums\FileFit;
 use App\Events\ContentListChanged;
 use App\Livewire\Concerns\HasOccupancyFields;
 use App\Livewire\Concerns\NormalizesEmptyNumericInput;
@@ -13,9 +14,13 @@ use App\Models\Content;
 use App\Models\Issue;
 use App\Support\ContentFormRules;
 use App\Support\ContentUpdater;
+use App\Support\PageGrid\ThumbnailFit;
 use App\Support\PageOccupancy;
+use App\Support\PlacementChoice;
 use App\Support\Twelfths;
+use App\Support\Uploads\UploadLimits;
 use Illuminate\Contracts\View\View;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -42,7 +47,9 @@ class ContentEdit extends Component
 {
     use HasOccupancyFields;
     use NormalizesEmptyNumericInput;
-    use WithFileUploads;
+    use WithFileUploads {
+        _uploadErrored as livewireUploadErrored;
+    }
 
     public Issue $issue;
 
@@ -75,6 +82,20 @@ class ContentEdit extends Component
 
     public string $commercial_notes = '';
 
+    /**
+     * Revisione 2, Fase 2.4: come mostrare il file nel suo rettangolo —
+     * '' automatico (dalle proporzioni), 'full_page' o 'format'
+     * (App\Enums\FileFit).
+     */
+    public string $file_fit = '';
+
+    /**
+     * Revisione 2, Fase 2.5: «Posizione nel timone» (App\Support\PlacementChoice);
+     * all'apertura la prima pagina occupata. Cambiandola il contenuto si
+     * sposta da lì (tutto o niente); vuota = torna «da assegnare».
+     */
+    public string $placement = '';
+
     /** Nuovo materiale di stampa: sostituisce quello attuale. */
     public ?TemporaryUploadedFile $file = null;
 
@@ -105,6 +126,8 @@ class ContentEdit extends Component
         $this->preferred_position = (string) ($content->advertisement?->preferred_position ?? '');
         $this->confirmation_status = $content->advertisement?->confirmation_status?->value ?? 'in_trattativa';
         $this->commercial_notes = $content->advertisement?->commercial_notes ?? '';
+        $this->file_fit = $content->file_fit?->value ?? '';
+        $this->placement = PlacementChoice::valueFor($content);
         $this->fillOccupancyFields(PageOccupancy::fromTwelfths(max(1, (int) $content->occupancy_twelfths)));
 
         $this->showModal = true;
@@ -127,12 +150,27 @@ class ContentEdit extends Component
         $validated = $this->validate(ContentFormRules::rules($this->issue, placeholder: $content->isPlaceholder()), ContentFormRules::messages());
         $trimmed = trim($this->preferred_position);
         $validated['preferred_position'] = $trimmed !== '' && ctype_digit($trimmed) ? (int) $trimmed : null;
+        $validated['file_fit'] = FileFit::tryFrom($this->file_fit)?->value;
+
+        // Fase 2.5: posizione cambiata rispetto a quella attuale?
+        $moveTo = null;
+
+        if ($this->placement !== PlacementChoice::valueFor($content)) {
+            $moveTo = $this->placement === '' ? false : PlacementChoice::page($this->issue, $this->placement);
+
+            if ($moveTo === null) {
+                $this->addError('placement', 'Posizione non valida: scegli una pagina o una copertina dall\'elenco.');
+
+                return;
+            }
+        }
 
         ContentUpdater::update(
             $content,
             $validated,
             $this->file instanceof TemporaryUploadedFile ? $this->file : null,
             auth()->id(),
+            $moveTo,
         );
 
         // Gli altri utenti ripescano dal database (Reverb, o il polling via
@@ -154,6 +192,23 @@ class ContentEdit extends Component
         return $content;
     }
 
+    /**
+     * File oltre il limite rifiutato dall'upload temporaneo di Livewire:
+     * stesso messaggio chiaro del modulo di creazione (revisione 2, Fase 1,
+     * bug 5, ContentFormRules::temporaryUploadMessage()); gli altri errori
+     * restano quelli di Livewire.
+     */
+    public function _uploadErrored($name, $errorsInJson, $isMultiple)
+    {
+        if (($tooLarge = ContentFormRules::temporaryUploadMessage($errorsInJson)) !== null) {
+            $this->dispatch('upload:errored', name: $name)->self();
+
+            throw ValidationException::withMessages([$name => $tooLarge]);
+        }
+
+        return $this->livewireUploadErrored($name, $errorsInJson, $isMultiple);
+    }
+
     public function render(): View
     {
         $content = $this->showModal && $this->contentId !== null
@@ -169,6 +224,16 @@ class ContentEdit extends Component
             'fractionOptions' => Twelfths::FRACTIONS,
             'occupancyPreview' => $this->occupancyPreview(),
             'isAd' => $this->type === ContentType::Pubblicita->value,
+            // Revisione 2, Fase 1, bug 5: limite vero mostrato e controllato
+            // nel browser prima dell'invio, come in ContentCreate.
+            'uploadLimit' => UploadLimits::effective(ContentFormRules::maxKilobytes()),
+            // Fase 2.4: cosa è stato rilevato dalle proporzioni del file, per
+            // la voce «Automatico» dell'override.
+            'detectedFit' => ($first = $content?->files->sortBy('pdf_page_number')->first()) !== null
+                ? ThumbnailFit::resolve($first->aspect_ratio, null, $this->issue->pageAspectRatio())
+                : null,
+            'fileFits' => FileFit::cases(),
+            'placementOptions' => $content !== null ? PlacementChoice::options($this->issue) : [],
         ]);
     }
 }

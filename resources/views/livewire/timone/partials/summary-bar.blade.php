@@ -1,5 +1,7 @@
 {{-- Fase 6 (2026-10-27): riepilogo stile dashboard, sempre visibile subito
-     sotto l'header fisso (top = --app-header-height, misurata nel layout).
+     sotto l'header fisso. Revisione 2, Fase 2.2: non è più sticky da solo,
+     sta nella fascia sticky unica insieme ai comandi del timone
+     (grid.blade.php, data-testid="timone-sticky-band").
      Numeri da App\Support\IssueSummary ($summary), nessun calcolo qui.
      z-30: sopra le card del timone, sotto l'header (z-40) e le modali (z-50).
      "Pagine bianche" e "Da assegnare" sono bottoni: evidenziano quelle
@@ -11,8 +13,7 @@
         : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:border-sky-500';
 @endphp
 <div
-    class="sticky z-30 -mx-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur shadow-sm text-xs text-gray-700 dark:text-gray-200"
-    style="top: var(--app-header-height, 0px);"
+    class="text-xs text-gray-700 dark:text-gray-200"
     data-testid="summary-bar"
 >
     <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5">

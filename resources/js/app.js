@@ -15,4 +15,9 @@
  * (e './echo' ora non lancia comunque più: vedi lì).
  */
 import './timone-alpine';
+import { installDragAutoScroll } from './drag-autoscroll';
 import './bootstrap';
+
+// Revisione 2, Fase 1, bug 4: auto-scroll durante ogni trascinamento
+// (pagine, gruppi, contenuti, copertine) — vedi drag-autoscroll.js.
+installDragAutoScroll();

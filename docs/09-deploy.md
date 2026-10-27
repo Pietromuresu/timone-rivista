@@ -167,7 +167,7 @@ Non serve `php artisan storage:link`: tutti i file stanno sul disco `local` (pri
 
 Prima cosa da fare, sul server: `docker compose exec app php artisan timone:diagnose-upload` (oppure `php artisan timone:diagnose-upload` senza Docker). Stampa ✅/⚠️/❌ per ognuno dei controlli sotto che è leggibile da PHP ed esce con codice 1 se qualcosa è fallito. Poi riprova un upload e cerca nel log la voce **`upload_failed`** (`docker compose exec app grep -A40 upload_failed storage/logs/laravel.log | tail -60`): contiene l'indirizzo con cui è arrivata la richiesta, `APP_URL`, `X-Forwarded-Proto`, i limiti PHP e i permessi dei dischi, scritti nel momento esatto del fallimento.
 
-Come funziona l'upload (per orientarsi): il browser invia il file a `POST /livewire/upload-file?expires=…&signature=…` (URL firmato generato da Livewire, `WithFileUploads`); Livewire lo valida con `config/livewire.php` → `temporary_file_upload.rules` (`max:102400`, mimes) e lo salva sul disco temporaneo (`temporary_file_upload.disk` = `null` → `FILESYSTEM_DISK`, cartella `livewire-tmp`). Al salvataggio del contenuto `ContentCreate` lo rivalida (`FILE_RULES`, max 20 MB) e `App\Support\ContentCreator::storeFile()` lo copia sul disco **`local`** (`storage/app/private/contents/{id}`). Se l'upload temporaneo fallisce il browser chiama `ContentCreate::_uploadErrored()`, che scrive `upload_failed` nel log e mostra all'utente «Il file non è arrivato al server…».
+Come funziona l'upload (per orientarsi): il browser invia il file a `POST /livewire/upload-file?expires=…&signature=…` (URL firmato generato da Livewire, `WithFileUploads`); Livewire lo valida con `config/livewire.php` → `temporary_file_upload.rules` (`max:` = `config/timone.php` → `upload_max_kb`, mimes) e lo salva sul disco temporaneo (`temporary_file_upload.disk` = `null` → `FILESYSTEM_DISK`, cartella `livewire-tmp`). Al salvataggio del contenuto `ContentCreate`/`ContentEdit` lo rivalidano (`App\Support\ContentFormRules::fileRule()`, stesso limite `upload_max_kb`, 100 MB; fino al 2026-10-27 era 20 MB) e `App\Support\ContentCreator::storeFile()` lo copia sul disco **`local`** (`storage/app/private/contents/{id}`). Se l'upload temporaneo fallisce il browser chiama `ContentCreate::_uploadErrored()`, che scrive `upload_failed` nel log e mostra all'utente «Il file non è arrivato al server…».
 
 Cause in ordine di probabilità:
 
@@ -175,7 +175,7 @@ Cause in ordine di probabilità:
 |---|---|---|---|
 | 1 | **`APP_URL` diverso dall'indirizzo reale** (http/https, IP invece del nome, porta, `localhost`) | `grep APP_URL .env` e confronto con la barra del browser | Log `upload_failed`: `APP_URL … — richiesta arrivata su …`; nella console del browser il `POST /livewire/upload-file` risponde **401**. `AppServiceProvider` forza tutte le URL su `APP_URL`: dal 2026-10-26 l'URL di upload è firmato sull'indirizzo reale (`App\Support\Uploads\RequestRootSignedUploadUrl`), ma un `APP_URL` sbagliato rompe comunque altre URL (miniature, link). Correggi e `php artisan config:clear` |
 | 2 | **Proxy HTTPS che non invia `X-Forwarded-Proto`** (o proxy non fidato) | Configurazione del reverse proxy sull'host | Log `upload_failed`: `x_forwarded_proto` vuoto e richiesta su `http://` mentre il browser è su `https://` → firma non valida (401) o contenuto misto bloccato. `bootstrap/app.php` fida già tutti i proxy (`trustProxies(at: '*')`): serve che il proxy mandi `proxy_set_header X-Forwarded-Proto $scheme;` (vedi §5 HTTPS sopra) |
-| 3 | **`upload_max_filesize` / `post_max_size` di PHP** troppo bassi | `timone:diagnose-upload` → riga «Limiti PHP»; `docker compose exec app php -i \| grep -E 'upload_max\|post_max'` | Log PHP: `POST Content-Length of … exceeds the limit`. Valori in `docker/php/uploads.ini` (100M/110M). Il riquadro di caricamento mostra il limite effettivo e rifiuta subito i file più grandi |
+| 3 | **`upload_max_filesize` / `post_max_size` di PHP** troppo bassi | `timone:diagnose-upload` → riga «Limiti PHP»; `docker compose exec app php -i \| grep -E 'upload_max\|post_max'` | Log PHP: `POST Content-Length of … exceeds the limit`. Valori in `docker/php/uploads.ini` (110M/120M dal 2026-10-27, vedi §6ter). Il riquadro di caricamento mostra il limite effettivo e rifiuta subito i file più grandi |
 | 4 | **`client_max_body_size` di nginx** (container e/o reverse proxy sull'host) | `grep client_max_body_size docker/nginx/default.conf /etc/nginx -r` | Browser: risposta **413** al `POST /livewire/upload-file`; log nginx: `client intended to send too large body`. Deve essere ≥ `post_max_size` (oggi 120m nel container: va messo uguale anche nel proxy dell'host) |
 | 5 | **Permessi su `storage/`** (in particolare `storage/app/private/livewire-tmp` e `storage/app/private/contents`) | `timone:diagnose-upload` → righe «Disco temporaneo Livewire» e «Disco finale dei file» | Log: `failed to open stream: Permission denied` / risposta 500. `docker compose exec -u root app chown -R www-data:www-data storage bootstrap/cache` |
 | 6 | **Cartella temporanea di PHP non scrivibile** (`upload_tmp_dir`) | `timone:diagnose-upload` → «Cartella temporanea PHP» | Log PHP: `Missing a temporary folder` / `UPLOAD_ERR_NO_TMP_DIR` |
@@ -183,8 +183,31 @@ Cause in ordine di probabilità:
 | 8 | **Regole `livewire.temporary_file_upload.rules`** più strette del file (dimensione o tipo) | `config/livewire.php` | Risposta **422** all'upload; l'utente vede il messaggio di validazione di Livewire (in italiano, `lang/it`); log `upload_failed` con `validation_errors` valorizzato |
 | 9 | **Imagick/Ghostscript non leggono i PDF** (estensione mancante o `policy.xml` che vieta i PDF) | `timone:diagnose-upload` → «Lettura PDF (Imagick)» (prova davvero un PDF di una pagina) | L'utente vede «Impossibile leggere il numero di pagine di questo PDF». Vedi la `policy.xml` patchata nel `Dockerfile` |
 | 10 | **`storage:link` mancante** | `ls -la public/storage` | **Non è una causa per questo progetto**: PDF e miniature sono serviti dalle route `content-files.*`/`page-files.*`, non da `/storage`. Elencato per escluderlo |
-| 11 | **Upload più lento di `max_upload_time`** (10 minuti in questo progetto) | `config/livewire.php` → `max_upload_time` | La firma dell'URL scade: 401 su linee molto lente |
+| 11 | **Upload più lento di `max_upload_time`** (30 minuti dal 2026-10-27, prima 10) o di `max_input_time` di PHP / timeout del proxy (§6ter) | `config/livewire.php` → `max_upload_time` | La firma dell'URL scade: 401 su linee molto lente |
 | 12 | **Asset JS vecchi o non caricati** | Console del browser | Senza `app.js` aggiornato il riquadro non mostra il limite e gli errori; vedi [10-debugging.md](10-debugging.md#drag-drop-presence-o-aggiornamenti-realtime-non-funzionano-lato-browser) |
+
+### 6ter. Valori server per file fino a 100 MB (revisione 2, Fase 1, 2026-10-27)
+
+Il limite dell'applicazione è **uno solo**: `config/timone.php` → `upload_max_kb` (default 102400 KB = 100 MB, sovrascrivibile con la variabile d'ambiente facoltativa `TIMONE_UPLOAD_MAX_KB`). Lo usano la regola del modulo contenuti (`App\Support\ContentFormRules::fileRule()`), l'upload temporaneo di Livewire (`config/livewire.php`) e il limite mostrato nel riquadro di caricamento. Il server deve accettare **un po' di più** del limite dell'app, così a rifiutare un file troppo grande è sempre l'app, con un messaggio che dice il limite («Il file supera il limite di 100 MB…»), e non PHP o nginx con un errore muto.
+
+Valori da impostare sul server (non leggibili tutti da PHP: quelli di nginx/apache/proxy vanno controllati a mano):
+
+| Dove | Impostazione | Valore minimo | Nel Docker del repo |
+|---|---|---|---|
+| PHP (`php.ini` o `conf.d`) | `upload_max_filesize` | **110M** | `docker/php/uploads.ini`: 110M |
+| PHP | `post_max_size` | **110M** (consigliato 120M: la richiesta multipart aggiunge qualche KB) | 120M |
+| PHP | `max_input_time` | **300** s (o -1): tempo per *ricevere* 100 MB su una linea lenta | 300 |
+| PHP | `max_execution_time` | **120** s (o 0): elaborazione nella richiesta (conteggio pagine, salvataggio) | 120 |
+| PHP | `memory_limit` | 256M (miniature Imagick nel worker) | 256M |
+| nginx (container e reverse proxy dell'host) | `client_max_body_size` | **110M** (≥ `post_max_size`; nel container 120m) | `docker/nginx/default.conf`: 120m |
+| nginx | `fastcgi_read_timeout` / `proxy_read_timeout`, `client_body_timeout` | 300s / 300s / ≥ 60s | `fastcgi_read_timeout 300` |
+| apache (se usato al posto di nginx) | `LimitRequestBody` | **115343360** (110 MB in byte) o 0 | — |
+| Proxy/bilanciatore davanti (es. Cloudflare, HAProxy) | limite del corpo e timeout di lettura | ≥ 110 MB, ≥ 300 s | ⚠️ DA VERIFICARE sul server reale |
+| Disco di `storage/app/private/livewire-tmp` | spazio libero | ≥ 2 GB (20 file da 100 MB in transito; Livewire li cancella dopo 24 h) | volume `storage_data` |
+
+Verifica: `docker compose exec app php artisan timone:diagnose-upload` stampa i limiti effettivi di PHP e avvisa (⚠️) se `upload_max_filesize`/`post_max_size` sono sotto la soglia (limite app + 10%, cioè 110 MB), se `max_input_time`/`max_execution_time` sono sotto 300/120 s, e se lo spazio libero per `livewire-tmp` è sotto 2 GB. Attenzione: da riga di comando legge il `php.ini` della CLI; nel Docker del repo `uploads.ini` vale per CLI e PHP-FPM, su un server senza Docker controlla che i valori siano impostati anche per FPM (`php-fpm -i | grep upload_max`). Lo stesso riepilogo, letto da PHP-FPM, finisce nel log alla voce `upload_failed` quando un upload fallisce.
+
+Le miniature dei PDF si generano in coda (job `GenerateContentFileThumbnail`, servizio `worker`), non nella richiesta di upload. Nella richiesta resta solo il conteggio delle pagine, fatto con Ghostscript senza rasterizzare (`App\Support\PdfPageMeasurer::pageCount()`, ~0,03 s anche per un PDF di stampa; Imagick solo come ripiego): serve `gs` installato sul server (nel `Dockerfile` c'è già).
 
 ### 7. Scheduler, code, backup
 
@@ -238,11 +261,21 @@ docker compose run --rm --no-deps app php artisan timone:covers-dry-run
 # dopo l'arrotondamento superano la capienza: vanno sistemate a mano dopo il deploy).
 docker compose run --rm --no-deps app php artisan timone:occupancy-dry-run
 
+# 5quater. (una tantum, deploy della revisione 2, Fase 2, 2026-10-27) anteprima della
+# posizione di ogni contenuto sulla griglia 6×6, senza scrivere nulla. Con la NUOVA
+# immagine e PRIMA del migrate. Righe [NON ENTRA]: pagine oltre capienza da sistemare.
+docker compose run --rm --no-deps app php artisan timone:grid-dry-run
+
 # 6. Migrazioni con la nuova immagine, prima di sostituire i container
 docker compose run --rm --no-deps app php artisan migrate --force
 
 # 7. Sostituzione dei container (app, nginx, worker, reverb, scheduler vengono ricreati → il worker riparte con il codice nuovo)
 docker compose up -d
+
+# 7bis. (una tantum, revisione 2, Fase 2.4) proporzioni dei file già caricati, per il
+# ritaglio delle anteprime. Facoltativo: senza, le anteprime vecchie restano intere.
+docker compose exec app php artisan timone:file-ratios --dry-run
+docker compose exec app php artisan timone:file-ratios
 
 # 8. Verifica
 docker compose ps
@@ -313,7 +346,7 @@ Solo se il server non può usare Docker. **Nessuno di questi file esiste nel rep
 apt install nginx mysql-server redis-server ghostscript imagemagick \
   php8.2-fpm php8.2-mysql php8.2-bcmath php8.2-gd php8.2-imagick php8.2-redis php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip
 # rimuovere/commentare la policy PDF di ImageMagick (/etc/ImageMagick-6/policy.xml o -7), come fa il Dockerfile
-# php.ini: upload_max_filesize=100M, post_max_size=110M, memory_limit=256M, display_errors=Off (come docker/php/uploads.ini)
+# php.ini: upload_max_filesize=110M, post_max_size=120M, max_input_time=300, max_execution_time=120, memory_limit=256M, display_errors=Off (come docker/php/uploads.ini, vedi §6ter)
 composer install --no-dev --optimize-autoloader
 npm ci && npm run build            # con VITE_REVERB_* nel .env
 php artisan migrate --force

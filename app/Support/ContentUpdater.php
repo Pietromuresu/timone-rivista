@@ -8,6 +8,7 @@ use App\Models\Article;
 use App\Models\Content;
 use App\Models\ContentFile;
 use App\Models\Page;
+use App\Support\PageGrid\PageGridPositions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -45,11 +46,17 @@ final class ContentUpdater
      *
      * @throws ValidationException
      */
+    /**
+     * $moveTo (revisione 2, Fase 2.5): null = posizione invariata; una
+     * Page = sposta il contenuto a partire da quella pagina (tutto o niente,
+     * ContentPlacer); false = toglilo dalle pagine (torna «da assegnare»).
+     */
     public static function update(
         Content $content,
         array $data,
         ?UploadedFile $file = null,
         ?int $userId = null,
+        Page|false|null $moveTo = null,
     ): void {
         $content->loadMissing(['article', 'advertisement', 'files']);
 
@@ -67,6 +74,12 @@ final class ContentUpdater
         $pages = self::assignedPagesInReadingOrder($content);
         $occupancyChanged = $occupancy->twelfths !== (int) $content->occupancy_twelfths;
 
+        if ($moveTo !== null && ($locked = $pages->first(fn (Page $page) => $page->isLocked())) !== null) {
+            throw ValidationException::withMessages([
+                'placement' => "La {$locked->label()} è bloccata: sbloccala prima di spostare questo contenuto (nessuna modifica salvata).",
+            ]);
+        }
+
         if (($occupancyChanged || $file !== null) && ($locked = $pages->first(fn (Page $page) => $page->isLocked())) !== null) {
             throw ValidationException::withMessages([
                 'occupancy' => "La {$locked->label()} è bloccata: sbloccala prima di cambiare occupazione o PDF di questo contenuto (nessuna modifica salvata).",
@@ -74,12 +87,23 @@ final class ContentUpdater
         }
 
         $before = self::snapshot($content);
+        $orientationBefore = PageGridPositions::orientationOf($content);
 
-        DB::transaction(function () use ($content, $data, $occupancy, $occupancyChanged, $pages, $file) {
+        DB::transaction(function () use ($content, $data, $occupancy, $occupancyChanged, $pages, $file, $orientationBefore, $moveTo) {
             self::updateFields($content, $data, $occupancy, newFile: $file !== null);
 
-            if ($occupancyChanged && $pages->isNotEmpty()) {
-                self::redistribute($content, $pages);
+            if ($moveTo !== null) {
+                // Fase 2.5: nuova posizione scelta nella modale (o nessuna).
+                self::relocate($content, $pages, $moveTo === false ? null : $moveTo, 'placement', '');
+            } elseif ($occupancyChanged && $pages->isNotEmpty()) {
+                self::relocate($content, $pages, $pages->first(), 'occupancy', 'Nuova occupazione non applicabile alle pagine: ');
+            } elseif (PageGridPositions::orientationOf($content->fresh(['advertisement'])) !== $orientationBefore) {
+                // Revisione 2, Fase 2.3: formato da orizzontale a verticale (o
+                // viceversa) → la forma sulla griglia segue, nello stesso angolo
+                // se ci sta. Una ridistribuzione rifà già le posizioni da capo.
+                foreach ($pages as $page) {
+                    PageGridPositions::reshape($page, $content);
+                }
             }
         });
 
@@ -108,7 +132,7 @@ final class ContentUpdater
     /**
      * Pagine occupate in ordine di sfoglio: copertine nel loro ordine,
      * poi le interne per posizione. Il punto di partenza di una
-     * ridistribuzione è il primo elemento (vedi redistribute()).
+     * ridistribuzione è il primo elemento (vedi relocate()).
      *
      * @return Collection<int, Page>
      */
@@ -136,6 +160,8 @@ final class ContentUpdater
             'title' => $data['title'],
             'section_id' => $data['section_id'] ?? null,
             'occupancy_twelfths' => $occupancy->twelfths,
+            // Revisione 2, Fase 2.4: override del ritaglio (solo dalla modale).
+            ...(array_key_exists('file_fit', $data) ? ['file_fit' => $data['file_fit']] : []),
         ]);
 
         // Cambio di tipo: la riga dell'altro tipo sparisce (i suoi campi
@@ -179,9 +205,18 @@ final class ContentUpdater
      *
      * @throws ValidationException
      */
-    private static function redistribute(Content $content, Collection $pages): void
+    /**
+     * Toglie il contenuto dalle sue pagine (sciogliendo il gruppo collegato
+     * se coincide con loro) e, se c'è una pagina di partenza, lo rimette da
+     * lì con ContentPlacer. Usata per la ridistribuzione dopo un cambio di
+     * occupazione (dalla prima pagina occupata) e per lo spostamento scelto
+     * nella modale (Fase 2.5). Se non ci sta: ValidationException sul campo
+     * $errorKey e la transazione del chiamante annulla tutto.
+     *
+     * @param  Collection<int, Page>  $pages
+     */
+    private static function relocate(Content $content, Collection $pages, ?Page $start, string $errorKey, string $errorPrefix): void
     {
-        $start = $pages->first();
         $groupIds = $pages->pluck('page_group_id')->filter()->unique();
 
         if ($groupIds->count() === 1) {
@@ -198,12 +233,14 @@ final class ContentUpdater
             ContentPageAttacher::syncPageContentType($page);
         }
 
+        if ($start === null) {
+            return;
+        }
+
         $result = ContentPlacer::place($content->fresh(['advertisement']), $start->fresh());
 
         if (is_string($result)) {
-            throw ValidationException::withMessages([
-                'occupancy' => 'Nuova occupazione non applicabile alle pagine: '.$result,
-            ]);
+            throw ValidationException::withMessages([$errorKey => $errorPrefix.$result]);
         }
     }
 

@@ -3,9 +3,9 @@
      (2026-10-27): era copiato identico in tre punti, e il passaggio da
      percentuale libera a dodicesimi andava fatto in tutti e tre.
      $variant: 'overlay' (testo bianco sulla miniatura), 'card', 'row'.
-     $compact (Fase 7a): dentro un blocco della disposizione — i comandi
-     (spazio, ✏️, ↗, ✕) compaiono solo passando sul blocco o col focus da
-     tastiera (group/block), per non coprire i blocchi piccoli.
+     $compact (Fase 7a): dentro un blocco della disposizione — solo il
+     nome; i comandi sono nel menu «⋯» del blocco (revisione 2, Fase 1,
+     bug 3: vedi partials/content-controls).
      Lo spazio su questa pagina si sceglie da una select 1/12 … intera
      (Grid::updateContentOccupancy()), mai un numero libero. --}}
 @php
@@ -15,10 +15,6 @@
     // Fase 5: pubblicità segnaposto — contorno tratteggiato + etichetta
     // "Da assegnare" (riconoscibile anche senza colori).
     $isPlaceholder = $content->isPlaceholder();
-    $muted = $variant === 'overlay' ? 'text-white/80 hover:text-white' : 'opacity-60 hover:opacity-100';
-    $selectClasses = $isRow
-        ? 'text-xs py-0 pl-1 pr-6'
-        : 'text-[10px] py-0 pl-0.5 pr-4';
 @endphp
 <{{ $isRow ? 'span' : 'div' }}
     wire:key="page-{{ $page->id }}-content-{{ $content->id }}"
@@ -63,68 +59,15 @@
     @if ($locked)
         <span class="shrink-0 {{ $isRow ? 'text-xs' : 'text-[10px]' }} opacity-70" title="Spazio occupato su questa pagina">{{ \App\Support\Twelfths::fractionLabel($twelfths) }}</span>
     @else
-        <span class="{{ $compact ? 'hidden group-hover/block:inline-flex group-focus-within/block:inline-flex items-center gap-1' : 'contents' }}" data-testid="content-controls">
-        <select
-            x-on:keydown.stop
-            x-on:click.stop
-            x-on:focus="$store.pagePresence?.startEditing({{ $page->id }})"
-            x-on:blur="$store.pagePresence?.stopEditing({{ $page->id }})"
-            wire:change="updateContentOccupancy({{ $page->id }}, {{ $content->id }}, parseInt($event.target.value))"
-            title="Spazio occupato su questa pagina"
-            aria-label="Spazio di {{ $content->displayLabel() }} su questa pagina"
-            class="shrink-0 rounded border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 {{ $selectClasses }}"
-        >
-            @foreach (range(1, \App\Support\Twelfths::PER_PAGE) as $option)
-                <option value="{{ $option }}" @selected($option === $twelfths)>{{ $option === \App\Support\Twelfths::PER_PAGE ? 'intera' : \App\Support\Twelfths::fractionLabel($option) }}</option>
-            @endforeach
-        </select>
-        {{-- Fase 7b (2026-10-27): ordine dei contenuti nella pagina, che
-             decide la disposizione dei blocchi (Grid::moveContentInPage()).
-             Solo se la pagina ha più di un contenuto; ai bordi la freccia
-             resta ma è disattivata. --}}
-        @if ($page->contents->count() > 1)
-            @php
-                $orderIndex = $page->contents->search(fn ($c) => $c->id === $content->id);
-                $orderLast = $page->contents->count() - 1;
-            @endphp
-            <button
-                type="button"
-                x-on:click.stop="$wire.moveContentInPage({{ $page->id }}, {{ $content->id }}, -1)"
-                @disabled($orderIndex === 0)
-                class="shrink-0 {{ $isRow ? 'text-xs' : 'text-[10px]' }} {{ $muted }} disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Sposta prima nell'ordine della pagina (più in alto o più a sinistra)"
-                aria-label="Sposta {{ $content->displayLabel() }} prima"
-                data-testid="move-content-earlier"
-            >↑</button>
-            <button
-                type="button"
-                x-on:click.stop="$wire.moveContentInPage({{ $page->id }}, {{ $content->id }}, 1)"
-                @disabled($orderIndex === $orderLast)
-                class="shrink-0 {{ $isRow ? 'text-xs' : 'text-[10px]' }} {{ $muted }} disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Sposta dopo nell'ordine della pagina (più in basso o più a destra)"
-                aria-label="Sposta {{ $content->displayLabel() }} dopo"
-                data-testid="move-content-later"
-            >↓</button>
-        @endif
-        <button
-            type="button"
-            x-on:click.stop="$dispatch('open-content-edit', { contentId: {{ $content->id }} })"
-            class="shrink-0 {{ $isRow ? 'text-xs' : 'text-[10px]' }} {{ $muted }}"
-            title="Modifica il contenuto (rinomina: doppio click sul nome)"
-            aria-label="Modifica {{ $content->displayLabel() }}"
-        >✏️</button>
-        <button
-            type="button"
-            x-on:click.stop="const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
-            class="shrink-0 {{ $isRow ? 'text-xs' : 'text-[10px]' }} {{ $muted }}"
-            title="Estendi questo contenuto a un'altra pagina"
-        >↗</button>
-        <button
-            type="button"
-            x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
-            class="shrink-0 {{ $isRow ? 'text-xs' : 'text-[10px]' }} {{ $muted }} {{ $variant === 'overlay' ? 'hover:text-red-400' : 'hover:text-red-600' }}"
-            title="Rimuovi"
-        >✕</button>
-        </span>
+        {{-- Revisione 2, Fase 1, bug 3 (2026-10-27): nei blocchi della
+             disposizione ($compact) i comandi non stanno più qui dentro
+             ma nel menu «⋯» del blocco (page-card), che si apre sopra
+             tutto: qui sarebbero tagliati dall'overflow dei blocchi
+             piccoli. Nelle altre varianti restano in riga. --}}
+        @unless ($compact)
+            <span class="contents" data-testid="content-controls">
+                @include('livewire.timone.partials.content-controls')
+            </span>
+        @endunless
     @endif
 </{{ $isRow ? 'span' : 'div' }}>

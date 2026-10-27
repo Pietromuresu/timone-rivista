@@ -14,10 +14,13 @@ class ContentFileController extends Controller
     {
         Gate::authorize('view', $contentFile->content->issue);
 
+        // inline esplicito (revisione 2, Fase 2.1): l'occhio 👁 sul contenuto
+        // apre il file in una nuova scheda per guardarlo, non per scaricarlo.
         return Storage::disk($contentFile->disk)->response(
             $contentFile->path,
             $contentFile->original_name,
-            ['Content-Type' => $contentFile->mime_type]
+            ['Content-Type' => $contentFile->mime_type],
+            'inline'
         );
     }
 

@@ -79,6 +79,19 @@ class Issue extends Model
      * aggiorna SOLO `pages_updated_at`, un singolo UPDATE leggero, senza
      * toccare `updated_at`/altri campi del modello.
      */
+    /**
+     * Larghezza/altezza della pagina del numero (formato del pannello Peso),
+     * 3/4 se non impostato — stesso ripiego delle card del timone. Usato
+     * per riconoscere un file "a pagina intera" (revisione 2, Fase 2.4,
+     * App\Support\PageGrid\ThumbnailFit).
+     */
+    public function pageAspectRatio(): float
+    {
+        return $this->formato_base_mm && $this->formato_altezza_mm
+            ? $this->formato_base_mm / $this->formato_altezza_mm
+            : 3 / 4;
+    }
+
     public function markPagesUpdated(): void
     {
         $this->touch('pages_updated_at');

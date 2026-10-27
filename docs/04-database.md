@@ -122,6 +122,7 @@ Numeri e riviste **già esistenti** al momento della migration:
 - **Scopo**: articolo o pubblicità del numero, assegnato o no.
 - **Colonne**: `type` (`articolo`/`pubblicita`), `title`, `section_id`, `occupancy_twelfths` (smallint unsigned, NOT NULL, dal 2026-10-27: occupazione totale in dodicesimi di pagina, 30 = 2 pagine e mezza; vedi `App\Support\PageOccupancy`), `archived_at`.
 - `is_placeholder` (boolean, default false, Fase 5 — migration `2026_10_27_300000_add_placeholder_ads`): pubblicità segnaposto creata dalle "pubblicità previste" di un numero.
+- `file_fit` (string(16), nullable — revisione 2, Fase 2.4, migration `2026_10_27_610000_add_file_fit_columns`): scelta manuale del ritaglio dell'anteprima, `full_page` / `format` (`App\Enums\FileFit`); null = automatico dalle proporzioni del file.
 - **Colonna non più usata**: `page_occupancy` (decimal 5,2, il vecchio valore in pagine: `0.25/0.33/0.50/0.67` o N). Resa nullable dalla migration della Fase 3, non più letta né scritta; tiene i valori originali per il rollback.
 - **Indici**: `(issue_id, type)`.
 - **Scrive**: `ContentCreator::create`, `ContentUpdater::update` (Fase 4), `Grid::renameContent`/`archiveContent`/`deleteUnassignedContent`.
@@ -140,6 +141,8 @@ Numeri e riviste **già esistenti** al momento della migration:
 - **Colonne**: `occupied_twelfths` (tinyint unsigned 1–12, default 12, dal 2026-10-27; **nessun vincolo DB** sulla somma per pagina: la validazione è in `App\Support\PageCapacity`), `content_file_id` (FK content_files, nullOnDelete: quale pagina del PDF mostrare).
 - **Vincoli**: `unique(page_id, content_id)`.
 - `position` (smallint unsigned, nullable, Fase 7b — migration `2026_10_27_400000_add_position_to_page_content_table`): ordine del contenuto nella pagina, 1…n. La migration numera le righe esistenti per pagina nell'ordine di id (= l'ordine già mostrato); nullable perché un `attach()` senza posizione resta valido (va in coda). Rollback: colonna eliminata. Verificata su copia MySQL dei dati di sviluppo.
+- `grid_x`, `grid_y`, `grid_w`, `grid_h` (tinyint unsigned, nullable — revisione 2, Fase 2.3, migration `2026_10_27_600000_add_grid_cells_to_page_content_table`): rettangolo del contenuto sulla **griglia 6×6** della pagina (angolo in alto a sinistra 0–5, larghezza e altezza in celle; 1 dodicesimo = 3 celle). Null per i contenuti **a L** (7/12, 3/4, 11/12: non sono rettangoli, riempiono le celle libere) e per quelli che non ci stanno (pagine oltre capienza): si ricalcolano a ogni disegno. Unico punto che le scrive: `App\Support\PageGrid\PageGridPositions` (assegnazione, cambio di spazio, frecce, rotazione, cambio di formato). La migration le valorizza con la posizione in cui la Fase 7a disegnava ogni contenuto (`GridConversion`); dry-run: `php artisan timone:grid-dry-run`. In sviluppo: 33 assegnazioni identiche, 3 vetrine 1/4 da riga a tutta larghezza a 3×3, nessuna a L o fuori pagina. Rollback: colonne eliminate. Verificata up/down/up su copia MySQL.
+- Da allora `position` decide solo chi viene sistemato prima quando un contenuto non ha ancora un rettangolo.
 - **Colonna non più usata**: `occupied_percentage` (decimal, la vecchia percentuale; nullable dal 2026-10-27, tenuta per il rollback).
 - Ha un modello dedicato: `App\Models\PageContent`.
 
@@ -152,6 +155,7 @@ Numeri e riviste **già esistenti** al momento della migration:
 ### `content_files`
 - **Scopo**: file allegati a un contenuto, **una riga per pagina del PDF**, ognuna con la propria copia del file.
 - **Colonne**: `disk` (default `local`), `path`, `thumbnail_path`, `original_name`, `mime_type`, `size`, `thumbnail_status` (`pending`/`processing`/`ready`/`failed`), `pdf_page_number`, `format_check_status`, `measured_width_mm`/`measured_height_mm`, `format_override_confirmed_by`/`_at`, `uploaded_by` (FK users, **cascadeOnDelete**).
+- `aspect_ratio` (decimal 8,5, nullable — revisione 2, Fase 2.4): larghezza/altezza della pagina del file, misurata dalla miniatura quando viene generata (`App\Support\ContentFileAspectRatio`). Confrontata con il formato del numero (±5%) decide se il file è «a pagina intera» (si mostra solo la porzione del rettangolo) o «nel formato» (intero). Per i file caricati prima: `php artisan timone:file-ratios [--dry-run]`; finché è null l'anteprima resta intera, senza ritaglio.
 - **Scrive**: `ContentCreator`, job `GenerateContentFileThumbnail`, `Grid::confirmFormatOverride`.
 
 ### `page_files`
@@ -171,7 +175,8 @@ Numeri e riviste **già esistenti** al momento della migration:
 
 ### `activity_logs`
 - **Scopo**: cronologia generale (audit applicativo).
-- **Colonne**: `issue_id` (nullOnDelete), `user_id` (nullOnDelete), `entity_type`, `entity_id`, `action` (es. `page.moved`, `content.assigned`), `description`, `old_values`/`new_values` (JSON), `ip_address`, `created_at`.
+- **Colonne**: `issue_id` (nullOnDelete), `user_id` (nullOnDelete), `entity_type`, `entity_id`, `action` (es. `page.moved`, `content.assigned`), `description` (**TEXT** dal 2026-10-27, migration `2026_10_27_500000_change_activity_logs_description_to_text`; prima VARCHAR(255): la creazione di un numero con decine di pubblicità previste falliva con «Text too long»), `old_values`/`new_values` (JSON: qui vanno i dati strutturati, es. l'elenco delle posizioni dei segnaposto), `ip_address`, `created_at`.
+- **Regola**: la descrizione è una frase breve per l'elenco in UI; elenchi lunghi e dati completi vanno in `new_values`. Il `down()` della migration accorcia a 255 caratteri le descrizioni più lunghe prima di tornare a VARCHAR.
 - **Scrive**: `App\Support\ActivityLogger::log()`. **Legge**: `Timone\ActivityLogPanel`.
 
 ## Tabelle di framework (senza modello applicativo)

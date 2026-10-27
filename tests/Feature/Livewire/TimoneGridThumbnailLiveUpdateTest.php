@@ -47,7 +47,9 @@ test('the card switches from pending to the ready thumbnail without a page reloa
 
     expect($component->html())
         ->not->toContain('⏳ PDF')
-        ->toContain('object-cover');
+        // Revisione 2, Fase 2.4: l'anteprima del blocco è ritagliata secondo
+        // il suo rettangolo (data-fit), non più un object-cover fisso.
+        ->toContain('data-fit=');
 });
 
 // Percorso legacy (PageFile diretto, pagine non ancora migrate al Punto 8):
