@@ -20,7 +20,6 @@ class Magazine extends Model
         'slug',
         'periodicity',
         'color',
-        'ad_threshold_percentage',
         'notes',
         'battente_counted_in_total',
         'redattore_id',
@@ -42,7 +41,6 @@ class Magazine extends Model
     {
         return [
             'periodicity' => Periodicity::class,
-            'ad_threshold_percentage' => 'decimal:2',
             'battente_counted_in_total' => 'boolean',
             // Parametri peso: solo gli interi hanno un cast. I decimal restano
             // grezzi (stringa/float a seconda del driver) di proposito: il cast

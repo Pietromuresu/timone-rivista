@@ -50,6 +50,16 @@
         $isMultiSelected => 'focus:ring-emerald-500',
         default => 'focus:ring-indigo-500',
     };
+    // Fase 6 (2026-10-27): evidenziazione dalla barra di riepilogo
+    // (pagine bianche / con pubblicità da assegnare): le pagine che
+    // corrispondono hanno un contorno azzurro, le altre sono attenuate.
+    $summaryHighlightActive = ($summaryHighlight ?? null) !== null;
+    $isHighlighted = $summaryHighlightActive && in_array($page->id, $highlightPageIds ?? [], true);
+    $highlightClasses = match (true) {
+        $isHighlighted => 'outline outline-4 outline-sky-500 outline-offset-2',
+        $summaryHighlightActive => 'opacity-40',
+        default => '',
+    };
 @endphp
 <li
     wire:key="page-{{ $page->id }}"
@@ -88,7 +98,8 @@
         solo canale cromatico aggiuntivo qui, la lista è già pensata per
         scorrere veloce, non per un colpo d'occhio sul tipo pagina).
     --}}
-    class="flex items-center gap-4 px-4 py-3 border-l-4 {{ $isCover ? 'bg-indigo-50/60 dark:bg-indigo-950/30' : '' }} {{ $page->status->borderClasses() }} hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset {{ $focusClasses }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $selectionRowClasses }}"
+    class="flex items-center gap-4 px-4 py-3 border-l-4 {{ $isCover ? 'bg-indigo-50/60 dark:bg-indigo-950/30' : '' }} {{ $page->status->borderClasses() }} hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset {{ $focusClasses }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $selectionRowClasses }} {{ $highlightClasses }}"
+    @if ($isHighlighted) data-highlighted="1" @endif
 >
     @if (($selectionMode ?? false) && ! $isCover)
         <input

@@ -7,6 +7,17 @@
                 </a>
             </div>
 
+            {{-- Fase 5: avvisi del posizionamento automatico delle pubblicità
+                 previste (Issues\Create → PlaceholderAdCreator), una sola
+                 volta, appena creato il numero. --}}
+            @if (session('ad-placement-warnings'))
+                <div class="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-2 text-sm text-amber-800 dark:text-amber-200" data-testid="ad-placement-warnings">
+                    @foreach (session('ad-placement-warnings') as $warning)
+                        <p>⚠️ {{ $warning }}</p>
+                    @endforeach
+                </div>
+            @endif
+
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 flex items-start justify-between gap-6">
                     <div>

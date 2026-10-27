@@ -46,6 +46,16 @@ La schermata del timone ha tre modalità, selezionabili in alto a destra:
 
 **La barra in alto** (logo, Riviste, Utenti, Manuale, il tuo nome) resta sempre visibile mentre scorri il timone: non serve tornare in cima per cambiare schermata.
 
+**Il riepilogo** (subito sotto la barra in alto, sempre visibile anche scorrendo): il colpo d'occhio sul numero, aggiornato in tempo reale.
+- **Pagine interne**: quante sono, quante **piene**, quante **parziali** e quante **bianche** (senza nessun contenuto).
+- **Spazio libero**: tutto lo spazio ancora libero sulle pagine interne, sommato (es. «4 e 1/3 pagine»).
+- **Pubblicità**: la percentuale di pubblicità sulle pagine interne (prenotate e segnaposto compresi), esatta perché calcolata in frazioni di pagina. Solo il numero: niente soglie né colori di allarme.
+- **Da assegnare**: quante pubblicità segnaposto aspettano ancora inserzionista e PDF, con il dettaglio per formato ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)).
+- **Copertine**: quante hanno già un contenuto e quante sono libere.
+- **Peso copia** e **scaglione** postale, dal pannello Peso ([§9ter](#9ter-peso-della-rivista)); «parametri incompleti» se mancano carta o formato.
+
+**Clic su «bianche»** o su **«Da assegnare»**: le pagine corrispondenti (copertine comprese, per i segnaposto) si evidenziano con un contorno azzurro e le altre si attenuano, in tutte e tre le viste. Le pagine non si spostano e restano utilizzabili. Un secondo clic sullo stesso bottone toglie l'evidenziazione.
+
 **Ogni card/riga mostra:**
 
 | Elemento | Significato |
@@ -291,9 +301,9 @@ Ogni pagina timone coinvolta mostra la miniatura della propria pagina interna co
 
 Pannello sempre visibile sopra la griglia. Mostra, per il numero che stai guardando:
 
-- **Percentuale di carico pubblicitario** (numero grande) — quanta parte del numero è occupata da pubblicità, **incluse le pubblicità prenotate ma non ancora assegnate a una pagina** ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), non solo quelle già piazzate: il testo accanto al numero mostra il dettaglio "X già assegnate + Y prenotate". È calcolata sullo spazio realmente occupato in dodicesimi di pagina ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)), quindi è esatta: tre pubblicità da 1/3 su 3 pagine fanno 1 pagina su 3 = 33,33%. Le prenotate contano per l'occupazione indicata nel loro modulo. Diventa rossa se supera la soglia di allarme impostata. Le pagine di copertina non entrano mai in questo calcolo (né come "pagine totali" del denominatore, né un eventuale contenuto assegnato per errore su di esse) — vedi [§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella).
-- **Soglia di allarme**: il campo numerico accanto al titolo del cruscotto — impostala tu (es. `30` per il 30%); lasciala vuota per disattivare l'avviso. È un'impostazione della rivista, non del singolo numero: cambiarla qui vale per tutti i numeri di quella rivista.
+- **Percentuale di carico pubblicitario** (numero grande) — quanta parte del numero è occupata da pubblicità, **incluse le pubblicità prenotate ma non ancora assegnate a una pagina** ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), non solo quelle già piazzate: il testo accanto al numero mostra il dettaglio "X già assegnate + Y prenotate". È calcolata sullo spazio realmente occupato in dodicesimi di pagina ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)), quindi è esatta: tre pubblicità da 1/3 su 3 pagine fanno 1 pagina su 3 = 33,33%. Le prenotate contano per l'occupazione indicata nel loro modulo. Nessuna soglia né colore di allarme (tolti il 2026-10-27): è solo la percentuale, la stessa del riepilogo in alto ([§3](#3-leggere-la-griglia-del-timone)). Le pagine di copertina non entrano mai in questo calcolo (né come "pagine totali" del denominatore, né un eventuale contenuto assegnato per errore su di esse) — vedi [§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella).
 - **Inserzioni assegnate** vs **pubblicità non ancora assegnate**.
+- **Pubblicità da assegnare (segnaposto)**: quante pubblicità previste non hanno ancora un inserzionista, in tutto il numero (copertine comprese), con il dettaglio per formato ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)).
 - **Riepilogo per formato pubblicitario** (pagina intera, mezza pagina, ecc.) e **per stato commerciale** (in trattativa, confermata, annullata) — include anche le prenotazioni.
 
 **Esportare il report:** i link "⬇️ CSV" e "⬇️ PDF" in alto a destra del pannello scaricano lo stesso riepilogo in un file, utile per condividerlo con chi non ha accesso al sistema.
@@ -394,7 +404,7 @@ I valori di partenza vengono dalla rivista ([§12bis](#12bis-modificare-una-rivi
 
 Bottone **"📜 Storico spostamenti"** nella barra del timone: apre un elenco degli ultimi 50 spostamenti di pagina fatti su questo numero, con chi li ha fatti, da quale posizione a quale, e quando.
 
-Bottone **"🕓 Cronologia"**, poco sotto la barra del timone: il registro di **tutto il resto** che succede su questo numero — cambi di stato pagina, contenuti creati/assegnati/rimossi/con spazio sulla pagina modificato, PDF caricati, modifiche al numero di pagine totali, cambi della soglia di allarme pubblicitario. Ogni riga mostra chi ha fatto cosa e quando. Non si aggiorna da solo mentre resta aperto: chiudilo e riaprilo per vedere le voci più recenti.
+Bottone **"🕓 Cronologia"**, poco sotto la barra del timone: il registro di **tutto il resto** che succede su questo numero — cambi di stato pagina, contenuti creati/assegnati/rimossi/con spazio sulla pagina modificato, PDF caricati, modifiche al numero di pagine totali, modifiche e rinomine dei contenuti, pubblicità previste create con il numero (le voci vecchie sui cambi della soglia di allarme restano leggibili, ma la soglia non esiste più). Ogni riga mostra chi ha fatto cosa e quando. Non si aggiorna da solo mentre resta aperto: chiudilo e riaprilo per vedere le voci più recenti.
 
 ---
 
@@ -405,17 +415,33 @@ Se compare un riquadro **"⚠️ Avvisi"** sotto la barra del timone, il sistema
 - una pagina già segnata come **Revisionata** o **Ok stampa** ma ancora **senza un PDF caricato** — a differenza degli altri avvisi, per «Ok stampa» questo caso è anche bloccante: vedi [§7](#7-caricare-e-vedere-un-pdf);
 - un contenuto assegnato a **pagine non consecutive** (es. pagina 3 e pagina 9) — a volte è voluto, ma vale la pena ricontrollare.
 
-Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone non ha nulla da segnalare, non si vede affatto. Il carico pubblicitario oltre soglia ([§8](#8-leggere-il-cruscotto-pubblicitario)) e il numero di pagine non multiplo di 4 hanno già i loro avvisi dedicati altrove nell'interfaccia.
+Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone non ha nulla da segnalare, non si vede affatto. Il numero di pagine non multiplo di 4 ha già il suo avviso dedicato altrove nell'interfaccia. Il carico pubblicitario non ha più soglie né avvisi (dal 2026-10-27): si legge la percentuale nel riepilogo e nel cruscotto.
 
 ---
 
 ## 12. Creare una rivista / un numero, duplicare la struttura
 
-**Nuova rivista** (solo Admin): dal riquadro "Le tue riviste", bottone "+ Nuova rivista". Nome, periodicità, colore identificativo, soglia di allarme pubblicitario (opzionale), note. (L'opzione «il battente conta nel totale pagine» non c'è più dal 2026-10-26: la bandella è una copertina a parte e non entra mai nel totale delle pagine interne.)
+**Nuova rivista** (solo Admin): dal riquadro "Le tue riviste", bottone "+ Nuova rivista". Nome, periodicità, colore identificativo, note. (La soglia di allarme pubblicitario non c'è più dal 2026-10-27: il carico pubblicitario si legge come semplice percentuale.) (L'opzione «il battente conta nel totale pagine» non c'è più dal 2026-10-26: la bandella è una copertina a parte e non entra mai nel totale delle pagine interne.)
 
 **Nuovo numero**: dalla pagina di una rivista, bottone "+ Nuovo numero" (visibile ad Admin e Redattori con accesso a quella rivista). Titolo, data di uscita (opzionale), **scadenza stampa** (opzionale — vedi [§12bis](#12bis-modificare-una-rivista-redattore-di-riferimento-e-scadenza-stampa)), **numero di pagine interne** (le quattro copertine I–IV si aggiungono da sole, non vanno contate; con 6 «pagine copertina» nella sezione Carta e peso il numero nasce anche con la bandella), note. Se cancelli del tutto il numero di pagine per riscriverlo, l'anteprima del peso si ferma finché non scrivi un valore valido; se provi a creare il numero con il campo vuoto compare l'errore sotto il campo (prima la pagina andava in errore).
 
 **Duplicare la struttura da un numero precedente**: nello stesso form di creazione numero, se la rivista ha già altri numeri, trovi un menu "Duplica struttura da un numero precedente". Selezionandone uno, il numero di pagine interne si pre-compila con quello del numero scelto (resta modificabile) e — dopo la creazione — ogni pagina interna e ogni copertina eredita lo stesso tipo (editoriale/pubblicità/mista/bianca) della pagina corrispondente del numero di origine. **Non vengono copiati**: i contenuti assegnati, gli stati delle pagine, i PDF caricati — solo lo schema di che tipo di pagina è cosa, per non ripartire ogni volta da un timone completamente vuoto.
+
+**Pubblicità previste** (opzionale): nel form di creazione del numero, la sezione «📢 Pubblicità previste» chiede quante pubblicità sono già previste per tipo — **pagina intera**, **2/3**, **1/2**, **piedino (1/3)**, **vetrina (1/4)**. Mentre scrivi, sotto compaiono:
+- quante pagine di pubblicità fanno in tutto (es. «7 pagine di pubblicità (8 inserzioni)»);
+- la **percentuale sulle pagine interne** (le copertine non contano, come nel cruscotto);
+- le **posizioni** in cui andranno;
+- un **errore rosso** se non ci stanno: in quel caso il numero non viene creato finché non riduci le pubblicità o aumenti le pagine.
+
+Alla creazione diventano pubblicità **segnaposto** già messe nel timone, con questa regola:
+1. le **prime 4 pubblicità occupano tutte le copertine**, di fila, nell'ordine **II, III, IV** e per ultima la **I** — prima le pagine intere, poi, se le pagine intere sono meno di 4, le frazioni più grandi (2/3, 1/2…). Quando viene usata la I, in cima al numero appena creato compare un avviso;
+2. le pagine intere rimaste vanno nelle pagine interne **una sì e una no, da pagina 2** (2, 4, 6…);
+3. poi le frazioni rimaste (2/3, 1/2, 1/3, 1/4), **una per pagina**, continuando la stessa sequenza: il resto della pagina resta libero per l'editoriale;
+4. finite le pagine alterne, le pagine libere rimaste partendo **dal fondo**.
+
+Le posizioni si decidono **solo adesso**: dopo puoi spostare, togliere e modificare tutto a mano, e nulla viene mai ricalcolato da solo.
+
+**I segnaposto nel timone**: bordo tratteggiato ed etichetta **«Da assegnare»**, titolo automatico (es. «Pubblicità 1/2 — da assegnare»), nessun cliente né PDF. Contano nella percentuale pubblicitaria e nel contatore «Pubblicità da assegnare (segnaposto)» del cruscotto ([§8](#8-leggere-il-cruscotto-pubblicitario)). Per trasformarne uno in una **pubblicità vera**: doppio click sul nome e scrivi il cliente, oppure ✏️ e compila cliente, titolo o PDF ([§5ter](#5ter-modificare-un-contenuto-e-rinominarlo)). Cambiare solo formato, stato o spazio non basta: resta «da assegnare». La mezza pagina nasce orizzontale: se è verticale, cambia il formato dalla ✏️.
 
 **Carta e peso**: nel form di creazione del numero, la sezione richiudibile "⚖️ Carta e peso" è già compilata con i valori di default della rivista: formato in mm, grammature, pagine di copertina, poi n. copie e n. bancali, e sotto "Avanzate" maggiorazione e tolleranze. Puoi cambiarli solo per questo numero; i campi diversi dalla rivista mostrano il badge "modificato" e "Ripristina default rivista" li riporta ai valori della rivista. Sotto ogni grammatura compare il peso a pagina e sotto la sezione un'anteprima del peso che si aggiorna mentre scrivi. Dettagli in [§9ter](#9ter-peso-della-rivista).
 
@@ -423,7 +449,7 @@ Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone 
 
 ## 12bis. Modificare una rivista, redattore di riferimento e scadenza stampa
 
-**Modificare una rivista** (solo Admin): dalla pagina della rivista, bottone "Modifica rivista". Stessi campi della creazione (nome, periodicità, colore, soglia allarme pubblicitario, note), più un campo nuovo:
+**Modificare una rivista** (solo Admin): dalla pagina della rivista, bottone "Modifica rivista". Stessi campi della creazione (nome, periodicità, colore, note), più un campo nuovo:
 
 - **Redattore di riferimento**: l'utente responsabile di quella rivista. Assegnarlo gli dà automaticamente accesso alla rivista (se non ce l'aveva già) — non serve anche aggiungerlo da [§13](#13-gestire-gli-utenti-solo-admin). Riceve le mail di sollecito quando la scadenza stampa di un numero si avvicina (vedi sotto). Cambiare redattore non toglie l'accesso al precedente: se serve, va rimosso a mano da §13.
 

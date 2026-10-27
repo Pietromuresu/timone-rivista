@@ -30,6 +30,7 @@ use App\Support\AutomaticChecks;
 use App\Support\ContentPageAttacher;
 use App\Support\ContentPlacer;
 use App\Support\IssueCovers;
+use App\Support\IssueSummary;
 use App\Support\PageCapacity;
 use App\Support\PageCountResizer;
 use App\Support\PageGroupLinker;
@@ -39,6 +40,8 @@ use App\Support\PageReorderer;
 use App\Support\PageSpreadBuilder;
 use App\Support\ThumbnailProgressEstimator;
 use App\Support\Twelfths;
+use App\Support\Weight\MagazineWeightCalculator;
+use App\Support\Weight\WeightLimits;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -135,6 +138,23 @@ class Grid extends Component
      * numero e aveva bisogno di un modo per restringerla.
      */
     public string $contentSearch = '';
+
+    /**
+     * Fase 6 (2026-10-27): clic su "pagine bianche" o "da assegnare" nella
+     * barra di riepilogo → quelle pagine evidenziate, le altre attenuate
+     * (evidenziare e non filtrare: le pagine restano al loro posto, il
+     * drag&drop continua a funzionare). null = nessuna evidenziazione.
+     */
+    public ?string $summaryHighlight = null;
+
+    public function toggleSummaryHighlight(string $what): void
+    {
+        if (! in_array($what, ['blank', 'placeholders'], true)) {
+            return;
+        }
+
+        $this->summaryHighlight = $this->summaryHighlight === $what ? null : $what;
+    }
 
     /**
      * Fase 4.3 — pannello "contenuti archiviati" dentro il pannello
@@ -382,37 +402,6 @@ class Grid extends Component
     }
 
     /**
-     * Soglia di allarme del carico pubblicitario: campo già esistente su
-     * Magazine (`ad_threshold_percentage`, previsto fin dallo schema
-     * iniziale ma mai collegato a una UI finora) — impostazione della
-     * rivista, non della singola issue, ma modificabile da qui perché è
-     * il cruscotto pubblicitario a usarla. Stringa vuota/null azzera la
-     * soglia (nessun allarme configurato).
-     */
-    public function updateAdThreshold(?string $value): void
-    {
-        $this->authorize('update', $this->issue);
-
-        $oldThreshold = $this->issue->magazine->ad_threshold_percentage;
-
-        if ($value === null || trim($value) === '') {
-            $this->issue->magazine->update(['ad_threshold_percentage' => null]);
-            $this->logAdThresholdChange($oldThreshold, null);
-
-            return;
-        }
-
-        $threshold = round((float) $value, 2);
-
-        if ($threshold < 0 || $threshold > 100) {
-            return;
-        }
-
-        $this->issue->magazine->update(['ad_threshold_percentage' => $threshold]);
-        $this->logAdThresholdChange($oldThreshold, $threshold);
-    }
-
-    /**
      * Scadenza stampa dell'issue (Fase 5.1) — modificabile qui, non solo in
      * creazione (Issues\Create), perché un'issue esistente deve poter
      * spostare la propria scadenza. Azzera sempre deadline_reminder_sent_at:
@@ -455,19 +444,6 @@ class Grid extends Component
             description: 'Scadenza stampa cambiata da '.($old?->toDateString() ?? 'nessuna').' a '.($new?->toDateString() ?? 'nessuna'),
             old: ['print_deadline_at' => $old?->toDateString()],
             new: ['print_deadline_at' => $new?->toDateString()],
-        );
-    }
-
-    private function logAdThresholdChange(?float $old, ?float $new): void
-    {
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Magazine',
-            entityId: $this->issue->magazine_id,
-            action: 'magazine.ad_threshold_changed',
-            description: 'Soglia di allarme pubblicitario cambiata da '.($old ?? 'nessuna').' a '.($new ?? 'nessuna'),
-            old: ['ad_threshold_percentage' => $old],
-            new: ['ad_threshold_percentage' => $new],
         );
     }
 
@@ -1815,6 +1791,11 @@ class Grid extends Component
 
         $isAd ? $content->advertisement->update(['client' => $name]) : $content->update(['title' => $name]);
 
+        // Fase 5: dare un nome a un segnaposto lo rende una pubblicità vera.
+        if ($content->isPlaceholder()) {
+            $content->update(['is_placeholder' => false]);
+        }
+
         ActivityLogger::log(
             issue: $this->issue,
             entityType: 'Content',
@@ -2288,11 +2269,18 @@ class Grid extends Component
             ->sortBy(fn (Page $cover) => $cover->cover_slot->order())
             ->values();
 
-        $unassignedContents = $this->issue->unassignedContents()
+        // Fase 6 (2026-10-27): caricati TUTTI e filtrati in memoria per il
+        // pannello. Prima il filtro "Cerca per titolo" stava nella query, e
+        // da questa stessa lista si calcolavano le prenotate del cruscotto:
+        // cercare un titolo cambiava la percentuale pubblicitaria (bug).
+        $allUnassignedContents = $this->issue->unassignedContents()
             ->with(['article', 'advertisement', 'files' => fn ($query) => $query->limit(1)])
-            ->when($this->contentSearch !== '', fn ($query) => $query->where('title', 'like', '%'.$this->contentSearch.'%'))
             ->orderBy('created_at')
             ->get();
+
+        $unassignedContents = $this->contentSearch === ''
+            ? $allUnassignedContents
+            : $allUnassignedContents->filter(fn (Content $content) => mb_stripos($content->title, $this->contentSearch) !== false)->values();
 
         $reorderLogs = $this->showReorderLog
             ? $this->issue->reorderLogs()->with(['page', 'user'])->latest()->limit(50)->get()
@@ -2325,7 +2313,7 @@ class Grid extends Component
         // Fase 3: il carico prenotato è l'occupazione del Content
         // (AdLoadCalculator legge $advertisement->content): relazione
         // impostata a mano per non fare una query per pubblicità.
-        $reservedAdvertisements = $unassignedContents
+        $reservedAdvertisements = $allUnassignedContents
             ->where('type', ContentType::Pubblicita)
             ->map(fn ($content) => $content->advertisement?->setRelation('content', $content))
             ->filter()
@@ -2374,6 +2362,18 @@ class Grid extends Component
             ? $this->issue->formato_base_mm.' / '.$this->issue->formato_altezza_mm
             : '3 / 4';
 
+        // Fase 6 (2026-10-27): riepilogo stile dashboard (App\Support\IssueSummary)
+        // sulle collezioni già caricate; il peso con lo stesso calcolo del
+        // pannello Peso (MagazineWeightCalculator), nessuna formula nuova.
+        $adLoad = AdLoadCalculator::summarize($pages, $reservedAdvertisements);
+        $summary = IssueSummary::summarize(
+            $pages,
+            $covers,
+            $allUnassignedContents,
+            $adLoad,
+            MagazineWeightCalculator::calculate($this->issue->weightInput(), config('peso_rivista.scaglioni'), WeightLimits::fromConfig()),
+        );
+
         return view('livewire.timone.grid', [
             'pages' => $pages,
             // Tutte le copertine in un'unica fascia in cima, in ordine di
@@ -2388,8 +2388,14 @@ class Grid extends Component
             'archivedContents' => $archivedContents,
             'reorderLogs' => $reorderLogs,
             // Solo pagine interne: le copertine hanno un conteggio a parte.
-            'adLoad' => AdLoadCalculator::summarize($pages, $reservedAdvertisements),
-            'adThreshold' => $this->issue->magazine->ad_threshold_percentage,
+            'adLoad' => $adLoad,
+            // Fase 6: barra di riepilogo ed evidenziazione delle pagine.
+            'summary' => $summary,
+            'highlightPageIds' => match ($this->summaryHighlight) {
+                'blank' => $summary['blankPageIds'],
+                'placeholders' => $summary['placeholderPageIds'],
+                default => [],
+            },
             'unassignedAdCount' => $reservedAdvertisements->count(),
             'pageCountImpact' => $pageCountImpact,
             'newTotalPagesParsed' => $newTotalPagesParsed,

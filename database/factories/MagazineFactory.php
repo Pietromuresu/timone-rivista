@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Enums\Periodicity;
+use App\Models\Magazine;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Magazine>
+ * @extends Factory<Magazine>
  */
 class MagazineFactory extends Factory
 {
@@ -26,7 +27,6 @@ class MagazineFactory extends Factory
             'name' => Str::title(fake()->unique()->words(2, true)),
             'periodicity' => fake()->randomElement(Periodicity::cases())->value,
             'color' => fake()->hexColor(),
-            'ad_threshold_percentage' => 30,
             'notes' => null,
         ];
     }

@@ -63,6 +63,8 @@
         "
     @endauth
 >
+    @include('livewire.timone.partials.summary-bar')
+
     {{-- Toast leggero per un cambiamento arrivato da un altro utente
          (richiesta: "senza essere invasivo") — nessuno stato server, si
          auto-nasconde da solo dopo 4s, alimentato dall'evento browser
@@ -479,31 +481,14 @@
                         class="text-indigo-600 dark:text-indigo-400 hover:underline"
                     >⬇️ PDF</a>
                 </div>
-
-                <div class="flex items-center gap-1.5 text-xs">
-                    <label for="ad-threshold-{{ $issue->id }}" class="text-gray-500 dark:text-gray-400">Soglia allarme</label>
-                    <input
-                        id="ad-threshold-{{ $issue->id }}"
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.5"
-                        value="{{ $adThreshold }}"
-                        placeholder="—"
-                        wire:change="updateAdThreshold($event.target.value)"
-                        class="w-16 text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-1 py-0.5"
-                    />
-                    <span class="text-gray-400">%</span>
-                </div>
             </div>
         </div>
 
-        @php
-            $overThreshold = $adThreshold !== null && $adLoad['adLoadPercentage'] > (float) $adThreshold;
-        @endphp
+        {{-- Fase 6: niente più soglia di allarme né colori di avviso sul
+             carico pubblicitario (richiesta della specifica): solo la percentuale. --}}
 
         <div class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span class="text-2xl font-semibold {{ $overThreshold ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-100' }}">
+            <span class="text-2xl font-semibold text-gray-800 dark:text-gray-100">
                 {{ $adLoad['adLoadPercentage'] }}%
             </span>
             <span class="text-xs text-gray-500 dark:text-gray-400">
@@ -512,14 +497,13 @@
                 ({{ $adLoad['placedAdEquivalentPages'] }} già assegnate + {{ $adLoad['reservedAdEquivalentPages'] }} prenotate) &middot;
                 {{ $adLoad['editorialEquivalentPages'] }} pagine equiv. editoriale
             </span>
-            @if ($overThreshold)
-                <span class="text-xs font-medium text-red-600 dark:text-red-400">⚠️ Sopra soglia ({{ $adThreshold }}%)</span>
-            @endif
         </div>
 
         <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
             <span>Inserzioni assegnate: <strong>{{ $adLoad['assignedAdCount'] }}</strong></span>
             <span>Pubblicità non ancora assegnate: <strong>{{ $unassignedAdCount }}</strong></span>
+            {{-- Fase 5: segnaposto (pubblicità previste senza inserzionista) in tutto il numero, copertine comprese (App\Support\IssueSummary). --}}
+            <span data-testid="placeholder-ads-count">Pubblicità da assegnare (segnaposto): <strong>{{ $summary['placeholderCount'] }}</strong>@if ($summary['placeholderCount'] > 0) ({{ collect($summary['placeholderByFormat'])->map(fn ($n, $format) => \App\Enums\AdFormat::from($format)->label().': '.$n)->implode(', ') }})@endif</span>
         </div>
 
         @if (! empty($adLoad['formatBreakdown']))

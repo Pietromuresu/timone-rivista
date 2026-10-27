@@ -38,7 +38,7 @@ Colonne `id` e `timestamps` omesse. FK = foreign key. "Scrive" e "Legge" indican
 
 ### `magazines`
 - **Scopo**: rivista.
-- **Colonne**: `name`, `slug` (unique, usato nelle URL), `periodicity` (`mensile`/`settimanale`/`altro`), `color` (hex), `ad_threshold_percentage` (decimal 5,2, nullable: soglia di allarme del carico pubblicitario), `battente_counted_in_total` (bool), `notes`, `redattore_id` (FK users, nullOnDelete: destinatario dei solleciti).
+- **Colonne**: `name`, `slug` (unique, usato nelle URL), `periodicity` (`mensile`/`settimanale`/`altro`), `color` (hex), `ad_threshold_percentage` (decimal 5,2, nullable: soglia di allarme del carico pubblicitario — **non più usata dal 2026-10-27**, Fase 6: soglie e colori di allarme tolti; colonna lasciata con i suoi valori), `battente_counted_in_total` (bool), `notes`, `redattore_id` (FK users, nullOnDelete: destinatario dei solleciti).
 - **Scrive**: `Magazines\Create`/`Edit`, `Grid::updateAdThreshold`.
 
 ### Parametri del peso su `magazines` e `issues` (migration `2026_10_26_*`)
@@ -121,6 +121,7 @@ Numeri e riviste **già esistenti** al momento della migration:
 ### `contents`
 - **Scopo**: articolo o pubblicità del numero, assegnato o no.
 - **Colonne**: `type` (`articolo`/`pubblicita`), `title`, `section_id`, `occupancy_twelfths` (smallint unsigned, NOT NULL, dal 2026-10-27: occupazione totale in dodicesimi di pagina, 30 = 2 pagine e mezza; vedi `App\Support\PageOccupancy`), `archived_at`.
+- `is_placeholder` (boolean, default false, Fase 5 — migration `2026_10_27_300000_add_placeholder_ads`): pubblicità segnaposto creata dalle "pubblicità previste" di un numero.
 - **Colonna non più usata**: `page_occupancy` (decimal 5,2, il vecchio valore in pagine: `0.25/0.33/0.50/0.67` o N). Resa nullable dalla migration della Fase 3, non più letta né scritta; tiene i valori originali per il rollback.
 - **Indici**: `(issue_id, type)`.
 - **Scrive**: `ContentCreator::create`, `ContentUpdater::update` (Fase 4), `Grid::renameContent`/`archiveContent`/`deleteUnassignedContent`.
@@ -131,7 +132,7 @@ Numeri e riviste **già esistenti** al momento della migration:
 
 ### `advertisements`
 - 1:1 con `contents`.
-- **Colonne**: `client`, `agency`, `format` (enum `AdFormat`, 16 formati di listino; propone l'occupazione con `AdFormat::twelfths()`), `confirmation_status` (`in_trattativa`/`confermata`/`annullata`), `preferred_position`, `commercial_notes`.
+- **Colonne**: `client` (nullable dalla Fase 5: un segnaposto non ha inserzionista; il rollback rimette `''` e NOT NULL), `agency`, `format` (enum `AdFormat`, 16 formati di listino; propone l'occupazione con `AdFormat::twelfths()`), `confirmation_status` (`in_trattativa`/`confermata`/`annullata`), `preferred_position`, `commercial_notes`.
 - **Colonna non più usata**: `occupied_percentage_override` (dal 2026-10-27 l'occupazione della pubblicità sta nel `Content`, modificabile come per un articolo).
 
 ### `page_content`

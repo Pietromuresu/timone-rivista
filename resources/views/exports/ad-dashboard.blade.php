@@ -9,7 +9,6 @@
         h2 { font-size: 14px; margin-top: 24px; margin-bottom: 6px; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; }
         p.subtitle { color: #6b7280; margin-top: 0; }
         .load-figure { font-size: 28px; font-weight: bold; }
-        .over-threshold { color: #dc2626; }
         table { width: 100%; border-collapse: collapse; margin-top: 4px; }
         th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #e5e7eb; }
         th { background-color: #f3f4f6; font-weight: bold; }
@@ -20,12 +19,8 @@
     <h1>{{ $issue->magazine->name }} — {{ $issue->title }}</h1>
     <p class="subtitle">Cruscotto pubblicitario &middot; generato il {{ now()->translatedFormat('d M Y, H:i') }}</p>
 
-    <p class="load-figure {{ $adThreshold !== null && $adLoad['adLoadPercentage'] > (float) $adThreshold ? 'over-threshold' : '' }}">
-        {{ $adLoad['adLoadPercentage'] }}% carico pubblicitario
-        @if ($adThreshold !== null && $adLoad['adLoadPercentage'] > (float) $adThreshold)
-            (sopra la soglia del {{ $adThreshold }}%)
-        @endif
-    </p>
+    {{-- Fase 6 (2026-10-27): solo la percentuale, senza soglia né colori di allarme. --}}
+    <p class="load-figure">{{ $adLoad['adLoadPercentage'] }}% carico pubblicitario</p>
 
     <h2>Riepilogo</h2>
     <table>
@@ -36,7 +31,6 @@
         <tr><th>Pagine equivalenti editoriali</th><td>{{ $adLoad['editorialEquivalentPages'] }}</td></tr>
         <tr><th>Inserzioni assegnate</th><td>{{ $adLoad['assignedAdCount'] }}</td></tr>
         <tr><th>Inserzioni prenotate (non ancora assegnate)</th><td>{{ $adLoad['reservedAdCount'] }}</td></tr>
-        <tr><th>Soglia allarme</th><td>{{ $adThreshold !== null ? $adThreshold.'%' : 'non impostata' }}</td></tr>
     </table>
 
     <h2>Per formato pubblicitario</h2>

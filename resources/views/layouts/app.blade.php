@@ -25,7 +25,14 @@
                  fantasma sopra tutto; l'auto-scroll di Sortable parte già
                  a 120px dal bordo (resources/js/timone-alpine.js), quindi
                  anche sotto l'header. --}}
-            <div class="sticky top-0 z-40 shadow-sm">
+            {{-- Fase 6 (2026-10-27): l'altezza reale dell'header (cambia col
+                 menu mobile) va in --app-header-height, così la barra di
+                 riepilogo del timone (sticky) si ferma subito sotto. --}}
+            <div
+                class="sticky top-0 z-40 shadow-sm"
+                x-data
+                x-init="const set = () => document.documentElement.style.setProperty('--app-header-height', $el.offsetHeight + 'px'); set(); new ResizeObserver(set).observe($el)"
+            >
                 @include('layouts.navigation')
 
                 <!-- Page Heading -->

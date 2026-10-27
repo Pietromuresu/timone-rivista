@@ -164,6 +164,20 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - Sostituire il PDF: nella stessa finestra si sceglie un nuovo file; quello vecchio viene eliminato. Un PDF di più pagine deve corrispondere allo spazio del contenuto (es. 3 pagine per un contenuto di 3 pagine o di 2 e 1/2).
 - L'anteprima di un contenuto nel timone è sempre quella del suo PDF (o immagine) di stampa: non c'è una miniatura da caricare a parte.
 
+## Pubblicità previste e segnaposto (dal 2026-10-27)
+
+- Creando un numero, nella sezione «📢 Pubblicità previste» si indica quante pubblicità sono previste: pagina intera, 2/3, 1/2, piedino (1/3), vetrina (1/4). Mentre si scrive, il modulo mostra quante pagine di pubblicità sono in tutto, la percentuale sulle pagine interne e dove andranno. Se non ci stanno compare un errore rosso e il numero non viene creato finché non si correggono i valori.
+- Dove vanno: le prime 4 pubblicità occupano tutte le copertine, di fila, nell'ordine II, III, IV e I (prima le pagine intere; se sono meno di 4, anche le frazioni più grandi). Quando viene usata la I compare un avviso. Le altre vanno nelle pagine interne una sì e una no da pagina 2 (2, 4, 6…), prima le pagine intere e poi le frazioni, una per pagina, lasciando il resto della pagina all'editoriale.
+- Nel timone sono «segnaposto»: bordo tratteggiato ed etichetta «Da assegnare». Contano nella percentuale di pubblicità e nel contatore «Pubblicità da assegnare» del cruscotto.
+- Per trasformarlo in una pubblicità vera: doppio click sul nome e scrivere il cliente, oppure ✏️ e compilare cliente, titolo o PDF. Si sposta e si modifica come ogni altro contenuto.
+- Le posizioni vengono decise solo quando si crea il numero: dopo non cambiano mai da sole.
+
+## Riepilogo in cima al timone (dal 2026-10-27)
+
+- Sotto la barra in alto c'è una riga di riepilogo sempre visibile, anche scorrendo: pagine piene, parziali e bianche; spazio libero in tutto (es. «4 e 1/3 pagine»); percentuale di pubblicità sulle pagine interne; pubblicità ancora da assegnare, per formato; copertine assegnate e libere; peso di una copia e scaglione postale.
+- Cliccando su «bianche» o su «Da assegnare» quelle pagine si evidenziano in azzurro e le altre si attenuano; un secondo clic toglie l'evidenziazione. Le pagine non si spostano.
+- La percentuale di pubblicità non ha più soglie né colori di allarme: è solo il numero. Anche il campo «soglia di allarme» della rivista non c'è più.
+
 ## Punti di attenzione
 
 - Vulnerabilità note: Livewire 3.8.2 (XSS) e Laravel 12.64 vanno aggiornati (composer audit: 19 advisory).

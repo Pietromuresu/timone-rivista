@@ -8,6 +8,9 @@
 @php
     $twelfths = (int) $content->pivot->occupied_twelfths;
     $isRow = $variant === 'row';
+    // Fase 5: pubblicità segnaposto — contorno tratteggiato + etichetta
+    // "Da assegnare" (riconoscibile anche senza colori).
+    $isPlaceholder = $content->isPlaceholder();
     $muted = $variant === 'overlay' ? 'text-white/80 hover:text-white' : 'opacity-60 hover:opacity-100';
     $selectClasses = $isRow
         ? 'text-xs py-0 pl-1 pr-6'
@@ -15,7 +18,8 @@
 @endphp
 <{{ $isRow ? 'span' : 'div' }}
     wire:key="page-{{ $page->id }}-content-{{ $content->id }}"
-    class="{{ $isRow ? 'inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-200' : 'flex items-start gap-1 leading-tight'.($variant === 'overlay' ? ' text-white' : '') }}"
+    class="{{ $isRow ? 'inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-200' : 'flex items-start gap-1 leading-tight'.($variant === 'overlay' ? ' text-white' : '') }} {{ $isPlaceholder ? 'rounded border border-dashed border-amber-500 px-0.5' : '' }}"
+    @if ($isPlaceholder) data-placeholder="1" @endif
 >
     {{-- Fase 4 (2026-10-27): rinomina inline — doppio click sul nome →
          campo di testo (✏️ più sotto apre invece la modale di modifica
@@ -28,6 +32,9 @@
     >
         <span x-show="! editing" @unless ($locked) x-on:dblclick.stop="editing = true; $nextTick(() => $refs.input.select())" title="Doppio click per rinominare" @endunless data-testid="content-label">
             {{ $content->type->value === 'articolo' ? '📄' : '📢' }} {{ $content->displayLabel() }}
+            @if ($isPlaceholder)
+                <span class="ml-0.5 inline-block rounded border border-dashed border-amber-600 bg-amber-50 text-amber-900 px-1 text-[9px] font-semibold uppercase tracking-wide" title="Pubblicità prevista, ancora senza inserzionista né PDF">Da assegnare</span>
+            @endif
         </span>
         @unless ($locked)
             <input

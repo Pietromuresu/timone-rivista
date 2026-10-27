@@ -47,7 +47,7 @@
                         <li wire:key="ad-reservation-{{ $ad->id }}" class="py-2 flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="font-medium text-gray-800 dark:text-gray-100 truncate">{{ $ad->client }}</span>
+                                    <span class="font-medium text-gray-800 dark:text-gray-100 truncate">{{ $ad->client ?? $ad->content?->title }}</span>
                                     <span class="px-1.5 py-0.5 rounded text-[10px] font-medium {{ $row['status']->colorClasses() }}">
                                         {{ $row['status']->label() }}
                                     </span>
@@ -73,7 +73,7 @@
                                     <button
                                         type="button"
                                         x-data
-                                        x-on:click="confirm('Eliminare la prenotazione per {{ $ad->client }}?') && $wire.deleteReservation({{ $ad->content_id }})"
+                                        x-on:click="confirm('Eliminare la prenotazione per {{ $ad->client ?? $ad->content?->title }}?') && $wire.deleteReservation({{ $ad->content_id }})"
                                         class="shrink-0 text-xs text-red-600 dark:text-red-400 hover:underline"
                                         title="Elimina prenotazione"
                                     >🗑 Elimina</button>

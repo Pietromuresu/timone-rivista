@@ -18,7 +18,7 @@ use Livewire\Component;
 /**
  * Prima UI di modifica di una Magazine già esistente (Fase 5.2) — fino a
  * questa sessione esisteva solo Create, quindi campi come
- * ad_threshold_percentage (Punto 5; battente_counted_in_total non è più modificabile dalla Fase 2 del 2026-10-26: la bandella è una copertina a parte e non entra mai nel totale)
+ * la soglia di allarme pubblicitario (tolta nella Fase 6 del 2026-10-27; battente_counted_in_total non è più modificabile dalla Fase 2 del 2026-10-26: la bandella è una copertina a parte e non entra mai nel totale)
  * restavano fissati per sempre al valore scelto in creazione. Riusa lo
  * stesso set di campi di Create (stessa validazione) invece di limitarsi al
  * solo redattore, per chiudere quel limite già segnalato in HANDOFF.md
@@ -36,8 +36,6 @@ class Edit extends Component
     public string $periodicity = 'mensile';
 
     public string $color = '#3B82F6';
-
-    public ?string $ad_threshold_percentage = '';
 
     public string $notes = '';
 
@@ -67,9 +65,6 @@ class Edit extends Component
         $this->name = $magazine->name;
         $this->periodicity = $magazine->periodicity->value;
         $this->color = $magazine->color;
-        $this->ad_threshold_percentage = $magazine->ad_threshold_percentage === null
-            ? ''
-            : (string) $magazine->ad_threshold_percentage;
         $this->notes = $magazine->notes ?? '';
         // (bool) esplicito: una Magazine passata qui appena creata via
         // factory senza specificare il campo ha 'null' in memoria PHP
@@ -87,10 +82,6 @@ class Edit extends Component
     {
         $this->authorize('update', $this->magazine);
 
-        if ($this->ad_threshold_percentage === '') {
-            $this->ad_threshold_percentage = null;
-        }
-
         // "80,5" → "80.5" prima di validare, così virgola e punto salvano lo stesso valore.
         $this->weight = WeightParameters::normalizeInput($this->weight);
 
@@ -98,7 +89,6 @@ class Edit extends Component
             'name' => 'required|string|max:180',
             'periodicity' => 'required|in:'.implode(',', array_column(Periodicity::cases(), 'value')),
             'color' => 'required|string|max:7',
-            'ad_threshold_percentage' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string|max:2000',
             'redattore_id' => 'nullable|exists:users,id',
         ], WeightParameters::messages('weight'));

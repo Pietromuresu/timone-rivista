@@ -80,3 +80,29 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - Partial `content-edit.blade.php`; riga del contenuto con rinomina e ✏️.
 - Nessuna dipendenza nuova.
 
+## Fase 5 — Pubblicità previste alla creazione del numero (2026-10-27)
+
+### Visibili agli utenti
+- **"Nuovo numero"**: sezione «📢 Pubblicità previste» con quante pubblicità a pagina intera, 2/3, 1/2, piedino (1/3) e vetrina (1/4). Mentre scrivi mostra le pagine pubblicitarie equivalenti, la percentuale sulle pagine interne, le posizioni e un errore (che blocca la creazione) se non ci stanno.
+- Alla creazione diventano **pubblicità segnaposto** già nel timone: le prime 4 (di qualsiasi formato, prima le pagine intere) riempiono tutte le copertine II, III, IV, I (avviso sulla I), le altre nelle pagine interne una sì e una no da pagina 2, frazioni a seguire una per pagina, poi le pagine libere dal fondo. Il posizionamento non si ripete mai dopo.
+- Segnaposto riconoscibili: contorno tratteggiato ed etichetta **«Da assegnare»**; titolo automatico «Pubblicità 1/2 — da assegnare». Contano nella percentuale pubblicitaria e nel nuovo contatore «Pubblicità da assegnare (segnaposto)» del cruscotto, per formato.
+- Un segnaposto diventa una pubblicità vera quando riceve il cliente (modale o doppio click sul nome), un titolo proprio o il PDF.
+
+### Tecniche
+- `App\Enums\PlannedAdKind`; `App\Support\AdPlacement\AdPlacementService` (puro) + `AdPlacementPlan`; `PlaceholderAdCreator`; `PlaceholderAdCounter` (sostituito nella Fase 6 da `IssueSummary`). Config `timone.ad_placement` (`cover_order`, `start_page`/`TIMONE_AD_PLACEMENT_START_PAGE`, `step`/`TIMONE_AD_PLACEMENT_STEP`).
+- Migration `2026_10_27_300000_add_placeholder_ads`: `contents.is_placeholder`, `advertisements.client` nullable (reversibile; verificata su copia MySQL dei dati di sviluppo).
+- `ContentFormRules::rules(..., placeholder:)`; `ContentUpdater` e `Grid::renameContent()` tolgono il flag.
+- Nessuna dipendenza nuova.
+
+## Fase 6 — Riepilogo stile dashboard (2026-10-27)
+
+### Visibili agli utenti
+- **Barra di riepilogo** sempre visibile sotto l'header del timone: pagine interne piene / parziali / bianche, spazio libero totale («2 e 5/6 pagine»), percentuale di pubblicità sulle pagine interne, pubblicità da assegnare (segnaposto) per formato, copertine assegnate/libere, peso copia e scaglione.
+- **Clic su «bianche» o «Da assegnare»**: evidenzia quelle pagine (contorno azzurro, le altre attenuate) in griglia, doppia pagina e lista; secondo clic per togliere.
+- **Niente più soglia di allarme** né colori di avviso sul carico pubblicitario: tolti dal cruscotto, dagli export CSV/PDF e dai moduli della rivista. Resta solo la percentuale.
+- **Bug corretto**: cercare un titolo nei "Contenuti da assegnare" cambiava la percentuale pubblicitaria.
+
+### Tecniche
+- `App\Support\IssueSummary` (sostituisce `PlaceholderAdCounter`), partial `summary-bar.blade.php`, `Grid::$summaryHighlight` + `toggleSummaryHighlight()`, `--app-header-height` nel layout.
+- Rimossi `Grid::updateAdThreshold()` e la soglia da `Magazines\Create/Edit`, `Magazine` (fillable/cast), factory ed export; colonna `magazines.ad_threshold_percentage` lasciata, non usata. Nessuna migration.
+

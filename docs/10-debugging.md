@@ -144,6 +144,16 @@ Checklist completa con comandi e righe di log: [09-deploy.md §6bis](09-deploy.m
 | "Il PDF allegato ha N pagine, ma l'occupazione … ne attraversa M" sotto il file | Il nuovo PDF non coincide con l'occupazione (in modifica non c'è la scelta "usa tutte / da X a Y") | Cambiare prima l'occupazione, poi caricare il PDF |
 | Rinomina che "non salva" | Esc o clic fuori annullano; nome vuoto rifiutato (errore rosso sopra la griglia) | `Grid::renameContent()`, chiave d'errore `rename` |
 
+### Pubblicità previste e segnaposto (Fase 5, dal 2026-10-27)
+
+| Sintomo | Causa probabile | Dove guardare / come risolvere |
+|---|---|---|
+| "Le pubblicità previste non ci stanno…" creando un numero | Più pubblicità che posti: una per pagina interna, più le 4 copertine per le pagine intere | Voluto (`AdPlacementService`, `Issues\Create::save()`): ridurre le pubblicità o aumentare le pagine |
+| Pubblicità sulla I di copertina | Più di 3 pubblicità a pagina intera: la I è l'ultima copertina usata | Avviso in cima al numero appena creato; spostarla a mano o cambiare `ad_placement.cover_order` |
+| Posizioni diverse da 2, 4, 6… | `TIMONE_AD_PLACEMENT_START_PAGE`/`_STEP` nel `.env` | `php artisan config:show timone.ad_placement` |
+| Un segnaposto resta «Da assegnare» dopo la modifica | Non ha ancora cliente, titolo proprio o PDF (cambiare solo stato/formato/spazio non basta) | `contents.is_placeholder`; `ContentUpdater::updateFields()` |
+| Le pubblicità previste non si ricalcolano cambiando le pagine | Voluto: il posizionamento avviene solo alla creazione del numero | — |
+
 ### Miniature che restano "in elaborazione" o falliscono
 
 1. `docker compose ps worker`: il worker gira? Senza worker i job restano in Redis per sempre.

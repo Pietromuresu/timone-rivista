@@ -114,6 +114,24 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 | 62 | ~~Miniatura separata non ridimensionata~~ — la miniatura separata è stata tolta su richiesta dell'utente (2026-10-27): il PDF è già la miniatura | — | Numero lasciato per non rinumerare |
 | 63 | Rinomina inline e modale verificate solo su markup e Livewire::test() (nessun Dusk) | `page-content-entry.blade.php`, `content-edit.blade.php` | Checklist manuale in `HANDOFF.md` (sessione Fase 4) |
 
+## Fase 5 — pubblicità previste (aggiunto il 2026-10-27)
+
+| # | Problema | Dove | Note |
+|---|---|---|---|
+| 64 | Una pubblicità prevista occupa sempre UNA pagina (o una copertina): la doppia pagina e il battente non sono tra i tipi previsti | `App\Enums\PlannedAdKind` | La specifica elenca solo intera, 2/3, 1/2, 1/3, 1/4. Un nuovo tipo = un nuovo case, ma la doppia richiederebbe due posizioni contigue nella regola |
+| 65 | La mezza pagina segnaposto nasce sempre orizzontale | `PlannedAdKind::format()` | Orientamento ignoto finché non c'è l'inserzionista; si cambia dalla modale |
+| 66 | Il posizionamento ignora i tipi di pagina copiati da "Duplica struttura" | `PlaceholderAdCreator` | Le pagine "pubblicità" del numero d'origine non attirano i segnaposto: la regola è quella della specifica, uguale per ogni numero |
+| 67 | ~~Il contatore dei segnaposto fa una query a ogni render del timone~~ — risolto nella Fase 6: conteggio in `IssueSummary` sulle collezioni già caricate | ~~`PlaceholderAdCounter`~~ (rimosso) | Una query leggera (whereHas su contents per numero). Da accorpare nel riepilogo della Fase 6 |
+
+## Fase 6 — riepilogo stile dashboard (aggiunto il 2026-10-27)
+
+| # | Problema | Dove | Note |
+|---|---|---|---|
+| 68 | Colonna `magazines.ad_threshold_percentage` non più usata | migration originale | Soglie tolte su richiesta della specifica; colonna lasciata coi valori. Da eliminare con una migration dedicata se la soglia non tornerà |
+| 69 | Il riepilogo ricalcola il peso a ogni render del timone (anche col pannello Peso che lo calcola già) | `Grid::render()`, `WeightPanel::render()` | Calcolo puro e veloce, nessuna query in più (parametri sull'issue). Due componenti separati: condividerlo richiederebbe uno stato comune non giustificato |
+| 70 | Barra sticky misurata con un ResizeObserver nel layout | `layouts/app.blade.php` | Senza JS (o prima dell'init) la barra si ferma a `top: 0` e scorre sotto l'header per un istante. Verifica nel browser in DV-34 |
+| 71 | "Occupate" nel riepilogo = pagine **piene**; le parziali sono a parte | `IssueSummary` | Interpretazione della specifica ("totali / occupate / bianche / parziali"): le quattro voci si sommano al totale |
+
 ## Cose che sembrano sbagliate ma hanno un motivo (non "correggerle")
 
 | Cosa | Perché è così |

@@ -57,6 +57,8 @@ CLAUDE_PROMPTS/            Specifica originale e prompt di lavoro usati durante 
    - `Twelfths` (unità "dodicesimo di pagina" e unica formattazione in frazioni) e `PageCapacity` (capienza 12 per pagina, vuota/parziale/piena, messaggio "non ci sta") — dalla Fase 3 (2026-10-27) al posto di `PagePercentageAllocator`
    - `AdLoadCalculator` (carico pubblicitario, in dodicesimi)
    - `PageOccupancy` (value object dell'occupazione totale in dodicesimi, con la distribuzione 12, 12, 6…)
+   - `AdPlacement\AdPlacementService` (regola di posizionamento delle pubblicità previste, Fase 5), `AdPlacement\PlaceholderAdCreator`
+   - `IssueSummary` (barra di riepilogo, Fase 6: compone PageCapacity, AdLoadCalculator, peso e segnaposto senza calcoli propri)
    - `ContentCreator` / `ContentPlacer` (creazione e posizionamento di un contenuto), `ContentUpdater` (modifica, Fase 4), `ContentFormRules` (regole condivise dai moduli di creazione e modifica)
 
    La scelta "statico, nessuna interfaccia" è voluta e motivata in `CLAUDE.md` (regola 3) e in `HANDOFF.md`.

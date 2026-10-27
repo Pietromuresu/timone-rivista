@@ -60,6 +60,48 @@
                         @endif
                     </div>
 
+                    {{-- Fase 5 (2026-10-27): pubblicità previste. Diventano segnaposto
+                         già posizionati nel timone (App\Support\AdPlacement\PlaceholderAdCreator)
+                         con la regola di AdPlacementService; l'anteprima qui sotto usa lo
+                         stesso piano ($adPlan), non un calcolo nel Blade. --}}
+                    <fieldset class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                        <legend class="px-1 font-medium text-sm text-gray-700 dark:text-gray-300">📢 Pubblicità previste (opzionale)</legend>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Vengono create come pubblicità «da assegnare» e già messe nel timone: le prime 4 (prima le pagine intere, poi le frazioni) occupano tutte le copertine II, III, IV e I; le altre vanno nelle pagine interne una sì e una no da pagina 2. Dopo puoi spostarle e completarle a mano.</p>
+                        <div class="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            @foreach ($plannedAdKinds as $kind)
+                                <div>
+                                    <x-input-label for="planned-{{ $kind->value }}" :value="$kind->label()" class="text-xs" />
+                                    <x-text-input id="planned-{{ $kind->value }}" wire:model.live.debounce.300ms="plannedAds.{{ $kind->value }}" type="number" min="0" placeholder="0" class="mt-1 block w-full text-sm" />
+                                    <x-input-error class="mt-1" :messages="$errors->get('plannedAds.'.$kind->value)" />
+                                </div>
+                            @endforeach
+                        </div>
+                        @if ($adPlan)
+                            <div class="mt-3 text-sm" data-testid="planned-ads-summary">
+                                <p class="text-gray-800 dark:text-gray-100">
+                                    <strong>{{ \App\Support\Twelfths::pagesLabel($adPlan->totalTwelfths()) }}</strong> di pubblicità
+                                    ({{ $adPlan->count() }} {{ $adPlan->count() === 1 ? 'inserzione' : 'inserzioni' }})
+                                    · <strong>{{ $adPlan->internalPercentage() }}%</strong> delle pagine interne
+                                    @if ($adPlan->coverTwelfths() > 0)
+                                        <span class="text-gray-500">(più {{ \App\Support\Twelfths::pagesLabel($adPlan->coverTwelfths()) }} sulle copertine, non conteggiate)</span>
+                                    @endif
+                                </p>
+                                @if ($adPlan->placements !== [])
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Posizioni: {{ implode(', ', $adPlan->labels()) }}</p>
+                                @endif
+                                @if (! $adPlan->fits())
+                                    <p class="mt-1 text-xs font-medium text-red-600 dark:text-red-400">⚠️ Non ci stanno: {{ count($adPlan->unplaced) }} {{ count($adPlan->unplaced) === 1 ? 'resterebbe' : 'resterebbero' }} senza posto. Riduci le pubblicità o aumenta le pagine.</p>
+                                @endif
+                                @foreach ($adPlan->warnings as $warning)
+                                    @if ($adPlan->fits())
+                                        <p class="mt-1 text-xs text-amber-700 dark:text-amber-400">⚠️ {{ $warning }}</p>
+                                    @endif
+                                @endforeach
+                            </div>
+                        @endif
+                        <x-input-error class="mt-2" :messages="$errors->get('plannedAds')" />
+                    </fieldset>
+
                     {{-- Carta e peso: pre-compilata con i default della rivista,
                          copiata sul numero al salvataggio (vedi Issues\Create::$weight). --}}
                     <details open wire:ignore.self class="rounded-lg border border-gray-200 dark:border-gray-700">

@@ -23,8 +23,13 @@ final class ContentFormRules
 
     public const FILE = 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:'.self::FILE_MAX_KILOBYTES;
 
-    /** @return array<string, mixed> */
-    public static function rules(Issue $issue): array
+    /**
+     * $placeholder (Fase 5): modificando una pubblicità segnaposto il
+     * cliente può restare vuoto — finché manca, resta un segnaposto.
+     *
+     * @return array<string, mixed>
+     */
+    public static function rules(Issue $issue, bool $placeholder = false): array
     {
         return [
             'type' => 'required|in:articolo,pubblicita',
@@ -33,7 +38,7 @@ final class ContentFormRules
             'author' => 'nullable|string|max:180',
             'editorial_status' => 'required|in:'.implode(',', array_column(EditorialStatus::cases(), 'value')),
             'expected_length' => 'nullable|integer|min:1',
-            'client' => 'required_if:type,pubblicita|nullable|string|max:180',
+            'client' => ($placeholder ? '' : 'required_if:type,pubblicita|').'nullable|string|max:180',
             'agency' => 'nullable|string|max:180',
             'format' => 'required_if:type,pubblicita|nullable|in:'.implode(',', array_column(AdFormat::cases(), 'value')),
             'confirmation_status' => 'required_if:type,pubblicita|nullable|in:'.implode(',', array_column(AdConfirmationStatus::cases(), 'value')),

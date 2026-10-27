@@ -77,7 +77,7 @@ class AdReservations extends Component
             return;
         }
 
-        $client = $advertisement->client;
+        $client = $advertisement->client ?? $advertisement->content->title; // Fase 5: un segnaposto non ha cliente
         $advertisement->content->delete(); // cascata su advertisements (content_id, cascadeOnDelete)
 
         // Fase 1, bug 3: la prenotazione eliminata compariva ancora tra i

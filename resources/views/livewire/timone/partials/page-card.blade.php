@@ -78,6 +78,16 @@
         $isMultiSelected => 'focus:ring-4 focus:ring-emerald-500',
         default => 'focus:ring-2 focus:ring-indigo-500',
     };
+    // Fase 6 (2026-10-27): evidenziazione dalla barra di riepilogo
+    // (pagine bianche / con pubblicità da assegnare): le pagine che
+    // corrispondono hanno un contorno azzurro, le altre sono attenuate.
+    $summaryHighlightActive = ($summaryHighlight ?? null) !== null;
+    $isHighlighted = $summaryHighlightActive && in_array($page->id, $highlightPageIds ?? [], true);
+    $highlightClasses = match (true) {
+        $isHighlighted => 'outline outline-4 outline-sky-500 outline-offset-2',
+        $summaryHighlightActive => 'opacity-40',
+        default => '',
+    };
 @endphp
 <div
     wire:key="page-{{ $page->id }}"
@@ -130,7 +140,8 @@
          del pannello Peso, vedi Grid::render() → $pageAspectRatio) invece di
          un 3/4 fisso; la larghezza la decide lo zoom S/M/L. --}}
     style="aspect-ratio: {{ $pageAspectRatio ?? '3 / 4' }};"
-    class="relative flex flex-col rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none {{ $focusClasses }} {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $ringClasses }} {{ $isCover && $ringClasses === '' ? 'ring-2 ring-offset-2 ring-indigo-400 dark:ring-offset-gray-900' : '' }} {{ $extraClasses }}"
+    class="relative flex flex-col rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none {{ $focusClasses }} {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $ringClasses }} {{ $isCover && $ringClasses === '' ? 'ring-2 ring-offset-2 ring-indigo-400 dark:ring-offset-gray-900' : '' }} {{ $highlightClasses }} {{ $extraClasses }}"
+    @if ($isHighlighted) data-highlighted="1" @endif
 >
     <template x-if="$store.pagePresence?.editorFor({{ $page->id }})">
         <span

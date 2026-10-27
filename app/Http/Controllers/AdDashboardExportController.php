@@ -26,11 +26,11 @@ class AdDashboardExportController extends Controller
         return response()->streamDownload(function () use ($issue, $adLoad) {
             $handle = fopen('php://output', 'w');
 
-            fputcsv($handle, ['Rivista', 'Numero', 'Soglia allarme %']);
+            // Fase 6 (2026-10-27): niente più soglia di allarme nel report.
+            fputcsv($handle, ['Rivista', 'Numero']);
             fputcsv($handle, [
                 $issue->magazine->name,
                 $issue->title,
-                $issue->magazine->ad_threshold_percentage ?? '',
             ]);
             fputcsv($handle, []);
 
@@ -69,7 +69,6 @@ class AdDashboardExportController extends Controller
         return Pdf::loadView('exports.ad-dashboard', [
             'issue' => $issue,
             'adLoad' => $adLoad,
-            'adThreshold' => $issue->magazine->ad_threshold_percentage,
         ])->download($filename);
     }
 

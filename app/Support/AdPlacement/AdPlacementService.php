@@ -12,14 +12,17 @@ use App\Enums\PlannedAdKind;
  * query, nessuna scrittura (quelle le fa PlaceholderAdCreator).
  *
  * Regola (dalla specifica, parametri in config/timone.php `ad_placement`):
- * 1. Le prime pubblicità a pagina intera vanno sulle copertine, nell'ordine
- *    `cover_order` (default II, III, IV, I). La I di solito non è
- *    pubblicità: è l'ultima scelta e, se usata, il piano lo segnala.
- * 2. Le altre a pagina intera si alternano una pagina sì e una no, da
- *    `start_page` (2) con passo `step` (2): 2, 4, 6…
- * 3. Le frazionarie (2/3, 1/2, 1/3, 1/4, in quest'ordine) continuano la
- *    stessa sequenza, una per pagina: il resto della pagina resta libero
- *    per l'editoriale.
+ * 1. Le prime pubblicità, di QUALSIASI formato (prima le pagine intere,
+ *    poi 2/3, 1/2, 1/3, 1/4), riempiono tutte le copertine di fila,
+ *    nell'ordine `cover_order` (default II, III, IV, I) — precisazione
+ *    dell'utente alla consegna della Fase 5: le copertine sono tutte
+ *    preassegnate alla pubblicità, non una sì e una no. La I è l'ultima
+ *    e, se usata, il piano lo segnala (avviso confermato dall'utente).
+ * 2. Le pagine intere rimaste si alternano nelle pagine interne una sì e
+ *    una no, da `start_page` (2) con passo `step` (2): 2, 4, 6…
+ * 3. Le frazionarie rimaste (2/3, 1/2, 1/3, 1/4, in quest'ordine)
+ *    continuano la stessa sequenza, una per pagina: il resto della pagina
+ *    resta libero per l'editoriale.
  * 4. Finite le posizioni alternate, si riempiono le pagine libere rimaste
  *    partendo dal fondo; se non c'è più posto la pubblicità resta da
  *    assegnare (nel piano: `unplaced`).
@@ -52,13 +55,13 @@ final class AdPlacementService
         $alternating = $totalPages >= $start ? range($start, $totalPages, $step) : [];
 
         foreach ($queue as $kind) {
-            // 1. Copertine, solo per le pagine intere.
-            if ($kind === PlannedAdKind::Full && $coverOrder !== []) {
+            // 1. Copertine: le prime pubblicità, di qualsiasi formato.
+            if ($coverOrder !== []) {
                 $cover = array_shift($coverOrder);
                 $placements[] = ['kind' => $kind, 'cover' => $cover, 'position' => null];
 
                 if ($cover === CoverSlot::I) {
-                    $warnings[] = 'Una pubblicità a pagina intera è stata messa sulla I di copertina (di solito non è pubblicità): controlla.';
+                    $warnings[] = 'Una pubblicità è stata messa sulla I di copertina (di solito non è pubblicità): controlla.';
                 }
 
                 continue;

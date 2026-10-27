@@ -18,15 +18,18 @@
 | **Spazio occupato su una pagina** | Quota di **una** pagina presa da un contenuto, da 1/12 a intera; somma ≤ 12 per pagina (capienza). Prima del 2026-10-27 era una percentuale | `page_content.occupied_twelfths`, `App\Support\PageCapacity` |
 | **Capienza (della pagina)** | 12 dodicesimi: più contenuti possono stare sulla stessa pagina finché la somma non supera la pagina intera | `PageCapacity::fits()` |
 | **Riempimento (della pagina)** | Stato della pagina rispetto alla capienza: vuota (○), parziale («Libero: 1/3», ◐), piena (●), oltre capienza (⚠, solo da dati convertiti) | `App\Enums\PageFillStatus`, `partials/page-fill.blade.php` |
+| **Riepilogo (barra)** | Riga sempre visibile sotto l'header del timone: pagine piene/parziali/bianche, spazio libero, % pubblicità, segnaposto, copertine, peso | `App\Support\IssueSummary`, `partials/summary-bar.blade.php` |
 | **Pagina bianca** | Pagina interna senza alcun contenuto (occupazione 0); sulla card «○ Vuota» | `PageFillStatus::Empty`, `PageContentType::Bianca` |
 | **Anteprima (di un contenuto)** | Immagine del PDF o dell'immagine di stampa allegati, generata in automatico: è la miniatura del contenuto nel timone (non esiste un'immagine separata) | `content_files.thumbnail_path`, `GenerateContentFileThumbnail` |
+| **Pubblicità prevista** | Pubblicità indicata per numero e formato creando un numero: diventa un segnaposto già posizionato (le prime 4 su tutte le copertine, le altre a pagine interne alterne) | `Issues\Create::$plannedAds`, `App\Enums\PlannedAdKind` |
+| **Segnaposto (pubblicità)** | Pubblicità senza inserzionista né PDF, titolo «Pubblicità 1/2 — da assegnare», tratteggiata nel timone; diventa vera quando riceve cliente, titolo proprio o PDF | `contents.is_placeholder`, `App\Support\AdPlacement\PlaceholderAdCreator` |
 | **Vetrina** | Pubblicità da ¼ di pagina (formato «Un quarto pagina») | `AdFormat::UnQuartoPagina` (3/12) |
 | **Piedino** | Pubblicità a fascia in basso, ⅓ di pagina | `AdFormat::Piedino` (4/12) |
 | **Pagina mista** | Pagina con contenuti editoriali e pubblicitari insieme | `PageContentType::Mista` |
 | **Carico pubblicitario** | Percentuale delle pagine interne occupata da pubblicità, comprese le prenotazioni; calcolata in dodicesimi (esatta) | `App\Support\AdLoadCalculator` |
 | **Gruppo collegato** | Pagine legate tra loro (🔗) che si spostano sempre insieme, con il mouse o con le frecce | `PageGroup`, `pages.page_group_id`, `Grid::nudgePage()` |
 | **Zoom delle pagine (S/M/L)** | Dimensione delle miniature nel timone, scelta da ciascun utente e ricordata dal suo browser | store Alpine `timoneZoom` (`resources/js/timone-alpine.js`) |
-| **Soglia di allarme** | Carico pubblicitario oltre il quale il cruscotto diventa rosso; impostata per rivista | `magazines.ad_threshold_percentage` |
+| **Soglia di allarme** | ~~Carico pubblicitario oltre il quale il cruscotto diventava rosso~~ — tolta il 2026-10-27 (Fase 6): resta solo la percentuale | `magazines.ad_threshold_percentage` |
 | **Prenotazione** (pubblicità prenotata) | Pubblicità registrata senza pagina né materiale | `AdMaterialStatus::Prenotato` |
 | **Materiale** | Il file (PDF o immagine) di un contenuto | `ContentFile` |
 | **Listino ADV / formato** | Formati pubblicitari vendibili con le loro misure | `App\Enums\AdFormat` |

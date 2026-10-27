@@ -1,6 +1,6 @@
 # Batch "revisione con gli utenti" — file di ripartenza
 
-Ultimo aggiornamento: 2026-10-27. **Fasi 1, 2 e 3 completate e approvate. Fase 4 implementata, in attesa di ok (nessuna migration: la miniatura separata è stata tolta su richiesta).**
+Ultimo aggiornamento: 2026-10-27. **Fasi 1–5 completate e approvate (migration della Fase 5 applicata). Fase 6 implementata, in attesa di ok. Resta la Fase 7 (opzionale: proporre prima l'approccio).**
 
 Questo file serve a riprendere il lavoro in una sessione nuova senza ricostruire il contesto. Contiene:
 1. come ripartire (testo da incollare);
@@ -18,7 +18,7 @@ Incollare in una nuova sessione:
 
 > Leggi `CLAUDE.md`, poi `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md` (stato del batch e prompt originale) e le ultime sezioni di `HANDOFF.md`. Le Fasi 1 e 2 sono completate e approvate; la Fase 3 è implementata (vedi stato sotto: se approvata, applicare la migration e passare alla **Fase 4 — Gestione contenuti**), seguendo le regole generali del prompt originale (fasi con ok esplicito, migration nuove e reversibili con dry-run mostrato prima di eseguirla, una sola fonte di verità per i calcoli, test di regressione, documentazione aggiornata a fine fase incluso il file Nextcloud).
 
-Prima di scrivere codice per la Fase 4: leggere `App\Livewire\Timone\ContentCreate` (+ `partials/occupancy-fields.blade.php`), `App\Support\ContentCreator`, `App\Support\PageOccupancy` (`distribution()`), `partials/page-content-entry.blade.php` (punto naturale per la rinomina inline) e i debiti #55, #56, #59 di `docs/11-debito-tecnico.md` (riguardano proprio la modifica di un contenuto).
+Fase 7 (opzionale, solo dopo ok): **proporre prima l'approccio** (impilamento verticale proporzionale vs griglia libera, orientamento orizzontale/verticale per i formati mezza/terzo, riordino dentro la pagina), partendo da `partials/page-content-entry.blade.php`, `page-card.blade.php`, pivot `page_content` (servirebbe una colonna d'ordine) e `PageCapacity`. Note storiche — prima della Fase 4: leggere `App\Livewire\Timone\ContentCreate` (+ `partials/occupancy-fields.blade.php`), `App\Support\ContentCreator`, `App\Support\PageOccupancy` (`distribution()`), `partials/page-content-entry.blade.php` (punto naturale per la rinomina inline) e i debiti #55, #56, #59 di `docs/11-debito-tecnico.md` (riguardano proprio la modifica di un contenuto).
 
 ---
 
@@ -29,9 +29,9 @@ Prima di scrivere codice per la Fase 4: leggere `App\Livewire\Timone\ContentCrea
 | 1 — Bug (9 punti) | ✅ completata e approvata (bug 8 implementato dopo l'ok sul flusso) | `HANDOFF.md` "Fase 1: bug" + "Fase 1 approvata; bug 8 implementato" |
 | 2 — Copertine separate | ✅ completata e approvata; migration applicata sul DB di sviluppo | `HANDOFF.md` "Fase 2: copertine separate dalle pagine" + "Fase 2 approvata: copertine in un'unica fascia" |
 | 3 — Occupazione in dodicesimi | ✅ completata e approvata; migration applicata sul DB di sviluppo (2026-10-27) | `HANDOFF.md` "Sessione 2026-10-27 — … Fase 3" |
-| 4 — Gestione contenuti (modifica, rinomina inline; miniatura tolta su richiesta) | 🟡 implementata, in attesa di ok | `HANDOFF.md` "Sessione 2026-10-27 (continuazione) — … Fase 4" |
-| 5 — Pubblicità previste alla creazione (segnaposto, `AdPlacementService`) | ⏳ da fare | — |
-| 6 — Riepilogo stile dashboard | ⏳ da fare | — |
+| 4 — Gestione contenuti (modifica, rinomina inline; miniatura tolta su richiesta) | ✅ completata e approvata (senza miniatura) | `HANDOFF.md` "Sessione 2026-10-27 (continuazione) — … Fase 4" |
+| 5 — Pubblicità previste alla creazione (segnaposto, `AdPlacementService`) | ✅ completata e approvata; migration applicata | `HANDOFF.md` "Sessione 2026-10-27 (continuazione) — … Fase 5" |
+| 6 — Riepilogo stile dashboard | 🟡 implementata, in attesa di ok (nessuna migration) | `HANDOFF.md` "Sessione 2026-10-27 (continuazione) — … Fase 6" |
 | 7 — Disposizione dei contenuti nella pagina (opzionale) | ⏳ solo dopo ok, proporre prima l'approccio | — |
 
 ### Fase 1 — cosa è stato fatto (sintesi)
@@ -64,11 +64,20 @@ Prima di scrivere codice per la Fase 4: leggere `App\Livewire\Timone\ContentCrea
 - Miniatura separata (punto 4.2 della specifica): implementata e poi **tolta su richiesta dell'utente** («il PDF principale è già la miniatura»). Non riproporla.
 - Rinomina inline: doppio click sul nome in pagina → `Grid::renameContent()` (articolo: titolo; pubblicità: cliente).
 
+### Fase 5 — cosa è stato fatto (sintesi)
+- `PlannedAdKind`, `AdPlacement\AdPlacementService` (puro, config `timone.ad_placement`), `PlaceholderAdCreator` (solo da `Issues\Create::save()`), `PlaceholderAdCounter`.
+- `contents.is_placeholder`, `advertisements.client` nullable; modulo "Nuovo numero" con anteprima live ed errore bloccante; segnaposto tratteggiati «Da assegnare»; diventano veri con cliente/titolo/PDF.
+
+### Fase 6 — cosa è stato fatto (sintesi)
+- `App\Support\IssueSummary` + partial `summary-bar` sticky sotto l'header (`--app-header-height`); evidenziazione bianche/da assegnare (`Grid::toggleSummaryHighlight()`); soglia di allarme tolta ovunque (colonna lasciata); bug "la ricerca cambiava la % pubblicitaria" corretto; `PlaceholderAdCounter` rimosso.
+
 ### Decisioni prese con una scelta di default (da tenere presenti)
 - Bandella = vecchio "battente", slot facoltativo; un nuovo numero la riceve se la rivista ha 6 pagine di copertina nei parametri del peso.
 - Copertine fuori da selezione multipla, modalità scambio, frecce, gruppi collegati, cruscotto pubblicitario e conteggi delle pagine interne (conteggio a parte nell'intestazione).
 - Bug 8: scelta "usa tutte / da X a Y" solo per le pubblicità (non per gli articoli); un PDF più corto del formato non chiede nulla; se la scelta supera le pagine del formato la percentuale per pagina diventa 100 (da riassorbire nei dodicesimi in Fase 3).
 - In vista doppia la II non è affiancata alla pagina 1 (fascia separata).
+- Fase 6: "occupate" = piene (le quattro voci sommano al totale); evidenziare invece di filtrare; riepilogo come partial di Grid e non componente a sé (eviterebbe di duplicare tutti i listener realtime).
+- Fase 5: mezza segnaposto orizzontale; «in trattativa»; solo intera/2/3/1/2/1/3/1/4; creazione bloccata se non ci stanno; contatore segnaposto su tutto il numero (DV-32).
 - Fase 4: rinomina di una pubblicità = cliente; ridistribuzione sempre dalla prima pagina su pagine consecutive; in modifica niente scelta "usa tutte / da X a Y" del PDF (il PDF deve coincidere con l'occupazione); ✏️ = modale completa, doppio click = rinomina.
 - Fase 3: conversione al dodicesimo più vicino invece di "12 su ogni pagina"; copertina 2ª/3ª/4ª e battente = 12, piedino = 4, 2/3 = 8, 1/4 = vetrina (DV-28); pivot con default 12; bug 8 "usa tutte" = N pagine intere a prescindere dai campi; estendere a una pagina in più = pagina intera (o tutto il contenuto se < 1 pagina).
 
@@ -76,15 +85,16 @@ Prima di scrivere codice per la Fase 4: leggere `App\Livewire\Timone\ContentCrea
 - `docs/DA-VERIFICARE.md` DV-23 (causa reale degli upload in produzione: eseguire `timone:diagnose-upload` sul server), DV-24 (verifiche nel browser della Fase 1: nessun Dusk), DV-25 (regole copertina su più pagine da confermare con la redazione), DV-26 (dry-run delle copertine sul server prima del `migrate` in produzione).
 - Checklist di verifica manuale nel browser: `HANDOFF.md`, sessione "Fase 1: bug", paragrafo "Da verificare a mano nel browser". Da aggiungere per la Fase 2: fascia copertine, scambio trascinando l'etichetta blu, bandella.
 - `docs/11-debito-tecnico.md` #45–#53: rischi noti introdotti o emersi in Fase 1–2 (override di metodi interni di Livewire, `Grid.php` che cresce → proposta di estrarre il riepilogo in un componente nella Fase 6, rollback della conversione affidabile solo subito dopo il deploy).
-- **Fase 6 / regole**: il prompt chiede di togliere soglie e colori di allarme del carico pubblicitario. Oggi esistono ancora (`magazines.ad_threshold_percentage`, input "Soglia allarme" nel cruscotto, export).
+- **Fase 6 / regole**: soglie e colori di allarme del carico pubblicitario tolti nella Fase 6 (2026-10-27). Nota storica: prima esistevano (`magazines.ad_threshold_percentage`, input "Soglia allarme" nel cruscotto, export).
 
 ---
 
 ## 3. Note operative sull'ambiente (macchina di sviluppo)
 
+- **Fase 5: migration `2026_10_27_300000_add_placeholder_ads` applicata** (batch 5). Attenzione: l'utente ricostruisce anche da sé lo stack, quindi le migration possono risultare applicate prima del previsto — controllare sempre `migrate:status` (il 2026-10-27 la migration della miniatura, poi tolta, era stata applicata così: colonne e riga di `migrations` rimosse a mano, vedi HANDOFF).
 - **Fase 3: migration `2026_10_27_100000` applicata** (batch 3, 2026-10-27, con `docker compose up -d --build`). Lo stack esegue `migrate` all'avvio: ogni rebuild applica le migration pendenti.
 - **DB di sviluppo** (Docker, MySQL `timone`): le migration della Fase 2 sono **applicate** (batch 2, alle 18:07 del 2026-10-26, all'avvio dello stack ricostruito). Numeri presenti: #1/#2 (62 interne), #3 (210 interne; la bandella creata dalla conversione è stata poi tolta dall'interfaccia, quindi il rollback non sarebbe più esatto per questo numero), #4 (210), #5 «TTOT» (30, creato poco prima della conversione).
-- **Test** (ultimo stato, Fase 4: 706 + 40 skipped in locale, 746/746 con imagick): `php artisan test` in locale (MAMP, senza imagick: 38 test saltati). Suite completa con imagick, senza toccare i container in esecuzione:
+- **Test** (ultimo stato, Fase 6: 722 + 40 skipped in locale, 762/762 con imagick): `php artisan test` in locale (MAMP, senza imagick: 38 test saltati). Suite completa con imagick, senza toccare i container in esecuzione:
   ```bash
   docker run --rm --entrypoint sh -v "$PWD":/app -w /app \
     -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
@@ -93,7 +103,7 @@ Prima di scrivere codice per la Fase 4: leggere `App\Livewire\Timone\ContentCrea
 - Comandi artisan contro il DB di sviluppo con il codice del repo (es. un dry-run), senza ricostruire: stesso `docker run` con `--network timone-rivista_timone` e senza le variabili `DB_*` (usa `.env`).
 - Asset: `npm run build` dopo modifiche a JS/CSS/classi Tailwind (in locale esiste `public/hot`, che punta al Vite dev server).
 - I test che fanno broadcast vanno scritti con `Event::fake([...])` (vedi `docs/10-debugging.md`, "Could not resolve host: reverb"). Gli helper `reorderableIssue()`/`editorFor()` stanno in `tests/Feature/Livewire/TimoneGridReorderTest.php`.
-- Fasi 1–2 committate dall'utente (`14184e3`, `0340c72`). Fasi 3–4 nel working tree, non committate (rimossi con `git rm`: `app/Support/PagePercentageAllocator.php`, `tests/Unit/PagePercentageAllocatorTest.php`).
+- Fasi 1–2 committate dall'utente (`14184e3`, `0340c72`). Fasi 3–6 nel working tree, non committate (rimossi con `git rm`: `app/Support/PagePercentageAllocator.php`, `tests/Unit/PagePercentageAllocatorTest.php`).
 
 ---
 
@@ -335,6 +345,7 @@ file Nextcloud.
 ---
 
 ### Modifiche alla specifica concordate durante il lavoro
+- Fase 5, regola 1: **le prime 4 pubblicità di qualsiasi formato** (prima le intere, poi 2/3, 1/2, 1/3, 1/4) riempiono tutte le copertine II, III, IV, I; poi pagine interne una sì e una no. La specifica diceva "prime 4 a pagina intera" (precisazione dell'utente del 2026-10-27, avviso sulla I mantenuto).
 - Fase 4, punto 2 (miniatura): **tolto** su richiesta dell'utente (2026-10-27): il PDF principale è già la miniatura.
 - Fase 2, interfaccia: **tutte le copertine (I, bandella, II, III, IV) in un'unica fascia in cima al timone**, prima della pagina 1 — non più III e IV dopo l'ultima pagina (richiesta dell'utente all'ok della Fase 2).
 - Fase 1, bug 8: "organizzati in base alla richiesta e fai come credi" — ramo copertina implementato con le regole II/III descritte sopra, scelta pagine solo per le pubblicità.

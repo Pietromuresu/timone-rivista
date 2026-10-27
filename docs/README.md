@@ -9,7 +9,7 @@
 2. **Cosa fa**: gestisce riviste → numeri → pagine. Ogni pagina può ricevere articoli e pubblicità, avere uno stato redazionale e un PDF. Le pagine si riordinano con il drag&drop.
 3. **Chi lo usa**: la redazione interna (ruoli Admin, Redattore, Commerciale, Sola lettura; vedi [03-dominio-e-flussi.md](03-dominio-e-flussi.md#ruoli-e-permessi)). Non ha area pubblica: `/` porta al login (`routes/web.php:26`).
 4. **Collaborativo in tempo reale**: più utenti sullo stesso numero vedono le modifiche degli altri via WebSocket (Laravel Reverb). Se il WebSocket cade, il client passa al polling.
-5. **Pubblicità**: cruscotto del carico pubblicitario con soglia di allarme, export CSV/PDF, controllo del formato dei PDF rispetto al listino.
+5. **Pubblicità**: riepilogo sempre visibile (riempimento, spazio libero, % pubblicità, segnaposto, copertine, peso), cruscotto del carico pubblicitario (senza soglie dal 2026-10-27), export CSV/PDF, controllo del formato dei PDF rispetto al listino.
 6. **PDF**: upload di PDF anche multipagina, generazione di miniature in coda (Imagick + Ghostscript), export PDF dell'intero timone (dompdf).
 7. **Scadenze**: mail di sollecito al redattore di riferimento prima della scadenza di stampa (scheduler giornaliero).
 8. **Stack**: Laravel 12 + Livewire 3 + Reverb + Tailwind, MySQL 8.4, Redis 7. Tutto containerizzato con Docker Compose.

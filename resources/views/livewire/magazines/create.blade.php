@@ -34,11 +34,6 @@
                         <x-input-error class="mt-2" :messages="$errors->get('color')" />
                     </div>
 
-                    <div>
-                        <x-input-label for="ad_threshold_percentage" value="Soglia allarme carico pubblicitario % (opzionale)" />
-                        <x-text-input id="ad_threshold_percentage" wire:model="ad_threshold_percentage" type="number" min="0" max="100" step="0.5" class="mt-1 block w-32" />
-                        <x-input-error class="mt-2" :messages="$errors->get('ad_threshold_percentage')" />
-                    </div>
 
                     <div>
                         <x-input-label for="notes" value="Note (opzionale)" />

@@ -20,7 +20,7 @@
         wire:key="content-{{ $content->id }}"
         draggable="true"
         x-on:dragstart="$event.dataTransfer.setData('text/content-id', '{{ $content->id }}')"
-        class="group flex items-center gap-1.5 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs cursor-grab max-w-[220px]"
+        class="group flex items-center gap-1.5 px-2 py-1.5 rounded border {{ $content->isPlaceholder() ? 'border-dashed border-amber-500' : 'border-gray-200 dark:border-gray-700' }} bg-white dark:bg-gray-800 text-xs cursor-grab max-w-[220px]"
         title="{{ $content->displayLabel() }}"
     >
         @if ($content->previewImageUrl())
@@ -33,6 +33,10 @@
             <span>{{ $content->type->value === 'articolo' ? '📄' : '📢' }}</span>
         @endif
         <span class="truncate">{{ $content->displayLabel() }}</span>
+        @if ($content->isPlaceholder())
+            {{-- Fase 5: segnaposto senza posto nel timone. --}}
+            <span class="shrink-0 rounded border border-dashed border-amber-600 px-1 text-[9px] font-semibold uppercase text-amber-900 dark:text-amber-200">Da assegnare</span>
+        @endif
         @if ($content->type->value === 'pubblicita' && $content->advertisement)
             <span class="text-[10px] opacity-60 shrink-0">{{ $content->advertisement->format->label() }}</span>
         @endif

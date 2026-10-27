@@ -22,6 +22,7 @@ class Content extends Model
         'type',
         'title',
         'occupancy_twelfths',
+        'is_placeholder',
         'archived_at',
     ];
 
@@ -31,6 +32,7 @@ class Content extends Model
             'type' => ContentType::class,
             'archived_at' => 'datetime',
             'occupancy_twelfths' => 'integer',
+            'is_placeholder' => 'boolean',
         ];
     }
 
@@ -58,6 +60,17 @@ class Content extends Model
         $file = $this->files->sortByDesc('created_at')->first();
 
         return $file?->thumbnail_status === ThumbnailStatus::Ready ? route('content-files.thumbnail', $file) : null;
+    }
+
+    /**
+     * Pubblicità segnaposto (Fase 5, 2026-10-27): creata dalle "pubblicità
+     * previste" di un numero, senza inserzionista né PDF. Conta nel carico
+     * pubblicitario come ogni pubblicità e nel contatore "da assegnare";
+     * smette di esserlo quando riceve inserzionista, titolo proprio o PDF.
+     */
+    public function isPlaceholder(): bool
+    {
+        return (bool) $this->is_placeholder;
     }
 
     public function isArchived(): bool

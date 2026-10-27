@@ -37,4 +37,23 @@ return [
     */
     'deadline_reminder_days_before' => (int) env('TIMONE_DEADLINE_REMINDER_DAYS_BEFORE', 3),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Posizionamento delle pubblicità previste (Fase 5, 2026-10-27)
+    |--------------------------------------------------------------------------
+    |
+    | Usati da App\Support\AdPlacement\AdPlacementService alla creazione di
+    | un numero. cover_order: copertine riempite tutte, di fila, dalle prime
+    | pubblicità previste di qualsiasi formato (prima le pagine intere), in
+    | quest'ordine (la I è l'ultima: se usata il sistema lo segnala). start_page/step: la
+    | sequenza alternata delle altre (2, 4, 6…). In config e non nel codice
+    | perché sono abitudini redazionali che possono cambiare.
+    |
+    */
+    'ad_placement' => [
+        'cover_order' => ['II', 'III', 'IV', 'I'],
+        'start_page' => (int) env('TIMONE_AD_PLACEMENT_START_PAGE', 2),
+        'step' => (int) env('TIMONE_AD_PLACEMENT_STEP', 2),
+    ],
+
 ];

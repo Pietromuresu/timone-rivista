@@ -3,12 +3,10 @@
 use App\Enums\AdConfirmationStatus;
 use App\Enums\AdFormat;
 use App\Enums\ContentType;
-use App\Enums\UserRole;
 use App\Livewire\Timone\Grid;
 use App\Models\Advertisement;
 use App\Models\Content;
 use App\Models\Issue;
-use App\Models\User;
 use Livewire\Livewire;
 
 // reorderableIssue()/editorFor() sono definite in TimoneGridReorderTest.php
@@ -72,71 +70,6 @@ test('a not yet assigned advertisement is counted separately from assigned ones'
         ->assertSee('Pubblicità non ancora assegnate: <strong>1</strong>', false);
 });
 
-test('an editor can set an ad load warning threshold and it is highlighted once exceeded', function () {
-    $issue = reorderableIssue();
-    $user = editorFor($issue);
-
-    // Posizione 2 (Interna), non 1 (Copertina1, esclusa dal cruscotto).
-    assignedAdContent($issue, 2, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata);
-
-    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->call('updateAdThreshold', '10');
-
-    expect((float) $issue->magazine->fresh()->ad_threshold_percentage)->toBe(10.0);
-
-    // Con una pagina intera su 6 pagine interne il carico è 16,67%,
-    // sopra la soglia del 10% appena
-    // impostata. $issue->fresh() evita di riusare la relazione
-    // "magazine" già cache-ata (con la vecchia soglia) sulla variabile
-    // di test originale.
-    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue->fresh()])
-        ->assertSee('⚠️ Sopra soglia');
-});
-
-test('clearing the threshold removes it', function () {
-    $issue = reorderableIssue();
-    $user = editorFor($issue);
-    $issue->magazine->update(['ad_threshold_percentage' => 20]);
-
-    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->call('updateAdThreshold', '');
-
-    expect($issue->magazine->fresh()->ad_threshold_percentage)->toBeNull();
-});
-
-test('a threshold outside the 0-100 range is rejected', function () {
-    $issue = reorderableIssue();
-    $issue->magazine->update(['ad_threshold_percentage' => null]);
-    $user = editorFor($issue);
-
-    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->call('updateAdThreshold', '150');
-
-    expect($issue->magazine->fresh()->ad_threshold_percentage)->toBeNull();
-});
-
-test('a sola lettura user cannot change the ad load threshold', function () {
-    $issue = reorderableIssue();
-    $issue->magazine->update(['ad_threshold_percentage' => null]);
-    $user = User::factory()->create(['role' => UserRole::SolaLettura]);
-    $user->magazines()->attach($issue->magazine);
-
-    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->call('updateAdThreshold', '30');
-
-    expect($issue->magazine->fresh()->ad_threshold_percentage)->toBeNull();
-});
-
-test('a guest cannot change the ad load threshold', function () {
-    $issue = reorderableIssue();
-    $issue->magazine->update(['ad_threshold_percentage' => null]);
-
-    Livewire::test(Grid::class, ['issue' => $issue])
-        ->call('updateAdThreshold', '30');
-
-    expect($issue->magazine->fresh()->ad_threshold_percentage)->toBeNull();
-});
-
 // Fase 2 (2026-10-26): una pubblicità sulla IV di copertina non entra nella
 // percentuale delle pagine interne (né al numeratore né al denominatore).
 test('an ad on a cover does not change the internal ad load', function () {
@@ -148,4 +81,17 @@ test('an ad on a cover does not change the internal ad load', function () {
 
     Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
         ->assertSee('0 pagine equiv. pubblicità su 6 totali');
+});
+
+// Fase 6 (2026-10-27): soglia di allarme e colori di avviso tolti dal
+// cruscotto (richiesta della specifica): resta solo la percentuale.
+test('the dashboard shows only the ad percentage, without threshold or warning colours', function () {
+    $issue = reorderableIssue();
+    assignedAdContent($issue, 2, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata);
+
+    Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
+        ->assertSee('16.67%')
+        ->assertDontSee('Soglia allarme')
+        ->assertDontSee('Sopra soglia')
+        ->assertDontSeeHtml('updateAdThreshold');
 });

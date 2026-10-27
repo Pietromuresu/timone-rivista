@@ -13,7 +13,6 @@ test('an admin can create a magazine', function () {
         ->set('name', 'Motori Elettrici')
         ->set('periodicity', 'mensile')
         ->set('color', '#112233')
-        ->set('ad_threshold_percentage', '25')
         ->set('notes', 'Rivista di prova')
         ->call('save')
         ->assertRedirect();
@@ -22,24 +21,11 @@ test('an admin can create a magazine', function () {
 
     expect($magazine)->not->toBeNull()
         ->and($magazine->slug)->toBe('motori-elettrici')
-        ->and($magazine->periodicity->value)->toBe('mensile')
-        ->and((float) $magazine->ad_threshold_percentage)->toBe(25.0);
+        ->and($magazine->periodicity->value)->toBe('mensile');
 });
 
 // Fase 2 (2026-10-26): l'opzione "il battente conta nel totale pagine" non
 // esiste più — la bandella è una copertina a parte, mai nel totale.
-
-test('an empty ad threshold is stored as null', function () {
-    $admin = User::factory()->create(['role' => UserRole::Admin]);
-
-    Livewire::actingAs($admin)->test(Create::class)
-        ->set('name', 'Casa Serena')
-        ->call('save');
-
-    $magazine = Magazine::where('name', 'Casa Serena')->first();
-
-    expect($magazine->ad_threshold_percentage)->toBeNull();
-});
 
 test('the name is required', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin]);

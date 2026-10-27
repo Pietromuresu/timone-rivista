@@ -75,8 +75,8 @@ final class ContentUpdater
 
         $before = self::snapshot($content);
 
-        DB::transaction(function () use ($content, $data, $occupancy, $occupancyChanged, $pages) {
-            self::updateFields($content, $data, $occupancy);
+        DB::transaction(function () use ($content, $data, $occupancy, $occupancyChanged, $pages, $file) {
+            self::updateFields($content, $data, $occupancy, newFile: $file !== null);
 
             if ($occupancyChanged && $pages->isNotEmpty()) {
                 self::redistribute($content, $pages);
@@ -119,9 +119,19 @@ final class ContentUpdater
             ->values();
     }
 
-    private static function updateFields(Content $content, array $data, PageOccupancy $occupancy): void
+    private static function updateFields(Content $content, array $data, PageOccupancy $occupancy, bool $newFile = false): void
     {
+        // Fase 5: un segnaposto diventa una pubblicità vera appena riceve un
+        // inserzionista, un titolo diverso da quello automatico o un PDF
+        // (oppure diventa un articolo).
+        $stillPlaceholder = $content->isPlaceholder()
+            && $data['type'] === ContentType::Pubblicita->value
+            && trim((string) ($data['client'] ?? '')) === ''
+            && $data['title'] === $content->title
+            && ! $newFile;
+
         $content->update([
+            'is_placeholder' => $stillPlaceholder,
             'type' => $data['type'],
             'title' => $data['title'],
             'section_id' => $data['section_id'] ?? null,
@@ -140,7 +150,7 @@ final class ContentUpdater
         } else {
             $content->article?->delete();
             Advertisement::updateOrCreate(['content_id' => $content->id], [
-                'client' => $data['client'],
+                'client' => trim((string) ($data['client'] ?? '')) !== '' ? $data['client'] : null,
                 'agency' => $data['agency'] ?? null,
                 'format' => $data['format'],
                 'preferred_position' => $data['preferred_position'] ?? null,
@@ -235,6 +245,7 @@ final class ContentUpdater
     {
         return [
             'type' => $content->type->value,
+            'is_placeholder' => $content->is_placeholder ? '1' : '0',
             'title' => $content->title,
             'section_id' => $content->section_id,
             'occupancy_twelfths' => $content->occupancy_twelfths,

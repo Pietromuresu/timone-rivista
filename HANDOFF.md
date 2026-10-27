@@ -1549,3 +1549,71 @@ Suite: **706 + 40 skipped in locale; 746/746 nel container con imagick**. `npm r
 - Restano (utili a prescindere): `Content::previewImageUrl()` e `Page::previewImageUrl()`, ora solo l'URL dell'anteprima pronta del file (prima costruito in due copie nei Blade).
 - La sezione Fase 4 sopra descrive ancora il punto 4.2 com'era: vale questa voce. Documentazione utente e tecnica ripulita (manuale §5ter ora "Modificare un contenuto e rinominarlo", README, docs/02, 03, 04, 10, 11 #62 barrato, 12, DA-VERIFICARE DV-30, CHANGELOG, Nextcloud, file di ripartenza con nota "non riproporla").
 - Suite: 700 + 40 skipped in locale; 740/740 nel container con imagick.
+
+## Sessione 2026-10-27 (continuazione) — Batch "revisione con gli utenti", Fase 5: pubblicità previste alla creazione del numero
+
+Ok dell'utente sulla Fase 4 (senza miniatura). **Migration nuova** `2026_10_27_300000_add_placeholder_ads` (`contents.is_placeholder` boolean default false; `advertisements.client` nullable; nessun dato da convertire; `down()` rimette `''` e NOT NULL). Verificata migrate → rollback → migrate su una **copia MySQL dei dati di sviluppo** (8 pubblicità e 15 contenuti conservati in ogni passaggio). **Non applicata sul DB di sviluppo**: si applica con `docker compose up -d --build` (migrate all'avvio) dopo l'ok.
+- Nota di metodo: il primo tentativo di copia era vuoto (import fallito in silenzio con `2>/dev/null` prima che MySQL accettasse connessioni sul database): rifatto aspettando `select 1` sul db e mostrando gli errori, con conteggio delle righe prima della migrazione. Il DB di sviluppo vero non è stato toccato.
+
+### Regola e servizi
+- `App\Enums\PlannedAdKind` (Full, TwoThirds, Half, Piedino, Vetrina — in ordine di posizionamento): etichetta, formato di listino (`PaginaIntera`, `DueTerziPagina`, `MezzaPaginaOrizzontale`, `Piedino`, `UnQuartoPagina`), dodicesimi, titolo automatico «Pubblicità 1/2 — da assegnare» / «Pubblicità pagina intera — da assegnare».
+- `App\Support\AdPlacement\AdPlacementService::plan(totalPages, counts, ?config)` — **pura**: 1) pagine intere sulle copertine in `cover_order` (II, III, IV, I; la I produce un avviso); 2) altre intere su `start_page`, +`step`… (2, 4, 6…); 3) frazioni (2/3, 1/2, 1/3, 1/4) a seguire, una per pagina; 4) finita la sequenza, pagine libere dal fondo; altrimenti `unplaced` + avviso. Restituisce `AdPlacementPlan` (posizioni, non posizionate, avvisi, dodicesimi totali/copertine/interne, percentuale interna, etichette).
+- `PlaceholderAdCreator::create(Issue, counts)`: crea i Content segnaposto (`is_placeholder`, `client` NULL, «in trattativa») e li attacca con `ContentPageAttacher` alle pagine/copertine del piano; i non posizionati restano tra i contenuti da assegnare; log `issue.placeholder_ads_created`. Chiamato **solo** da `Issues\Create::save()`: nessun ricalcolo dopo la creazione (test dedicato con ridimensionamento del numero e spostamento manuale).
+- `PlaceholderAdCounter::forIssue()`: contatore «Pubblicità da assegnare (segnaposto)» per formato, su tutto il numero (copertine comprese). **Correzione fatta durante i test**: la prima versione era dentro `AdLoadCalculator`, che riceve solo le pagine interne, quindi non contava i segnaposto sulle copertine.
+- Config `timone.ad_placement` (`cover_order`; `start_page`/`step` da `TIMONE_AD_PLACEMENT_START_PAGE`/`_STEP`, aggiunte a `.env.example`).
+
+### Modulo "Nuovo numero"
+- `Issues\Create::$plannedAds` (array di stringhe, nessun problema di "unset" delle `int`), validazione `plannedAds.*` intero 0–999; anteprima live dal piano (pagine equivalenti, % sulle interne con copertine escluse, posizioni, errore); se il piano non ci sta `save()` aggiunge l'errore `plannedAds` e **non crea il numero** (scelta: la specifica chiede "un errore se non ci stanno"; il ramo `unplaced` del servizio resta per chiamanti diversi dal modulo, testato). Avvisi del piano in sessione `ad-placement-warnings`, mostrati in cima a `issues/show.blade.php`.
+
+### Segnaposto → pubblicità vera
+- `ContentUpdater::updateFields()`: resta segnaposto solo se ancora pubblicità, senza cliente, con lo stesso titolo e senza nuovo PDF. `ContentFormRules::rules(..., placeholder: true)` rende facoltativo il cliente nella modale di un segnaposto. `Grid::renameContent()` (doppio click) imposta il cliente e toglie il flag. Nota nella modale.
+- Visibili: contorno tratteggiato + etichetta «Da assegnare» nella riga del contenuto in pagina (`data-placeholder="1"`) e nel chip; `AdReservations` mostra il titolo quando manca il cliente.
+
+### Test
+Nuovi: `tests/Unit/AdPlacementServiceTest.php` (8: **6 intere + 2 mezze su 32 → II, III, IV, I, pagine 2, 4, mezze su 6, 8**, I come ultima scelta, frazioni in ordine, riempimento dal fondo, **più pubblicità che spazio**, config, percentuale, niente previsto), `tests/Feature/Livewire/PlannedAdsTest.php` (11: creazione vera con segnaposto sulle posizioni giuste, avviso I, anteprima live, errore bloccante, senza previste, **posizionamento che non si ripete modificando il numero**, marcatura e contatore + percentuale, segnaposto → vero da modale e da rinomina, resta segnaposto se cambia solo lo stato, servizio con non posizionati).
+Suite: **719 + 40 skipped in locale; 759/759 nel container con imagick**.
+
+### Scelte di default (DV-32)
+Mezza pagina segnaposto orizzontale; stato «in trattativa»; tipi previsti solo intera/2/3/1/2/1/3/1/4; creazione bloccata se non ci stanno; percentuale dell'anteprima senza copertine (coerente col cruscotto); contatore segnaposto su tutto il numero.
+
+### Da verificare a mano nel browser (DV-33)
+1. "Nuovo numero": anteprima che si aggiorna digitando, errore rosso con troppe pubblicità, avviso giallo sulla I nel numero appena creato.
+2. Timone: segnaposto tratteggiati con «Da assegnare» su copertine e pagine 2, 4…; contatore nel cruscotto.
+3. Doppio click su un segnaposto → nome cliente → l'etichetta sparisce, anche nel secondo browser.
+
+### Documentazione aggiornata
+`MANUALE_UTENTE.md` (§12 pubblicità previste e segnaposto, §8 contatore), `README.md`, `.env.example`, `docs/02`, `03` (Flusso 3 + sezione "Pubblicità previste e segnaposto"), `04`, `05` (variabili e `cover_order`), `10`, `11` (#64–#67), `12` (pubblicità prevista, segnaposto), `DA-VERIFICARE.md` (DV-32, DV-33), `CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`, `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md`.
+
+## Sessione 2026-10-27 (continuazione) — Fase 5: copertine riempite dalle prime 4 pubblicità di qualsiasi formato
+
+- Precisazione dell'utente alla consegna: «le prime 4 pubblicità vanno nelle copertine, non è una sì e una no: sono tutte le copertine con pubblicità preassegnate, e poi nelle pagine interne una sì e una no». Chiarito con due domande: con meno di 4 pagine intere le copertine si riempiono con le pubblicità successive di **qualsiasi formato** (risposta "Qualsiasi formato"); l'avviso sulla I di copertina **resta** (risposta "Tienilo").
+- `AdPlacementService::plan()`: tolta la condizione "solo pagine intere" sulle copertine; la coda resta in ordine intere → 2/3 → 1/2 → 1/3 → 1/4, quindi le intere hanno comunque la precedenza. Testo dell'avviso generalizzato («Una pubblicità è stata messa sulla I di copertina…»). Una frazione su una copertina occupa solo la sua parte (es. 6/12) e conta nelle «pagine sulle copertine» dell'anteprima.
+- Test: nuovi "meno di 4 intere → frazioni sulle copertine" e "solo frazioni → le prime 4 sulle copertine"; adattati i casi che usavano sole frazioni (ora con 4 intere davanti) e i conteggi di capienza (4 copertine + pagine). Suite: **721 + 40 skipped in locale; 761/761 con imagick**.
+- Documentazione: testo del modulo "Nuovo numero", `config/timone.php`, manuale §12, `docs/03`, `05`, `12`, `DA-VERIFICARE` (DV-32), `CHANGELOG`, Nextcloud, file di ripartenza ("Modifiche alla specifica concordate").
+
+## Sessione 2026-10-27 (continuazione) — Pulizia DB di sviluppo + Batch "revisione con gli utenti", Fase 6: riepilogo stile dashboard
+
+### Prima della Fase 6: stato reale del DB di sviluppo
+- Applicando la migration della Fase 5 con `docker compose up -d --build` è emerso che lo stack era **già stato ricostruito dall'utente** durante le Fasi 4 e 5: in `migrations` c'erano il batch 4 = `2026_10_27_200000_add_thumbnail_to_contents_table` (la miniatura, poi tolta: file cancellato) e il batch 5 = migration dei segnaposto, con il numero #6 «dfsdvd» creato con 12 pubblicità previste.
+- Pulizia (dopo aver verificato `thumbnail_path` NULL su tutti i 27 contenuti e nessun file `thumbnail-*` su disco): `ALTER TABLE contents DROP thumbnail_path, DROP thumbnail_mime` e cancellata la riga orfana in `migrations`. `migrate:status` ora corrisponde ai file.
+- **Lezione da ricordare**: "migration non applicata" in questi appunti vale solo al momento della scrittura — l'utente ricostruisce lo stack da sé (che fa `migrate` all'avvio). Controllare sempre `migrate:status` prima di dare per scontato lo stato del DB; non mettere migration "di prova" nel working tree se non si è pronti a vederle applicate.
+
+### Fase 6 — cosa è stato fatto
+- **`App\Support\IssueSummary::summarize(pages, covers, allUnassigned, adLoad, weightResult)`**: pagine interne piene/parziali/bianche e spazio libero (`PageCapacity`, dodicesimi; "occupate" = piene, le quattro voci sommano al totale; le oltre capienza contano come piene), % pubblicitaria (da `AdLoadCalculator`), segnaposto per formato e pagine che li ospitano (pagine + copertine + non assegnati, una volta per contenuto), copertine assegnate/libere, peso copia/scaglione/rischio (da `MagazineWeightCalculator::calculate()` con `issue->weightInput()`, come il pannello Peso). Nessuna query propria: sostituisce `PlaceholderAdCounter` (rimosso, debito #67 chiuso).
+- **Barra** `partials/summary-bar.blade.php`, primo elemento di `grid.blade.php`: `sticky z-30` con `top: var(--app-header-height)`; la variabile la imposta nel layout uno snippet Alpine con ResizeObserver sull'header fisso (la cui altezza cambia col menu mobile).
+- **Evidenziazione**: `Grid::$summaryHighlight` + `toggleSummaryHighlight('blank'|'placeholders')` (valori sconosciuti ignorati); `render()` passa `highlightPageIds`; card e righe con contorno azzurro + `data-highlighted`, le altre `opacity-40`. Evidenziare invece di filtrare: posizioni e drag&drop invariati, vale in tutte e tre le viste.
+- **Soglie tolte** (richiesta della specifica): input e colori nel cruscotto, `Grid::updateAdThreshold()`/`logAdThresholdChange()`, export CSV (colonna) e PDF (colore, riga), campo nei moduli `Magazines\Create/Edit`, `Magazine` fillable/cast, factory. Colonna `magazines.ad_threshold_percentage` lasciata (debito #68), nessuna migration.
+- **Bug preesistente corretto**: `Grid::render()` filtrava i "Contenuti da assegnare" per titolo **nella query**, e da quella lista calcolava le prenotate del carico pubblicitario → cercare un titolo cambiava la percentuale. Ora carica tutti i non assegnati (`$allUnassignedContents`) e filtra in memoria (`mb_stripos`, come il LIKE case-insensitive di prima) solo l'elenco mostrato.
+- **Scelta architetturale** (regola 3): riepilogo come partial di Grid e non componente Livewire a sé (proposta del debito #52): un componente separato dovrebbe duplicare tutti i listener realtime e il polling di Grid; la logica sta comunque fuori, in `IssueSummary`.
+
+### Test
+Nuovo `tests/Feature/Livewire/SummaryBarTest.php` (8): **conteggi piene/parziali/bianche, spazio libero, segnaposto (pagine, copertine, non assegnati), copertine su un numero ad hoc**; barra renderizzata con % e copertine; evidenziazione bianche on/off; evidenziazione segnaposto nelle 3 viste; valore sconosciuto ignorato; **regressione: la ricerca non cambia la %**. `TimoneGridAdDashboardTest`: i 5 test della soglia sostituiti da "solo percentuale, niente soglia"; rimossi i test soglia di `ActivityLogTest`, `MagazineCreateTest`, `MagazineEditTest`.
+Suite: **722 + 40 skipped in locale; 762/762 nel container con imagick**. `npm run build`, `pint --dirty` eseguiti.
+
+### Da verificare a mano nel browser (DV-34)
+1. Barra ferma sotto l'header scorrendo, su desktop e su mobile con il menu aperto e chiuso; leggibile in tema scuro.
+2. Clic su «bianche» / «Da assegnare» in griglia, doppia e lista: contorno azzurro, altre attenuate; drag&drop ancora funzionante con l'evidenziazione attiva.
+3. Peso copia e scaglione coerenti con il pannello Peso.
+
+### Documentazione aggiornata
+`MANUALE_UTENTE.md` (§3 riepilogo, §8 senza soglia, §11, §12/§12bis moduli rivista, cronologia), `README.md`, `docs/README.md`, `docs/02`, `03` (sezione "Riepilogo stile dashboard"), `04`, `11` (#67 chiuso, #68–#71), `12`, `DA-VERIFICARE.md` (DV-34), `CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`, `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md`.

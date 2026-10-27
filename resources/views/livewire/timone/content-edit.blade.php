@@ -19,6 +19,12 @@
                         </p>
                     @endif
 
+                    @if ($content->isPlaceholder())
+                        <p class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 border border-dashed border-amber-400 rounded px-2 py-1" data-testid="placeholder-note">
+                            Pubblicità <strong>da assegnare</strong> (segnaposto): indicando il cliente, un titolo proprio o caricando il PDF diventa una pubblicità vera.
+                        </p>
+                    @endif
+
                     <div class="flex gap-4 text-sm">
                         <label class="inline-flex items-center gap-1"><input type="radio" wire:model.live="type" value="articolo" /> Articolo</label>
                         <label class="inline-flex items-center gap-1"><input type="radio" wire:model.live="type" value="pubblicita" /> Pubblicità</label>

@@ -125,19 +125,6 @@ test('changing the total page count logs an activity entry', function () {
         ->and($log->new_values)->toBe(['total_pages' => 8]);
 });
 
-test('changing the ad threshold logs an activity entry', function () {
-    $issue = reorderableIssue();
-    $user = editorFor($issue);
-
-    Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->call('updateAdThreshold', '25');
-
-    $log = ActivityLog::where('action', 'magazine.ad_threshold_changed')->first();
-
-    expect($log)->not->toBeNull()
-        ->and($log->entity_type)->toBe('Magazine');
-});
-
 test('creating a content logs an activity entry', function () {
     Event::fake([ContentCreated::class]);
 

@@ -124,7 +124,7 @@ class ContentEdit extends Component
 
         $content = $this->findContent((int) $this->contentId);
 
-        $validated = $this->validate(ContentFormRules::rules($this->issue), ContentFormRules::messages());
+        $validated = $this->validate(ContentFormRules::rules($this->issue, placeholder: $content->isPlaceholder()), ContentFormRules::messages());
         $trimmed = trim($this->preferred_position);
         $validated['preferred_position'] = $trimmed !== '' && ctype_digit($trimmed) ? (int) $trimmed : null;
 

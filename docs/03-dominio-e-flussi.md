@@ -45,7 +45,7 @@ Fonte: `app/Policies/*`, `app/Enums/UserRole.php`, `MANUALE_UTENTE.md` §14.
 ## Flusso 2 — Creazione rivista e accesso utenti (Admin)
 
 1. `/riviste/nuova` → `App\Livewire\Magazines\Create` (`authorize('create', Magazine::class)`, solo Admin). Lo slug è generato in `Magazine::booted()` (`app/Models/Magazine.php:38`).
-2. `/riviste/{slug}/modifica` → `Magazines\Edit`: soglia pubblicitaria (`ad_threshold_percentage`), redattore (`battente_counted_in_total` non è più nel modulo dalla Fase 2), di riferimento (`redattore_id`).
+2. `/riviste/{slug}/modifica` → `Magazines\Edit`: redattore (`battente_counted_in_total` non è più nel modulo dalla Fase 2), di riferimento (`redattore_id`).
 3. `/utenti/nuovo` → `Users\Create`: crea l'utente con il ruolo e sincronizza `magazine_user`.
 
 ## Flusso 3 — Creazione di un numero
@@ -58,7 +58,16 @@ Fonte: `app/Policies/*`, `app/Enums/UserRole.php`, `MANUALE_UTENTE.md` §14.
    - inserisce `total_pages` pagine interne in `pages` (posizioni 1…N, tipo `bianca`, stato `da_assegnare`);
    - `App\Support\IssueCovers::ensure()` crea **sempre** le copertine I, II, III, IV (righe di `pages` con `cover_slot` e `position` NULL; prima della Fase 2 nascevano solo I e IV, come ruolo della prima/ultima pagina) e la **bandella** se `pagine_copertina` ≥ 6; poi allinea `issues.pagine_copertina` (4 o 6).
 3. Opzionale "duplica struttura": `Issue::duplicateStructureFrom($source)` copia solo `content_type` per posizione (pagine interne) e per slot (copertine). **Non** copia i contenuti.
-4. Redirect a `issues.show`.
+4. **Pubblicità previste** (Fase 5, 2026-10-27): `App\Support\AdPlacement\PlaceholderAdCreator::create($issue, $counts)` — vedi sotto. Se il piano non ci sta, `save()` si ferma prima di creare il numero (errore `plannedAds`).
+5. Redirect a `issues.show`, con gli avvisi del posizionamento in sessione (`ad-placement-warnings`).
+
+## Pubblicità previste e segnaposto (Fase 5, 2026-10-27)
+
+- **Modulo** "Nuovo numero": quante pubblicità a pagina intera, 2/3, 1/2, piedino (1/3), vetrina (1/4) (`App\Enums\PlannedAdKind`, proprietà `Issues\Create::$plannedAds`). Anteprima live dallo stesso piano usato al salvataggio (`AdPlacementPlan`): pagine equivalenti totali, percentuale sulle pagine interne (copertine escluse, come nel cruscotto), posizioni, errore se non ci stanno.
+- **Regola** `App\Support\AdPlacement\AdPlacementService::plan()` (pura, chiavi `config('timone.ad_placement')`): 1) le prime pubblicità di **qualsiasi formato** (prima le intere, poi 2/3, 1/2, 1/3, 1/4) riempiono tutte le copertine di fila nell'ordine `cover_order` (II, III, IV, I; la I genera un avviso) — precisazione dell'utente del 2026-10-27; 2) le pagine intere rimaste su `start_page`, `start_page + step`… (2, 4, 6…); 3) le frazionarie rimaste continuano la stessa sequenza, una per pagina; 4) finita la sequenza, pagine libere dal fondo; senza posto → `unplaced`.
+- **Creazione** `PlaceholderAdCreator`: un `Content` pubblicità per ognuna, `is_placeholder = true`, titolo «Pubblicità 1/2 — da assegnare», `Advertisement` con `client` NULL, formato da `PlannedAdKind::format()` (la mezza nasce orizzontale), stato «in trattativa»; attaccata alla pagina/copertina del piano con `ContentPageAttacher` (spazio = formato, max 12). Log `issue.placeholder_ads_created`. **Solo alla creazione del numero**: nessun altro punto la richiama, niente ricalcoli.
+- **Da segnaposto a pubblicità vera**: `ContentUpdater` toglie il flag quando arrivano cliente, titolo diverso da quello automatico o PDF (o il contenuto diventa un articolo); `Grid::renameContent()` quando gli si dà un nome (diventa il cliente). Nella modale il cliente non è obbligatorio per un segnaposto (`ContentFormRules::rules(..., placeholder: true)`).
+- **Visibilità**: contorno tratteggiato + etichetta «Da assegnare» (`partials/page-content-entry`, chip dei contenuti da assegnare). Contatore «Pubblicità da assegnare (segnaposto)» per formato nel cruscotto e nella barra di riepilogo: `App\Support\IssueSummary` (tutto il numero, copertine comprese; fino alla Fase 6 era `PlaceholderAdCounter`, rimosso). Nella percentuale contano come ogni pubblicità (`AdLoadCalculator`).
 
 ## Copertine (Fase 2, 2026-10-26)
 
@@ -81,6 +90,15 @@ Fonte: `app/Policies/*`, `app/Enums/UserRole.php`, `MANUALE_UTENTE.md` §14.
 - **Mappatura formati** (`AdFormat::twelfths()`): pagina intera, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale, copertina 2ª/3ª/4ª, battente copertina → 12; doppia pagina → 24; 2/3 → 8; mezza orizzontale/verticale → 6; 1/3 orizzontale/verticale, piedino → 4; 1/4 (vetrina) → 3.
 - **Carico pubblicitario**: `AdLoadCalculator` somma i dodicesimi pubblicitari (pivot per le assegnate, `occupancy_twelfths` per le prenotate) e divide per pagine interne × 12, arrotondando solo alla fine.
 - **Conversione dei dati esistenti** (migration `2026_10_27_100000_convert_occupancy_to_twelfths`, dry-run `php artisan timone:occupancy-dry-run`): pivot = dodicesimo più vicino alla vecchia percentuale (mai 0, mai oltre 12); contenuto = vecchia occupazione dichiarata (frazioni → 3/4/6/8, N pagine → 12·N), pubblicità senza percentuale manuale → formato, con percentuale manuale → pagine × dodicesimo della percentuale. Le pagine che dopo l'arrotondamento superano 12 sono segnalate, non corrette.
+
+## Riepilogo stile dashboard (Fase 6, 2026-10-27)
+
+- **Dove**: `resources/views/livewire/timone/partials/summary-bar.blade.php`, primo elemento di `grid.blade.php`, `sticky` con `top: var(--app-header-height)`: l'altezza reale dell'header fisso la misura uno snippet Alpine (ResizeObserver) in `layouts/app.blade.php`. z-30 (sotto l'header z-40 e le modali z-50).
+- **Dati**: `App\Support\IssueSummary::summarize()` in `Grid::render()`, sulle collezioni già caricate: pagine interne piene/parziali/bianche e spazio libero (`PageCapacity`, dodicesimi), % pubblicitaria (`AdLoadCalculator`), segnaposto per formato e pagine che li ospitano (pagine, copertine, non assegnati), copertine assegnate/libere, peso copia e scaglione (`MagazineWeightCalculator::calculate()` con gli stessi parametri del pannello Peso). Nessuna query propria.
+- **Evidenziazione**: i bottoni «bianche» e «Da assegnare» chiamano `Grid::toggleSummaryHighlight('blank'|'placeholders')`; `render()` passa `highlightPageIds`; card e righe corrispondenti hanno contorno azzurro (`data-highlighted`), le altre `opacity-40`. Evidenziare e non filtrare: posizioni e drag&drop restano invariati.
+- **Soglie tolte**: niente più soglia di allarme né colori di avviso del carico pubblicitario (cruscotto, export CSV/PDF, moduli rivista; `Grid::updateAdThreshold()` rimosso). La colonna `magazines.ad_threshold_percentage` resta, non usata.
+- **Bug corretto**: le prenotate del carico pubblicitario venivano dalla lista "Contenuti da assegnare" già filtrata dalla ricerca per titolo; ora `render()` carica tutti i non assegnati e filtra in memoria solo l'elenco mostrato.
+- **Perché non un componente Livewire a sé** (proposta del debito #52): dovrebbe ripetere tutti i listener realtime di Grid (spostamenti, assegnazioni, stati, copertine…) e il polling per restare aggiornato; come partial di Grid si aggiorna gratis a ogni re-render. La logica è comunque fuori da Grid (`IssueSummary`).
 
 ## Flusso 4 — Apertura del timone
 

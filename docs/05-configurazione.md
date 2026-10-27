@@ -9,7 +9,7 @@
   - **Docker Compose stesso**, per l'interpolazione: `MYSQL_DATABASE`/`MYSQL_USER`/`MYSQL_PASSWORD` del container `mysql` sono **le stesse** `DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD`, più `MYSQL_ROOT_PASSWORD`;
   - i build arg `VITE_REVERB_*` delle immagini.
 - **`.env.example`** è commentato riga per riga ed è la base del `.env`. `setup.sh` genera da solo le 6 variabili segrete se sono vuote.
-- `config/timone.php` contiene i 2 parametri specifici del progetto.
+- `config/timone.php` contiene i parametri specifici del progetto (tolleranza formato PDF, preavviso scadenza, posizionamento delle pubblicità previste).
 - **Variabili `VITE_*`**: vengono inserite nel bundle JS **al momento della build**. In Docker passano come `build.args` (il `.env` è escluso dal contesto di build da `.dockerignore`). Se cambiano, serve **ricostruire le immagini** (`docker compose up -d --build`); non basta un restart.
 - Dopo un `php artisan config:cache` le `env()` fuori da `config/` non vengono più lette. Il progetto non usa `env()` fuori da `config/` (verificato con grep su `app/`, `routes/`, `database/`).
 
@@ -122,6 +122,10 @@ Legenda colonna *Obbl.*: **Sì** = senza, l'app o lo stack non partono o una fun
 |---|---|---|---|---|---|
 | `TIMONE_PDF_FORMAT_TOLERANCE_MM` | No | `1.5` | `1.5` | `config/timone.php` → `GenerateContentFileThumbnail`/`GeneratePageFileThumbnail::checkFormat()` | Tolleranza in mm oltre l'abbondanza di 3 mm per lato. Decisione della redazione |
 | `TIMONE_DEADLINE_REMINDER_DAYS_BEFORE` | No | `3` | `3` | `config/timone.php` → `SendDeadlineReminders` | **Assente da `.env.example`** (vedi sotto). Decisione della redazione |
+| `TIMONE_AD_PLACEMENT_START_PAGE` | No | `2` | `2` | `config/timone.php` `ad_placement.start_page` → `App\Support\AdPlacement\AdPlacementService` | Prima pagina interna della sequenza alternata delle pubblicità previste (Fase 5). Decisione della redazione |
+| `TIMONE_AD_PLACEMENT_STEP` | No | `2` | `2` | `config/timone.php` `ad_placement.step` → `AdPlacementService` | Passo della sequenza (2 = una pagina sì e una no). Decisione della redazione |
+
+`ad_placement.cover_order` (`['II', 'III', 'IV', 'I']`, senza variabile d'ambiente: è una lista) è l'ordine in cui le prime pubblicità previste (di qualsiasi formato, prima le pagine intere) occupano tutte le copertine; la I è l'ultima scelta e il sistema segnala quando la usa. Si cambia in `config/timone.php`.
 
 ### `config/peso_rivista.php` (calcolo peso rivista)
 
