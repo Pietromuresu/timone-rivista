@@ -314,7 +314,8 @@
                         <input type="number" min="1" max="{{ $pdfChoice['pdfPageCount'] }}" wire:model.live.debounce.300ms="pdfPageTo" x-on:focus="$wire.set('pdfPageChoice', '{{ \App\Support\AdPdfPagePlan::RANGE }}')" aria-label="Ultima pagina del PDF da usare" class="w-16 text-sm rounded border-gray-300 dark:border-gray-600 px-1 py-0.5" />
                     </label>
                     @if ($pdfChoice['isCover'])
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Per usare una sola pagina sulla copertina, indica la stessa pagina in entrambi i campi (es. da 1 a 1).</p>
+                        {{-- Fase 2: regole in App\Support\ContentPlacer::coverTargets(). --}}
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Per usare una sola pagina sulla copertina, indica la stessa pagina in entrambi i campi (es. da 1 a 1). Su più pagine: dalla II di copertina si continua sulle pagine 1, 2…; dalla III si occupano le ultime pagine interne e poi la III; la I e la IV accolgono una sola pagina.</p>
                     @endif
 
                     @if ($pdfChoice['usedPages'] !== null)

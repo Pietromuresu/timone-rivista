@@ -419,9 +419,10 @@ final class MagazineWeightCalculator
             $warnings[] = "Le pagine interne ({$in->pagineInterno}) non sono un multiplo di {$signature}: in stampa si lavora a segnature, verifica con la tipografia.";
         }
 
-        if ($in->pagineCopertinaNelTimone !== null && $in->pagineCopertina !== null && $in->pagineCopertinaNelTimone !== $in->pagineCopertina) {
-            $warnings[] = "Nel timone ci sono {$in->pagineCopertinaNelTimone} pagine con ruolo copertina o battente, ma il peso considera {$in->pagineCopertina} pagine di copertina: controlla il parametro «Pagine copertina» o assegna i ruoli nel pannello Copertina.";
-        }
+        // Fase 2 (2026-10-26): tolto l'avviso "pagine con ruolo copertina
+        // nel timone ≠ parametro Pagine copertina": il parametro ora deriva
+        // dalle copertine esistenti (Issue::coverPageCount()), non possono
+        // più divergere.
 
         if ($in->nBancali !== null && $in->pesoBancaleKg === null) {
             $warnings[] = 'Peso del bancale non impostato: il peso lordo della tiratura non è calcolabile.';

@@ -18,7 +18,7 @@ use Livewire\Component;
 /**
  * Prima UI di modifica di una Magazine già esistente (Fase 5.2) — fino a
  * questa sessione esisteva solo Create, quindi campi come
- * ad_threshold_percentage/battente_counted_in_total (Punto 5/Fase 3.1)
+ * ad_threshold_percentage (Punto 5; battente_counted_in_total non è più modificabile dalla Fase 2 del 2026-10-26: la bandella è una copertina a parte e non entra mai nel totale)
  * restavano fissati per sempre al valore scelto in creazione. Riusa lo
  * stesso set di campi di Create (stessa validazione) invece di limitarsi al
  * solo redattore, per chiudere quel limite già segnalato in HANDOFF.md
@@ -40,8 +40,6 @@ class Edit extends Component
     public ?string $ad_threshold_percentage = '';
 
     public string $notes = '';
-
-    public bool $battente_counted_in_total = false;
 
     public ?int $redattore_id = null;
 
@@ -80,7 +78,6 @@ class Edit extends Component
         // stessa gotcha già documentata in HANDOFF.md per reorder_version/
         // role. In produzione arriva sempre da route model binding (query
         // reale), questo è solo un secondo strato difensivo a costo zero.
-        $this->battente_counted_in_total = (bool) $magazine->battente_counted_in_total;
         $this->redattore_id = $magazine->redattore_id;
         $this->weight = WeightParameters::formValuesFrom($magazine);
         $this->previewTotalPages = (string) ($magazine->issues()->orderByDesc('issue_date')->value('total_pages') ?? '');
@@ -103,7 +100,6 @@ class Edit extends Component
             'color' => 'required|string|max:7',
             'ad_threshold_percentage' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string|max:2000',
-            'battente_counted_in_total' => 'boolean',
             'redattore_id' => 'nullable|exists:users,id',
         ], WeightParameters::messages('weight'));
 

@@ -20,7 +20,7 @@ test('any authenticated user can view the documentation page, rendered from MANU
     // aggiornato insieme al codice, non solo uno stantio in generale.
     $response->assertSee('Cambiare lo stato di una pagina', false);
     $response->assertSee('Collegare pagine in un gruppo permanente', false);
-    $response->assertSee('Copertina e battente', false);
+    $response->assertSee('Le copertine (I, II, III, IV) e la bandella', false); // Fase 2: sezione 9bis rinominata
     $response->assertSee('redattore di riferimento', false);
 
     // La conversione Markdown->HTML è avvenuta per davvero (non solo

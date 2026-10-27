@@ -58,6 +58,8 @@ class WeightPanel extends Component
     }
 
     #[On('echo-presence:issue.{issue.id},.IssuePageCountUpdated')]
+    // Fase 2: la bandella cambia le pagine di copertina del peso.
+    #[On('echo-presence:issue.{issue.id},.CoversChanged')]
     #[On('issue-page-count-changed')]
     public function onPageCountChanged(): void
     {
@@ -74,6 +76,10 @@ class WeightPanel extends Component
             $this->issue,
             [...WeightParameters::FIELDS, ...WeightParameters::ISSUE_ONLY_FIELDS],
         );
+        // Fase 2 (2026-10-26): per un numero le pagine di copertina non si
+        // scrivono a mano, derivano dalle copertine esistenti (campo in
+        // sola lettura nella modale, ignorato da saveParams()).
+        $this->params['pagine_copertina'] = (string) $this->issue->coverPageCount();
 
         $this->dispatch('open-modal', 'weight-params-'.$this->issue->id);
     }
@@ -89,6 +95,9 @@ class WeightPanel extends Component
             WeightParameters::prefixedRules('params', includeIssueOnly: true),
             WeightParameters::messages('params'),
         )['params']);
+
+        // Derivato dalle copertine (IssueCovers::syncPrintedPages()), mai dal form.
+        unset($values['pagine_copertina']);
 
         $old = [];
         $new = [];
@@ -131,6 +140,7 @@ class WeightPanel extends Component
 
         $this->resetValidation();
         $this->params = WeightParameters::formValuesFrom($this->issue->magazine) + $this->params;
+        $this->params['pagine_copertina'] = (string) $this->issue->coverPageCount();
     }
 
     /**

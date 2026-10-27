@@ -18,12 +18,15 @@
     // Sortable non riconosce più questo div come figlio diretto del suo
     // contenitore e il drag&drop smette di partire (bug reale, 2026-09-02).
     $extraClasses = $extraClasses ?? '';
-    // Etichetta mostrata (copertina separata dal conteggio pagine): il
-    // fallback su $page->position copre solo il caso teorico di un
-    // include senza 'pageNumber' esplicito (oggi non accade, unico
-    // chiamante è grid.blade.php, che lo passa sempre — vedi
-    // App\Support\PageNumberer per il calcolo reale).
-    $pageNumber = $pageNumber ?? $page->position;
+    // Fase 2 (2026-10-26): le copertine (I–IV, bandella) usano questa
+    // stessa card — contenuti, anteprima, stato e blocco funzionano uguali —
+    // ma sono fuori dalla sequenza delle pagine interne: niente maniglia
+    // Sortable, frecce, selezione multipla o modalità scambio; si
+    // trascinano solo su un'altra copertina (Grid::swapCovers()).
+    // Etichetta: "II di copertina" per le copertine, la posizione per le
+    // pagine interne (che dalla Fase 2 partono sempre da 1).
+    $isCover = $page->isCover();
+    $pageNumber = $pageNumber ?? ($isCover ? $page->cover_slot->label() : $page->position);
     $locked = $page->isLocked();
     // Fase 2.3: pagine "collegate" in un gruppo — vedi App\Models\PageGroup,
     // $page->group già eager-loaded da Grid::render().
@@ -88,15 +91,21 @@
          destra invece che a sinistra. $animatedMove anima tutte le pagine
          che si spostano (resources/js/timone-alpine.js). --}}
     @if ($page->page_group_id) data-group-id="{{ $page->page_group_id }}" @endif
-    @unless ($locked)
+    @if ($isCover) data-cover-slot="{{ $page->cover_slot->value }}" @endif
+    @unless ($locked || $isCover)
         @keydown.arrow-left.prevent="$animatedMove('nudgePage', {{ $page->id }}, -1)"
         @keydown.arrow-right.prevent="$animatedMove('nudgePage', {{ $page->id }}, 1)"
     @endunless
     @if ($interactive)
         x-on:dragover.prevent
-        x-on:drop.prevent="const cid = $event.dataTransfer.getData('text/content-id'); if (cid) { $wire.assignContent(parseInt(cid), {{ $page->id }}); }"
+        {{-- Fase 2: una copertina rilasciata su un'altra si scambia di slot;
+             su una pagina interna viene ignorata (le copertine non entrano
+             nella sequenza). Un contenuto si assegna come sempre. --}}
+        x-on:drop.prevent="const coverId = $event.dataTransfer.getData('text/cover-id'); const cid = $event.dataTransfer.getData('text/content-id'); if (coverId && {{ $isCover ? 'true' : 'false' }}) { $wire.swapCovers(parseInt(coverId), {{ $page->id }}); } else if (cid) { $wire.assignContent(parseInt(cid), {{ $page->id }}); }"
     @endif
-    @if ($swapMode && ! $locked)
+    @if ($isCover)
+        {{-- Copertine: nessuna selezione multipla né modalità scambio. --}}
+    @elseif ($swapMode && ! $locked)
         x-on:click="$wire.selectForSwap({{ $page->id }})"
     @elseif (! $swapMode)
         {{-- Shortcut da tastiera (2026-09-02, punto 2 del prompt): click
@@ -122,7 +131,7 @@
          del pannello Peso, vedi Grid::render() → $pageAspectRatio) invece di
          un 3/4 fisso; la larghezza la decide lo zoom S/M/L. --}}
     style="aspect-ratio: {{ $pageAspectRatio ?? '3 / 4' }};"
-    class="relative flex flex-col rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none {{ $focusClasses }} {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $ringClasses }} {{ $extraClasses }}"
+    class="relative flex flex-col rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none {{ $focusClasses }} {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $ringClasses }} {{ $isCover && $ringClasses === '' ? 'ring-2 ring-offset-2 ring-indigo-400 dark:ring-offset-gray-900' : '' }} {{ $extraClasses }}"
 >
     <template x-if="$store.pagePresence?.editorFor({{ $page->id }})">
         <span
@@ -132,17 +141,10 @@
         ></span>
     </template>
 
-    {{-- Fase 3.1: promemoria compatto, gestione vera nel pannello "Copertina & battente" a inizio pagina — stesso principio del badge DX/SX in vista lista. --}}
-    @if ($page->role->isCoverSection())
-        <span
-            class="absolute -top-1.5 -left-1.5 text-[9px] leading-none rounded-full bg-indigo-600 text-white px-1 py-0.5 z-10"
-            title="{{ $page->role->label() }} — gestita dal pannello Copertina &amp; battente"
-        >📘</span>
-    @endif
 
     <div class="flex items-center justify-between gap-1">
         <div class="flex items-center gap-1">
-            @if ($selectionMode ?? false)
+            @if (($selectionMode ?? false) && ! $isCover)
                 <input
                     type="checkbox"
                     x-on:click.stop
@@ -156,6 +158,17 @@
                 <span class="font-semibold text-sm select-none" title="{{ $page->lockedBy ? 'Bloccata da '.$page->lockedBy->name : 'Pagina bloccata' }}">
                     🔒 {{ $pageNumber }}
                 </span>
+            @elseif ($isCover)
+                {{-- Drag nativo (non Sortable): le copertine non stanno nel
+                     contenitore delle pagine interne, si scambiano solo tra
+                     loro. Etichetta su sfondo indaco = "è una copertina",
+                     leggibile anche senza colori. --}}
+                <span
+                    draggable="true"
+                    x-on:dragstart.stop="$event.dataTransfer.setData('text/cover-id', '{{ $page->id }}'); $event.dataTransfer.effectAllowed = 'move'"
+                    class="cursor-grab font-semibold text-[11px] select-none rounded bg-indigo-600 text-white px-1.5 py-0.5 whitespace-nowrap"
+                    title="Copertina — trascinala su un'altra copertina per scambiarle"
+                >📘 {{ $pageNumber }}</span>
             @else
                 <span class="drag-handle cursor-grab font-semibold text-sm select-none" title="Trascina per riordinare">
                     ⠿ {{ $pageNumber }}

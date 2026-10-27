@@ -23,7 +23,7 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 | # | Problema | Dove | Note |
 |---|---|---|---|
 | 8 | Estensione del file salvato presa dal nome fornito dal client (`getClientOriginalExtension()`) | `app/Support/ContentCreator.php:200` (era `ContentCreate.php:216` all'epoca dell'audit); `GenerateContentFileThumbnail` eredita l'estensione | Oggi innocuo (storage fuori dal docroot, `Content-Type` dal MIME salvato). Diventerebbe RCE se un domani lo storage fosse servito come statico. Fix: derivare l'estensione dal MIME reale |
-| 9 | `Grid`, `ContentCreate` e `CoverSection` non fanno `authorize('view')` nel `mount()` | `app/Livewire/Timone/*.php` | Protetti da `Issues\Show::mount()`. Se un domani vengono esposti come rotta diretta, perdono la protezione. Fix: `authorize` ridondante |
+| 9 | `Grid`, `ContentCreate` e `AdReservations` non fanno `authorize('view')` nel `mount()` (`CoverSection` rimosso nella Fase 2) | `app/Livewire/Timone/*.php` | Protetti da `Issues\Show::mount()`. Se un domani vengono esposti come rotta diretta, perdono la protezione. Fix: `authorize` ridondante |
 | 10 | `updateContentPercentage()`: `->first()->pivot` su un contenuto rimosso nel frattempo da un altro utente → errore fatale | `app/Livewire/Timone/Grid.php:1829` | Solo robustezza (500 Livewire) |
 | 11 | `redattore_id` accetta qualunque utente, non solo i redattori | `app/Livewire/Magazines/Edit.php` (`'redattore_id' => 'nullable|exists:users,id'`) | Integrità dati; solo l'Admin può modificarlo |
 
@@ -84,6 +84,15 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 | 47 | Le proporzioni delle miniature (`formato_base_mm`/`formato_altezza_mm`) sono lette dal modello `Issue` di `Grid`: dopo una modifica del formato nel pannello Peso servono un ricaricamento o un aggiornamento del timone | `Grid::render()` | Cosmetico; il formato cambia raramente |
 | 48 | MultiDrag/FLIP/zoom non hanno test automatici (niente Dusk) | `resources/js/timone-alpine.js` | Vedi la checklist manuale in `HANDOFF.md`, sessione 2026-10-26 "Fase 1" |
 | 49 | Le proprie modifiche fatte in `Grid` (spostamenti, stato, ecc.) non riallineano `lastKnownPagesUpdatedAt`: in modalità polling il client può mostrarsi il toast "aggiornato da un altro utente" per una modifica propria | `Grid.php` (tutte le chiamate a `markPagesUpdated()`) | Preesistente; corretto solo per i nuovi percorsi dei contenuti (`broadcastContentListChanged()`, `onLocalContentListChanged()`) |
+
+## Fase 2 — copertine separate (aggiunto il 2026-10-26)
+
+| # | Problema | Dove | Note |
+|---|---|---|---|
+| 50 | Colonna `pages.role` e `magazines.battente_counted_in_total` non più usate dal codice | migration originali | Tenute di proposito: la prima serve al rollback della conversione, cancellarle sarebbe una migration distruttiva. Da togliere quando la conversione è consolidata |
+| 51 | Rollback della conversione affidabile solo subito dopo il deploy | `App\Support\Covers\CoverConversion::revertAll()` | Se nel frattempo si aggiungono pagine interne, le posizioni ripristinate possono collidere su `unique(issue_id, position)`: il rollback si ferma con un errore del database (transazione per numero, niente stati parziali) |
+| 52 | `Grid.php` cresce ancora (+ `swapCovers`, `addBandella`, `removeBandella`, guardie copertina) | `app/Livewire/Timone/Grid.php` | La logica è in `App\Support\IssueCovers`/`ContentPlacer`; in Grid solo orchestrazione. Proposta per la Fase 6: estrarre cruscotto/riepilogo in un componente dedicato |
+| 53 | In vista doppia pagina la II di copertina non è affiancata alla pagina 1 (sta nella fascia copertine sopra) | `grid.blade.php`, `cover-band.blade.php` | Scelta: la richiesta chiede una fascia visivamente separata. Se la redazione vuole vedere l'apertura II + 1, va aggiunta come anteprima nella vista doppia |
 
 ## Cose che sembrano sbagliate ma hanno un motivo (non "correggerle")
 

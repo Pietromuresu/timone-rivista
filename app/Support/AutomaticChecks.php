@@ -56,7 +56,9 @@ class AutomaticChecks
                 }
                 $seenContentIds[$content->id] = true;
 
-                $positions = $content->pages->pluck('position')->sort()->values();
+                // Fase 2: solo pagine interne — una copertina non ha
+                // posizione e la sequenza II + pagina 1 è voluta.
+                $positions = $content->pages->whereNull('cover_slot')->pluck('position')->sort()->values();
 
                 if ($positions->count() > 1 && ! self::isContiguous($positions)) {
                     $flagged[] = [
@@ -101,7 +103,8 @@ class AutomaticChecks
 
         return $pages
             ->filter(fn ($page) => in_array($page->status, $approvedStatuses, true) && $page->contents->isEmpty())
-            ->pluck('position')
+            // Fase 2: "5" o "II cop." — le copertine non hanno posizione.
+            ->map(fn ($page) => $page->shortLabel())
             ->values()
             ->all();
     }
@@ -136,7 +139,7 @@ class AutomaticChecks
         // "senza PDF" nonostante ne avesse uno.
         return $pages
             ->filter(fn ($page) => in_array($page->status, $approvedStatuses, true) && $page->previewFile() === null)
-            ->pluck('position')
+            ->map(fn ($page) => $page->shortLabel())
             ->values()
             ->all();
     }

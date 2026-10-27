@@ -34,10 +34,6 @@ final readonly class MagazineWeightInput
         public ?int $nCopie = null,
         public ?int $nBancali = null,
         public ?float $pesoRealeG = null,
-        // Pagine con ruolo copertina/battente effettivamente presenti nel
-        // timone: serve solo per un avviso di coerenza con $pagineCopertina,
-        // mai al calcolo (vedi Issue::weightInput()).
-        public ?int $pagineCopertinaNelTimone = null,
     ) {}
 
     /**
@@ -47,7 +43,7 @@ final readonly class MagazineWeightInput
      *
      * @param  array<string, mixed>  $params
      */
-    public static function fromArray(array $params, ?int $pagineInterno, ?int $pagineCopertinaNelTimone = null): self
+    public static function fromArray(array $params, ?int $pagineInterno): self
     {
         $float = static fn (string $key): ?float => self::toFloat($params[$key] ?? null);
         $int = static fn (string $key): ?int => self::toInt($params[$key] ?? null);
@@ -67,7 +63,6 @@ final readonly class MagazineWeightInput
             nCopie: $int('n_copie'),
             nBancali: $int('n_bancali'),
             pesoRealeG: $float('peso_reale_g'),
-            pagineCopertinaNelTimone: $pagineCopertinaNelTimone,
         );
     }
 
@@ -80,7 +75,7 @@ final readonly class MagazineWeightInput
             $this->formatoBaseMm, $this->formatoAltezzaMm, $this->grammaturaInterno, $this->grammaturaCopertina,
             $pagineInterno, $this->pagineCopertina, $this->maggiorazionePercentuale, $this->pesoBancaleKg,
             $this->tolleranzaGrammaturaPerc, $this->tolleranzaFormatoMm, $this->tolleranzaMaggiorazionePerc,
-            $this->nCopie, $this->nBancali, $this->pesoRealeG, $this->pagineCopertinaNelTimone,
+            $this->nCopie, $this->nBancali, $this->pesoRealeG,
         );
     }
 
@@ -93,7 +88,7 @@ final readonly class MagazineWeightInput
             $this->formatoBaseMm, $this->formatoAltezzaMm, $this->grammaturaInterno, $this->grammaturaCopertina,
             $this->pagineInterno, $this->pagineCopertina, $maggiorazionePercentuale, $this->pesoBancaleKg,
             $this->tolleranzaGrammaturaPerc, $this->tolleranzaFormatoMm, $this->tolleranzaMaggiorazionePerc,
-            $this->nCopie, $this->nBancali, $this->pesoRealeG, $this->pagineCopertinaNelTimone,
+            $this->nCopie, $this->nBancali, $this->pesoRealeG,
         );
     }
 

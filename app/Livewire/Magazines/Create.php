@@ -21,14 +21,6 @@ class Create extends Component
 
     public string $notes = '';
 
-    /**
-     * Fase 3.1: se il battente conta nel totale pagine dichiarato del
-     * numero — vedi HANDOFF.md "Decisioni architetturali da ricordare" per
-     * la scelta e perché è per rivista, non globale. Default false
-     * (convenzione più comune), coerente col default della colonna DB.
-     */
-    public bool $battente_counted_in_total = false;
-
     public function mount(): void
     {
         $this->authorize('create', Magazine::class);
@@ -53,7 +45,6 @@ class Create extends Component
             'color' => 'required|string|max:7',
             'ad_threshold_percentage' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string|max:2000',
-            'battente_counted_in_total' => 'boolean',
         ]);
 
         $magazine = Magazine::create($validated);

@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\IssueStatus;
-use App\Enums\PageRole;
 use App\Support\Weight\MagazineWeightCalculator;
 use App\Support\Weight\MagazineWeightInput;
 use App\Support\Weight\MagazineWeightResult;
@@ -86,11 +85,41 @@ class Issue extends Model
     }
 
     /**
-     * Pagine del timone, ordinate per posizione.
+     * Pagine INTERNE del timone (1…total_pages), ordinate per posizione.
+     *
+     * Fase 2 (2026-10-26): le copertine sono escluse qui, alla fonte —
+     * riordino, ridimensionamento, cruscotto, conteggi, selezione "tutte"
+     * passano da questa relazione e non devono mai vederle. Per le
+     * copertine: covers(); per entrambe (es. ricerca per id): allPages().
      */
     public function pages(): HasMany
     {
-        return $this->hasMany(Page::class)->orderBy('position');
+        return $this->hasMany(Page::class)->whereNull('cover_slot')->orderBy('position');
+    }
+
+    /**
+     * Copertine del numero (I–IV sempre, bandella se presente), in ordine
+     * di sfoglio. Vedi App\Enums\CoverSlot.
+     */
+    public function covers(): HasMany
+    {
+        return $this->hasMany(Page::class)->whereNotNull('cover_slot');
+    }
+
+    /** Pagine interne e copertine insieme. */
+    public function allPages(): HasMany
+    {
+        return $this->hasMany(Page::class);
+    }
+
+    /**
+     * Facciate di copertina stampate (4, o 6 con la bandella): la fonte del
+     * parametro `pagine_copertina` del peso, sincronizzato da
+     * App\Support\IssueCovers ogni volta che le copertine cambiano.
+     */
+    public function coverPageCount(): int
+    {
+        return $this->covers()->get(['cover_slot'])->sum(fn (Page $cover) => $cover->cover_slot->printedPages());
     }
 
     /**
@@ -137,35 +166,29 @@ class Issue extends Model
                 $page->update(['content_type' => $sourceTypes[$page->position]]);
             }
         }
+
+        // Fase 2: anche le copertine, slot per slot (es. la IV sempre pubblicità).
+        $sourceCoverTypes = $source->covers()->get()->mapWithKeys(fn (Page $cover) => [$cover->cover_slot->value => $cover->content_type]);
+
+        foreach ($this->covers()->get() as $cover) {
+            if ($sourceCoverTypes->has($cover->cover_slot->value)) {
+                $cover->update(['content_type' => $sourceCoverTypes[$cover->cover_slot->value]]);
+            }
+        }
     }
 
     /**
-     * Numero di pagine mostrato all'utente (Fase 3.1, estesa per separare
-     * la copertina dal conteggio) — SOLO per visualizzazione, mai usato
-     * per posizioni/ordinamento: total_pages resta l'unica fonte di
-     * verità per lo schema (unique(issue_id, position), PageReorderer,
-     * ecc.), copertina e battente occupano comunque una posizione fisica
-     * sequenziale come qualunque altra pagina. Scelta pragmatica
-     * documentata in HANDOFF.md — un vero "fuori sequenza" romperebbe
-     * l'invariante di posizione in tutto il progetto per un guadagno solo
-     * cosmetico. Le quattro pagine di copertina (I-IV) sono SEMPRE escluse
-     * (mai contano come pagina numerata, a differenza del battente che
-     * resta configurabile per rivista).
+     * Numero di pagine interne del numero, quello mostrato all'utente.
+     * Fino alla Fase 2 le copertine stavano dentro total_pages e qui si
+     * sottraevano (vedi HANDOFF.md, sessione 2026-09-01, scelta "A"); dal
+     * 2026-10-26 sono slot separati e total_pages è già il dato giusto.
      */
     public function displayedTotalPages(): int
     {
-        $coverCount = $this->pages()->whereIn('role', [
-            PageRole::Copertina1->value,
-            PageRole::Copertina2->value,
-            PageRole::Copertina3->value,
-            PageRole::Copertina4->value,
-        ])->count();
-
-        $battenteCount = $this->magazine->battente_counted_in_total
-            ? 0
-            : $this->pages()->where('role', PageRole::Battente->value)->count();
-
-        return $this->total_pages - $coverCount - $battenteCount;
+        // Fase 2 (2026-10-26): total_pages conta ormai SOLO le pagine
+        // interne (le copertine sono fuori sequenza), quindi niente più
+        // sottrazioni. Il metodo resta per i chiamanti esistenti.
+        return (int) $this->total_pages;
     }
 
     /**
@@ -179,30 +202,20 @@ class Issue extends Model
      * default della rivista vale solo per i numeri creati dopo (coperto da
      * tests/Feature/Livewire/IssueWeightTest.php).
      *
-     * Le pagine interne NON sono un parametro salvato: nel timone le
-     * copertine occupano posizioni fisiche dentro total_pages (vedi
-     * displayedTotalPages() e HANDOFF.md, sessione 2026-09-01), quindi
-     * interne = total_pages − pagine_copertina del numero. Si usa il
-     * parametro e non il conteggio dei ruoli copertina perché Copertina2/3 e
-     * Battente si assegnano a mano e spesso mancano; il conteggio dei ruoli
-     * serve solo per un avviso di incoerenza.
+     * Le pagine interne non sono un parametro salvato: sono total_pages, così
+     * il peso segue il timone da solo. Le pagine di copertina non sono più il
+     * parametro modificabile a mano: derivano dalle copertine che esistono
+     * (coverPageCount(), 4 o 6 con la bandella).
      */
     public function weightInput(): MagazineWeightInput
     {
-        $pagineInterno = $this->pagine_copertina !== null
-            ? $this->total_pages - $this->pagine_copertina
-            : null;
+        // Fase 2 (2026-10-26): pagine interne = total_pages (le copertine
+        // non ne fanno più parte), pagine di copertina = quelle che
+        // esistono davvero (4, 6 con la bandella) — nessuna sottrazione.
+        $params = $this->only([...WeightParameters::FIELDS, ...WeightParameters::ISSUE_ONLY_FIELDS]);
+        $params['pagine_copertina'] = $this->coverPageCount();
 
-        $coverRoles = array_map(fn (PageRole $role) => $role->value, array_filter(
-            PageRole::cases(),
-            fn (PageRole $role) => $role !== PageRole::Interna,
-        ));
-
-        return MagazineWeightInput::fromArray(
-            $this->only([...WeightParameters::FIELDS, ...WeightParameters::ISSUE_ONLY_FIELDS]),
-            $pagineInterno,
-            $this->pages()->whereIn('role', $coverRoles)->count(),
-        );
+        return MagazineWeightInput::fromArray($params, (int) $this->total_pages);
     }
 
     /**

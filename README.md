@@ -52,7 +52,7 @@ Il percorso è sempre: **rivista → numero → timone**.
 
 - **Le tue riviste** (`/riviste`): elenco delle riviste a cui hai accesso, con il numero attualmente in lavorazione.
 - **Pagina rivista**: numeri attivi e archivio dei numeri chiusi; da qui si crea un nuovo numero.
-- **Timone** (la schermata principale, dentro un numero): la griglia delle pagine, in tre modalità intercambiabili — griglia a card, doppia pagina (come si vedrebbe sfogliando la rivista stampata), lista. Da qui:
+- **Timone** (la schermata principale, dentro un numero): la griglia delle pagine interne (numerate da 1), in tre modalità intercambiabili — griglia a card, doppia pagina (come si vedrebbe sfogliando la rivista stampata), lista — con le quattro **copertine** (I, II, III, IV, più l'eventuale bandella) in una fascia separata in cima, prima della pagina 1. Da qui:
   - **si spostano le pagine** trascinandole (drag&drop, in tutte e tre le modalità), da tastiera, oppure con la **modalità scambio** (due click per scambiare direttamente due pagine di posto);
   - **si creano nuovi articoli e pubblicità** dal bottone "+ Nuovo contenuto", e **si assegnano** trascinandoli dal pannello "contenuti da assegnare" sopra la griglia, regolando poi la percentuale di pagina occupata;
   - **si cambia lo stato** di ogni pagina (da assegnare → assegnata → in bozza → revisionata → ok stampa);

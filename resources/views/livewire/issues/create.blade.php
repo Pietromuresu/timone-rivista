@@ -47,7 +47,10 @@
                     </div>
 
                     <div>
-                        <x-input-label for="total_pages" value="Numero totale di pagine" />
+                        <x-input-label for="total_pages" value="Numero di pagine interne (copertine escluse)" />
+                        {{-- Fase 2 (2026-10-26): solo pagine interne, numerate da 1. Le
+                             copertine I–IV si creano sempre da sole, a parte. --}}
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Le quattro copertine (I, II, III, IV) si aggiungono da sole e non vanno contate qui.</p>
                         <x-text-input id="total_pages" wire:model.live="total_pages" type="number" min="0" max="2000" class="mt-1 block w-32" required />
                         <x-input-error class="mt-2" :messages="$errors->get('total_pages')" />
                         @if ($total_pages !== null && $total_pages > 0 && $total_pages % 4 !== 0)
@@ -63,7 +66,7 @@
                         <summary class="cursor-pointer select-none px-4 py-3 font-medium text-gray-700 dark:text-gray-300">⚖️ Carta e peso</summary>
                         <div class="px-4 pb-4 space-y-4">
                             <p class="text-xs text-gray-500 dark:text-gray-400">
-                                Valori proposti dalla rivista: puoi cambiarli solo per questo numero. Le pagine interne sono le pagine totali meno le pagine di copertina.
+                                Valori proposti dalla rivista: puoi cambiarli solo per questo numero. Le pagine interne sono quelle indicate sopra; le pagine di copertina sono 4 (I–IV), 6 se scrivi 6: il numero nascerà con la bandella.
                             </p>
 
                             @if ($modifiedWeightFields !== [])

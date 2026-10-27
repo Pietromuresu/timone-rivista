@@ -17,7 +17,7 @@ app/
 ├── Livewire/              Le schermate dell'app (componenti Livewire 3)
 │   ├── Magazines/         Index (dashboard), Show, Create, Edit
 │   ├── Issues/            Show (contenitore del timone), Create
-│   ├── Timone/            Grid (il timone vero e proprio), ContentCreate, CoverSection,
+│   ├── Timone/            Grid (il timone vero e proprio, copertine comprese), ContentCreate,
 │   │                      AdReservations, ActivityLogPanel, PageFileHistory, WeightPanel (pannello Peso)
 │   └── Users/             Index, Create, Edit (solo Admin)
 ├── Mail/                  IssueDeadlineReminder (mail di sollecito scadenza stampa)
@@ -76,7 +76,7 @@ Browser GET /riviste/{slug}/numeri/{issue}
          └─ routes/web.php: middleware auth + verified, scopeBindings (issue deve appartenere al magazine)
              └─ App\Livewire\Issues\Show::mount()  → $this->authorize('view', $issue)  (Show.php:25)
                  └─ view livewire/issues/show.blade.php monta i componenti annidati:
-                    Timone\Grid, Timone\ContentCreate, Timone\CoverSection, Timone\AdReservations, ...
+                    Timone\Grid, Timone\ContentCreate, Timone\AdReservations, ...
                      └─ Grid::render() (Grid.php:2003): carica tutte le pagine con eager loading,
                         calcola spread, carico pubblicitario, avvisi automatici
 ```
@@ -93,7 +93,7 @@ Browser (Sortable.js, direttiva x-sortable in resources/js/app.js)
          ├─ App\Support\PageReorderer::move() calcola le nuove posizioni
          ├─ doppio UPDATE (offset temporaneo) per rispettare unique(issue_id, position)
          ├─ PageReorderLog::create, increment reorder_version
-         ├─ PageRoleAssigner::syncCoverRoles, ActivityLogger::log
+         ├─ ActivityLogger::log   (le copertine non entrano mai qui: Grid le rifiuta)
          ├─ broadcast(new PageMoved(...))->toOthers()   ← sincrono verso Reverb
          └─ Issue::markPagesUpdated()  (aggiorna pages_updated_at per il polling di fallback)
  └─ Gli altri browser: Reverb → Echo → Livewire listener onPageMoved() → re-render
@@ -146,6 +146,7 @@ Fonte principale: `HANDOFF.md`, sezione "Decisioni architetturali da ricordare" 
 | Zoom S/M/L in `localStorage` (store `timoneZoom`), variabili CSS su `<html>` | Preferenza personale del browser, non stato condiviso: niente Livewire/database; su `<html>` perché il morph di Livewire non può toccarle | `resources/js/timone-alpine.js`, `grid.blade.php` |
 | Eventi Livewire **locali** `content-created` / `content-list-changed` tra componenti della stessa pagina (2026-10-26) | I broadcast sono `toOthers()`: chi creava un contenuto non lo vedeva in `Grid` (altro componente) senza ricaricare. Per gli altri utenti: `ContentListChanged` (broadcast) + `issues.pages_updated_at` (polling) | `ContentCreate`, `Grid`, `AdReservations`, `app/Events/ContentListChanged.php` |
 | `URL::forceRootUrl(APP_URL)` | Le URL generate (miniature) usavano l'header Host sbagliato dietro proxy | `app/Providers/AppServiceProvider.php` |
+| Copertine come righe di `pages` con `cover_slot` e `position` NULL, escluse da `Issue::pages()` (Fase 2, 2026-10-26) | Riusano contenuti, anteprime, stato e blocco delle pagine senza duplicare nulla, ma restano fuori da sequenza, riordino e conteggi: l'esclusione sta alla fonte (la relazione), non sparsa nei chiamanti. Sostituisce la scelta "A" del 2026-09-01 (copertine dentro `total_pages`, solo etichetta diversa) | `app/Enums/CoverSlot.php`, `Issue::pages()/covers()/allPages()`, `App\Support\IssueCovers` |
 | …tranne l'URL firmato dell'upload temporaneo Livewire (2026-10-26) | Firmato su `APP_URL` ma verificato sull'indirizzo reale della richiesta: con `APP_URL` non identico all'indirizzo del browser ogni upload falliva con 401. Ora è firmato sull'indirizzo della richiesta | `App\Support\Uploads\RequestRootSignedUploadUrl`, binding in `AppServiceProvider::register()` |
 | Proprietà numeriche Livewire `?int` con default `null` + trait `NormalizesEmptyNumericInput` (2026-10-26) | Livewire "unset"-ta una proprietà `int` che riceve `''` e non riassegna un `null` in idratazione | `app/Livewire/Concerns/NormalizesEmptyNumericInput.php` |
 | `trustProxies(at: '*')` | "Intranet interna" | `bootstrap/app.php` |
@@ -169,4 +170,4 @@ Fonte principale: `HANDOFF.md`, sezione "Decisioni architetturali da ricordare" 
   - `UserPolicy`: tutto solo Admin.
 - **Helper centrali**: `User::isAdmin()` e `User::canAccessMagazine()` (`app/Models/User.php:72-80`). L'Admin vede tutto; gli altri solo le riviste collegate in `magazine_user`.
 - **Canale broadcast** `issue.{issueId}`: autorizzato se `canAccessMagazine()` (`routes/channels.php`).
-- **Componenti annidati** (`Grid`, `ContentCreate`, `CoverSection`): il loro `mount()` **non** chiama `authorize('view')` e si affida a `Issues\Show::mount()`. È un finding "media" dell'audit interno, non corretto (vedi [11-debito-tecnico.md](11-debito-tecnico.md)).
+- **Componenti annidati** (`Grid`, `ContentCreate`, `AdReservations`): il loro `mount()` **non** chiama `authorize('view')` e si affida a `Issues\Show::mount()`. È un finding "media" dell'audit interno, non corretto (vedi [11-debito-tecnico.md](11-debito-tecnico.md)).

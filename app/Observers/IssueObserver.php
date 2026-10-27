@@ -6,7 +6,7 @@ use App\Enums\PageContentType;
 use App\Enums\PageStatus;
 use App\Models\Issue;
 use App\Models\Page;
-use App\Support\PageRoleAssigner;
+use App\Support\IssueCovers;
 
 class IssueObserver
 {
@@ -20,10 +20,6 @@ class IssueObserver
      */
     public function created(Issue $issue): void
     {
-        if ($issue->total_pages < 1) {
-            return;
-        }
-
         $now = now();
         $pages = [];
 
@@ -38,12 +34,15 @@ class IssueObserver
             ];
         }
 
-        Page::insert($pages);
+        if ($pages !== []) {
+            Page::insert($pages);
+        }
 
-        // Fase 3.1: la prima/ultima pagina appena create diventano
-        // Copertina1/Copertina4 (§4.3 dello spec) — Copertina2/Copertina3/
-        // Battente restano da assegnare a mano, nessuna posizione fissa le
-        // identifica in modo affidabile per ogni rivista.
-        PageRoleAssigner::syncCoverRoles($issue);
+        // Fase 2 (2026-10-26): total_pages sono le sole pagine INTERNE
+        // (1…N); le copertine I–IV vengono create SEMPRE come slot separati
+        // (prima nascevano solo I e IV, come ruolo della prima/ultima
+        // pagina — bug). La bandella nasce se il numero prevede 6 pagine di
+        // copertina (parametro copiato dalla rivista in Issues\Create).
+        IssueCovers::ensure($issue, withBandella: (int) ($issue->pagine_copertina ?? 4) >= 6);
     }
 }

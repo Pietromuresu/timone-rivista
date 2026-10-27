@@ -64,19 +64,17 @@ test('a guest cannot open the magazine edit form', function () {
         ->assertForbidden();
 });
 
-test('editing preserves battente_counted_in_total and ad threshold set at creation', function () {
+// Fase 2 (2026-10-26): battente_counted_in_total non è più nel modulo.
+test('editing preserves the ad threshold set at creation', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin]);
     $magazine = Magazine::factory()->create([
-        'battente_counted_in_total' => true,
         'ad_threshold_percentage' => 42.5,
     ]);
 
     Livewire::actingAs($admin)->test(Edit::class, ['magazine' => $magazine])
-        ->assertSet('battente_counted_in_total', true)
         ->assertSet('ad_threshold_percentage', '42.50')
         ->set('name', $magazine->name)
         ->call('save');
 
-    expect($magazine->fresh()->battente_counted_in_total)->toBeTrue()
-        ->and((float) $magazine->fresh()->ad_threshold_percentage)->toBe(42.5);
+    expect((float) $magazine->fresh()->ad_threshold_percentage)->toBe(42.5);
 });

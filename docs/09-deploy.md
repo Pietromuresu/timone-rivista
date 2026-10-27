@@ -226,6 +226,12 @@ docker compose exec -T app php artisan timone:missing-occupancy
 # 5. Build delle nuove immagini (composer install --no-dev e npm run build avvengono QUI, nel Dockerfile)
 docker compose build
 
+# 5bis. (una tantum, deploy della Fase 2 del 2026-10-26) anteprima della conversione delle
+# copertine: per ogni numero mostra cosa diventa cosa, senza scrivere nulla.
+# Va eseguito con la NUOVA immagine e PRIMA del migrate. Controllare gli avvisi
+# (es. due pagine con lo stesso ruolo copertina). Vedi 04-database.md, cover_conversion_logs.
+docker compose run --rm --no-deps app php artisan timone:covers-dry-run
+
 # 6. Migrazioni con la nuova immagine, prima di sostituire i container
 docker compose run --rm --no-deps app php artisan migrate --force
 

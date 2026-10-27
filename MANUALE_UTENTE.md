@@ -52,7 +52,8 @@ La schermata del timone ha tre modalità, selezionabili in alto a destra:
 |---|---|
 | Colore di sfondo | Tipo pagina: blu = editoriale, ambra = pubblicità, viola = mista (metà e metà), grigio = bianca (ancora vuota) — pubblicità sempre riconoscibile a colpo d'occhio |
 | Bordo colorato spesso (griglia/doppia) o striscia colorata a sinistra (lista) | Stato della pagina: grigio = da assegnare, azzurro = assegnata, giallo = in bozza, arancione = revisionata, verde = ok stampa — riconoscibile senza dover leggere l'etichetta |
-| Numero con ⠿ | Numero della pagina, **senza contare la copertina** — la prima pagina interna è sempre "1", non importa quante pagine di copertina la precedono fisicamente (vedi [§9bis](#9bis-copertina-e-battente)). Sulle pagine di copertina stesse, al posto del numero compare il nome del ruolo (es. "Copertina (1ª)"). È anche la "maniglia" per trascinare la pagina |
+| Numero con ⠿ | Numero della pagina interna, da 1 in su (le copertine sono a parte, vedi [§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)). È anche la "maniglia" per trascinare la pagina |
+| 📘 «I di copertina» su sfondo blu | È una copertina, non una pagina interna: sta nella fascia azzurra «Copertine» in cima al timone, prima della pagina 1 ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)) |
 | Etichetta colorata (es. "In bozza") | Stato della pagina, stessa palette del bordo — cliccabile per cambiarlo, vedi [§6](#6-cambiare-lo-stato-di-una-pagina) |
 | 📄 / 📢 | Contenuto assegnato: 📄 articolo, 📢 pubblicità, seguito dal titolo/cliente |
 | Pallino verde con iniziali, animato | Un collega ha in questo momento il focus su quella pagina (sta cambiando qualcosa) |
@@ -264,7 +265,7 @@ Ogni pagina timone coinvolta mostra la miniatura della propria pagina interna co
 
 Pannello sempre visibile sopra la griglia. Mostra, per il numero che stai guardando:
 
-- **Percentuale di carico pubblicitario** (numero grande) — quanta parte del numero è occupata da pubblicità, **incluse le pubblicità prenotate ma non ancora assegnate a una pagina** ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), non solo quelle già piazzate: il testo accanto al numero mostra il dettaglio "X già assegnate + Y prenotate". Diventa rossa se supera la soglia di allarme impostata. Le pagine di copertina non entrano mai in questo calcolo (né come "pagine totali" del denominatore, né un eventuale contenuto assegnato per errore su di esse) — vedi [§9bis](#9bis-copertina-e-battente).
+- **Percentuale di carico pubblicitario** (numero grande) — quanta parte del numero è occupata da pubblicità, **incluse le pubblicità prenotate ma non ancora assegnate a una pagina** ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), non solo quelle già piazzate: il testo accanto al numero mostra il dettaglio "X già assegnate + Y prenotate". Diventa rossa se supera la soglia di allarme impostata. Le pagine di copertina non entrano mai in questo calcolo (né come "pagine totali" del denominatore, né un eventuale contenuto assegnato per errore su di esse) — vedi [§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella).
 - **Soglia di allarme**: il campo numerico accanto al titolo del cruscotto — impostala tu (es. `30` per il 30%); lasciala vuota per disattivare l'avviso. È un'impostazione della rivista, non del singolo numero: cambiarla qui vale per tutti i numeri di quella rivista.
 - **Inserzioni assegnate** vs **pubblicità non ancora assegnate**.
 - **Riepilogo per formato pubblicitario** (pagina intera, mezza pagina, ecc.) e **per stato commerciale** (in trattativa, confermata, annullata) — include anche le prenotazioni.
@@ -291,7 +292,7 @@ Bottone **"📌 Pubblicità prenotate"** sopra la griglia: elenca **tutte** le p
 
 ## 9. Modificare il numero totale di pagine
 
-Bottone **"⚙️ Pagine totali"** in alto nella barra degli strumenti del timone.
+Bottone **"⚙️ Pagine interne"** in alto nella barra degli strumenti del timone. Si cambiano solo le **pagine interne**: le quattro copertine restano sempre, a parte ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)).
 
 Puoi scrivere liberamente nel campo (anche cancellarlo del tutto e riscrivere): la validazione e il ricalcolo avvengono solo quando esci dal campo (tab o clic altrove), non ad ogni carattere digitato. Se il valore lasciato non è un numero valido (vuoto, non numerico, negativo), compare un avviso chiaro e nessuna operazione viene tentata — non un errore imprevisto.
 
@@ -306,21 +307,25 @@ Solo dopo aver visto questo riepilogo puoi cliccare **"Conferma rimozione defini
 
 ---
 
-## 9bis. Copertina e battente
+## 9bis. Le copertine (I, II, III, IV) e la bandella
 
-Riquadro **"📘 Copertina & battente"** in cima alla pagina del timone, prima della griglia principale — una vista separata e sempre a colpo d'occhio di copertina, battente e quarta di copertina, distinta dalle pagine "interne".
+**Le copertine non sono pagine del timone.** Ogni numero ha sempre quattro copertine — **I di copertina** (la copertina vera e propria), **II** (il suo retro, a sinistra della pagina 1), **III** (la pagina interna della quarta) e **IV di copertina** (il retro della rivista) — create da sole insieme al numero, separate dalle pagine interne. Le pagine interne partono **sempre da 1** e arrivano al numero di pagine interne del numero: nessuno deve più sommare o sottrarre le copertine.
 
-La **prima pagina** del numero è sempre "Copertina (1ª)" e l'**ultima** è sempre "Quarta di copertina": il sistema li tiene aggiornati da solo, anche se trascini le pagine o cambi il numero totale di pagine — non serve (e non si può) assegnarli a mano.
+**Dove sono nel timone**: tutte insieme in una fascia azzurra «📘 Copertine» **in cima al timone, prima della pagina 1**, in ordine di sfoglio: I, eventuale bandella, II, III, IV. Ogni copertina ha un'etichetta blu «📘 I di copertina» al posto del numero di pagina e un contorno azzurro, per distinguerla subito da una pagina interna (anche senza guardare i colori: c'è sempre la scritta).
 
-**La copertina non conta come pagina 1**: nella griglia, in doppia pagina e in lista, le pagine di copertina mostrano il nome del loro ruolo al posto di un numero (es. "Copertina (1ª)"), e la numerazione delle pagine interne riparte sempre da **1** subito dopo l'ultima copertina che le precede — non dalla loro posizione fisica nel timone. Lo stesso vale nel menu "assegna a una pagina interna" qui sotto e nell'esportazione PDF ([§3](#3-leggere-la-griglia-del-timone)): il numero mostrato è sempre quello "senza copertina", coerente ovunque. Anche il conteggio "pagine totali" mostrato in cima al timone e nel cruscotto pubblicitario ([§8](#8-leggere-il-cruscotto-pubblicitario)) esclude sempre le pagine di copertina.
+**Cosa si può fare su una copertina**: le stesse cose di una pagina — assegnarle contenuti e pubblicità trascinandoli dal pannello "Contenuti da assegnare", caricarle materiale col bottone «📎 Carica materiale», cambiarne lo stato, bloccarla, togliere un contenuto con ✕.
 
-**Seconda/terza di copertina o battente**: dal riquadro, scegli una pagina interna e il ruolo da assegnarle (form in fondo al pannello). La pagina prende subito un'etichetta 📘 visibile anche nella griglia/lista principale, per ricordare che è gestita da qui. Per togliere il ruolo, clicca "✕ rimuovi" accanto alla pagina nel riquadro.
+**Spostare le copertine**: trascina l'etichetta blu di una copertina sopra un'altra copertina e si **scambiano** (es. la pubblicità passa dalla II alla III, con il suo stato e il suo PDF). Una copertina **non** si può trascinare tra le pagine interne, e una pagina interna non si può trascinare dentro una copertina. Le copertine non entrano nella selezione multipla, nella modalità scambio e negli spostamenti con le frecce.
 
-Una pagina bloccata (🔒) non può ricevere né perdere un ruolo finché non la sblocchi.
+**Una pubblicità di più pagine su una copertina**: trascinata sulla **II** continua sulle pagine 1, 2… (la II e la pagina 1 sono affiancate quando si apre la rivista); trascinata sulla **III** occupa le ultime pagine interne e poi la III. La **I** e la **IV** accolgono una sola pagina: per più pagine compare un messaggio che spiega dove partire.
 
-**Il battente conta nel totale pagine?** Dipende dalla rivista: quando la crei ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)) puoi spuntare "Il battente conta nel totale pagine dichiarato del numero" — se non la spunti (default), il numero di pagine mostrato nell'intestazione del numero esclude il battente dal conteggio, pur restando una pagina vera e propria nel timone (non sparisce, non è escludibile dall'export).
+**La bandella** (il lembo ripiegato agganciato alla copertina, detto anche battente): bottone **«+ Aggiungi bandella»** nella fascia delle copertine iniziali, **«− Togli bandella»** per toglierla (solo se è vuota e non bloccata). Con la bandella le pagine di copertina diventano **6** invece di 4, e il peso si aggiorna da solo ([§9ter](#9ter-peso-della-rivista)). Se la rivista ha 6 pagine di copertina tra le sue impostazioni del peso, i nuovi numeri nascono già con la bandella.
 
-**Nell'esportazione PDF** (bottone "📄 Esporta PDF", [§3](#3-leggere-la-griglia-del-timone)): copertina, battente e quarta di copertina compaiono in una sezione a sé, prima della griglia delle pagine interne.
+**Conteggi**: in cima al timone «N pagine interne · copertine 4 (X assegnate)». Il cruscotto pubblicitario ([§8](#8-leggere-il-cruscotto-pubblicitario)) e gli avvisi contano solo le pagine interne; una pubblicità sulla IV di copertina non cambia la percentuale delle pagine interne.
+
+**Nell'esportazione PDF** (bottone "📄 Esporta PDF", [§3](#3-leggere-la-griglia-del-timone)): le copertine compaiono in una sezione «Copertine» a sé, prima delle pagine interne.
+
+**Numeri creati prima del 2026-10-26**: sono stati convertiti automaticamente — le pagine che erano copertina sono diventate le copertine I–IV (con i loro contenuti), le pagine interne sono state rinumerate da 1, e le copertine che mancavano (spesso la II e la III) sono state create vuote.
 
 ---
 
@@ -330,10 +335,10 @@ Riquadro **"⚖️ Peso"** in cima alla pagina del numero. Mostra il **peso teor
 
 - **Peso copia**: es. "510,7 g ± 31 g (481 – 541 g)". Il peso è teorico: la carta reale e il taglio non sono mai esatti, e il "±" è lo scostamento massimo nel caso peggiore. Il riquadro "ℹ️ Come è calcolato il margine" elenca le tolleranze usate.
 - **Scaglione**: badge **verde** se la copia resta nello scaglione anche nel caso peggiore; **giallo** se il margine potrebbe farla passare allo scaglione successivo ("Rischio di passare allo scaglione X g"); **rosso** se supera 1000 g (fuori scaglione). Scaglioni: 250, 350, 500, 1000 g. Il limite è incluso: 500,0 g sta nello scaglione 500.
-- **Interno / Copertina / Maggiorazione / Tiratura**: il dettaglio del calcolo. Le **pagine interne** sono le pagine totali del numero meno le pagine di copertina (es. 214 − 6 = 208): quando cambi le pagine totali ([§9](#9-modificare-il-numero-totale-di-pagine)) il peso si aggiorna da solo.
+- **Interno / Copertina / Maggiorazione / Tiratura**: il dettaglio del calcolo. Le **pagine interne** sono quelle del timone (es. 208); le **pagine di copertina** sono le copertine che esistono: 4, oppure 6 se il numero ha la bandella ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)). Quando cambi le pagine interne ([§9](#9-modificare-il-numero-totale-di-pagine)) o aggiungi/togli la bandella, il peso si aggiorna da solo.
 
 **Modificare i parametri di questo numero** (Admin e Redattore): bottone **"Modifica parametri"**.
-- In cima c'è la sezione **"Carta"**: grammatura interno, grammatura copertina e pagine copertina (numero pari tra 2 e 12: 4, o 6 con bandella).
+- In cima c'è la sezione **"Carta"**: grammatura interno, grammatura copertina e pagine copertina. Per un numero già creato le **pagine copertina non si scrivono a mano** (campo grigio): sono le copertine esistenti, 4 o 6 con la bandella.
 - **Grammatura**: scrivi quella stampata sulla carta, in g/m² (es. **80** per l'interno, **170** per la copertina), **non il peso di una pagina**: il peso a pagina lo calcola il sistema e lo mostra sotto il campo, es. "80 g/m² → 2,268 g a pagina · 208 pagine = 471,7 g". Valori sotto 30 o sopra 400 vengono rifiutati con un messaggio che spiega l'errore. Puoi usare la virgola o il punto (`80,5` o `80.5`).
 - Poi formato in **millimetri** (210 × 270, non 21 × 27: valori sotto 50 vengono rifiutati perché quasi certamente in centimetri), n. copie, n. bancali e peso reale. Maggiorazione e tolleranze stanno sotto "Avanzate".
 - Mentre scrivi, l'**anteprima** in fondo alla finestra mostra il nuovo peso, il margine e lo scaglione **prima di salvare**, con la differenza dal peso salvato (es. "+12,4 g rispetto al valore salvato …, passa da scaglione 500 g a 1.000 g.").
@@ -380,11 +385,11 @@ Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone 
 
 ## 12. Creare una rivista / un numero, duplicare la struttura
 
-**Nuova rivista** (solo Admin): dal riquadro "Le tue riviste", bottone "+ Nuova rivista". Nome, periodicità, colore identificativo, soglia di allarme pubblicitario (opzionale), se il battente conta nel totale pagine dichiarato (vedi [§9bis](#9bis-copertina-e-battente) — default: no), note.
+**Nuova rivista** (solo Admin): dal riquadro "Le tue riviste", bottone "+ Nuova rivista". Nome, periodicità, colore identificativo, soglia di allarme pubblicitario (opzionale), note. (L'opzione «il battente conta nel totale pagine» non c'è più dal 2026-10-26: la bandella è una copertina a parte e non entra mai nel totale delle pagine interne.)
 
-**Nuovo numero**: dalla pagina di una rivista, bottone "+ Nuovo numero" (visibile ad Admin e Redattori con accesso a quella rivista). Titolo, data di uscita (opzionale), **scadenza stampa** (opzionale — vedi [§12bis](#12bis-modificare-una-rivista-redattore-di-riferimento-e-scadenza-stampa)), numero totale di pagine, note. Se cancelli del tutto il numero di pagine per riscriverlo, l'anteprima del peso si ferma finché non scrivi un valore valido; se provi a creare il numero con il campo vuoto compare l'errore sotto il campo (prima la pagina andava in errore).
+**Nuovo numero**: dalla pagina di una rivista, bottone "+ Nuovo numero" (visibile ad Admin e Redattori con accesso a quella rivista). Titolo, data di uscita (opzionale), **scadenza stampa** (opzionale — vedi [§12bis](#12bis-modificare-una-rivista-redattore-di-riferimento-e-scadenza-stampa)), **numero di pagine interne** (le quattro copertine I–IV si aggiungono da sole, non vanno contate; con 6 «pagine copertina» nella sezione Carta e peso il numero nasce anche con la bandella), note. Se cancelli del tutto il numero di pagine per riscriverlo, l'anteprima del peso si ferma finché non scrivi un valore valido; se provi a creare il numero con il campo vuoto compare l'errore sotto il campo (prima la pagina andava in errore).
 
-**Duplicare la struttura da un numero precedente**: nello stesso form di creazione numero, se la rivista ha già altri numeri, trovi un menu "Duplica struttura da un numero precedente". Selezionandone uno, il numero di pagine si pre-compila con quello del numero scelto (resta modificabile) e — dopo la creazione — ogni pagina eredita lo stesso tipo (editoriale/pubblicità/mista/bianca) della pagina corrispondente del numero di origine. **Non vengono copiati**: i contenuti assegnati, gli stati delle pagine, i PDF caricati — solo lo schema di che tipo di pagina è cosa, per non ripartire ogni volta da un timone completamente vuoto.
+**Duplicare la struttura da un numero precedente**: nello stesso form di creazione numero, se la rivista ha già altri numeri, trovi un menu "Duplica struttura da un numero precedente". Selezionandone uno, il numero di pagine interne si pre-compila con quello del numero scelto (resta modificabile) e — dopo la creazione — ogni pagina interna e ogni copertina eredita lo stesso tipo (editoriale/pubblicità/mista/bianca) della pagina corrispondente del numero di origine. **Non vengono copiati**: i contenuti assegnati, gli stati delle pagine, i PDF caricati — solo lo schema di che tipo di pagina è cosa, per non ripartire ogni volta da un timone completamente vuoto.
 
 **Carta e peso**: nel form di creazione del numero, la sezione richiudibile "⚖️ Carta e peso" è già compilata con i valori di default della rivista: formato in mm, grammature, pagine di copertina, poi n. copie e n. bancali, e sotto "Avanzate" maggiorazione e tolleranze. Puoi cambiarli solo per questo numero; i campi diversi dalla rivista mostrano il badge "modificato" e "Ripristina default rivista" li riporta ai valori della rivista. Sotto ogni grammatura compare il peso a pagina e sotto la sezione un'anteprima del peso che si aggiorna mentre scrivi. Dettagli in [§9ter](#9ter-peso-della-rivista).
 
@@ -392,7 +397,7 @@ Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone 
 
 ## 12bis. Modificare una rivista, redattore di riferimento e scadenza stampa
 
-**Modificare una rivista** (solo Admin): dalla pagina della rivista, bottone "Modifica rivista". Stessi campi della creazione (nome, periodicità, colore, soglia allarme pubblicitario, se il battente conta nel totale, note), più un campo nuovo:
+**Modificare una rivista** (solo Admin): dalla pagina della rivista, bottone "Modifica rivista". Stessi campi della creazione (nome, periodicità, colore, soglia allarme pubblicitario, note), più un campo nuovo:
 
 - **Redattore di riferimento**: l'utente responsabile di quella rivista. Assegnarlo gli dà automaticamente accesso alla rivista (se non ce l'aveva già) — non serve anche aggiungerlo da [§13](#13-gestire-gli-utenti-solo-admin). Riceve le mail di sollecito quando la scadenza stampa di un numero si avvicina (vedi sotto). Cambiare redattore non toglie l'accesso al precedente: se serve, va rimosso a mano da §13.
 

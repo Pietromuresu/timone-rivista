@@ -27,3 +27,20 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 ### Bug 8 — PDF multipagina su una pubblicità (implementato dopo l'ok sul flusso)
 - Visibile: un PDF più lungo del formato non è più rifiutato; il modulo chiede «usa tutte le N pagine» oppure «usa solo le pagine da X a Y» (dicitura dedicata per il formato copertina) e riassume cosa succederà. Ogni pagina del timone mostra la pagina del PDF corrispondente.
 - Tecnico: `App\Support\AdPdfPagePlan` (puro); `ContentCreator::pagePlan()` (chiavi `pdf_page_from`/`pdf_page_to`); `ContentFile.pdf_page_number` = numero originale nel PDF; `ContentPlacer`/`ContentCreate::attachConfirmedPages()` associano i file per posizione nell'ordine del PDF; percentuale 100 quando la scelta supera le pagine del formato. Nessuna migration.
+
+## Fase 2 — Copertine separate dalle pagine (2026-10-26)
+
+### Visibili agli utenti
+- Le copertine **I, II, III, IV** sono elementi separati del numero, sempre tutte e quattro (prima nascevano solo I e IV), tutte insieme in una fascia azzurra in cima al timone, prima della pagina 1 (I, bandella, II, III, IV), con l'etichetta «📘 I di copertina». Una prima versione aveva III e IV in una seconda fascia dopo l'ultima pagina: spostate in cima su richiesta dell'utente.
+- Le **pagine interne partono da 1** e il numero di pagine del numero è solo quello delle interne (anche nel modulo di creazione: «Numero di pagine interne (copertine escluse)»). Intestazione del timone: «N pagine interne · copertine 4 (X assegnate)».
+- Sulle copertine si assegnano contenuti e pubblicità come sulle pagine; una copertina si trascina solo su un'altra copertina (scambio), mai tra le pagine interne, e viceversa.
+- Pubblicità su più pagine partendo da una copertina: dalla II continua sulle pagine 1, 2…; dalla III occupa le ultime pagine interne e la III; I e IV una pagina sola.
+- **Bandella** aggiungibile/rimovibile dalla fascia copertine: 6 pagine di copertina nel peso invece di 4. Nel pannello Peso le pagine di copertina di un numero non si scrivono più a mano.
+- Cruscotto pubblicitario, avvisi ed export contano solo le pagine interne; l'export PDF ha una sezione «Copertine».
+- Tolta l'opzione «il battente conta nel totale pagine» dalle impostazioni della rivista.
+
+### Tecniche
+- Colonna `pages.cover_slot` (`App\Enums\CoverSlot`), `pages.position` nullable, `unique(issue_id, cover_slot)`; `Issue::pages()` = sole interne, `covers()`, `allPages()`, `coverPageCount()`.
+- `App\Support\IssueCovers` (creazione, bandella, scambio, `pagine_copertina`); `IssueObserver` crea sempre I–IV; evento `App\Events\CoversChanged`; `Grid::swapCovers()/addBandella()/removeBandella()`; `ContentPlacer::coverTargets()`.
+- Rimossi `PageRole`, `PageRoleAssigner`, `PageNumberer`, `Timone\CoverSection` (e i loro test); tolto l'avviso del peso "ruoli copertina ≠ pagine copertina".
+- **Migration di dati** `2026_10_26_200002_convert_cover_pages_to_slots` con registro `cover_conversion_logs` (reversibile, anche per i numeri creati dopo), anteprima `php artisan timone:covers-dry-run`. Verificata su una copia MySQL dei dati di sviluppo: andata e ritorno identici.

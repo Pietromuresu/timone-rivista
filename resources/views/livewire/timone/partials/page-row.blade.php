@@ -1,4 +1,5 @@
 @php
+    $isCover = $page->isCover();
     // Punto 4 del prompt (2026-09-02): l'anteprima ora viene dal contenuto
     // assegnato alla pagina (Page::previewFile()) — vedi la nota completa
     // in page-card.blade.php, identica qui.
@@ -25,13 +26,14 @@
     // vista doppia pagina (pagina 1 sempre a destra, poi alternanza): non
     // va reinventata qui, solo espressa come etichetta testuale per chi
     // scorre la lista senza vedere le aperture affiancate.
-    $pageSide = $page->position % 2 === 1 ? 'DX' : 'SX';
+    $pageSide = $isCover ? null : ($page->position % 2 === 1 ? 'DX' : 'SX');
     // Fase 2.3: pagine "collegate" in un gruppo — vedi App\Models\PageGroup,
     // $page->group già eager-loaded da Grid::render().
     $group = $page->group;
-    // Etichetta mostrata (copertina separata dal conteggio pagine) — vedi
-    // App\Support\PageNumberer e la nota in page-card.blade.php.
-    $pageNumber = $pageNumber ?? $page->position;
+    // Fase 2 (2026-10-26): una copertina (I–IV, bandella) usa la stessa
+    // riga ma è fuori dalla sequenza: niente riordino/tastiera/selezione,
+    // etichetta "II di copertina" al posto del numero. Vedi page-card.
+    $pageNumber = $pageNumber ?? ($isCover ? $page->cover_slot->label() : $page->position);
     // Evidenziazione selezione multipla — stessa logica/priorità di
     // page-card.blade.php (vedi lì per il perché), solo classi diverse
     // per restare coerenti con lo stile "riga" invece che "card".
@@ -54,16 +56,19 @@
     wire:key="page-{{ $page->id }}"
     data-page-id="{{ $page->id }}"
     @if ($page->page_group_id) data-group-id="{{ $page->page_group_id }}" @endif
+    @if ($isCover) data-cover-slot="{{ $page->cover_slot->value }}" @endif
     tabindex="0"
-    @unless ($locked)
+    @unless ($locked || $isCover)
         @keydown.arrow-up.prevent="$animatedMove('nudgePage', {{ $page->id }}, -1)"
         @keydown.arrow-down.prevent="$animatedMove('nudgePage', {{ $page->id }}, 1)"
     @endunless
     @if ($interactive)
         x-on:dragover.prevent
-        x-on:drop.prevent="const cid = $event.dataTransfer.getData('text/content-id'); if (cid) { $wire.assignContent(parseInt(cid), {{ $page->id }}); }"
+        x-on:drop.prevent="const coverId = $event.dataTransfer.getData('text/cover-id'); const cid = $event.dataTransfer.getData('text/content-id'); if (coverId && {{ $isCover ? 'true' : 'false' }}) { $wire.swapCovers(parseInt(coverId), {{ $page->id }}); } else if (cid) { $wire.assignContent(parseInt(cid), {{ $page->id }}); }"
     @endif
-    @if ($swapMode && ! $locked)
+    @if ($isCover)
+        {{-- Copertine: nessuna selezione multipla né modalità scambio. --}}
+    @elseif ($swapMode && ! $locked)
         x-on:click="$wire.selectForSwap({{ $page->id }})"
     @elseif (! $swapMode)
         {{-- Shortcut da tastiera (2026-09-02, punto 2 del prompt) — stesso
@@ -84,9 +89,9 @@
         solo canale cromatico aggiuntivo qui, la lista è già pensata per
         scorrere veloce, non per un colpo d'occhio sul tipo pagina).
     --}}
-    class="flex items-center gap-4 px-4 py-3 border-l-4 {{ $page->status->borderClasses() }} hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset {{ $focusClasses }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $selectionRowClasses }}"
+    class="flex items-center gap-4 px-4 py-3 border-l-4 {{ $isCover ? 'bg-indigo-50/60 dark:bg-indigo-950/30' : '' }} {{ $page->status->borderClasses() }} hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset {{ $focusClasses }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $selectionRowClasses }}"
 >
-    @if ($selectionMode ?? false)
+    @if (($selectionMode ?? false) && ! $isCover)
         <input
             type="checkbox"
             x-on:click.stop
@@ -100,6 +105,16 @@
         <span class="w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200" title="{{ $page->lockedBy ? 'Bloccata da '.$page->lockedBy->name : 'Pagina bloccata' }}">
             🔒 {{ $pageNumber }}
         </span>
+    @elseif ($isCover)
+        {{-- Trascinabile solo su un'altra copertina (scambio di slot):
+             drag nativo, non Sortable — le copertine non sono nel
+             contenitore delle pagine interne. --}}
+        <span
+            draggable="true"
+            x-on:dragstart.stop="$event.dataTransfer.setData('text/cover-id', '{{ $page->id }}'); $event.dataTransfer.effectAllowed = 'move'"
+            class="shrink-0 font-semibold text-indigo-800 dark:text-indigo-300 cursor-grab whitespace-nowrap"
+            title="Trascina su un'altra copertina per scambiarle"
+        >📘 {{ $pageNumber }}</span>
     @else
         <span class="drag-handle w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200 cursor-grab" title="Trascina per riordinare">
             {{ $pageNumber }}
@@ -114,17 +129,11 @@
         ></span>
     </template>
 
-    <span
-        class="w-7 shrink-0 text-center text-[10px] font-semibold rounded px-1 py-0.5 {{ $pageSide === 'DX' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300' }}"
-        title="{{ $pageSide === 'DX' ? 'Pagina destra' : 'Pagina sinistra' }}"
-    >{{ $pageSide }}</span>
-
-    {{-- Fase 3.1: stesso ruolo mostrato nel pannello "Copertina & battente" a inizio pagina — qui solo un promemoria compatto, la gestione vera è là. --}}
-    @if ($page->role->isCoverSection())
+    @if ($pageSide)
         <span
-            class="shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300"
-            title="{{ $page->role->label() }} — gestita dal pannello Copertina &amp; battente"
-        >📘 {{ $page->role->label() }}</span>
+            class="w-7 shrink-0 text-center text-[10px] font-semibold rounded px-1 py-0.5 {{ $pageSide === 'DX' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300' }}"
+            title="{{ $pageSide === 'DX' ? 'Pagina destra' : 'Pagina sinistra' }}"
+        >{{ $pageSide }}</span>
     @endif
 
     @if ($group)

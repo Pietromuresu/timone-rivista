@@ -9,13 +9,11 @@ use Livewire\Livewire;
 test('the grid defaults to the griglia view and shows every page', function () {
     $issue = Issue::factory()->create(['total_pages' => 6]);
 
-    // Header "Timone · N pagine" mostra il conteggio SENZA le due
-    // copertine auto-assegnate da PageRoleAssigner su un'issue di 6
-    // pagine (position 1 = Copertina1, position 6 = Copertina4) —
-    // copertina separata dal conteggio pagine, vedi Issue::displayedTotalPages().
+    // Fase 2 (2026-10-26): pagine interne e copertine contate a parte.
     Livewire::test(Grid::class, ['issue' => $issue])
         ->assertSet('viewMode', 'griglia')
-        ->assertSee('4 pagine');
+        ->assertSee('6 pagine interne')
+        ->assertSee('copertine 4');
 });
 
 test('switching view mode updates what is rendered', function () {
@@ -141,27 +139,34 @@ test('an unassigned blank page shows the "pagina bianca" placeholder', function 
         ->assertSeeInOrder(['1', 'Pagina bianca']);
 });
 
-test('the cover is never numbered and internal numbering restarts at 1 right after it', function () {
-    // 4 pagine: position 1 = Copertina1, position 4 = Copertina4 (auto),
-    // position 2/3 = Interna — copertina separata dal conteggio pagine,
-    // vedi App\Support\PageNumberer/HANDOFF.md.
+test('internal pages are numbered from 1 and the four covers are shown apart with their names', function () {
+    // Fase 2 (2026-10-26): 4 pagine interne (1-4) + copertine I-IV in una
+    // fascia separata prima della pagina 1.
     $issue = Issue::factory()->create(['total_pages' => 4]);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->get();
 
     $html = Livewire::test(Grid::class, ['issue' => $issue])->html();
 
-    // Isola il blocco di ogni card via il suo wire:key univoco (stesso
-    // approccio di TimoneGridContentTitleWrapTest), per non confondere il
-    // numero della card 1 con quello della card 2 nell'HTML concatenato.
+    // Isola il blocco di ogni card via il suo wire:key univoco.
     $cardBlock = function (string $html, int $pageId): string {
         $markerPos = mb_strpos($html, 'wire:key="page-'.$pageId.'"');
         expect($markerPos)->not->toBeFalse();
 
-        return mb_substr($html, $markerPos, 2000);
+        return mb_substr($html, $markerPos, 4000);
     };
 
-    expect($cardBlock($html, $pages[0]->id))->toContain('⠿ Copertina (1ª)')
-        ->and($cardBlock($html, $pages[1]->id))->toContain('⠿ 1')
-        ->and($cardBlock($html, $pages[2]->id))->toContain('⠿ 2')
-        ->and($cardBlock($html, $pages[3]->id))->toContain('⠿ Quarta di copertina');
+    expect($pages->pluck('position')->all())->toBe([1, 2, 3, 4])
+        ->and($cardBlock($html, $pages[0]->id))->toContain('⠿ 1')
+        ->and($cardBlock($html, $pages[3]->id))->toContain('⠿ 4');
+
+    // Tutte le copertine in un'unica fascia PRIMA della pagina 1, in ordine di sfoglio.
+    $bandStart = mb_strpos($html, 'data-testid="cover-band"');
+    $firstPage = mb_strpos($html, 'wire:key="page-'.$pages[0]->id.'"');
+    $band = mb_substr($html, $bandStart, $firstPage - $bandStart);
+
+    expect($bandStart)->toBeLessThan($firstPage)
+        ->and(substr_count($html, 'data-testid="cover-band"'))->toBe(1)
+        ->and($band)->toContain('📘 I di copertina')->toContain('📘 IV di copertina')
+        ->and(mb_strpos($band, 'I di copertina'))->toBeLessThan(mb_strpos($band, 'II di copertina'))
+        ->and(mb_strpos($band, 'III di copertina'))->toBeLessThan(mb_strpos($band, 'IV di copertina'));
 });

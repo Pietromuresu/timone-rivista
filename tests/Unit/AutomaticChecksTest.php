@@ -62,7 +62,8 @@ test('no pages produce no warnings', function () {
 test('an approved page with no pdf file at all is flagged as missing', function () {
     $pages = new Collection([fakeAutoCheckPage(1, [], PageStatus::OkStampa, hasFile: false)]);
 
-    expect(AutomaticChecks::check($pages)['missingPdfPages'])->toBe([1]);
+    // Fase 2: etichette brevi ('1', 'II cop.') al posto delle posizioni intere.
+    expect(AutomaticChecks::check($pages)['missingPdfPages'])->toBe(['1']);
 });
 
 test('an approved page with a pdf file is not flagged as missing', function () {
@@ -114,7 +115,7 @@ test('an approved page with no content is flagged', function () {
         fakeAutoCheckPage(2, [], PageStatus::OkStampa),
     ]);
 
-    expect(AutomaticChecks::check($pages)['approvedEmptyPages'])->toBe([1, 2]);
+    expect(AutomaticChecks::check($pages)['approvedEmptyPages'])->toBe(['1', '2']);
 });
 
 test('an approved page with content is not flagged', function () {
@@ -128,4 +129,13 @@ test('a non-approved empty page is not flagged', function () {
     $pages = new Collection([fakeAutoCheckPage(1, [], PageStatus::DaAssegnare)]);
 
     expect(AutomaticChecks::check($pages)['approvedEmptyPages'])->toBe([]);
+});
+
+// Fase 2 (2026-10-26): le copertine compaiono negli avvisi col loro nome.
+test('an approved empty cover is flagged by its slot name', function () {
+    $cover = fakeAutoCheckPage(1, [], PageStatus::OkStampa);
+    $cover->position = null;
+    $cover->cover_slot = \App\Enums\CoverSlot::II;
+
+    expect(AutomaticChecks::check(new Collection([$cover]))['approvedEmptyPages'])->toBe(['II cop.']);
 });

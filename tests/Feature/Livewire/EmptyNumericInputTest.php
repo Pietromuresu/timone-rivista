@@ -4,7 +4,6 @@ use App\Enums\UserRole;
 use App\Livewire\Issues\Create as IssueCreate;
 use App\Livewire\Magazines\Edit as MagazineEdit;
 use App\Livewire\Timone\ContentCreate;
-use App\Livewire\Timone\CoverSection;
 use App\Models\Issue;
 use App\Models\Magazine;
 use App\Models\User;
@@ -80,14 +79,8 @@ test('emptying the expected length of an article does not throw', function () {
         ->assertSet('section_id', null);
 });
 
-test('choosing the empty option of the cover page select does not throw', function () {
-    $issue = Issue::factory()->create(['total_pages' => 8]);
-
-    Livewire::actingAs(emptyInputEditor($issue->magazine))->test(CoverSection::class, ['issue' => $issue])
-        ->set('assignPageId', '')
-        ->assertOk()
-        ->assertSet('assignPageId', null);
-});
+// (Il test sulla select del vecchio pannello CoverSection è stato rimosso
+// con il pannello stesso, Fase 2 del 2026-10-26.)
 
 test('choosing "no editor" on the magazine edit form does not throw', function () {
     $magazine = Magazine::factory()->create();

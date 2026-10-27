@@ -96,8 +96,14 @@
     </template>
 
     <div class="flex items-center justify-between gap-3 flex-wrap">
+        {{-- Fase 2 (2026-10-26): pagine interne e copertine contate a parte,
+             così nessuno deve sommare o sottrarre a mente. --}}
         <h3 class="font-medium text-gray-700 dark:text-gray-300">
-            Timone &middot; {{ $issue->displayedTotalPages() }} pagine
+            Timone &middot; {{ $issue->total_pages }} pagine interne
+            <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
+                &middot; copertine {{ $covers->count() }}
+                ({{ $covers->filter(fn ($c) => $c->contents->isNotEmpty())->count() }} assegnate)
+            </span>
         </h3>
 
         <div class="flex flex-wrap items-center gap-2">
@@ -124,7 +130,7 @@
                     'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700' => ! $showPageCountEditor,
                 ])
             >
-                ⚙️ Pagine totali
+                ⚙️ Pagine interne
             </button>
 
             <button
@@ -324,11 +330,11 @@
 
     @if ($showPageCountEditor)
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
-            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Modifica pagine totali</h4>
+            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Modifica pagine interne <span class="font-normal text-gray-400">(le copertine non cambiano)</span></h4>
 
             <div class="flex items-end gap-3 flex-wrap">
                 <div>
-                    <label for="new-total-pages" class="block text-xs text-gray-500 dark:text-gray-400">Nuovo totale pagine</label>
+                    <label for="new-total-pages" class="block text-xs text-gray-500 dark:text-gray-400">Nuovo totale pagine interne</label>
                     <input
                         id="new-total-pages"
                         type="number"
@@ -537,6 +543,10 @@
         @endif
     </div>
 
+    @error('covers')
+        <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">📘 {{ $message }}</p>
+    @enderror
+
     @error('reorder')
         <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{{ $message }}</p>
     @enderror
@@ -710,11 +720,15 @@
         @endif
     </div>
 
+    {{-- Fase 2: tutte le copertine (I, bandella, II, III, IV) in una sola fascia
+         prima della pagina 1, in tutte e tre le viste. --}}
+    @include('livewire.timone.partials.cover-band', ['covers' => $covers])
+
     @if ($pages->isEmpty())
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
             <div class="p-12 text-center text-gray-400 dark:text-gray-500">
                 <p class="font-medium">Nessuna pagina per questo numero.</p>
-                <p class="text-sm mt-1">Imposta il numero di pagine totali per generare il timone.</p>
+                <p class="text-sm mt-1">Imposta il numero di pagine interne (⚙️ Pagine interne) per generare il timone.</p>
             </div>
         </div>
     @elseif ($viewMode === 'griglia')
@@ -730,7 +744,7 @@
             class="grid gap-5 grid-cols-[repeat(auto-fill,minmax(var(--timone-page-min,11.5rem),1fr))]"
         >
             @foreach ($pages as $page)
-                @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds, 'pageNumber' => $pageNumbers[$page->id], 'pageAspectRatio' => $pageAspectRatio])
+                @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds, 'pageAspectRatio' => $pageAspectRatio])
             @endforeach
         </div>
     @elseif ($viewMode === 'doppia')
@@ -814,7 +828,6 @@
                         'page' => $page,
                         'dropEnabled' => true,
                         'avgThumbnailSeconds' => $avgThumbnailSeconds,
-                        'pageNumber' => $pageNumbers[$page->id],
                         'pageAspectRatio' => $pageAspectRatio,
                         // Dimensione fissa + margini/bordo di posizione nell'apertura:
                         // prima stavano su un div-wrapper attorno a page-card, rimosso
@@ -843,7 +856,7 @@
                 class="divide-y divide-gray-100 dark:divide-gray-700"
             >
                 @foreach ($pages as $page)
-                    @include('livewire.timone.partials.page-row', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds, 'pageNumber' => $pageNumbers[$page->id]])
+                    @include('livewire.timone.partials.page-row', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds])
                 @endforeach
             </ul>
         </div>

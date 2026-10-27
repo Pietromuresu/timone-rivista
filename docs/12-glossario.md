@@ -26,8 +26,13 @@
 | **Abbondanza** (bleed) | Margine di stampa oltre il formato: +3 mm per lato | `PdfFormatChecker::BLEED_MM` |
 | **Controllo formato** | Confronto tra le misure reali del PDF e il formato ADV + abbondanza + tolleranza | `FormatCheckStatus`, `TIMONE_PDF_FORMAT_TOLERANCE_MM` |
 | **Override formato** | Conferma manuale che un PDF fuori formato va bene comunque | `format_override_confirmed_by/_at`, `Grid::confirmFormatOverride` |
-| **Copertina I/II/III/IV** | Prima di copertina, seconda (retro della prima), terza, quarta (retro di copertina) | `PageRole::Copertina1..4` |
-| **Battente** | Aletta pieghevole della copertina; può contare o no nel totale pagine | `PageRole::Battente`, `magazines.battente_counted_in_total` |
+| **I di copertina** | La copertina vera e propria, quella che si vede in edicola | `CoverSlot::I` (`pages.cover_slot = 'I'`) |
+| **II di copertina** | Il retro della I: la pagina a sinistra della pagina 1, quando si apre la rivista | `CoverSlot::II` |
+| **III di copertina** | Il lato interno della quarta: la pagina a destra dell'ultima pagina interna | `CoverSlot::III` |
+| **IV di copertina** | Il retro della rivista | `CoverSlot::IV` |
+| **Copertine** | Dal 2026-10-26 sono elementi separati del numero, sempre quattro, fuori dalla numerazione e dai conteggi delle pagine interne | `Issue::covers()`, `App\Support\IssueCovers` |
+| **Bandella** (battente) | Lembo ripiegato agganciato alla I di copertina; facoltativo, vale 2 pagine di copertina nel peso (6 invece di 4) | `CoverSlot::Bandella` |
+| **Pagine interne** | Le pagine numerate 1…N del timone, copertine escluse; il numero di pagine del numero | `issues.total_pages`, `Issue::pages()` |
 | **Pagine collegate / gruppo** | Pagine che si spostano sempre insieme | `PageGroup`, `pages.page_group_id` |
 | **Blocco pagina** | Pagina "congelata": non si sposta né si modifica | `pages.locked_at/locked_by` |
 | **Modalità scambio** | Scambio di posizione tra due pagine | `Grid::toggleSwapMode/selectForSwap`, evento `PagesSwapped` |
@@ -77,7 +82,7 @@
 | `IssueStatus` | `bozza`, `in_lavorazione`, `chiuso` |
 | `PageStatus` | `da_assegnare`, `assegnata`, `in_bozza`, `revisionata`, `ok_stampa` |
 | `PageContentType` | `editoriale`, `pubblicita`, `mista`, `bianca` |
-| `PageRole` | `copertina1`, `copertina2`, `copertina3`, `copertina4`, `battente`, `interna` |
+| `CoverSlot` | `I`, `II`, `III`, `IV`, `bandella` (dal 2026-10-26; il vecchio `PageRole` è stato rimosso, la colonna `pages.role` resta solo come traccia) |
 | `ContentType` | `articolo`, `pubblicita` |
 | `EditorialStatus` | `da_scrivere`, `in_scrittura`, `in_revisione`, `pronto` |
 | `AdFormat` | `pagina_intera`, `mezza_pagina_orizzontale`, `mezza_pagina_verticale`, `un_terzo_pagina_orizzontale`, `un_terzo_pagina_verticale`, `un_quarto_pagina`, `battente_copertina`, `doppia_pagina`, `copertina_seconda_terza_quarta`, `piedino`, `due_terzi_pagina`, `prima_romana`, `controsommario`, `elenco_inserzionisti`, `controeditoriale`, `pubbliredazionale` |

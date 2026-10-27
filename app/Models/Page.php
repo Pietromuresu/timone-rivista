@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\CoverSlot;
 use App\Enums\PageContentType;
-use App\Enums\PageRole;
 use App\Enums\PageStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,7 +24,7 @@ class Page extends Model
         'locked_at',
         'locked_by',
         'page_group_id',
-        'role',
+        'cover_slot',
     ];
 
     protected function casts(): array
@@ -34,8 +34,35 @@ class Page extends Model
             'content_type' => PageContentType::class,
             'status' => PageStatus::class,
             'locked_at' => 'datetime',
-            'role' => PageRole::class,
+            // Fase 2 (2026-10-26): `role` (copertina1…battente) non è più
+            // letto dal codice — resta in tabella solo come traccia e per
+            // il rollback della conversione. La copertina è `cover_slot`.
+            'cover_slot' => CoverSlot::class,
         ];
+    }
+
+    /**
+     * Fase 2: una copertina è una riga di `pages` con `cover_slot` e senza
+     * posizione — fuori dalla sequenza e dai conteggi delle pagine interne.
+     */
+    public function isCover(): bool
+    {
+        return $this->cover_slot !== null;
+    }
+
+    /**
+     * Nome della pagina nei messaggi: "pagina 5" o "II di copertina". Mai
+     * `position` da solo, che per una copertina è NULL.
+     */
+    public function label(): string
+    {
+        return $this->cover_slot?->label() ?? "pagina {$this->position}";
+    }
+
+    /** Come label() ma compatto, per elenchi: "5" o "II cop.". */
+    public function shortLabel(): string
+    {
+        return $this->cover_slot?->shortLabel() ?? (string) $this->position;
     }
 
     public function issue(): BelongsTo

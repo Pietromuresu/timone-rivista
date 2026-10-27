@@ -40,21 +40,19 @@ test('an issue with no ads shows a zero percent ad load', function () {
 });
 
 test('the dashboard reports the correct equivalent pages and percentage for assigned ads', function () {
-    $issue = reorderableIssue(); // total_pages = 6 (position 1 = Copertina1, position 6 = Copertina4)
+    $issue = reorderableIssue(); // 6 pagine interne + copertine I–IV a parte (Fase 2)
 
     $user = editorFor($issue);
 
-    // Posizioni 2/3 (Interna), non 1: la copertina è esclusa dal
-    // cruscotto pubblicitario (vedi Grid::render(), $numberedPages) —
-    // un contenuto assegnato sulla copertina non deve alterare né
-    // numeratore né denominatore della percentuale.
+    // Le copertine sono escluse dal cruscotto pubblicitario: dalla Fase 2
+    // non sono più tra le pagine interne ($issue->pages()).
     assignedAdContent($issue, 2, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata);
     assignedAdContent($issue, 3, AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::InTrattativa);
 
     // 1 pagina intera (100%) + 1 mezza pagina (50%) = 1.5 pagine equivalenti
-    // su 4 pagine numerate (6 totali - 2 di copertina) = 37.5%.
+    // su 6 pagine interne = 25%.
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->assertSee('37.5%')
+        ->assertSee('25%')
         ->assertSee('Pagina intera: 1')
         ->assertSee('Mezza pagina orizzontale: 1')
         ->assertSee('Confermata: 1')
@@ -86,8 +84,8 @@ test('an editor can set an ad load warning threshold and it is highlighted once 
 
     expect((float) $issue->magazine->fresh()->ad_threshold_percentage)->toBe(10.0);
 
-    // Con una pagina intera su 4 pagine numerate (6 totali - 2 di
-    // copertina) il carico è 25%, sopra la soglia del 10% appena
+    // Con una pagina intera su 6 pagine interne il carico è 16,67%,
+    // sopra la soglia del 10% appena
     // impostata. $issue->fresh() evita di riusare la relazione
     // "magazine" già cache-ata (con la vecchia soglia) sulla variabile
     // di test originale.
@@ -137,4 +135,17 @@ test('a guest cannot change the ad load threshold', function () {
         ->call('updateAdThreshold', '30');
 
     expect($issue->magazine->fresh()->ad_threshold_percentage)->toBeNull();
+});
+
+// Fase 2 (2026-10-26): una pubblicità sulla IV di copertina non entra nella
+// percentuale delle pagine interne (né al numeratore né al denominatore).
+test('an ad on a cover does not change the internal ad load', function () {
+    $issue = reorderableIssue();
+    $cover = $issue->covers()->where('cover_slot', 'IV')->first();
+    $content = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Pubblicita]);
+    Advertisement::factory()->create(['content_id' => $content->id, 'format' => AdFormat::PaginaIntera, 'occupied_percentage_override' => null]);
+    $cover->contents()->attach($content->id, ['occupied_percentage' => '100']);
+
+    Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
+        ->assertSee('0 pagine equiv. pubblicità su 6 totali');
 });

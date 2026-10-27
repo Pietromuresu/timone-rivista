@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\CoverSlot;
 use App\Models\Content;
 use App\Models\Page;
 use App\Models\PageGroup;
@@ -45,26 +46,23 @@ final class ContentPlacer
 
         $span = $occupancy->pagesSpanned();
 
-        $targetPages = Page::query()
-            ->where('issue_id', $startPage->issue_id)
-            ->where('position', '>=', $startPage->position)
-            ->where('position', '<', $startPage->position + $span)
-            ->orderBy('position')
-            ->get();
+        $targetPages = $startPage->isCover()
+            ? self::coverTargets($startPage, $span)
+            : self::internalTargets($startPage, $span);
 
-        if ($targetPages->count() < $span) {
-            return "«{$content->displayLabel()}» occupa {$span} pagine consecutive, ma dalla pagina {$startPage->position} il numero ne ha solo {$targetPages->count()}: scegli una pagina più in alto.";
+        if (is_string($targetPages)) {
+            return str_replace('{content}', $content->displayLabel(), $targetPages);
         }
 
         foreach ($targetPages as $page) {
             if ($page->isLocked()) {
-                return "La pagina {$page->position} è bloccata: sbloccala o scegli un'altra pagina di partenza (nessuna pagina è stata modificata).";
+                return 'La '.$page->label()." è bloccata: sbloccala o scegli un'altra pagina di partenza (nessuna pagina è stata modificata).";
             }
 
             $occupied = $page->contents()->pluck('occupied_percentage')->all();
 
             if (! PagePercentageAllocator::fits($occupied, $percentage)) {
-                return "Spazio insufficiente sulla pagina {$page->position} per «{$content->displayLabel()}» ({$percentage}% richiesto): nessuna pagina è stata modificata.";
+                return 'Spazio insufficiente sulla '.$page->label()." per «{$content->displayLabel()}» ({$percentage}% richiesto): nessuna pagina è stata modificata.";
             }
         }
 
@@ -96,7 +94,9 @@ final class ContentPlacer
             // materiale" (Punto 4.5): le pagine di un contenuto multipagina
             // si spostano insieme. Un fallimento (pagina già in un altro
             // gruppo) non annulla il posizionamento, come lì.
-            if ($span < 2) {
+            // Fase 2: le copertine non entrano mai in un gruppo collegato
+            // (il gruppo si sposta tra le pagine interne, una copertina no).
+            if ($span < 2 || $targetPages->contains(fn (Page $page) => $page->isCover())) {
                 return null;
             }
 
@@ -106,5 +106,62 @@ final class ContentPlacer
         });
 
         return ['pages' => $targetPages, 'percentage' => (string) $percentage, 'group' => $group];
+    }
+
+    /**
+     * Pagine interne consecutive dalla pagina di partenza.
+     *
+     * @return Collection<int, Page>|string
+     */
+    private static function internalTargets(Page $startPage, int $span): Collection|string
+    {
+        $targetPages = $startPage->issue->pages()
+            ->where('position', '>=', $startPage->position)
+            ->where('position', '<', $startPage->position + $span)
+            ->get();
+
+        if ($targetPages->count() < $span) {
+            return "«{content}» occupa {$span} pagine consecutive, ma dalla pagina {$startPage->position} il numero ne ha solo {$targetPages->count()}: scegli una pagina più in alto.";
+        }
+
+        return $targetPages;
+    }
+
+    /**
+     * Fase 2 (2026-10-26) — contenuto piazzato su una copertina. Una pagina:
+     * solo la copertina. Più pagine (bug 8, "la prima sulla copertina, le
+     * altre sulle pagine successive"), solo dove la copertina forma
+     * un'apertura con le pagine interne:
+     * - II di copertina: la II e poi le pagine 1, 2, … (l'apertura II + 1);
+     * - III di copertina: le ultime pagine interne e poi la III
+     *   (l'apertura ultima pagina + III), in ordine di sfoglio.
+     * I, IV e bandella accolgono una sola pagina: non hanno pagine interne
+     * accanto.
+     *
+     * @return Collection<int, Page>|string
+     */
+    private static function coverTargets(Page $cover, int $span): Collection|string
+    {
+        if ($span === 1) {
+            return collect([$cover]);
+        }
+
+        $internal = $cover->issue->pages();
+
+        $targetPages = match ($cover->cover_slot) {
+            CoverSlot::II => collect([$cover])->concat($internal->where('position', '<', $span)->get()),
+            CoverSlot::III => $internal->where('position', '>', $cover->issue->total_pages - ($span - 1))->get()->concat([$cover]),
+            default => null,
+        };
+
+        if ($targetPages === null) {
+            return "«{content}» occupa {$span} pagine: la {$cover->label()} ne accoglie una sola. Su più pagine si può partire dalla II di copertina (continua sulle pagine 1, 2…) o dalla III (le ultime pagine interne e poi la III).";
+        }
+
+        if ($targetPages->count() < $span) {
+            return "«{content}» occupa {$span} pagine, ma il numero non ha abbastanza pagine interne accanto alla {$cover->label()}.";
+        }
+
+        return $targetPages->values();
     }
 }

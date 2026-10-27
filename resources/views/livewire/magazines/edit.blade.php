@@ -52,12 +52,6 @@
                         <x-input-error class="mt-2" :messages="$errors->get('ad_threshold_percentage')" />
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <input id="battente_counted_in_total" wire:model="battente_counted_in_total" type="checkbox" class="rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500" />
-                        <x-input-label for="battente_counted_in_total" value="Il battente conta nel totale pagine dichiarato del numero" class="mb-0" />
-                        <x-input-error class="mt-2" :messages="$errors->get('battente_counted_in_total')" />
-                    </div>
-
                     {{-- Default del calcolo peso: copiati su ogni nuovo numero (Issues\Create). --}}
                     <fieldset class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-4">
                         <legend class="px-1 font-medium text-gray-700 dark:text-gray-300">⚖️ Carta e peso — valori di default</legend>
@@ -79,7 +73,7 @@
                         {{-- Pagine di prova: solo per l'anteprima, la rivista non ha un numero di pagine
                              proprio (Magazines\Edit::$previewTotalPages, mai salvato). --}}
                         <div class="max-w-xs">
-                            <x-input-label for="previewTotalPages" value="Pagine totali per l'anteprima (non salvate)" />
+                            <x-input-label for="previewTotalPages" value="Pagine interne per l'anteprima (non salvate)" />
                             <input id="previewTotalPages" type="text" inputmode="numeric" wire:model.live.debounce.300ms="previewTotalPages" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm" />
                         </div>
                         <x-weight-preview :preview="$weightPreview" title="Anteprima con questi default" />

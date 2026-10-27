@@ -24,7 +24,9 @@ function previewForm(array $overrides = []): array
     ], $overrides);
 }
 
-function preview(array $overrides = [], ?int $totalPages = 214, ?MagazineWeightResult $saved = null): WeightPreview
+// Fase 2 (2026-10-26): $totalPages sono le pagine INTERNE (prima 214 totali
+// − 6 di copertina = 208 interne); stessi numeri attesi di prima.
+function preview(array $overrides = [], ?int $totalPages = 208, ?MagazineWeightResult $saved = null): WeightPreview
 {
     return WeightPreview::fromForm(previewForm($overrides), $totalPages, [250, 350, 500, 1000], WeightLimits::fromValues(30, 400, 50, 1000), $saved);
 }

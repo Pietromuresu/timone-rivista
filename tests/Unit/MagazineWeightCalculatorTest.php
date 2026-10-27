@@ -241,19 +241,9 @@ test('addable pages are null when the copy is already out of bracket', function 
     expect(MagazineWeightCalculator::addablePages(weightInput(['pagine_interno' => 440]), WEIGHT_TEST_BRACKETS))->toBeNull();
 });
 
-test('a mismatch between cover roles in the timone and cover pages is a warning', function () {
-    $input = MagazineWeightInput::fromArray([
-        'formato_base_mm' => 210, 'formato_altezza_mm' => 297,
-        'grammatura_interno' => 80, 'grammatura_copertina' => 170,
-        'pagine_copertina' => 4, 'maggiorazione_percentuale' => 2,
-        'tolleranza_grammatura_perc' => 4, 'tolleranza_formato_mm' => 1, 'tolleranza_maggiorazione_perc' => 1,
-    ], 80, 2);
-
-    $result = MagazineWeightCalculator::calculate($input, WEIGHT_TEST_BRACKETS);
-
-    expect($result->complete)->toBeTrue()
-        ->and(implode(' ', $result->warnings))->toContain('2 pagine con ruolo copertina');
-});
+// Fase 2 (2026-10-26): rimosso il test "ruoli copertina nel timone diversi
+// dalle pagine copertina": il parametro deriva ora dalle copertine esistenti
+// (Issue::coverPageCount()) e l'avviso non può più scattare.
 
 // --- Grammatura vs peso a pagina (follow-up 2026-10-26) ---------------------
 

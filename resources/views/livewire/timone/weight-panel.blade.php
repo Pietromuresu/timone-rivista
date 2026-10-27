@@ -130,7 +130,7 @@
             <form wire:submit="saveParams" class="p-6 space-y-4">
                 <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Parametri peso di questo numero</h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                    Modificano solo questo numero, mai i default della rivista (la modifica resta nella cronologia). Le pagine interne seguono il timone: {{ $issue->total_pages }} pagine totali meno le pagine di copertina.
+                    Modificano solo questo numero, mai i default della rivista (la modifica resta nella cronologia). Le pagine seguono il timone: {{ $issue->total_pages }} pagine interne e {{ $issue->coverPageCount() }} pagine di copertina (le copertine esistenti: 6 se c'è la bandella, che si aggiunge o toglie dalla fascia copertine del timone).
                 </p>
                 {{-- Carta in cima: è il punto dove si sbaglia l'unità (0,8 invece di 80).
                      Sotto ogni grammatura il peso a pagina calcolato (WeightPreview),
@@ -145,7 +145,7 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400">Inserisci la grammatura scritta sulla carta (es. 80 per l'interno, 170 per la copertina): il peso di ogni pagina è calcolato automaticamente.</p>
                     <div class="grid grid-cols-2 gap-4">
                         @foreach (WeightParameters::PAPER_FIELDS as $field)
-                            <x-weight-field :field="$field" :model="'params.'.$field" :modified="in_array($field, $modifiedFields, true)" :paper="$preview?->paper[$field] ?? null" live />
+                            <x-weight-field :field="$field" :model="'params.'.$field" :modified="in_array($field, $modifiedFields, true)" :paper="$preview?->paper[$field] ?? null" :readonly="$field === 'pagine_copertina'" live />
                         @endforeach
                     </div>
                 </section>

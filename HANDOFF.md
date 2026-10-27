@@ -1403,3 +1403,48 @@ L'utente ha approvato la Fase 1 e ha lasciato a me le due decisioni aperte sul b
 
 ### Documentazione aggiornata
 `MANUALE_UTENTE.md` §7, `docs/03-dominio-e-flussi.md` (flusso creazione contenuto), `docs/10-debugging.md` (riga "PDF più lungo del formato" + come eseguire i test Imagick), `docs/CHANGELOG.md`, `docs/DA-VERIFICARE.md` (DV-25), `docs/nextcloud/timone-rivista.md`. La voce "Limite noto" della sessione 2026-10-12 (pubblicità con PDF più lungo del formato rifiutata) è superata da questa.
+
+## Sessione 2026-10-26 (continuazione) — Batch "revisione con gli utenti", Fase 2: copertine separate dalle pagine
+
+Sostituisce la scelta "A" della sessione 2026-09-01 (copertine dentro `total_pages`, solo etichetta diversa con `PageNumberer`): la richiesta ora è esplicita — copertine come elementi separati, pagine interne da 1, nessun calcolo a mente.
+
+### Modello (decisione architetturale)
+- **Le copertine restano righe di `pages`**, con la nuova colonna `cover_slot` (`App\Enums\CoverSlot`: `I`, `II`, `III`, `IV`, `bandella`) e `position` **NULL**. Alternativa scartata: una tabella `covers` a sé — avrebbe richiesto di duplicare assegnazione contenuti (pivot `page_content`), anteprime (`Page::previewFile()`), stato, blocco, note, ContentPlacer e broadcast. Così una copertina sa fare tutto ciò che sa fare una pagina, ma resta fuori dalla sequenza.
+- **Esclusione alla fonte**: `Issue::pages()` restituisce solo le interne (`whereNull('cover_slot')`); `Issue::covers()` le copertine; `Issue::allPages()` entrambe. Riordino, ridimensionamento, cruscotto, selezione "tutte", export passano da `pages()` e non vedono mai le copertine senza dover essere modificati uno a uno. `unique(issue_id, position)` resta (più NULL ammessi da MySQL/SQLite); nuovo `unique(issue_id, cover_slot)`.
+- `total_pages` = pagine interne. `Issue::displayedTotalPages()` restituisce `total_pages` (resta per i chiamanti). Numerazione = `position` (rimosso `App\Support\PageNumberer`).
+- **Bandella** = vecchio "battente": slot facoltativo, 2 facciate nel peso. `issues.pagine_copertina` è ora derivato (`Issue::coverPageCount()`, scritto da `IssueCovers::syncPrintedPages()`), in sola lettura nella modale del Peso; sulla rivista resta il default che decide se un nuovo numero nasce con la bandella (≥ 6). Tolto l'avviso del peso "ruoli copertina ≠ pagine copertina" (non può più scattare) e il campo `pagineCopertinaNelTimone`.
+- Rimossi: `App\Enums\PageRole`, `App\Support\PageRoleAssigner`, `App\Support\PageNumberer`, `App\Livewire\Timone\CoverSection` (+ vista) e i loro test. La colonna `pages.role` e `magazines.battente_counted_in_total` restano (rollback; nessuna migration distruttiva) ma non sono più lette; la spunta "il battente conta nel totale" è sparita dai moduli rivista.
+
+### Nuove classi/metodi
+- `App\Support\IssueCovers` (unico punto che scrive `cover_slot`): `ensure()` (I–IV sempre — prima nascevano solo I e IV, **bug corretto**), `addBandella()`, `removeBandella()` (solo se vuota e non bloccata), `swap()` (passo intermedio a NULL per il vincolo unique; bandella esclusa), `syncPrintedPages()`.
+- `IssueObserver::created()`: pagine interne 1…N + `IssueCovers::ensure()`.
+- `Grid`: `swapCovers()`, `addBandella()`, `removeBandella()`, guardie copertina in `movePage()` (errore "Le copertine non si spostano tra le pagine interne"), `nudgePage()`, `selectForSwap()`, `togglePageSelection()`, `clickPage()`; `render()` carica le copertine a parte (`pageEagerLoads()` condiviso) e passa `frontCovers`/`backCovers`.
+- `ContentPlacer::coverTargets()`: dalla II → II + pagine 1…; dalla III → ultime pagine interne + III; I, IV, bandella una pagina sola. Mai gruppo collegato con una copertina. `ContentCreate` ancorato a una copertina salta la modale di conflitto (ragiona per posizioni interne) e usa queste regole. Chiude il ramo copertina del bug 8.
+- `Page::isCover()`, `label()` ("pagina 5"/"II di copertina"), `shortLabel()` — usati in messaggi, cronologia e `AutomaticChecks` (che ora restituisce etichette, non interi).
+- Evento `App\Events\CoversChanged` (Grid + WeightPanel).
+- Vista: `partials/cover-band.blade.php` (fasce "front"/"back", in tutte e tre le viste, fuori dal contenitore Sortable); page-card/page-row con `$isCover` (etichetta blu draggable nativa `text/cover-id`, niente maniglia Sortable/frecce/selezione, contorno indaco). Intestazione "N pagine interne · copertine 4 (X assegnate)"; "⚙️ Pagine interne"; modulo di creazione "Numero di pagine interne (copertine escluse)".
+- Export PDF: sezione "Copertine" da `covers()`; cruscotto e CSV/PDF ADV solo su `pages()`.
+
+### Migration (nuove e reversibili)
+1. `2026_10_26_200000_add_cover_slot_to_pages_table` — `cover_slot`, `position` nullable, unique.
+2. `2026_10_26_200001_create_cover_conversion_logs_table` — registro della conversione.
+3. `2026_10_26_200002_convert_cover_pages_to_slots` — dati: `App\Support\Covers\CoverConversionPlanner` (puro) + `CoverConversion` (query builder, non modelli). Ruoli copertina1-4/battente → slot I-IV/bandella, interne rinumerate da 1 nell'ordine, slot mancanti creati vuoti, gruppi rimasti con una pagina sciolti, ruolo duplicato → la seconda pagina resta interna con avviso, numero senza alcun ruolo → tutte interne + 4 copertine vuote (era ciò che vedeva l'utente). `down()` ripristina dal registro **e** riporta al vecchio modello i numeri creati dopo la conversione — **bug trovato provando il rollback**: senza questo passo il rollback dello schema falliva (position NULL su un NOT NULL).
+- Dry-run: `php artisan timone:covers-dry-run [--issue=ID]` (funziona anche sullo schema vecchio). Eseguito sul DB di sviluppo (4 numeri): #1 e #2 64 → 62 interne (I←pag.1, IV←pag.64, II/III create); #3 214 → 210 interne (I←1 con 1 contenuto, bandella←4, II←5, IV←214, III creata; avvisi: seconda "copertina2" in pos. 45 e secondo "battente" in pos. 47 restano interne); #4 212 → 210 (I←1 con 1 contenuto, IV←212, II/III create).
+- **Verifica**: migrate + rollback + migrate su SQLite temporaneo, e su una **copia MySQL dei dati di sviluppo** in un container temporaneo: totali 62/62/210/210, 7 copertine create, 15 assegnazioni prima = dopo = dopo il rollback, nessuna posizione NULL dopo il rollback. **La migration NON è stata eseguita sul DB di sviluppo** (in attesa di ok, come richiesto).
+
+### Test
+Nuovi: `tests/Unit/CoverConversionPlannerTest.php` (7), `tests/Feature/Covers/CoverConversionMigrationTest.php` (5: conversione con contenuti su copertina e interna, rollback, idempotenza, dry-run, rollback dei numeri nati dopo), `tests/Feature/Livewire/TimoneCoversTest.php` (17: 4 copertine alla creazione, bandella da rivista a 6, copertine non spostabili tra le interne, scambio con contenuti, copertina bloccata, selezione multipla, assegnazione, regole II/III/I/IV, bandella e peso, resize che non tocca le copertine, markup in 3 viste, upload ancorato a una copertina). Aggiornati per scelta (non regressioni): test del peso (`createWeightIssue` ora 208 interne + bandella = stesso NM), cruscotto (denominatore 6 interne), griglia (numerazione/copertine), export, moduli rivista (spunta battente rimossa), `AutomaticChecksTest` (etichette). Rimossi con il codice: `TimoneCoverSectionTest`, `PageRoleAssignerTest`, `PageNumbererTest`, il test del vecchio avviso del peso. Suite: **673 + 38 skipped in locale, 711/711 nel container con imagick**.
+
+### Scelte di default (punti ambigui risolti)
+- Bandella = slot facoltativo che vale 2 facciate; si aggiunge/toglie a mano; un nuovo numero la riceve se la rivista ha 6 pagine di copertina.
+- In vista doppia pagina la II non è affiancata alla pagina 1 (fascia separata, come richiesto) — `docs/11-debito-tecnico.md` #53.
+- Bandella non scambiabile con le copertine (formato diverso).
+- Copertine fuori da selezione multipla, modalità scambio, frecce e gruppi collegati.
+
+## Sessione 2026-10-26 (continuazione) — Fase 2 approvata: copertine in un'unica fascia, migration applicata
+
+- **Richiesta dell'utente all'ok della Fase 2**: "sposta le ultime copertine insieme ad inizio liste". Ora TUTTE le copertine (I, bandella, II, III, IV, in ordine di sfoglio) stanno in un'unica fascia `data-testid="cover-band"` in cima al timone, prima della pagina 1, in tutte e tre le viste. `Grid::render()` passa `covers` (non più `frontCovers`/`backCovers`); rimosso `CoverSlot::isFront()` (non più usato). Test aggiornato: `TimoneGridTest` ("internal pages are numbered from 1…": una sola fascia, prima della pagina 1, ordine I → IV). Documentazione aggiornata (manuale §3 e §9bis, README, docs/03, CHANGELOG, Nextcloud).
+- **Migration sul DB di sviluppo**: risultava **già applicata** alle 18:07 (batch 2 della tabella `migrations`) — lo stack Docker era stato ricostruito col codice nuovo e la migration è partita all'avvio. Esito identico al dry-run (#1/#2 62 interne, #3 210 + bandella, #4 210), più il numero #5 «TTOT» creato alle 18:06 col codice vecchio (32 → 30 interne, I e IV dai ruoli, II e III create). Dopo la conversione, dall'interfaccia: bandella aggiunta/tolta sul #5, **bandella tolta sul #3** (era vuota). Conseguenza: per il #3 un eventuale rollback non è più esatto (la pagina della vecchia bandella, id 130, non esiste più: resterebbe un buco in posizione 4) — annotato anche in `docs/11-debito-tecnico.md` #51 come caso generale.
+- Il container `app` in esecuzione NON contiene ancora la modifica "fascia unica" (fatta dopo il rebuild): serve `docker compose up -d --build`.
+- File di ripartenza per la sessione successiva: `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md` (prompt originale completo + stato di ogni fase).
+- Suite dopo la modifica "fascia unica": 674 + 38 skipped in locale; **712/712 con imagick**.

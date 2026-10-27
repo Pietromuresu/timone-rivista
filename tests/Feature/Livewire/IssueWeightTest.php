@@ -30,7 +30,10 @@ function weightEditorFor(Magazine $magazine): User
  * Crea un numero NM-like dal form reale (Issues\Create), così i parametri
  * passano davvero dalla copia dei default della rivista.
  */
-function createWeightIssue(Magazine $magazine, User $user, int $totalPages = 214, array $weightOverrides = []): Issue
+// Fase 2 (2026-10-26): $totalPages sono le pagine INTERNE (copertine a
+// parte): 208 interne + 6 di copertina (la rivista NM ha la bandella) è lo
+// stesso numero NM dell'Excel che prima si scriveva come "214 totali".
+function createWeightIssue(Magazine $magazine, User $user, int $totalPages = 208, array $weightOverrides = []): Issue
 {
     $component = Livewire::actingAs($user)->test(IssueCreate::class, ['magazine' => $magazine])
         ->set('title', 'Numero peso')
@@ -58,7 +61,7 @@ test('creating an issue copies the magazine weight defaults onto the issue', fun
         ->and($issue->n_copie)->toBe(8200)
         ->and($issue->n_bancali)->toBe(5);
 
-    // 214 pagine totali − 6 di copertina = 208 interne: caso NM dell'Excel.
+    // 208 pagine interne + 6 di copertina (I–IV e bandella, create da sole): caso NM dell'Excel.
     $weight = $issue->weight();
 
     expect($weight->input->pagineInterno)->toBe(208)
@@ -89,7 +92,7 @@ test('the creation form shows a live weight preview', function () {
     $magazine = Magazine::factory()->withWeightDefaults()->create();
 
     Livewire::actingAs(weightEditorFor($magazine))->test(IssueCreate::class, ['magazine' => $magazine])
-        ->set('total_pages', 214)
+        ->set('total_pages', 208)
         ->assertSee('510,7 g')
         ->assertSee('± 31 g');
 });
@@ -125,11 +128,11 @@ test('changing the issue page count changes the calculated weight', function () 
 
     $magazine = Magazine::factory()->withWeightDefaults()->create();
     $user = weightEditorFor($magazine);
-    $issue = createWeightIssue($magazine, $user, totalPages: 214);
+    $issue = createWeightIssue($magazine, $user, totalPages: 208);
     $before = $issue->weight()->pesoCopiaG;
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
-        ->set('newTotalPages', '218')
+        ->set('newTotalPages', '212')
         ->call('resizePages')
         ->assertDispatched('issue-page-count-changed');
 
@@ -143,12 +146,12 @@ test('changing the issue page count changes the calculated weight', function () 
 test('the weight panel re-renders with the new page count when notified', function () {
     $magazine = Magazine::factory()->withWeightDefaults()->create();
     $user = weightEditorFor($magazine);
-    $issue = createWeightIssue($magazine, $user, totalPages: 214);
+    $issue = createWeightIssue($magazine, $user, totalPages: 208);
 
     $panel = Livewire::actingAs($user)->test(WeightPanel::class, ['issue' => $issue])
         ->assertSee('208 pag.');
 
-    $issue->update(['total_pages' => 218]);
+    $issue->update(['total_pages' => 212]);
 
     $panel->dispatch('issue-page-count-changed')->assertSee('212 pag.');
 });
@@ -165,7 +168,7 @@ test('the weight panel shows "Parametri peso da configurare" when parameters are
 test('the weight panel shows an odd page count as a blocking error', function () {
     $magazine = Magazine::factory()->withWeightDefaults()->create();
     $user = weightEditorFor($magazine);
-    $issue = createWeightIssue($magazine, $user, totalPages: 213);
+    $issue = createWeightIssue($magazine, $user, totalPages: 207);
 
     Livewire::actingAs($user)->test(WeightPanel::class, ['issue' => $issue])
         ->assertSee('devono essere un numero pari');
@@ -341,6 +344,8 @@ test('editing the grammage from the modal changes the issue weight, never the ma
         ->call('openEditor')
         ->set('params.grammatura_interno', '90')
         ->set('params.grammatura_copertina', '200')
+        // Fase 2: le pagine di copertina di un numero derivano dalle
+        // copertine esistenti — un valore scritto nella modale è ignorato.
         ->set('params.pagine_copertina', '4')
         ->call('saveParams')
         ->assertHasNoErrors();
@@ -351,7 +356,7 @@ test('editing the grammage from the modal changes the issue weight, never the ma
     expect($issue->weight()->pesoCopiaG)->not->toBe($before)
         ->and((float) $issue->grammatura_interno)->toBe(90.0)
         ->and((float) $issue->grammatura_copertina)->toBe(200.0)
-        ->and($issue->pagine_copertina)->toBe(4)
+        ->and($issue->pagine_copertina)->toBe(6)
         ->and((float) $magazine->grammatura_interno)->toBe(80.0)
         ->and((float) $magazine->grammatura_copertina)->toBe(170.0)
         ->and($magazine->pagine_copertina)->toBe(6)
@@ -433,18 +438,18 @@ test('the creation form shows the weight per page under each grammage', function
     $magazine = Magazine::factory()->withWeightDefaults()->create();
 
     Livewire::actingAs(weightEditorFor($magazine))->test(IssueCreate::class, ['magazine' => $magazine])
-        ->set('total_pages', 214)
+        ->set('total_pages', 208)
         ->assertSee('80 g/m² → 2,268 g a pagina · 208 pagine = 471,7 g', escape: false)
         ->assertSee('170 g/m² → 4,820 g a pagina · 6 pagine = 28,9 g', escape: false);
 });
 
 test('the magazine settings reject out-of-range grammages and preview the defaults', function () {
     $magazine = Magazine::factory()->withWeightDefaults()->create();
-    createWeightIssue($magazine, weightEditorFor($magazine), totalPages: 214);
+    createWeightIssue($magazine, weightEditorFor($magazine), totalPages: 208);
 
     Livewire::actingAs(weightAdmin())->test(MagazineEdit::class, ['magazine' => $magazine])
-        // Pagine di prova proposte dall'ultimo numero.
-        ->assertSet('previewTotalPages', '214')
+        // Pagine interne di prova proposte dall'ultimo numero.
+        ->assertSet('previewTotalPages', '208')
         ->assertSee('80 g/m² → 2,268 g a pagina · 208 pagine = 471,7 g', escape: false)
         ->assertSee('510,7 g')
         ->set('weight.grammatura_copertina', '1,7')

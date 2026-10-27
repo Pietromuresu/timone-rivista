@@ -81,7 +81,7 @@ Chi le scrive:
 | Default su `magazines` | `App\Livewire\Magazines\Edit::save()`; `maggiorazione_percentuale` anche da `App\Livewire\Timone\WeightPanel::applySuggestedSurcharge()` (calibrazione, solo Admin) |
 | Parametri su `issues` | `App\Livewire\Issues\Create::save()` (copia dei default della rivista) e `WeightPanel::saveParams()` |
 
-Le pagine interne **non** sono una colonna: si derivano da `issues.total_pages − issues.pagine_copertina`.
+Le pagine interne **non** sono una colonna: sono `issues.total_pages`. `pagine_copertina` sul numero è scritto da `App\Support\IssueCovers::syncPrintedPages()` (4, o 6 con la bandella) e non è più modificabile a mano (Fase 2, 2026-10-26); sulla rivista resta il default che decide se un nuovo numero nasce con la bandella (≥ 6).
 
 Cast: solo gli interi (`formato_*_mm`, `pagine_copertina`, `n_copie`, `n_bancali`). I decimal restano grezzi, senza cast `decimal:2`, per evitare la deprecation di `brick/math` (vedi [11-debito-tecnico.md](11-debito-tecnico.md)); li converte a float `MagazineWeightInput::fromArray()`.
 
@@ -108,9 +108,15 @@ Numeri e riviste **già esistenti** al momento della migration:
 
 ### `pages`
 - **Scopo**: pagina fisica del numero.
-- **Colonne**: `position` (1..N), `content_type` (`editoriale`/`pubblicita`/`mista`/`bianca`, derivato dai contenuti), `status` (`da_assegnare`…`ok_stampa`), `role` (`copertina1..4`/`battente`/`interna`), `locked_at`/`locked_by`, `page_group_id` (FK page_groups), `notes`.
-- **Vincoli**: **`unique(issue_id, position)`**: il riordino usa un offset temporaneo (vedi [02-architettura.md](02-architettura.md)).
-- **Scrive**: quasi tutti i metodi di `Grid`, `IssueObserver`, `PageInserter`, `CoverSection`.
+- **Colonne**: `position` (1..N per le pagine interne, **NULL per le copertine** dal 2026-10-26), `cover_slot` (`I`/`II`/`III`/`IV`/`bandella`, NULL per le pagine interne — `App\Enums\CoverSlot`), `content_type` (`editoriale`/`pubblicita`/`mista`/`bianca`, derivato dai contenuti), `status` (`da_assegnare`…`ok_stampa`), `role` (**non più letto dal codice** dalla Fase 2: resta come traccia e per il rollback della conversione), `locked_at`/`locked_by`, `page_group_id` (FK page_groups), `notes`.
+- **Vincoli**: **`unique(issue_id, position)`** (più NULL ammessi: le copertine): il riordino usa un offset temporaneo (vedi [02-architettura.md](02-architettura.md)); **`unique(issue_id, cover_slot)`**.
+- **Scrive**: quasi tutti i metodi di `Grid`, `IssueObserver`, `PageInserter`, `App\Support\IssueCovers` (unico punto che scrive `cover_slot`).
+
+### `cover_conversion_logs` (Fase 2, 2026-10-26)
+- **Scopo**: registro, riga per riga, di ciò che ha fatto la migration `2026_10_26_200002_convert_cover_pages_to_slots` (pagina diventata copertina, rinumerata, copertina creata, gruppo sciolto, totali del numero prima della conversione). Rende la migration reversibile: `down()` ripristina posizioni, ruoli, gruppi e totali da qui, e riporta al vecchio modello anche i numeri creati dopo la conversione.
+- **Colonne**: `issue_id`, `page_id`, `action` (`to_cover`/`renumbered`/`created_cover`/`ungrouped`/`issue_totals`), `old_position`, `new_position`, `old_role`, `cover_slot`, `old_page_group_id`, `old_total_pages`, `old_pagine_copertina`.
+- **Da non cancellare** finché si vuole poter annullare la conversione. Il rollback è pensato per l'immediato dopo-deploy: dopo nuove modifiche al timone le posizioni ripristinate possono collidere.
+- **Prima del deploy**: `php artisan timone:covers-dry-run` mostra per ogni numero cosa diventa cosa, senza scrivere nulla (funziona anche sullo schema vecchio).
 
 ### `contents`
 - **Scopo**: articolo o pubblicità del numero, assegnato o no.

@@ -9,7 +9,7 @@
     la virgola in molti browser/locali, mentre la redazione scrive "80,5".
     La virgola viene convertita lato server (WeightParameters::normalizeInput).
 --}}
-@props(['field', 'model', 'modified' => false, 'live' => false, 'paper' => null])
+@props(['field', 'model', 'modified' => false, 'live' => false, 'paper' => null, 'readonly' => false])
 
 @use('App\Support\Weight\WeightFormatter', 'F')
 
@@ -26,7 +26,10 @@
             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" title="Diverso dal default della rivista">modificato</span>
         @endif
     </div>
-    @if ($live)
+    @if ($readonly)
+        {{-- Fase 2: valore derivato (es. pagine di copertina di un numero), mostrato ma non modificabile. --}}
+        <input id="{{ $id }}" type="text" wire:model="{{ $model }}" readonly class="{{ $inputClasses }} bg-gray-100 dark:bg-gray-800 cursor-not-allowed" />
+    @elseif ($live)
         <input id="{{ $id }}" type="text" inputmode="{{ $inputMode }}" autocomplete="off" wire:model.live.debounce.300ms="{{ $model }}" class="{{ $inputClasses }}" />
     @else
         <input id="{{ $id }}" type="text" inputmode="{{ $inputMode }}" autocomplete="off" wire:model="{{ $model }}" class="{{ $inputClasses }}" />

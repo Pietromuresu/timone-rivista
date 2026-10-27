@@ -25,7 +25,6 @@ use App\Support\ContentPlacer;
 use App\Support\PageGroupLinker;
 use App\Support\PageInserter;
 use App\Support\PageOccupancy;
-use App\Support\PageRoleAssigner;
 use App\Support\Uploads\UploadEnvironmentInspector;
 use App\Support\Uploads\UploadLimits;
 use Illuminate\Contracts\View\View;
@@ -313,7 +312,11 @@ class ContentCreate extends Component
 
         $anchorPage = $this->anchorPageId !== null ? Page::find($this->anchorPageId) : null;
 
-        if ($anchorPage !== null && $anchorPage->issue_id === $this->issue->id && ($usedPdfPages ?? 0) > 1) {
+        // Fase 2: ancorato a una COPERTINA niente modale di conflitto (che
+        // ragiona per posizioni interne consecutive): le regole copertina +
+        // pagine accanto sono in ContentPlacer::place(), usato da
+        // placeOnAnchorPage().
+        if ($anchorPage !== null && $anchorPage->issue_id === $this->issue->id && ! $anchorPage->isCover() && ($usedPdfPages ?? 0) > 1) {
             $this->openMultipageConflict($anchorPage, $usedPdfPages, $validated, $pdfPageCount);
 
             return;
@@ -511,8 +514,6 @@ class ContentCreate extends Component
                 }
             });
 
-            PageRoleAssigner::syncCoverRoles($this->issue);
-
             ActivityLogger::log(
                 issue: $this->issue,
                 entityType: 'Issue',
@@ -584,7 +585,7 @@ class ContentCreate extends Component
     private function blockIfLocked(Page $page): bool
     {
         if ($page->isLocked()) {
-            $this->addError('locked', "La pagina {$page->position} è bloccata e non può essere sovrascritta: sbloccala prima di procedere.");
+            $this->addError('locked', 'La '.$page->label().' è bloccata e non può essere sovrascritta: sbloccala prima di procedere.');
 
             return true;
         }

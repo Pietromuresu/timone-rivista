@@ -38,7 +38,7 @@
     <h1>{{ $issue->magazine->name }} — {{ $issue->title }}</h1>
     <p class="subtitle">
         Timone completo &middot; generato il {{ now()->translatedFormat('d M Y, H:i') }}
-        &middot; {{ $totalPages }} pagine
+        &middot; {{ $totalPages }} pagine interne
         @if ($filtersApplied)
             &middot; filtro attivo, non tutte le pagine del numero sono mostrate
         @endif
@@ -66,7 +66,7 @@
     @endif
 
     {{--
-        Fase 3.1: sezione copertina/battente separata dalle pagine interne,
+        Fase 3.1 / Fase 2 (2026-10-26): copertine (I–IV, bandella) separate dalle pagine interne,
         PRIMA della griglia principale — stessa struttura .page-cell già
         usata sotto, solo una tabella a sé per non mescolare visivamente
         "quarta di copertina" con l'ultima pagina interna nella stessa riga
@@ -75,7 +75,7 @@
         sezione interna).
     --}}
     @if ($coverPages->isNotEmpty())
-        <h2 style="font-size: 12px; margin-bottom: 6px;">Copertina &amp; battente</h2>
+        <h2 style="font-size: 12px; margin-bottom: 6px;">Copertine</h2>
         <table class="page-grid" style="margin-bottom: 16px;">
             <tr>
                 @foreach ($coverPages as $page)
@@ -85,7 +85,7 @@
                         $latestFile = $page->files->first();
                     @endphp
                     <td class="page-cell" style="width: auto; background-color: {{ $typeColor['bg'] }}; border-color: {{ $statusColor['border'] }};">
-                        <span class="position" style="color: {{ $typeColor['text'] }};">{{ $page->role->label() }} (pag. {{ $page->position }})</span>
+                        <span class="position" style="color: {{ $typeColor['text'] }};">{{ $page->cover_slot->label() }}</span>
                         <span class="status-badge" style="background-color: {{ $statusColor['bg'] }}; color: {{ $statusColor['text'] }};">
                             {{ $page->status->label() }}
                         </span>
@@ -123,7 +123,7 @@
                         $latestFile = $page->files->first();
                     @endphp
                     <td class="page-cell" style="background-color: {{ $typeColor['bg'] }}; border-color: {{ $statusColor['border'] }};">
-                        <span class="position" style="color: {{ $typeColor['text'] }};">{{ $pageNumbers[$page->id] ?? $page->position }}</span>
+                        <span class="position" style="color: {{ $typeColor['text'] }};">{{ $page->position }}</span>
                         <span class="status-badge" style="background-color: {{ $statusColor['bg'] }}; color: {{ $statusColor['text'] }};">
                             {{ $page->status->label() }}
                         </span>

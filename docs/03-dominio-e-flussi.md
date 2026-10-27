@@ -45,27 +45,38 @@ Fonte: `app/Policies/*`, `app/Enums/UserRole.php`, `MANUALE_UTENTE.md` §14.
 ## Flusso 2 — Creazione rivista e accesso utenti (Admin)
 
 1. `/riviste/nuova` → `App\Livewire\Magazines\Create` (`authorize('create', Magazine::class)`, solo Admin). Lo slug è generato in `Magazine::booted()` (`app/Models/Magazine.php:38`).
-2. `/riviste/{slug}/modifica` → `Magazines\Edit`: soglia pubblicitaria (`ad_threshold_percentage`), `battente_counted_in_total`, redattore di riferimento (`redattore_id`).
+2. `/riviste/{slug}/modifica` → `Magazines\Edit`: soglia pubblicitaria (`ad_threshold_percentage`), redattore (`battente_counted_in_total` non è più nel modulo dalla Fase 2), di riferimento (`redattore_id`).
 3. `/utenti/nuovo` → `Users\Create`: crea l'utente con il ruolo e sincronizza `magazine_user`.
 
 ## Flusso 3 — Creazione di un numero
 
 1. `/riviste/{slug}/numeri/nuovo` → `App\Livewire\Issues\Create::save()` (`app/Livewire/Issues/Create.php:56`):
    - `authorize('create', Issue::class)` + `canAccessMagazine`;
-   - validazione: `total_pages` da 0 a 2000;
+   - validazione: `total_pages` (solo pagine **interne**, dalla Fase 2 del 2026-10-26) da 0 a 2000;
    - `Issue::create([... 'status' => bozza])`.
 2. **`App\Observers\IssueObserver::created()`** (registrato in `AppServiceProvider::boot`):
-   - inserisce `total_pages` righe in `pages` (tipo `bianca`, stato `da_assegnare`);
-   - `PageRoleAssigner::syncCoverRoles()` assegna i ruoli `copertina1`/`copertina4` alla prima e all'ultima pagina.
-3. Opzionale "duplica struttura": `Issue::duplicateStructureFrom($source)` (`app/Models/Issue.php:105`) copia solo `content_type` per posizione. **Non** copia i contenuti.
+   - inserisce `total_pages` pagine interne in `pages` (posizioni 1…N, tipo `bianca`, stato `da_assegnare`);
+   - `App\Support\IssueCovers::ensure()` crea **sempre** le copertine I, II, III, IV (righe di `pages` con `cover_slot` e `position` NULL; prima della Fase 2 nascevano solo I e IV, come ruolo della prima/ultima pagina) e la **bandella** se `pagine_copertina` ≥ 6; poi allinea `issues.pagine_copertina` (4 o 6).
+3. Opzionale "duplica struttura": `Issue::duplicateStructureFrom($source)` copia solo `content_type` per posizione (pagine interne) e per slot (copertine). **Non** copia i contenuti.
 4. Redirect a `issues.show`.
+
+## Copertine (Fase 2, 2026-10-26)
+
+- **Modello**: una copertina è una riga di `pages` con `cover_slot` (`App\Enums\CoverSlot`: `I`, `II`, `III`, `IV`, `bandella`) e `position` NULL. Resta una riga di `pages` per riusare contenuti, anteprime, stato, blocco e note senza duplicazioni; esce però dalla sequenza: `Issue::pages()` restituisce **solo le interne** (1…`total_pages`), `Issue::covers()` le copertine, `Issue::allPages()` entrambe. Vincolo `unique(issue_id, cover_slot)`.
+- **Numerazione**: le pagine interne sono numerate dalla loro `position` (niente più `PageNumberer`). `total_pages` = pagine interne; `Issue::displayedTotalPages()` restituisce lo stesso valore (resta per i chiamanti esistenti).
+- **Conteggi**: cruscotto pubblicitario, avvisi, pagine bianche e percentuali usano solo le interne; le copertine hanno un conteggio a parte nell'intestazione del timone.
+- **Spostamenti**: `Grid::movePage()`/`nudgePage()` rifiutano le copertine; le copertine non sono nel contenitore Sortable, quindi una pagina interna non può finirci dentro. Tra copertine: drag nativo (`text/cover-id`) → `Grid::swapCovers()` → `IssueCovers::swap()` (bandella esclusa, copertine bloccate escluse).
+- **Contenuti su più pagine partendo da una copertina** (`ContentPlacer::coverTargets()`): dalla II la II e poi le pagine 1, 2…; dalla III le ultime pagine interne e poi la III; I, IV e bandella una sola pagina. Mai in un gruppo collegato.
+- **Bandella**: `Grid::addBandella()`/`removeBandella()` (solo se vuota e non bloccata) → `IssueCovers`; vale 2 facciate: `issues.pagine_copertina` = 4 o 6, scritto da `IssueCovers::syncPrintedPages()` e mostrato in sola lettura nella modale del Peso.
+- **Evento**: `App\Events\CoversChanged` (scambio, bandella) ascoltato da `Grid` e `WeightPanel`.
+- **Conversione dei numeri esistenti**: migration `2026_10_26_200002_convert_cover_pages_to_slots` (piano in `App\Support\Covers\CoverConversionPlanner`, scritture e rollback in `CoverConversion`, registro `cover_conversion_logs`); anteprima con `php artisan timone:covers-dry-run`. Vedi [04-database.md](04-database.md).
 
 ## Flusso 4 — Apertura del timone
 
 `Issues\Show::mount()` (`authorize('view')`) monta:
 - `Timone\Grid`: griglia o lista delle pagine, cruscotto pubblicitario, avvisi automatici (`App\Support\AutomaticChecks`), storico;
 - `Timone\ContentCreate`: form "+ Nuovo contenuto" e pannello rubriche;
-- `Timone\CoverSection`: ruoli copertina e battente;
+- le **copertine** non hanno più un componente a sé (il vecchio `Timone\CoverSection` è stato rimosso con la Fase 2): `Grid` le mostra tutte in un'unica fascia in cima, prima della pagina 1 (`partials/cover-band.blade.php`, ordine I, bandella, II, III, IV), con le stesse card delle pagine. Regole: vedi "Copertine" sotto;
 - `Timone\AdReservations`: pubblicità prenotate e chiusura numero;
 - `ActivityLogPanel` e `PageFileHistory`.
 
@@ -223,7 +234,7 @@ Per questo grammature e formato hanno un intervallo ammesso in `config/peso_rivi
 
 I campi accettano sia la virgola sia il punto decimale (`80`, `80,5`, `80.5`): `WeightParameters::normalizeInput()` converte la virgola prima di validazione, anteprima e salvataggio.
 
-Le **pagine interne** non sono un campo salvato. Valgono `issues.total_pages − issues.pagine_copertina` (`Issue::weightInput()`, `app/Models/Issue.php:189`), perché nel timone le copertine occupano posizioni fisiche dentro `total_pages` (vedi Flusso 4 e `Issue::displayedTotalPages()`). Si usa il parametro `pagine_copertina` e non il conteggio dei ruoli copertina, perché Copertina II/III e Battente si assegnano a mano e spesso mancano. Se le pagine con ruolo copertina o battente nel timone non coincidono con `pagine_copertina`, il pannello mostra solo un **avviso**.
+Le **pagine interne** non sono un campo salvato: sono `issues.total_pages` (dalla Fase 2 le copertine non ne fanno più parte). Le **pagine di copertina** non sono più un parametro scritto a mano per il numero: sono le copertine che esistono (`Issue::coverPageCount()`: 4, o 6 con la bandella), vedi `Issue::weightInput()`. Prima della Fase 2 si calcolava `total_pages − pagine_copertina` e un avviso segnalava ruoli copertina incoerenti: l'avviso è stato tolto perché non può più scattare.
 
 **Precisione**: tutti i calcoli usano float nativi, senza bcmath. I decimal arrivano da Eloquent come stringhe e vengono convertiti in un punto solo, `MagazineWeightInput::fromArray()`. Nessun passaggio intermedio è arrotondato. L'arrotondamento avviene solo in visualizzazione (`app/Support/Weight/WeightFormatter.php`):
 
@@ -291,7 +302,6 @@ Badge nel pannello:
 **Errori bloccanti**: il risultato è `complete = false`, senza pesi e senza eccezioni.
 - base o altezza fuori da `WeightLimits` (50–1000 mm) e grammature fuori da `WeightLimits` (30–400 g/m²); quando il calcolo è chiamato senza limiti (solo test unitari) si controlla soltanto che siano > 0;
 - pagine interne o di copertina **dispari** ("mezzo foglio");
-- pagine interne negative (`total_pages` < `pagine_copertina`);
 - tolleranze negative;
 - maggiorazione − tolleranza maggiorazione < 0;
 - tolleranza formato ≥ formato;
@@ -299,7 +309,6 @@ Badge nel pannello:
 
 **Avvisi**:
 - pagine interne non multiple di 4 (segnature);
-- ruoli copertina nel timone diversi da `pagine_copertina`;
 - bancali senza peso del bancale.
 
 **Parametri mancanti**: risultato `complete = false` con l'elenco `missing`. In UI compare "Parametri peso da configurare". `n_copie` e `n_bancali` non sono obbligatori: senza, manca solo il peso della tiratura.
@@ -353,7 +362,7 @@ Esempio a mano, GL:
 - netto = 225,205596 × 6200 / 1000 = 1396,2746952 kg
 - lordo = 1396,2746952 + 5 × 20 = 1496,2746952 kg
 
-Nel timone, per ottenere le 208 pagine interne di NM, il numero deve avere `total_pages` = 214 (208 + 6 di copertina).
+Nel timone, NM è un numero con `total_pages` = 208 (pagine interne) e la bandella (6 pagine di copertina). Prima della Fase 2 lo stesso numero si scriveva come 214 pagine totali.
 
 ### File coinvolti, in ordine di esecuzione
 

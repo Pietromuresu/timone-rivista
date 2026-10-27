@@ -29,7 +29,7 @@ final readonly class WeightPreview
 
     /**
      * @param  array<string, mixed>  $values  valori di form (WeightParameters::FIELDS e opz. ISSUE_ONLY_FIELDS)
-     * @param  int|null  $totalPages  pagine totali del numero; null = non note (impostazioni rivista senza pagine di prova)
+     * @param  int|null  $totalPages  pagine INTERNE del numero (Fase 2: copertine escluse); null = non note (impostazioni rivista senza pagine di prova)
      * @param  list<int|float>  $brackets
      * @param  MagazineWeightResult|null  $saved  risultato con i valori salvati, per la differenza
      */
@@ -37,10 +37,12 @@ final readonly class WeightPreview
     {
         $values = WeightParameters::normalizeInput($values);
 
-        // Stessa regola di Issue::weightInput(): interne = totali − copertina.
+        // Fase 2 (2026-10-26): $totalPages sono le pagine INTERNE (le
+        // copertine non fanno più parte del totale), stessa regola di
+        // Issue::weightInput() — nessuna sottrazione.
         $cover = $values['pagine_copertina'] ?? '';
         $pagineCopertina = is_numeric($cover) ? (int) $cover : null;
-        $pagineInterno = $pagineCopertina !== null && $totalPages !== null ? $totalPages - $pagineCopertina : null;
+        $pagineInterno = $totalPages;
 
         $input = MagazineWeightInput::fromArray($values, $pagineInterno);
 

@@ -105,6 +105,7 @@ docker compose exec app php artisan migrate:status
 | Azioni nel timone che falliscono | Container reverb attivo? (log: "Could not resolve host: reverb") |
 | Drag&drop morto, console "You must pass your app key" (versioni prima del 2026-10-26) o "VITE_REVERB_APP_KEY non impostata" | REVERB_APP_KEY nel .env, poi rebuild. Dal 2026-10-26 il timone funziona comunque, in polling |
 | Console: "Cannot read properties of undefined (reading 'editorFor')" | app.js non caricato o vecchio: rebuild degli asset (docker compose up -d --build); vedi docs/10-debugging.md |
+| Deploy della modifica "copertine separate" | Prima del migrate: docker compose run --rm --no-deps app php artisan timone:covers-dry-run (mostra cosa diventa cosa, non scrive nulla) |
 | Non si caricano PDF/immagini | docker compose exec app php artisan timone:diagnose-upload, poi cercare upload_failed in storage/logs/laravel.log (checklist in docs/09-deploy.md §6bis). Causa più probabile: APP_URL diverso dall'indirizzo usato nel browser |
 | Miniature ferme | Container worker attivo? thumbnail_status in tabella content_files |
 | Mail non arrivate | MAIL_MAILER (log = non inviate), queue:failed, redattore di riferimento impostato sulla rivista |
@@ -119,6 +120,16 @@ docker compose exec app php artisan migrate:status
 - Un contenuto appena creato compare subito tra i "Contenuti da assegnare", anche per i colleghi.
 - Il riquadro per allegare un file indica il peso massimo accettato dal server; un file troppo pesante viene rifiutato subito, con il suo peso e il massimo.
 - Una pubblicità con un PDF di più pagine del suo formato non viene più rifiutata: il modulo chiede se usare tutte le pagine (la pubblicità ne occuperà tante quante il PDF) o solo alcune (da pagina X a pagina Y). Ogni pagina del timone mostra la pagina del PDF giusta.
+
+## Copertine (dal 2026-10-26)
+
+- Ogni numero ha sempre quattro copertine: I (la copertina), II (il suo retro), III (l'interno della quarta), IV (il retro della rivista). Stanno tutte insieme in una fascia azzurra "Copertine" in cima al timone, prima della pagina 1.
+- Le pagine interne partono sempre da 1. Il numero di pagine che si scrive creando un numero è solo quello delle pagine interne: le copertine si aggiungono da sole, non vanno contate né sottratte.
+- Sulle copertine si mettono articoli e pubblicità come sulle pagine (trascinandoli dal pannello "Contenuti da assegnare" o con "📎 Carica materiale"). Una copertina si trascina solo sopra un'altra copertina, per scambiarle; non si mescola con le pagine interne.
+- Una pubblicità di due pagine messa sulla II continua sulla pagina 1; messa sulla III prende l'ultima pagina interna e la III. La I e la IV accolgono una pagina sola.
+- Bandella (battente): "+ Aggiungi bandella" nella fascia delle prime copertine. Con la bandella le pagine di copertina per il peso diventano 6.
+- Percentuale di pubblicità e conteggi riguardano solo le pagine interne; le copertine hanno il loro conteggio in cima al timone ("copertine 4, X assegnate").
+- I numeri creati prima di questa modifica sono stati convertiti in automatico: le loro copertine sono diventate I–IV con i contenuti che avevano, le pagine interne sono state rinumerate da 1.
 
 ## Punti di attenzione
 
@@ -158,12 +169,12 @@ Il formato si inserisce in millimetri: 210 × 270, non 21 × 27. Il sistema acce
 ### Cambiare la carta di un singolo numero
 
 1. Nella pagina del numero, riquadro "Peso", premere "Modifica parametri".
-2. Nella sezione "Carta" cambiare grammatura interno, grammatura copertina o pagine copertina.
+2. Nella sezione "Carta" cambiare grammatura interno o grammatura copertina. Le pagine copertina di un numero già creato sono in grigio: dipendono dalle copertine (4, o 6 con la bandella, che si aggiunge dalla fascia copertine del timone).
 3. Prima di salvare, l'anteprima in fondo mostra il nuovo peso, il margine, lo scaglione e la differenza dal peso salvato (es. "−60,1 g rispetto al valore salvato (510,7 g), passa da scaglione 1.000 g a 500 g.").
 4. I valori diversi dalla rivista hanno il badge "modificato". "Ripristina default rivista" li riporta ai valori della rivista (non salva da solo).
 5. "Salva" modifica solo questo numero, mai i valori della rivista. La modifica resta nella cronologia.
 
-Le pagine interne non si inseriscono: sono le pagine totali del timone meno le pagine di copertina (esempio: 214 pagine nel timone con 6 di copertina = 208 interne). Se si cambiano le pagine del timone, il peso si aggiorna da solo.
+Le pagine interne non si inseriscono: sono le pagine del timone (esempio: 208 pagine interne, più 6 pagine di copertina se c'è la bandella). Se si cambiano le pagine del timone o si aggiunge/toglie la bandella, il peso si aggiorna da solo.
 
 Cambiare i valori della rivista non modifica mai i numeri già creati: ogni numero conserva i suoi.
 

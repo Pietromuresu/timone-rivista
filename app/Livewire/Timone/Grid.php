@@ -3,11 +3,13 @@
 namespace App\Livewire\Timone;
 
 use App\Enums\ContentType;
+use App\Enums\CoverSlot;
 use App\Enums\PageStatus;
 use App\Enums\ThumbnailStatus;
 use App\Enums\PageContentType;
 use App\Events\ContentAssigned;
 use App\Events\ContentListChanged;
+use App\Events\CoversChanged;
 use App\Events\ContentUnassigned;
 use App\Events\IssuePageCountUpdated;
 use App\Events\PageGroupsChanged;
@@ -27,16 +29,15 @@ use App\Models\PageReorderLog;
 use App\Support\ActivityLogger;
 use App\Support\AdLoadCalculator;
 use App\Support\AutomaticChecks;
+use App\Support\IssueCovers;
 use App\Support\ContentPageAttacher;
 use App\Support\ContentPlacer;
 use App\Support\PageCountResizer;
 use App\Support\PageGroupLinker;
 use App\Support\PageGroupResolver;
 use App\Support\PageInserter;
-use App\Support\PageNumberer;
 use App\Support\PagePercentageAllocator;
 use App\Support\PageReorderer;
-use App\Support\PageRoleAssigner;
 use App\Support\PageSpreadBuilder;
 use App\Support\ThumbnailProgressEstimator;
 use Illuminate\Contracts\View\View;
@@ -313,12 +314,6 @@ class Grid extends Component
             $this->issue->update(['total_pages' => $newTotal]);
         });
 
-        // Fase 3.1: un resize può spostare quale pagina fisica è la prima
-        // o l'ultima (es. inserimento in posizione 1, o rimozione della
-        // vecchia Copertina4 in coda) — va ricalcolato subito, non lasciato
-        // disallineato fino al prossimo accesso al pannello Copertina.
-        PageRoleAssigner::syncCoverRoles($this->issue);
-
         ActivityLogger::log(
             issue: $this->issue,
             entityType: 'Issue',
@@ -487,6 +482,16 @@ class Grid extends Component
             return;
         }
 
+        // Fase 2 (2026-10-26): una copertina non entra nella sequenza delle
+        // pagine interne (e una pagina interna non può diventare
+        // copertina: il drag&drop di Sortable vive solo nel contenitore
+        // delle interne). Tra copertine si scambia con swapCovers().
+        if ($page->isCover()) {
+            $this->addError('reorder', 'Le copertine non si spostano tra le pagine interne: trascina una copertina su un\'altra copertina per scambiarle.');
+
+            return;
+        }
+
         // Fase 2.3: se la pagina trascinata fa parte di un gruppo
         // collegato, l'intero gruppo si sposta insieme come blocco unico —
         // stesso identico meccanismo di moveSelectedBlock() (riusato via
@@ -586,12 +591,6 @@ class Grid extends Component
             return;
         }
 
-        // Fase 3.1: Copertina1/Copertina4 sono definite dalla posizione
-        // fisica (prima/ultima pagina), non da un id fisso — un drag&drop
-        // normale (non solo un resize) può spostare quale pagina occupa
-        // quegli estremi, va risincronizzato subito.
-        PageRoleAssigner::syncCoverRoles($this->issue);
-
         ActivityLogger::log(
             issue: $this->issue,
             entityType: 'Page',
@@ -624,7 +623,7 @@ class Grid extends Component
     {
         $page = Page::where('issue_id', $this->issue->id)->find($pageId);
 
-        if ($page === null || $delta === 0) {
+        if ($page === null || $delta === 0 || $page->isCover()) {
             return;
         }
 
@@ -638,6 +637,104 @@ class Grid extends Component
         if ($target !== null) {
             $this->movePage($pageId, $target);
         }
+    }
+
+    private function isCoverPage(int $pageId): bool
+    {
+        return Page::whereKey($pageId)->whereNotNull('cover_slot')->exists();
+    }
+
+    /**
+     * Fase 2 (2026-10-26): trascinando una copertina su un'altra si
+     * scambiano gli slot (es. la pubblicità passa dalla II alla III).
+     * Regole in App\Support\IssueCovers::swap().
+     */
+    public function swapCovers(int $coverIdA, int $coverIdB): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $a = $this->issue->covers()->find($coverIdA);
+        $b = $this->issue->covers()->find($coverIdB);
+
+        if ($a === null || $b === null) {
+            return;
+        }
+
+        $labels = [$a->label(), $b->label()];
+        $error = IssueCovers::swap($a, $b);
+
+        if ($error !== null) {
+            $this->addError('covers', $error);
+
+            return;
+        }
+
+        if ($coverIdA === $coverIdB) {
+            return;
+        }
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Page',
+            entityId: $a->id,
+            action: 'cover.swapped',
+            description: "Copertine scambiate: {$labels[0]} ↔ {$labels[1]}",
+            new: ['pageIds' => [$a->id, $b->id]],
+        );
+
+        $this->broadcastCoversChanged('swapped');
+    }
+
+    /** Fase 2: bandella (6 pagine di copertina invece di 4). */
+    public function addBandella(): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $error = IssueCovers::addBandella($this->issue);
+
+        if ($error !== null) {
+            $this->addError('covers', $error);
+
+            return;
+        }
+
+        ActivityLogger::log(issue: $this->issue, entityType: 'Issue', entityId: $this->issue->id, action: 'cover.bandella_added', description: 'Bandella aggiunta alle copertine');
+        $this->broadcastCoversChanged('bandella_added');
+    }
+
+    public function removeBandella(): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $error = IssueCovers::removeBandella($this->issue);
+
+        if ($error !== null) {
+            $this->addError('covers', $error);
+
+            return;
+        }
+
+        ActivityLogger::log(issue: $this->issue, entityType: 'Issue', entityId: $this->issue->id, action: 'cover.bandella_removed', description: 'Bandella tolta dalle copertine');
+        $this->broadcastCoversChanged('bandella_removed');
+    }
+
+    /**
+     * Avvisa gli altri utenti (Reverb + pages_updated_at per il polling) e
+     * il pannello Peso di questa pagina (la bandella cambia le pagine di
+     * copertina del peso), senza toast "da un altro utente" per noi stessi.
+     */
+    private function broadcastCoversChanged(string $action): void
+    {
+        broadcast(new CoversChanged(issueId: $this->issue->id, action: $action))->toOthers();
+        $this->issue->markPagesUpdated();
+        $this->lastKnownPagesUpdatedAt = $this->issue->fresh()->getRawOriginal('pages_updated_at');
+        $this->dispatch('issue-page-count-changed');
+    }
+
+    #[On('echo-presence:issue.{issue.id},.CoversChanged')]
+    public function onCoversChanged(): void
+    {
+        $this->notifyRemoteChange('Le copertine sono state modificate da un altro utente.');
     }
 
     #[On('echo-presence:issue.{issue.id},.PageMoved')]
@@ -668,7 +765,7 @@ class Grid extends Component
     {
         $this->authorize('update', $this->issue);
 
-        if (! $this->swapMode) {
+        if (! $this->swapMode || $this->isCoverPage($pageId)) {
             return;
         }
 
@@ -913,10 +1010,6 @@ class Grid extends Component
         if ($applied === null) {
             return;
         }
-
-        // Fase 3.1: stesso motivo del ramo a pagina singola in movePage()
-        // sopra — un block-move può spostare l'estremo fisico del timone.
-        PageRoleAssigner::syncCoverRoles($this->issue);
 
         ActivityLogger::log(
             issue: $this->issue,
@@ -1205,7 +1298,7 @@ class Grid extends Component
         }
 
         if ($newStatus === PageStatus::OkStampa && ! $this->pageHasFile($page)) {
-            $this->addError('pdfRequired', "La pagina {$page->position} non ha ancora un PDF caricato: non può essere segnata «Ok stampa».");
+            $this->addError('pdfRequired', 'La '.$page->label()." non ha ancora un PDF caricato: non può essere segnata «Ok stampa».");
 
             return;
         }
@@ -1253,7 +1346,7 @@ class Grid extends Component
             entityType: 'Page',
             entityId: $page->id,
             action: 'page.status_changed',
-            description: "Stato della pagina {$page->position} cambiato da «{$oldStatus->label()}» a «{$newStatus->label()}»",
+            description: "Stato della {$page->label()} cambiato da «{$oldStatus->label()}» a «{$newStatus->label()}»",
             old: ['status' => $oldStatus->value],
             new: ['status' => $newStatus->value],
         );
@@ -1316,7 +1409,7 @@ class Grid extends Component
                 entityType: 'Page',
                 entityId: $page->id,
                 action: 'page.unlocked',
-                description: "Pagina {$page->position} sbloccata",
+                description: ucfirst($page->label())." sbloccata",
             );
 
             broadcast(new PageUnlocked(
@@ -1337,7 +1430,7 @@ class Grid extends Component
             entityType: 'Page',
             entityId: $page->id,
             action: 'page.locked',
-            description: "Pagina {$page->position} bloccata",
+            description: ucfirst($page->label())." bloccata",
         );
 
         broadcast(new PageLocked(
@@ -1372,7 +1465,9 @@ class Grid extends Component
      */
     public function togglePageSelection(int $pageId): void
     {
-        if (! $this->selectionMode) {
+        // Fase 2: le copertine non entrano nella selezione multipla (le sue
+        // azioni — spostamento a blocco, collegamento — sono da pagine interne).
+        if (! $this->selectionMode || $this->isCoverPage($pageId)) {
             return;
         }
 
@@ -1418,7 +1513,7 @@ class Grid extends Component
      */
     public function clickPage(int $pageId): void
     {
-        if (! $this->selectionMode) {
+        if (! $this->selectionMode || $this->isCoverPage($pageId)) {
             return;
         }
 
@@ -1700,7 +1795,7 @@ class Grid extends Component
     private function blockIfLocked(?Page $page, string $verb = 'modificata'): bool
     {
         if ($page !== null && $page->isLocked()) {
-            $this->addError('locked', "La pagina {$page->position} è bloccata e non può essere {$verb}: sbloccala prima di procedere.");
+            $this->addError('locked', 'La '.$page->label()." è bloccata e non può essere {$verb}: sbloccala prima di procedere.");
 
             return true;
         }
@@ -1744,7 +1839,7 @@ class Grid extends Component
                 entityType: 'Content',
                 entityId: $content->id,
                 action: 'content.assigned',
-                description: "Contenuto «{$content->displayLabel()}» assegnato alla pagina {$targetPage->position} ({$result['percentage']}%)",
+                description: "Contenuto «{$content->displayLabel()}» assegnato alla {$targetPage->label()} ({$result['percentage']}%)",
                 new: ['page_id' => $targetPage->id, 'occupied_percentage' => $result['percentage']],
             );
 
@@ -1842,7 +1937,7 @@ class Grid extends Component
             entityType: 'Content',
             entityId: $content->id,
             action: 'content.assigned',
-            description: "Contenuto «{$content->displayLabel()}» assegnato alla pagina {$page->position} ({$percentage}%)",
+            description: "Contenuto «{$content->displayLabel()}» assegnato alla {$page->label()} ({$percentage}%)",
             new: ['page_id' => $page->id, 'occupied_percentage' => $percentage],
         );
 
@@ -1888,7 +1983,7 @@ class Grid extends Component
             entityType: 'Content',
             entityId: $contentId,
             action: 'content.percentage_changed',
-            description: "Percentuale del contenuto sulla pagina {$page->position} cambiata da {$oldPercentage}% a {$percentage}%",
+            description: "Percentuale del contenuto sulla {$page->label()} cambiata da {$oldPercentage}% a {$percentage}%",
             old: ['occupied_percentage' => $oldPercentage],
             new: ['occupied_percentage' => $percentage],
         );
@@ -1926,7 +2021,7 @@ class Grid extends Component
             entityType: 'Content',
             entityId: $contentId,
             action: 'content.unassigned',
-            description: "Contenuto rimosso dalla pagina {$page->position}",
+            description: "Contenuto rimosso dalla {$page->label()}",
             old: ['page_id' => $page->id],
         );
 
@@ -2077,37 +2172,48 @@ class Grid extends Component
         );
     }
 
+    /**
+     * Eager load comuni a pagine interne e copertine (stessa card, stessi
+     * dati mostrati) — estratti da render() con la Fase 2 per non
+     * duplicarli tra le due query.
+     *
+     * @return array<int|string, mixed>
+     */
+    private function pageEagerLoads(): array
+    {
+        return [
+            'contents.article',
+            'contents.advertisement',
+            // Per il badge "×N pagine" (Grid::extendToPage()) basterebbe
+            // solo l'id; la posizione serve in più ad
+            // App\Support\AutomaticChecks per segnalare i contenuti su
+            // pagine non contigue (cover_slot per escludere le copertine).
+            'contents.pages:pages.id,pages.position,pages.cover_slot',
+            // Page::previewFile() legge TUTTI i file del contenuto: il pivot
+            // può puntare a una specifica pagina di un PDF multi-pagina.
+            'contents.files',
+            // 'files' diretto sulla pagina: fallback per le pagine legacy
+            // non ancora migrate (vedi Page::previewFile()).
+            'files' => fn ($query) => $query->latest()->limit(1),
+            'lockedBy:id,name',
+            'group:id,color',
+        ];
+    }
+
     public function render(): View
     {
         $pages = $this->issue->pages()
-            ->orderBy('position')
-            ->with([
-                'contents.article',
-                'contents.advertisement',
-                // Per il badge "×N pagine" (Grid::extendToPage()) basterebbe
-                // solo l'id; la posizione serve in più ad
-                // App\Support\AutomaticChecks per segnalare i contenuti su
-                // pagine non contigue — stesso eager load riusato per
-                // entrambi, non vale la pena separarli.
-                'contents.pages:pages.id,pages.position',
-                // Punto 4 (2026-09-02): Page::previewFile() legge questa
-                // relazione per mostrare l'anteprima del file del
-                // contenuto sulla card/riga — TUTTI i file del contenuto,
-                // non solo il più recente, perché il pivot può puntare a
-                // uno specifico più vecchio (pagina di un PDF
-                // multi-pagina, vedi PageContent::contentFile()).
-                'contents.files',
-                // 'files' diretto sulla pagina resta come fallback per le
-                // pagine caricate PRIMA di questa modifica e non ancora
-                // migrate (Punto 8, non eseguito in questa sessione) —
-                // vedi Page::previewFile().
-                'files' => fn ($query) => $query->latest()->limit(1),
-                'lockedBy:id,name',
-                // Fase 2.3: badge/anello colorato del gruppo collegato,
-                // vedi page-card.blade.php/page-row.blade.php.
-                'group:id,color',
-            ])
+            ->with($this->pageEagerLoads())
             ->get();
+
+        // Fase 2 (2026-10-26): copertine caricate a parte (stessi eager
+        // load: sono righe di `pages`, si mostrano con la stessa card) e
+        // fuori da ogni conteggio delle pagine interne qui sotto.
+        $covers = $this->issue->covers()
+            ->with($this->pageEagerLoads())
+            ->get()
+            ->sortBy(fn (Page $cover) => $cover->cover_slot->order())
+            ->values();
 
         $unassignedContents = $this->issue->unassignedContents()
             ->with(['article', 'advertisement', 'files' => fn ($query) => $query->limit(1)])
@@ -2162,7 +2268,7 @@ class Grid extends Component
         // ContentFile (nuovo percorso via contenuto) — entrambi hanno lo
         // stesso identico ventaglio di thumbnail_status, quindi il filtro
         // sotto funziona identico per entrambi senza doverli distinguere.
-        $pendingThumbnailFiles = $pages
+        $pendingThumbnailFiles = $pages->concat($covers)
             ->map(fn (Page $page) => $page->previewFile())
             ->filter(fn (PageFile|ContentFile|null $file) => $file && in_array($file->thumbnail_status, [ThumbnailStatus::Pending, ThumbnailStatus::Processing], true))
             ->values();
@@ -2179,16 +2285,11 @@ class Grid extends Component
                 $pages->flatMap(fn (Page $page) => $page->contents->pluck('id'))->unique()
             );
 
-        // Copertina separata dal conteggio pagine (scelta presa con
-        // l'utente: niente migration/riscrittura di position, solo
-        // etichetta mostrata + esclusione dai calcoli aggregati — vedi
-        // App\Support\PageNumberer). Le pagine di copertina restano
-        // comunque escluse dal cruscotto pubblicitario, non solo dalla
-        // numerazione: un contenuto assegnato per errore su una copertina
-        // non deve contribuire a "pagine totali"/carico % (denominatore e
-        // numeratore devono restare coerenti tra loro).
-        $pageNumbers = PageNumberer::assign($pages, $this->issue->magazine->battente_counted_in_total);
-        $numberedPages = $pages->reject(fn (Page $page) => $page->role->isCoverPage())->values();
+        // Fase 2 (2026-10-26): le pagine interne sono numerate dalla loro
+        // posizione (1…N, le copertine non ne fanno più parte), quindi non
+        // serve più un'etichetta calcolata (ex App\Support\PageNumberer).
+        // Le miniature in elaborazione delle copertine contano comunque nel
+        // banner di avanzamento.
 
         // Fase 1, bug 7 (2026-10-26): le miniature seguono le proporzioni
         // del formato reale del numero (base × altezza del pannello Peso);
@@ -2199,18 +2300,24 @@ class Grid extends Component
 
         return view('livewire.timone.grid', [
             'pages' => $pages,
+            // Tutte le copertine in un'unica fascia in cima, in ordine di
+            // sfoglio (I, bandella, II, III, IV) — richiesta dell'utente dopo
+            // la prima versione della Fase 2, che metteva III e IV in una
+            // seconda fascia dopo l'ultima pagina (lontana su un numero lungo).
+            'covers' => $covers,
+            'hasBandella' => $covers->contains(fn (Page $cover) => $cover->cover_slot === CoverSlot::Bandella),
             'pageAspectRatio' => $pageAspectRatio,
-            'pageNumbers' => $pageNumbers,
             'spreads' => $this->viewMode === 'doppia' ? PageSpreadBuilder::build($pages) : null,
             'unassignedContents' => $unassignedContents,
             'archivedContents' => $archivedContents,
             'reorderLogs' => $reorderLogs,
-            'adLoad' => AdLoadCalculator::summarize($numberedPages, $reservedAdvertisements),
+            // Solo pagine interne: le copertine hanno un conteggio a parte.
+            'adLoad' => AdLoadCalculator::summarize($pages, $reservedAdvertisements),
             'adThreshold' => $this->issue->magazine->ad_threshold_percentage,
             'unassignedAdCount' => $reservedAdvertisements->count(),
             'pageCountImpact' => $pageCountImpact,
             'newTotalPagesParsed' => $newTotalPagesParsed,
-            'automaticChecks' => AutomaticChecks::check($pages),
+            'automaticChecks' => AutomaticChecks::check($pages->concat($covers)),
             'avgThumbnailSeconds' => $avgThumbnailSeconds,
             'thumbnailProgress' => ThumbnailProgressEstimator::aggregate($pendingThumbnailFiles, $avgThumbnailSeconds),
         ]);

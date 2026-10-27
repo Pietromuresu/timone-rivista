@@ -84,17 +84,12 @@ class AdDashboardExportController extends Controller
 
         $issue->load('magazine');
 
-        // Copertina esclusa dal cruscotto (coerente con Grid::render()):
-        // le quattro pagine di copertina non contano come pagine
-        // numerate, quindi non devono contribuire né al denominatore
-        // "pagine totali" né a un eventuale contenuto assegnato per
-        // errore su di esse — vedi App\Support\PageNumberer.
+        // Solo pagine interne (coerente con Grid::render()): dalla Fase 2
+        // $issue->pages() esclude già le copertine, che hanno un conteggio a
+        // parte e non entrano nella percentuale pubblicitaria.
         $pages = $issue->pages()
-            ->orderBy('position')
             ->with(['contents.advertisement'])
-            ->get()
-            ->reject(fn ($page) => $page->role->isCoverPage())
-            ->values();
+            ->get();
 
         // Fase 3 (§3): le pubblicità prenotate (non ancora assegnate a una
         // pagina) vanno incluse anche nel report esportato, stessa logica

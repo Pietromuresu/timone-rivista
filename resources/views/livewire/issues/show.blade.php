@@ -27,7 +27,7 @@
                         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             {{ $magazine->name }}
                             &middot; {{ $issue->issue_date?->translatedFormat('d M Y') ?? 'Data non definita' }}
-                            &middot; {{ $issue->displayedTotalPages() }} pagine previste
+                            &middot; {{ $issue->total_pages }} pagine interne + copertine
                         </p>
                         @if ($issue->notes)
                             <p class="text-sm text-gray-600 dark:text-gray-300 mt-3">{{ $issue->notes }}</p>
@@ -68,8 +68,6 @@
 
             {{-- Peso teorico della rivista, vicino al conteggio pagine dell'intestazione. --}}
             <livewire:timone.weight-panel :issue="$issue" :key="'weight-panel-'.$issue->id" />
-
-            <livewire:timone.cover-section :issue="$issue" :key="'cover-section-'.$issue->id" />
 
             <livewire:timone.grid :issue="$issue" :key="'timone-grid-'.$issue->id" />
         </div>
