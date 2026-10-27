@@ -37,7 +37,7 @@ test('a block move works correctly while the component is set to doppia view mod
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('setViewMode', 'doppia')
@@ -48,7 +48,7 @@ test('a block move works correctly while the component is set to doppia view mod
     $component->call('moveSelectedBlock', $pages[1]->id, 6)
         ->assertHasNoErrors();
 
-    $finalOrder = $issue->fresh()->pages()->orderBy('position')->pluck('id')->all();
+    $finalOrder = $issue->fresh()->pages()->orderBy('pages.position')->pluck('id')->all();
     $indexOfFirst = array_search($pages[1]->id, $finalOrder, true);
     $indexOfSecond = array_search($pages[2]->id, $finalOrder, true);
 
@@ -96,7 +96,7 @@ test('no page element is nested inside another element carrying data-page-id, in
         ->call('setViewMode', $viewMode)
         ->html();
 
-    $dom = new DOMDocument();
+    $dom = new DOMDocument;
     libxml_use_internal_errors(true);
     $dom->loadHTML('<?xml encoding="utf-8" ?>'.$html);
     libxml_clear_errors();

@@ -139,6 +139,7 @@ Numeri e riviste **già esistenti** al momento della migration:
 - **Scopo**: pivot pagina ↔ contenuto.
 - **Colonne**: `occupied_twelfths` (tinyint unsigned 1–12, default 12, dal 2026-10-27; **nessun vincolo DB** sulla somma per pagina: la validazione è in `App\Support\PageCapacity`), `content_file_id` (FK content_files, nullOnDelete: quale pagina del PDF mostrare).
 - **Vincoli**: `unique(page_id, content_id)`.
+- `position` (smallint unsigned, nullable, Fase 7b — migration `2026_10_27_400000_add_position_to_page_content_table`): ordine del contenuto nella pagina, 1…n. La migration numera le righe esistenti per pagina nell'ordine di id (= l'ordine già mostrato); nullable perché un `attach()` senza posizione resta valido (va in coda). Rollback: colonna eliminata. Verificata su copia MySQL dei dati di sviluppo.
 - **Colonna non più usata**: `occupied_percentage` (decimal, la vecchia percentuale; nullable dal 2026-10-27, tenuta per il rollback).
 - Ha un modello dedicato: `App\Models\PageContent`.
 

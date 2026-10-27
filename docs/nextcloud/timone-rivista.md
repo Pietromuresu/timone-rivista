@@ -178,6 +178,14 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - Cliccando su «bianche» o su «Da assegnare» quelle pagine si evidenziano in azzurro e le altre si attenuano; un secondo clic toglie l'evidenziazione. Le pagine non si spostano.
 - La percentuale di pubblicità non ha più soglie né colori di allarme: è solo il numero. Anche il campo «soglia di allarme» della rivista non c'è più.
 
+## Disposizione dei contenuti nella pagina (dal 2026-10-27)
+
+- Nella griglia e nella doppia pagina ogni contenuto occupa un riquadro grande quanto il suo spazio: una mezza pagina è metà della pagina, un terzo un terzo.
+- Le pubblicità verticali (mezza pagina verticale, 1/3 verticale, 2/3) sono colonne alte quanto la pagina; gli altri contenuti sono righe una sotto l'altra; il piedino sta in fondo. Lo spazio ancora libero è un riquadro tratteggiato con scritto «libero».
+- Ogni riquadro mostra l'anteprima del suo PDF; cliccandola si apre il file. Passando sopra un riquadro compaiono i comandi (spazio, modifica, estendi, rimuovi).
+- Con più contenuti sulla stessa pagina, le frecce ↑ e ↓ (tra i comandi del riquadro) cambiano l'ordine: un contenuto più in alto o più in basso, una colonna più a sinistra o più a destra. Il piedino resta sempre in fondo. L'ordine resta salvato e lo vedono anche i colleghi.
+- È una rappresentazione dello spazio, non l'impaginato definitivo: gli articoli sono sempre disegnati orizzontali.
+
 ## Punti di attenzione
 
 - Vulnerabilità note: Livewire 3.8.2 (XSS) e Laravel 12.64 vanno aggiornati (composer audit: 19 advisory).

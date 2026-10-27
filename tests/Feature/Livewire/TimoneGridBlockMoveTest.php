@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Events\PageMoved;
 use App\Events\PagesBlockMoved;
 use App\Livewire\Timone\Grid;
 use App\Models\ActivityLog;
@@ -26,7 +27,7 @@ test('dragging a contiguous selection moves it as a single block, preserving int
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     // Seleziona le pagine in posizione 2 e 3 (contigue), le trascina a destinazione 6.
     $selectedIds = [$pages[1]->id, $pages[2]->id];
 
@@ -35,7 +36,7 @@ test('dragging a contiguous selection moves it as a single block, preserving int
     $component->call('moveSelectedBlock', $pages[1]->id, 6)
         ->assertHasNoErrors();
 
-    $finalOrder = $issue->fresh()->pages()->orderBy('position')->pluck('id')->all();
+    $finalOrder = $issue->fresh()->pages()->orderBy('pages.position')->pluck('id')->all();
 
     // Le due pagine spostate restano adiacenti tra loro, nello stesso
     // ordine relativo originale (pages[1] prima di pages[2]).
@@ -56,7 +57,7 @@ test('dragging a non-contiguous selection compacts it into a single block at the
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get(); // posizioni 1..6
+    $pages = $issue->pages()->orderBy('pages.position')->get(); // posizioni 1..6
 
     // Seleziona posizione 1 e posizione 4 (non contigue).
     $selectedIds = [$pages[0]->id, $pages[3]->id];
@@ -64,7 +65,7 @@ test('dragging a non-contiguous selection compacts it into a single block at the
     $component = selectPages(Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue]), $selectedIds);
     $component->call('moveSelectedBlock', $pages[0]->id, 2)->assertHasNoErrors();
 
-    $finalOrder = $issue->fresh()->pages()->orderBy('position')->pluck('id')->all();
+    $finalOrder = $issue->fresh()->pages()->orderBy('pages.position')->pluck('id')->all();
 
     $indexOfFirst = array_search($pages[0]->id, $finalOrder, true);
     $indexOfSecond = array_search($pages[3]->id, $finalOrder, true);
@@ -78,13 +79,13 @@ test('a block move targeting past the end of the issue is clamped instead of fai
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $selectedIds = [$pages[0]->id, $pages[1]->id];
 
     $component = selectPages(Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue]), $selectedIds);
     $component->call('moveSelectedBlock', $pages[0]->id, 999)->assertHasNoErrors();
 
-    $finalOrder = $issue->fresh()->pages()->orderBy('position')->pluck('id')->all();
+    $finalOrder = $issue->fresh()->pages()->orderBy('pages.position')->pluck('id')->all();
 
     expect(array_slice($finalOrder, -2))->toBe([$pages[0]->id, $pages[1]->id])
         ->and($finalOrder)->toHaveCount(6);
@@ -95,7 +96,7 @@ test('a block move is rejected entirely if any selected page is locked, nothing 
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $pages[1]->update(['locked_at' => now(), 'locked_by' => $user->id]);
     $selectedIds = [$pages[0]->id, $pages[1]->id];
 
@@ -105,7 +106,7 @@ test('a block move is rejected entirely if any selected page is locked, nothing 
     $component->call('moveSelectedBlock', $pages[0]->id, 5)
         ->assertHasErrors('locked');
 
-    $finalOrder = $issue->fresh()->pages()->orderBy('position')->pluck('id')->all();
+    $finalOrder = $issue->fresh()->pages()->orderBy('pages.position')->pluck('id')->all();
 
     expect($finalOrder)->toBe($originalOrder);
 
@@ -117,7 +118,7 @@ test('the whole selected block is broadcast as a single atomic event, not one pe
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $selectedIds = [$pages[0]->id, $pages[1]->id, $pages[2]->id];
 
     $component = selectPages(Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue]), $selectedIds);
@@ -131,7 +132,7 @@ test('a successful block move is recorded once in the activity log', function ()
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $selectedIds = [$pages[0]->id, $pages[1]->id];
 
     $component = selectPages(Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue]), $selectedIds);
@@ -145,7 +146,7 @@ test('a block move rejected by the optimistic lock changes nothing and realigns 
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $selectedIds = [$pages[0]->id, $pages[1]->id];
     $originalOrder = $pages->pluck('id')->all();
 
@@ -157,15 +158,15 @@ test('a block move rejected by the optimistic lock changes nothing and realigns 
     $component->call('moveSelectedBlock', $pages[0]->id, 5)
         ->assertHasErrors('reorder');
 
-    expect($issue->fresh()->pages()->orderBy('position')->pluck('id')->all())->toBe($originalOrder);
+    expect($issue->fresh()->pages()->orderBy('pages.position')->pluck('id')->all())->toBe($originalOrder);
 });
 
 test('dragging a page that is not part of the current selection falls back to a normal single-page move', function () {
-    Event::fake([PagesBlockMoved::class, \App\Events\PageMoved::class]);
+    Event::fake([PagesBlockMoved::class, PageMoved::class]);
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     // Seleziona pages[0] e pages[1], ma trascina pages[3] (non selezionata).
     $selectedIds = [$pages[0]->id, $pages[1]->id];
 
@@ -173,11 +174,11 @@ test('dragging a page that is not part of the current selection falls back to a 
     $component->call('moveSelectedBlock', $pages[3]->id, 1);
 
     Event::assertNotDispatched(PagesBlockMoved::class);
-    Event::assertDispatched(\App\Events\PageMoved::class);
+    Event::assertDispatched(PageMoved::class);
 });
 
 test('calling moveSelectedBlock with selection mode off falls back to a normal single-page move', function () {
-    Event::fake([PagesBlockMoved::class, \App\Events\PageMoved::class]);
+    Event::fake([PagesBlockMoved::class, PageMoved::class]);
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
@@ -187,12 +188,12 @@ test('calling moveSelectedBlock with selection mode off falls back to a normal s
         ->call('moveSelectedBlock', $page->id, 3);
 
     Event::assertNotDispatched(PagesBlockMoved::class);
-    Event::assertDispatched(\App\Events\PageMoved::class);
+    Event::assertDispatched(PageMoved::class);
 });
 
 test('a guest cannot move a selected block', function () {
     $issue = reorderableIssue();
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $originalOrder = $pages->pluck('id')->all();
 
     Livewire::test(Grid::class, ['issue' => $issue])
@@ -200,14 +201,14 @@ test('a guest cannot move a selected block', function () {
         ->set('selectedPageIds', [$pages[0]->id, $pages[1]->id])
         ->call('moveSelectedBlock', $pages[0]->id, 5);
 
-    expect($issue->fresh()->pages()->orderBy('position')->pluck('id')->all())->toBe($originalOrder);
+    expect($issue->fresh()->pages()->orderBy('pages.position')->pluck('id')->all())->toBe($originalOrder);
 });
 
 test('a sola lettura user cannot move a selected block', function () {
     $issue = reorderableIssue();
     $user = User::factory()->create(['role' => UserRole::SolaLettura]);
     $user->magazines()->attach($issue->magazine);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $originalOrder = $pages->pluck('id')->all();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
@@ -215,17 +216,17 @@ test('a sola lettura user cannot move a selected block', function () {
         ->set('selectedPageIds', [$pages[0]->id, $pages[1]->id])
         ->call('moveSelectedBlock', $pages[0]->id, 5);
 
-    expect($issue->fresh()->pages()->orderBy('position')->pluck('id')->all())->toBe($originalOrder);
+    expect($issue->fresh()->pages()->orderBy('pages.position')->pluck('id')->all())->toBe($originalOrder);
 });
 
 test('a page id from a different issue injected into the selection is ignored', function () {
-    Event::fake([PagesBlockMoved::class, \App\Events\PageMoved::class]);
+    Event::fake([PagesBlockMoved::class, PageMoved::class]);
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
     $otherIssue = reorderableIssue();
     $otherPage = $otherIssue->pages()->first();
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->set('selectionMode', true)

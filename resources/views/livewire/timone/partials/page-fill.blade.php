@@ -3,19 +3,15 @@
      App\Support\PageCapacity (unica fonte: "Vuota", "Libero: 1/3",
      "Piena"), icona + testo + forma della barra, quindi leggibile anche
      senza distinguere i colori.
-     $variant: 'card' (barra verticale sul bordo sinistro + etichetta),
-     'row' (sola etichetta, la riga della lista è troppo bassa per una barra). --}}
+     $variant: 'card' o 'row' (stessa etichetta, dimensione diversa). --}}
 @php
     $used = $page->occupiedTwelfths();
     $fill = \App\Support\PageCapacity::status($used);
     $label = \App\Support\PageCapacity::statusLabel($used);
-    $percent = min(100, $used * 100 / \App\Support\Twelfths::PER_PAGE);
 @endphp
-@if ($variant === 'card')
-    <div class="absolute left-0 inset-y-0 w-1.5 bg-black/10 dark:bg-white/10 pointer-events-none" aria-hidden="true">
-        <div class="absolute bottom-0 inset-x-0 {{ $fill->barClasses() }}" style="height: {{ $percent }}%"></div>
-    </div>
-@endif
+{{-- Fase 7a (2026-10-27): niente più barra laterale nella card — lo
+     spazio libero si vede ora nella disposizione dei blocchi (riquadro
+     tratteggiato "libero"); resta l'etichetta, in card e lista. --}}
 <span
     data-testid="page-fill"
     data-fill="{{ $fill->value }}"

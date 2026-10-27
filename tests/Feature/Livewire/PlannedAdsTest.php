@@ -112,7 +112,7 @@ test('the automatic placement never runs again after creation', function () {
     $before = placeholderLabels($issue);
 
     // Spostata a mano una pubblicità: pagina 2 → pagina 3 (tolta e rimessa).
-    $content = Content::whereHas('pages', fn ($q) => $q->where('position', 2))->where('issue_id', $issue->id)->firstOrFail();
+    $content = Content::whereHas('pages', fn ($q) => $q->where('pages.position', 2))->where('issue_id', $issue->id)->firstOrFail();
     $content->pages()->detach();
     $issue->pages()->where('position', 3)->first()->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 

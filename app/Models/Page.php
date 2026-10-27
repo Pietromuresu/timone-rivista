@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\ContentOrientation;
 use App\Enums\CoverSlot;
 use App\Enums\PageContentType;
 use App\Enums\PageFillStatus;
 use App\Enums\PageStatus;
 use App\Enums\ThumbnailStatus;
 use App\Support\PageCapacity;
+use App\Support\PageLayoutPlanner;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -113,8 +115,15 @@ class Page extends Model
             // content_file_id (Punto 4, 2026-09-02): quale file di quel
             // contenuto è rilevante per QUESTA pagina — vedi
             // PageContent::contentFile().
-            ->withPivot('occupied_twelfths', 'content_file_id')
-            ->withTimestamps();
+            ->withPivot('occupied_twelfths', 'content_file_id', 'position')
+            ->withTimestamps()
+            // Fase 7b: ordine scelto dall'utente (page_content.position, frecce
+            // sul blocco), che è l'ordine dei blocchi nella card
+            // (PageLayoutPlanner); le righe senza posizione vanno in coda,
+            // nell'ordine di assegnazione (Fase 7a).
+            ->orderByRaw('page_content.position is null')
+            ->orderBy('page_content.position')
+            ->orderBy('page_content.id');
     }
 
     /**
@@ -175,16 +184,7 @@ class Page extends Model
     public function previewFile(): PageFile|ContentFile|null
     {
         foreach ($this->contents as $content) {
-            $file = $content->pivot?->content_file_id !== null
-                ? $content->files->firstWhere('id', $content->pivot->content_file_id)
-                // sortByDesc(), non solo first(): la relazione Content::files()
-                // ordina "latest()" a livello di query, ma una collection
-                // già in memoria (es. eager-loaded diversamente, o un
-                // fixture di test con setRelation()) non rispetta quell'ordine
-                // da sola — stesso principio già seguito da
-                // App\Support\AdMaterialStatusResolver prima di questa
-                // modifica, qui esteso anche al ramo PageFile sotto.
-                : $content->files->sortByDesc('created_at')->first();
+            $file = $this->previewFileFor($content);
 
             if ($file !== null) {
                 return $file;
@@ -192,6 +192,59 @@ class Page extends Model
         }
 
         return $this->files->sortByDesc('created_at')->first();
+    }
+
+    /**
+     * File di QUEL contenuto da mostrare su questa pagina (estratto da
+     * previewFile() nella Fase 7a, dove ogni blocco della card mostra la
+     * propria anteprima): quello indicato sul pivot (pagina di un PDF
+     * multipagina) o il più recente del contenuto.
+     */
+    public function previewFileFor(Content $content): ?ContentFile
+    {
+        return $content->pivot?->content_file_id !== null
+            ? $content->files->firstWhere('id', $content->pivot->content_file_id)
+            // sortByDesc(), non solo first(): una collection già in memoria
+            // (eager-load diverso, fixture di test) non garantisce l'ordine
+            // "latest()" della relazione.
+            : $content->files->sortByDesc('created_at')->first();
+    }
+
+    /**
+     * Disposizione dei contenuti nella card (Fase 7a, 2026-10-27): un
+     * blocco per contenuto, in % della card, calcolato da
+     * PageLayoutPlanner con dodicesimi e orientamento (pubblicità: dal
+     * formato; articoli: orizzontali), più l'eventuale spazio libero.
+     * Usa le relazioni già caricate da Grid::render().
+     *
+     * @return array{blocks: list<array{content: Content, rect: array, imageUrl: string|null, file: ContentFile|null}>, free: array|null, overfull: bool}
+     */
+    public function layout(): array
+    {
+        $items = $this->contents->map(fn (Content $content) => [
+            'id' => $content->id,
+            'twelfths' => (int) $content->pivot->occupied_twelfths,
+            'orientation' => $content->advertisement?->format?->orientation() ?? ContentOrientation::Horizontal,
+        ])->values()->all();
+
+        $plan = PageLayoutPlanner::plan($items);
+        $byId = $this->contents->keyBy('id');
+
+        return [
+            'blocks' => array_map(function (array $rect) use ($byId) {
+                $content = $byId[$rect['id']];
+                $file = $this->previewFileFor($content);
+
+                return [
+                    'content' => $content,
+                    'rect' => $rect,
+                    'file' => $file,
+                    'imageUrl' => $file?->thumbnail_status === ThumbnailStatus::Ready ? route('content-files.thumbnail', $file) : null,
+                ];
+            }, $plan['blocks']),
+            'free' => $plan['free'],
+            'overfull' => $plan['overfull'],
+        ];
     }
 
     /**

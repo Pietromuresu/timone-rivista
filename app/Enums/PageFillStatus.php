@@ -39,15 +39,4 @@ enum PageFillStatus: string
             self::Overfull => 'border border-red-700 text-white bg-red-600 font-semibold',
         };
     }
-
-    /** Colore della barra di riempimento laterale. */
-    public function barClasses(): string
-    {
-        return match ($this) {
-            self::Empty => 'bg-transparent',
-            self::Partial => 'bg-amber-500',
-            self::Full => 'bg-gray-900 dark:bg-white',
-            self::Overfull => 'bg-red-600',
-        };
-    }
 }

@@ -132,6 +132,19 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 | 70 | Barra sticky misurata con un ResizeObserver nel layout | `layouts/app.blade.php` | Senza JS (o prima dell'init) la barra si ferma a `top: 0` e scorre sotto l'header per un istante. Verifica nel browser in DV-34 |
 | 71 | "Occupate" nel riepilogo = pagine **piene**; le parziali sono a parte | `IssueSummary` | Interpretazione della specifica ("totali / occupate / bianche / parziali"): le quattro voci si sommano al totale |
 
+## Fase 7a — disposizione dei contenuti (aggiunto il 2026-10-27)
+
+| # | Problema | Dove | Note |
+|---|---|---|---|
+| 72 | Gli articoli sono sempre disegnati orizzontali | `Page::layout()` | Scelta confermata dall'utente; una scelta per pagina richiederebbe un campo sul pivot |
+| 73 | Con zoom S e molti contenuti i blocchi sono piccoli: testo troncato, comandi stretti | `page-card.blade.php` | Nome completo nel tooltip del blocco; comandi visibili solo su hover/focus |
+| 74 | ~~L'export PDF del timone non mostra la disposizione~~ — risolto il 2026-10-27 (`App\Support\ExportPageLayout`) | `resources/views/exports/timone.blade.php` | — |
+| 75 | I blocchi sono focalizzabili (Tab) e bloccano le frecce sinistra/destra per non spostare la pagina mentre si usa un blocco | `page-card.blade.php` | Per spostare la pagina da tastiera il focus va sulla card, non sul blocco |
+| 76 | Nelle query su `$content->pages()` la colonna `position` è ora ambigua (c'è anche `page_content.position`): va scritta `pages.position` | relazioni `Content::pages()` | Scoperto dai test (SQLite "ambiguous column name"); nel codice dell'app nessun caso, nei test corretti. `Issue::pages()` non è toccata (nessun pivot) |
+| 77 | Il passo 7c (drag&drop dei blocchi dentro la card) non è fatto | `page-card.blade.php`, `resources/js/timone-alpine.js` | Da decidere con l'utente dopo aver provato ↑/↓: rischio di conflitto con il Sortable delle pagine (MultiDrag, maniglia) e con il morph di Livewire |
+| 78 | ~~Nell'export PDF una pagina mostrava UNA sola miniatura~~ — risolto il 2026-10-27 su segnalazione dell'utente: un blocco con la propria miniatura per contenuto | `exports/timone.blade.php` | — |
+| 79 | Miniature WEBP assenti dall'export dove la GD non supporta WEBP (es. container di sviluppo) | `App\Support\ExportThumbnail` | Convertirle richiederebbe Imagick/GD con WEBP; per i PDF la miniatura è sempre PNG |
+
 ## Cose che sembrano sbagliate ma hanno un motivo (non "correggerle")
 
 | Cosa | Perché è così |

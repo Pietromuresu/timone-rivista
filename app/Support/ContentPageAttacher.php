@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Content;
 use App\Models\Page;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Allega un Content a una Page (verifica spazio, scrittura del pivot,
@@ -44,6 +45,8 @@ class ContentPageAttacher
         $page->contents()->attach($content->id, [
             'occupied_twelfths' => $twelfths,
             'content_file_id' => $contentFileId,
+            // Fase 7b: in fondo all'ordine della pagina.
+            'position' => (int) DB::table('page_content')->where('page_id', $page->id)->max('position') + 1,
         ]);
 
         self::syncPageContentType($page);

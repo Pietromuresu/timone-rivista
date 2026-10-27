@@ -120,7 +120,7 @@ class Content extends Model
             // content_file_id (Punto 4, 2026-09-02): quale file di questo
             // contenuto è rilevante per ciascuna pagina — vedi
             // PageContent::contentFile().
-            ->withPivot('occupied_twelfths', 'content_file_id')
+            ->withPivot('occupied_twelfths', 'content_file_id', 'position')
             ->withTimestamps();
     }
 

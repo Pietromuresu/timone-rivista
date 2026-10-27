@@ -154,6 +154,13 @@ Checklist completa con comandi e righe di log: [09-deploy.md §6bis](09-deploy.m
 | Un segnaposto resta «Da assegnare» dopo la modifica | Non ha ancora cliente, titolo proprio o PDF (cambiare solo stato/formato/spazio non basta) | `contents.is_placeholder`; `ContentUpdater::updateFields()` |
 | Le pubblicità previste non si ricalcolano cambiando le pagine | Voluto: il posizionamento avviene solo alla creazione del numero | — |
 
+### Export PDF del timone senza miniature
+
+| Sintomo | Causa probabile | Dove guardare / come risolvere |
+|---|---|---|
+| Nessuna miniatura nel PDF anche con «miniature» spuntato (versioni prima del 2026-10-27) | L'export leggeva solo i PDF caricati sulla pagina (percorso tolto il 2026-09-02) | Corretto: `App\Support\ExportThumbnail` usa `Page::previewFile()` |
+| Manca la miniatura di una pagina | Anteprima non ancora pronta (⏳) o fallita, file mancante su disco, oppure immagine WEBP con una GD senza supporto WEBP | `content_files.thumbnail_status`, `thumbnail_path`; `php -r 'var_dump(function_exists("imagecreatefromwebp"));'` |
+
 ### Miniature che restano "in elaborazione" o falliscono
 
 1. `docker compose ps worker`: il worker gira? Senza worker i job restano in Redis per sempre.

@@ -57,7 +57,7 @@ test('the doppia view mode wraps every page in a single flat sortable container,
     // ora è un unico contenitore per l'intera vista, come in griglia/lista.
     expect(substr_count($html, 'x-sortable='))->toBe(1);
 
-    foreach ($issue->pages()->orderBy('position')->get() as $page) {
+    foreach ($issue->pages()->orderBy('pages.position')->get() as $page) {
         // Bug reale trovato il 2026-09-02 (segnalato dall'utente: il drag
         // in doppia non si avviava affatto): questo test asserisce ora
         // l'INVARIANTE CORRETTO, prima asserisce esattamente il difetto
@@ -82,7 +82,7 @@ test('the doppia view mode wraps every page in a single flat sortable container,
 
 test('in doppia view mode only the second page of a spread pair gets the visual separator border', function () {
     $issue = Issue::factory()->create(['total_pages' => 4]);
-    $pages = $issue->pages()->orderBy('position')->get()->values();
+    $pages = $issue->pages()->orderBy('pages.position')->get()->values();
 
     $html = Livewire::test(Grid::class, ['issue' => $issue])
         ->call('setViewMode', 'doppia')

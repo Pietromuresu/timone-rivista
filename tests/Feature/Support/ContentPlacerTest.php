@@ -46,7 +46,7 @@ test('a 2 and a half page article is placed as 12, 12, 6 on three consecutive pa
 
     expect($result['pages']->pluck('position')->all())->toBe([2, 3, 4])
         ->and($result['twelfths'])->toBe([12, 12, 6])
-        ->and($content->pages()->orderBy('position')->pluck('occupied_twelfths')->map(fn ($t) => (int) $t)->all())->toBe([12, 12, 6]);
+        ->and($content->pages()->orderBy('pages.position')->pluck('occupied_twelfths')->map(fn ($t) => (int) $t)->all())->toBe([12, 12, 6]);
 });
 
 test('a page with half left accepts a 1/2 content but refuses a 2/3 one, saying what is left', function () {

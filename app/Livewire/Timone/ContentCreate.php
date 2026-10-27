@@ -584,6 +584,7 @@ class ContentCreate extends Component
             $to->contents()->attach($content->id, [
                 'occupied_twelfths' => $content->pivot->occupied_twelfths,
                 'content_file_id' => $content->pivot->content_file_id,
+                'position' => $content->pivot->position,
             ]);
         }
         $from->contents()->detach();

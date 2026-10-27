@@ -3,11 +3,15 @@
      (2026-10-27): era copiato identico in tre punti, e il passaggio da
      percentuale libera a dodicesimi andava fatto in tutti e tre.
      $variant: 'overlay' (testo bianco sulla miniatura), 'card', 'row'.
+     $compact (Fase 7a): dentro un blocco della disposizione — i comandi
+     (spazio, ✏️, ↗, ✕) compaiono solo passando sul blocco o col focus da
+     tastiera (group/block), per non coprire i blocchi piccoli.
      Lo spazio su questa pagina si sceglie da una select 1/12 … intera
      (Grid::updateContentOccupancy()), mai un numero libero. --}}
 @php
     $twelfths = (int) $content->pivot->occupied_twelfths;
     $isRow = $variant === 'row';
+    $compact = $compact ?? false;
     // Fase 5: pubblicità segnaposto — contorno tratteggiato + etichetta
     // "Da assegnare" (riconoscibile anche senza colori).
     $isPlaceholder = $content->isPlaceholder();
@@ -18,7 +22,7 @@
 @endphp
 <{{ $isRow ? 'span' : 'div' }}
     wire:key="page-{{ $page->id }}-content-{{ $content->id }}"
-    class="{{ $isRow ? 'inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-200' : 'flex items-start gap-1 leading-tight'.($variant === 'overlay' ? ' text-white' : '') }} {{ $isPlaceholder ? 'rounded border border-dashed border-amber-500 px-0.5' : '' }}"
+    class="{{ $isRow ? 'inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-200' : 'flex items-start gap-1 leading-tight'.($compact ? ' flex-wrap' : '').($variant === 'overlay' ? ' text-white' : '') }} {{ $isPlaceholder ? 'rounded border border-dashed border-amber-500 px-0.5' : '' }}"
     @if ($isPlaceholder) data-placeholder="1" @endif
 >
     {{-- Fase 4 (2026-10-27): rinomina inline — doppio click sul nome →
@@ -59,6 +63,7 @@
     @if ($locked)
         <span class="shrink-0 {{ $isRow ? 'text-xs' : 'text-[10px]' }} opacity-70" title="Spazio occupato su questa pagina">{{ \App\Support\Twelfths::fractionLabel($twelfths) }}</span>
     @else
+        <span class="{{ $compact ? 'hidden group-hover/block:inline-flex group-focus-within/block:inline-flex items-center gap-1' : 'contents' }}" data-testid="content-controls">
         <select
             x-on:keydown.stop
             x-on:click.stop
@@ -73,6 +78,34 @@
                 <option value="{{ $option }}" @selected($option === $twelfths)>{{ $option === \App\Support\Twelfths::PER_PAGE ? 'intera' : \App\Support\Twelfths::fractionLabel($option) }}</option>
             @endforeach
         </select>
+        {{-- Fase 7b (2026-10-27): ordine dei contenuti nella pagina, che
+             decide la disposizione dei blocchi (Grid::moveContentInPage()).
+             Solo se la pagina ha più di un contenuto; ai bordi la freccia
+             resta ma è disattivata. --}}
+        @if ($page->contents->count() > 1)
+            @php
+                $orderIndex = $page->contents->search(fn ($c) => $c->id === $content->id);
+                $orderLast = $page->contents->count() - 1;
+            @endphp
+            <button
+                type="button"
+                x-on:click.stop="$wire.moveContentInPage({{ $page->id }}, {{ $content->id }}, -1)"
+                @disabled($orderIndex === 0)
+                class="shrink-0 {{ $isRow ? 'text-xs' : 'text-[10px]' }} {{ $muted }} disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Sposta prima nell'ordine della pagina (più in alto o più a sinistra)"
+                aria-label="Sposta {{ $content->displayLabel() }} prima"
+                data-testid="move-content-earlier"
+            >↑</button>
+            <button
+                type="button"
+                x-on:click.stop="$wire.moveContentInPage({{ $page->id }}, {{ $content->id }}, 1)"
+                @disabled($orderIndex === $orderLast)
+                class="shrink-0 {{ $isRow ? 'text-xs' : 'text-[10px]' }} {{ $muted }} disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Sposta dopo nell'ordine della pagina (più in basso o più a destra)"
+                aria-label="Sposta {{ $content->displayLabel() }} dopo"
+                data-testid="move-content-later"
+            >↓</button>
+        @endif
         <button
             type="button"
             x-on:click.stop="$dispatch('open-content-edit', { contentId: {{ $content->id }} })"
@@ -92,5 +125,6 @@
             class="shrink-0 {{ $isRow ? 'text-xs' : 'text-[10px]' }} {{ $muted }} {{ $variant === 'overlay' ? 'hover:text-red-400' : 'hover:text-red-600' }}"
             title="Rimuovi"
         >✕</button>
+        </span>
     @endif
 </{{ $isRow ? 'span' : 'div' }}>

@@ -22,7 +22,7 @@ test('arrow left on the second page of a linked group moves the whole group one 
     Event::fake([PagesBlockMoved::class]);
 
     $issue = reorderableIssue();
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[2]->update(['page_group_id' => $group->id]); // posizione 3
     $pages[3]->update(['page_group_id' => $group->id]); // posizione 4
@@ -39,7 +39,7 @@ test('arrow right on the first page of a linked group moves the whole group one 
     Event::fake([PagesBlockMoved::class]);
 
     $issue = reorderableIssue();
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[2]->update(['page_group_id' => $group->id]);
     $pages[3]->update(['page_group_id' => $group->id]);
@@ -56,7 +56,7 @@ test('a single page moves by one and nothing happens at the edge', function () {
     Event::fake([PageMoved::class]);
 
     $issue = reorderableIssue();
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $grid = Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
         ->call('nudgePage', $pages[1]->id, 1);
@@ -71,7 +71,7 @@ test('a single page moves by one and nothing happens at the edge', function () {
 
 test('the page cards expose the group id and use the keyboard nudge', function () {
     $issue = reorderableIssue();
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
 

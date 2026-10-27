@@ -27,7 +27,7 @@ function placedArticle($issue, int $twelfths, int $startPosition, string $title 
 
 function twelfthsByPosition(Content $content): array
 {
-    return $content->pages()->orderBy('position')->get()
+    return $content->pages()->orderBy('pages.position')->get()
         ->mapWithKeys(fn ($page) => [$page->position => (int) $page->pivot->occupied_twelfths])
         ->all();
 }

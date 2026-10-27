@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Events\PageGroupsChanged;
 use App\Events\PagesBlockMoved;
 use App\Livewire\Timone\Grid;
@@ -21,7 +22,7 @@ use Livewire\Livewire;
 test('a linked page renders the same unlink trigger in all three view modes, an unlinked one does not', function (string $viewMode) {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
@@ -43,7 +44,7 @@ test('clicking the unlink trigger produces the identical end result in every vie
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
@@ -64,7 +65,7 @@ test('linking two or more selected pages creates a group and colors them', funct
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('toggleSelectionMode')
@@ -85,7 +86,7 @@ test('linking two or more selected pages creates a group and colors them', funct
 test('linking fewer than two selected pages does nothing', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $page = $issue->pages()->orderBy('position')->first();
+    $page = $issue->pages()->orderBy('pages.position')->first();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('toggleSelectionMode')
@@ -98,7 +99,7 @@ test('linking fewer than two selected pages does nothing', function () {
 test('linking a page already in another group is rejected without changing anything', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $existingGroup = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $existingGroup->id]);
@@ -118,7 +119,7 @@ test('linking a page already in another group is rejected without changing anyth
 test('linking a selection that includes a locked page is rejected entirely', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
     $pages[0]->update(['locked_at' => now(), 'locked_by' => $user->id]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
@@ -136,7 +137,7 @@ test('unlinking a group dissolves it entirely, not just the page passed in', fun
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
@@ -158,7 +159,7 @@ test('unlinking a group dissolves it entirely, not just the page passed in', fun
 test('unlinking a group with a locked page is rejected and nothing changes', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
@@ -183,7 +184,7 @@ test('unlinking selected pages from a group of 3 removes only them, the rest sta
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
@@ -207,7 +208,7 @@ test('unlinking selected pages down to fewer than 2 remaining dissolves the grou
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
@@ -226,7 +227,7 @@ test('unlinking selected pages down to fewer than 2 remaining dissolves the grou
 test('unlinking a selection with no grouped pages does nothing and gives feedback instead of failing silently', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $page = $issue->pages()->orderBy('position')->first();
+    $page = $issue->pages()->orderBy('pages.position')->first();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('toggleSelectionMode')
@@ -238,7 +239,7 @@ test('unlinking a selection with no grouped pages does nothing and gives feedbac
 test('unlinking selected pages from a group is rejected if any of them is locked, the rest of the group is untouched', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id, 'locked_at' => now(), 'locked_by' => $user->id]);
@@ -265,7 +266,7 @@ test('unlinking a selected page from a group succeeds even if another (non-selec
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
@@ -285,7 +286,7 @@ test('unlinking a selected page from a group succeeds even if another (non-selec
 
 test('a guest cannot unlink selected pages from a group', function () {
     $issue = reorderableIssue();
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
@@ -303,7 +304,7 @@ test('a guest cannot unlink selected pages from a group', function () {
 test('the "scollega selezionate dal gruppo" button appears in the selection toolbar', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $page = $issue->pages()->orderBy('position')->first();
+    $page = $issue->pages()->orderBy('pages.position')->first();
 
     $html = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('toggleSelectionMode')
@@ -315,7 +316,7 @@ test('the "scollega selezionate dal gruppo" button appears in the selection tool
 
 test('a guest cannot link or unlink pages', function () {
     $issue = reorderableIssue();
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     Livewire::test(Grid::class, ['issue' => $issue])
         ->call('toggleSelectionMode')
@@ -328,8 +329,8 @@ test('a guest cannot link or unlink pages', function () {
 
 test('a sola lettura user cannot link pages', function () {
     $issue = reorderableIssue();
-    $pages = $issue->pages()->orderBy('position')->get();
-    $user = User::factory()->create(['role' => \App\Enums\UserRole::SolaLettura]);
+    $pages = $issue->pages()->orderBy('pages.position')->get();
+    $user = User::factory()->create(['role' => UserRole::SolaLettura]);
     $user->magazines()->attach($issue->magazine);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
@@ -351,7 +352,7 @@ test('dragging a single page that belongs to a group moves the whole group toget
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[1]->update(['page_group_id' => $group->id]); // posizione 2
@@ -363,7 +364,7 @@ test('dragging a single page that belongs to a group moves the whole group toget
         ->call('movePage', $pages[1]->id, 6)
         ->assertHasNoErrors();
 
-    $finalOrder = $issue->fresh()->pages()->orderBy('position')->pluck('id')->all();
+    $finalOrder = $issue->fresh()->pages()->orderBy('pages.position')->pluck('id')->all();
     $indexOfFirst = array_search($pages[1]->id, $finalOrder, true);
     $indexOfSecond = array_search($pages[2]->id, $finalOrder, true);
 
@@ -379,7 +380,7 @@ test('dragging a single page whose group has a locked member rejects the whole m
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[1]->update(['page_group_id' => $group->id]);
@@ -404,7 +405,7 @@ test('a block-drag selecting only some pages of an existing group pulls in the r
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]); // posizione 1

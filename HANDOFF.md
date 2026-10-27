@@ -1617,3 +1617,75 @@ Suite: **722 + 40 skipped in locale; 762/762 nel container con imagick**. `npm r
 
 ### Documentazione aggiornata
 `MANUALE_UTENTE.md` (§3 riepilogo, §8 senza soglia, §11, §12/§12bis moduli rivista, cronologia), `README.md`, `docs/README.md`, `docs/02`, `03` (sezione "Riepilogo stile dashboard"), `04`, `11` (#67 chiuso, #68–#71), `12`, `DA-VERIFICARE.md` (DV-34), `CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`, `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md`.
+
+## Sessione 2026-10-27 (continuazione) — Fase 7: proposta (nessun codice)
+
+- Su richiesta, presentata la proposta per la Fase 7 (disposizione dei contenuti nella pagina) senza implementare nulla. Dettaglio, alternative, passi 7a/7b/7c, limiti e domande aperte: `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md`, sezione "Fase 7 — proposta". In attesa della scelta dell'utente.
+
+## Sessione 2026-10-27 (continuazione) — Fase 6 approvata; Fase 7a: disposizione dei contenuti nella pagina
+
+Scelta dell'utente sulla proposta: **approccio B** (impilamento proporzionale con orientamento) con le scelte consigliate (anteprima per blocco, ↑/↓ per l'ordine nel 7b, articoli sempre orizzontali). Implementato solo il passo **7a** (sola lettura). Nessuna migration.
+
+### Cosa è stato fatto
+- `App\Enums\ContentOrientation` (Vertical, Horizontal, Bottom) e `AdFormat::orientation()`, ricavato da `dimensionsMm()` (alto ≥ 270 mm e più stretto di 210 → colonna: mezza verticale, 1/3 verticale, 2/3); piedino = Bottom; formati senza misure (1/3 orizzontale) = Horizontal.
+- `App\Support\PageLayoutPlanner::plan(items)` — puro: colonne verticali da sinistra (larghe t/12), righe orizzontali dall'alto nella larghezza rimasta R (alte (t/12)/R, così l'**area** è esattamente la quota della pagina), piedini dal basso, rettangolo libero. Pagina oltre capienza: righe proporzionali tra loro + `overfull`. Blocchi restituiti nell'ordine della pagina; % arrotondate a 4 decimali.
+- `Page::layout()` (blocchi con contenuto, rettangolo, file e URL dell'anteprima del PROPRIO file) e `Page::previewFileFor(Content)` estratto da `previewFile()` (stessa regola: file del pivot o più recente). `Page::contents()` ora ordinata per `page_content.id` (ordine di assegnazione = ordine dei blocchi; prima l'ordine non era garantito).
+- Card (`partials/page-card.blade.php`): area centrale riscritta con blocchi `absolute` in %; anteprima per blocco con link al file (e `#page=N`); senza anteprima fondo azzurro/ambra; segnaposto tratteggiati; riquadro «libero» tratteggiato. Pagina senza contenuti ma con un PageFile legacy: miniatura a tutta card come prima. Blocchi `tabindex="0"` con frecce sinistra/destra fermate (non spostano la pagina).
+- `partials/page-content-entry.blade.php`: parametro `compact` — comandi (spazio, ✏️, ↗, ✕) in un contenitore `hidden group-hover/block:inline-flex group-focus-within/block:inline-flex` (Tailwind 3.4 named groups), `contents` fuori dai blocchi (layout invariato in Lista).
+- Tolta la barra laterale di riempimento della Fase 3 (`page-fill` mostra solo l'etichetta; rimosso `PageFillStatus::barClasses()`): con la disposizione lo spazio libero è già visibile e la barra si sovrapponeva ai blocchi.
+
+### Test
+Nuovi: `tests/Unit/PageLayoutPlannerTest.php` (9: pagina intera, righe + libero, colonna mezza verticale + 1/4 con area esatta, 2/3 + 1/3 che riempiono, piedino in fondo, aree esatte su un mix, ordine di lettura, oltre capienza, orientamento dei formati), `tests/Feature/Livewire/PageLayoutTest.php` (6: stili dei blocchi in griglia e doppia, anteprima per blocco, comandi compatti + segnaposto, pagina bianca e Lista invariata, copertine con piedino in fondo). Suite: **737 + 40 skipped in locale; 777/777 nel container con imagick**. `npm run build`, `pint --dirty` eseguiti.
+
+### Da verificare a mano nel browser (DV-35)
+1. Blocchi leggibili a zoom S/M/L, in tema chiaro e scuro, con e senza anteprime.
+2. Hover e Tab su un blocco: compaiono i comandi; cambio spazio dal menu → i blocchi si ridisegnano.
+3. Drag&drop delle pagine e trascinamento di un contenuto dal pannello su una card con blocchi: funzionano come prima.
+
+### Documentazione aggiornata
+`MANUALE_UTENTE.md` (§3 tabella: blocchi, etichetta di riempimento), `README.md`, `docs/02`, `03` (sezione "Disposizione dei contenuti nella pagina"), `11` (#72–#75), `12`, `DA-VERIFICARE.md` (DV-35), `CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`, `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md`.
+
+## Sessione 2026-10-27 (continuazione) — Fase 7a approvata; Fase 7b: ordine dei contenuti nella pagina
+
+**Migration nuova** `2026_10_27_400000_add_position_to_page_content_table`: `page_content.position` (smallint unsigned, nullable); le righe esistenti vengono numerate 1…n per pagina nell'ordine di id (= l'ordine già mostrato dal 7a: nessun cambiamento visibile); `down()` elimina la colonna. Verificata migrate → rollback → migrate su una **copia MySQL dei dati di sviluppo** (34 assegnazioni, tutte numerate, nessun NULL; es. pagina 12: pivot 3→1, 4→2). **Non applicata sul DB di sviluppo** al momento della scrittura (si applica con `docker compose up -d --build`; controllare `migrate:status`, l'utente può averlo già fatto).
+
+### Cosa è stato fatto
+- `Page::contents()`: `withPivot(..., 'position')`, ordinamento per `position` (le righe senza posizione in coda, per id). Stesso `withPivot` su `Content::pages()`, cast in `PageContent`.
+- `ContentPageAttacher::attach()`: nuovo contenuto in fondo (max della pagina + 1, letto direttamente su `page_content` per non trascinarsi l'`ORDER BY` della relazione in un aggregato — `ONLY_FULL_GROUP_BY` su MySQL). `ContentCreate::relocatePageContent()` e `MigrateLegacyPageFilesToContents` copiano/impostano la posizione.
+- `App\Support\PageContentOrder::move(ids, contentId, ±1)` — puro: scambio col vicino, null ai bordi o per id/passo non validi.
+- `Grid::moveContentInPage(pageId, contentId, delta)`: autorizzazione, stesso numero, pagina bloccata → errore `locked`; rinumera TUTTA la pagina 1…n in transazione (così anche le righe senza posizione ricevono un ordine esplicito); log `page.contents_reordered`; broadcast `App\Events\PageContentsReordered` + `markPagesUpdated()` + riallineo di `lastKnownPagesUpdatedAt` (niente toast "da un altro utente" per una propria modifica); listener `onPageContentsReordered()`.
+- UI: frecce ↑/↓ in `page-content-entry.blade.php`, dentro i comandi (quindi sul blocco compaiono su hover/focus), solo se la pagina ha più di un contenuto, disattivate ai bordi.
+- **Effetto collaterale trovato dai test**: con `position` anche sul pivot, `$content->pages()->orderBy('position')` / `pluck('position')` / `whereHas('pages', … where('position'))` diventano ambigui (SQLite "ambiguous column name"). Nessun caso nel codice dell'app; corretti nei test con `pages.position` (debito #76 come promemoria). Due casi stavano in test che girano solo con imagick: emersi solo dalla suite nel container.
+
+### Test
+Nuovi: `tests/Unit/PageContentOrderTest.php` (3), `tests/Feature/Livewire/PageContentOrderTest.php` (7: nuovi in fondo con posizioni 1…3, spostamento che cambia ordine/disposizione/evento/cronologia, bordo senza effetto, righe senza posizione in coda e rinumerate, pagina bloccata, sola lettura 403, frecce solo con più contenuti e disattivate ai bordi). Suite: **747 + 40 skipped in locale; 787/787 nel container con imagick**. `npm run build`, `pint --dirty` eseguiti.
+
+### Da verificare a mano nel browser (DV-35, esteso)
+Frecce su hover/Tab in una card con 3 contenuti; ridisegno immediato; secondo browser aggiornato; nessuno spostamento della pagina premendo le frecce del blocco.
+
+### Documentazione aggiornata
+`MANUALE_UTENTE.md` (§3, comandi del blocco e ordine), `docs/03`, `04`, `11` (#76, #77), `DA-VERIFICARE.md` (DV-35), `CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`, `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md`.
+
+## Sessione 2026-10-27 (continuazione) — Bug reale: miniature assenti nell'export PDF del timone
+
+- Segnalazione dell'utente: «nel pdf che viene esportato non vengono riportate le miniature».
+- **Causa** (verificata nel codice e con un test che fallisce senza la correzione): `resources/views/exports/timone.blade.php` prendeva la miniatura da `$page->files` (PageFile caricato direttamente sulla pagina). Quel percorso è stato rimosso col Punto 4 del 2026-09-02: da allora il materiale si carica sui contenuti (ContentFile), quindi per tutte le pagine nuove l'export non trovava mai nulla. Il test esistente (`withThumbnails embeds a real ready thumbnail without error`) usava un PageFile legacy e controllava solo l'assenza di errori, per questo non se n'era accorto nessuno.
+- **Correzione**: `App\Support\ExportThumbnail::dataUri()` (miniatura pronta, presente su disco, mime giusto: PNG per i PDF, il formato originale per le immagini; WEBP solo se `imagecreatefromwebp` esiste, altrimenti saltata — dompdf usa la GD) con fonte `Page::previewFile()`, la stessa della card (file del contenuto, ripiego sul vecchio PageFile). `TimoneExportController` carica `contents.files`. Stessa logica per copertine e pagine interne (prima duplicata nella vista).
+- **Test**: 4 nuovi in `tests/Feature/TimoneExportTest.php` — miniatura di un contenuto su pagina interna e su copertina presente nel PDF (`/Subtype /Image`), assente senza l'opzione, helper che salta file non pronti/mancanti. Verificato che i due test d'inclusione **falliscono** senza la correzione. Suite: **751 + 40 skipped in locale; 791/791 con imagick**.
+- Limiti annotati: una sola miniatura per pagina (non la disposizione a blocchi, debito #78); WEBP dove la GD non lo supporta (#79).
+- Documentazione: manuale (§3, opzioni dell'export), `docs/03` (Flusso 12), `docs/10` (nuova sezione), `docs/11` (#78, #79), `CHANGELOG.md`.
+
+## Sessione 2026-10-27 (continuazione) — Export PDF: una miniatura per ogni contenuto della pagina
+
+- Seconda segnalazione dell'utente, dopo la correzione precedente: «ora nel pdf c'è solo una miniatura, non tutte quelle della pagina» (la correzione usava `Page::previewFile()`, cioè il primo contenuto con un file).
+- **Correzione**: `App\Support\ExportPageLayout::forPage(page, widthPt, heightPt, withThumbnails)` riusa `Page::layout()` (stessi blocchi della card, Fase 7a) e converte le percentuali in **punti** dentro un box a misura fissa — dompdf posiziona in modo affidabile solo con unità assolute; ogni blocco ha la miniatura del PROPRIO contenuto (`ExportThumbnail::dataUri($block['file'])`) o un fondo colorato (azzurro articolo, ambra pubblicità, bordo tratteggiato per i segnaposto); riquadro tratteggiato per lo spazio libero. `TimoneExportController` passa `layoutWidthPt` = 76 (8 celle per riga su A4 orizzontale) e `layoutHeightPt` dalle proporzioni del formato del numero (4:3 se mancano); la vista ha dei default per poter essere renderizzata da sola (un test lo fa). Pagina senza contenuti: miniatura del vecchio PageFile come prima. La disposizione compare anche senza l'opzione miniature (blocchi colorati).
+- **Verifica visiva**: PDF reale generato con 3 contenuti (1/2 verticale + due 1/4) e rasterizzato con `pdftoppm`: colonna a sinistra e due riquadri impilati a destra, ognuno con la sua immagine.
+- **Test**: 2 nuovi in `TimoneExportTest` (3 contenuti → 3 immagini nel PDF; blocchi in punti uguali alla card, pagina senza contenuti → null). Suite: **753 + 40 skipped in locale; 793/793 con imagick**.
+- Debito #74 e #78 chiusi. Documentazione: manuale (§3, export), `docs/03` (Flusso 12), `docs/11`, `CHANGELOG.md`.
+
+## Sessione 2026-10-27 (continuazione) — Restyling dell'export PDF del timone
+
+- Richiesta dell'utente: «il pdf esportato è terribile, rendilo bello». Rifatti `resources/views/exports/timone.blade.php` + nuovo partial `exports/partials/timone-sheet.blade.php`: pagine tutte della stessa misura (60pt, proporzioni del formato del numero), affiancate in **doppie pagine** (`PageSpreadBuilder::slots()`: 1 da sola a destra, ultima pari a sinistra; con un filtro attivo pagine singole), 6 aperture per riga, `page-break-inside: avoid` per riga; dentro ogni pagina i blocchi della disposizione (`ExportPageLayout`, ora con `label` e `fraction`) con miniatura e didascalia o testo nel blocco (accorciato in PHP, dompdf non fa ellipsis); segnaposto tratteggiati senza testo ripetuto; pallino di stato accanto al numero; intestazione con rivista/numero/uscita e riquadri del riepilogo (`IssueSummary` calcolato nel controller sul numero intero, prima dei filtri); legenda compatta; piè di pagina con «Foglio N di M» scritto sul canvas di dompdf dopo `render()` (`counter(pages)` CSS dava 0).
+- Verificato rasterizzando con `pdftoppm` PDF reali dal DB di sviluppo (numeri #3 e #6, sola lettura, container usa-e-getta) e un numero di prova con miniature vere. Corretti in corsa: righe che occupavano solo l'80% della larghezza, linea di piega che spariva (due bordi da 0.3pt), testo dei segnaposto duplicato.
+- Test: aperture (`PageSpreadBuilder::slots`), intestazione con i numeri del riepilogo, test esistente della vista aggiornato. Suite: **755 + 40 skipped in locale; 795/795 con imagick**.
+- **Da fare (sessione interrotta per limite d'uso)**: aggiornare `MANUALE_UTENTE.md` §3 (descrizione dell'export), `docs/03` Flusso 12, Nextcloud; controllare a vista l'ultimo render del numero #1 (`scratchpad/render/p1-1.png`, non guardato).

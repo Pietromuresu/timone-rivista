@@ -29,7 +29,7 @@ function pageCardClasses(string $html, int $pageId): string
 test('bug 4: every ctrl+clicked page, including the last one (which keeps focus), keeps the green selection ring', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pageIds = $issue->pages()->orderBy('position')->limit(3)->pluck('id')->all();
+    $pageIds = $issue->pages()->orderBy('pages.position')->limit(3)->pluck('id')->all();
 
     $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->set('viewMode', 'griglia');
@@ -52,7 +52,7 @@ test('bug 4: every ctrl+clicked page, including the last one (which keeps focus)
 test('bug 4: in list view too, the focused (last ctrl+clicked) row keeps the green selection ring', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pageIds = $issue->pages()->orderBy('position')->limit(3)->pluck('id')->all();
+    $pageIds = $issue->pages()->orderBy('pages.position')->limit(3)->pluck('id')->all();
 
     $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('setViewMode', 'lista');
@@ -74,7 +74,7 @@ test('bug 4: in list view too, the focused (last ctrl+clicked) row keeps the gre
 test('bug 4: a page that is not selected keeps the usual indigo keyboard-focus ring', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    [$selected, $other] = $issue->pages()->orderBy('position')->limit(2)->pluck('id')->all();
+    [$selected, $other] = $issue->pages()->orderBy('pages.position')->limit(2)->pluck('id')->all();
 
     $html = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('ctrlClickPage', $selected)

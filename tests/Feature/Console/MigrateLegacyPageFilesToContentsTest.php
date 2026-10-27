@@ -48,7 +48,7 @@ test('a single-page legacy pdf becomes a content with an equivalent content file
 
 test('consecutive pages from the same original multi-page pdf are grouped into one content and auto-linked', function () {
     $issue = reorderableIssue();
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     PageFile::factory()->for($pages[1])->ready()->create(['original_name' => 'doppia.pdf', 'pdf_page_number' => 1]); // posizione 2
     PageFile::factory()->for($pages[2])->ready()->create(['original_name' => 'doppia.pdf', 'pdf_page_number' => 2]); // posizione 3
@@ -74,7 +74,7 @@ test('consecutive pages from the same original multi-page pdf are grouped into o
 
 test('two independent single-page uploads on non-contiguous pages are never grouped together', function () {
     $issue = reorderableIssue();
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     PageFile::factory()->for($pages[0])->ready()->create(['original_name' => 'a.pdf', 'pdf_page_number' => 1]);
     PageFile::factory()->for($pages[4])->ready()->create(['original_name' => 'b.pdf', 'pdf_page_number' => 1]);

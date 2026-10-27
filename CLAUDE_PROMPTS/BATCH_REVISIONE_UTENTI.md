@@ -1,6 +1,6 @@
 # Batch "revisione con gli utenti" — file di ripartenza
 
-Ultimo aggiornamento: 2026-10-27. **Fasi 1–5 completate e approvate (migration della Fase 5 applicata). Fase 6 implementata, in attesa di ok. Resta la Fase 7 (opzionale: proporre prima l'approccio).**
+Ultimo aggiornamento: 2026-10-27. **Fasi 1–5 completate e approvate (migration della Fase 5 applicata). Fase 6 approvata. Fase 7: approccio B; 7a approvato; **7b (ordine con ↑/↓) implementato, in attesa di ok** — migration `2026_10_27_400000` non ancora applicata sul DB di sviluppo (controllare `migrate:status`: l'utente può aver ricostruito lo stack); 7c (drag&drop) solo se l'utente lo chiede dopo aver provato 7b.**
 
 Questo file serve a riprendere il lavoro in una sessione nuova senza ricostruire il contesto. Contiene:
 1. come ripartire (testo da incollare);
@@ -31,8 +31,8 @@ Fase 7 (opzionale, solo dopo ok): **proporre prima l'approccio** (impilamento ve
 | 3 — Occupazione in dodicesimi | ✅ completata e approvata; migration applicata sul DB di sviluppo (2026-10-27) | `HANDOFF.md` "Sessione 2026-10-27 — … Fase 3" |
 | 4 — Gestione contenuti (modifica, rinomina inline; miniatura tolta su richiesta) | ✅ completata e approvata (senza miniatura) | `HANDOFF.md` "Sessione 2026-10-27 (continuazione) — … Fase 4" |
 | 5 — Pubblicità previste alla creazione (segnaposto, `AdPlacementService`) | ✅ completata e approvata; migration applicata | `HANDOFF.md` "Sessione 2026-10-27 (continuazione) — … Fase 5" |
-| 6 — Riepilogo stile dashboard | 🟡 implementata, in attesa di ok (nessuna migration) | `HANDOFF.md` "Sessione 2026-10-27 (continuazione) — … Fase 6" |
-| 7 — Disposizione dei contenuti nella pagina (opzionale) | ⏳ solo dopo ok, proporre prima l'approccio | — |
+| 6 — Riepilogo stile dashboard | ✅ completata e approvata (nessuna migration) | `HANDOFF.md` "Sessione 2026-10-27 (continuazione) — … Fase 6" |
+| 7 — Disposizione dei contenuti nella pagina (opzionale) | 🟡 approccio B; 7a approvato; 7b implementato, in attesa di ok; 7c da decidere | `HANDOFF.md` "… Fase 7a" |
 
 ### Fase 1 — cosa è stato fatto (sintesi)
 1. **Header fisso**: `layouts/app.blade.php`, wrapper `sticky top-0 z-40`; auto-scroll Sortable da 120px.
@@ -87,6 +87,15 @@ Fase 7 (opzionale, solo dopo ok): **proporre prima l'approccio** (impilamento ve
 - `docs/11-debito-tecnico.md` #45–#53: rischi noti introdotti o emersi in Fase 1–2 (override di metodi interni di Livewire, `Grid.php` che cresce → proposta di estrarre il riepilogo in un componente nella Fase 6, rollback della conversione affidabile solo subito dopo il deploy).
 - **Fase 6 / regole**: soglie e colori di allarme del carico pubblicitario tolti nella Fase 6 (2026-10-27). Nota storica: prima esistevano (`magazines.ad_threshold_percentage`, input "Soglia allarme" nel cruscotto, export).
 
+### Fase 7 — proposta presentata il 2026-10-27 — **scelta dell'utente: B con le scelte consigliate** (anteprima per blocco, ↑/↓ per l'ordine, articoli sempre orizzontali)
+- **Approccio consigliato (B)**: impilamento proporzionale con orientamento, calcolato al volo da classe pura `App\Support\PageLayoutPlanner` (rettangoli in % da dodicesimi + orientamento): i contenuti "verticali" (mezza verticale, 1/3 verticale, 2/3: alti quanto la pagina nel listino) diventano colonne a tutta altezza larghe dodicesimi/12; gli altri si impilano in righe nella larghezza rimasta, alti dodicesimi/(12 × larghezza rimasta). Le aree sono esatte e ci stanno sempre (somma ≤ 12). Spazio libero = rettangolo vuoto in fondo. Orientamento da `AdFormat::orientation()` (derivato da `dimensionsMm()`); articoli orizzontali di default.
+- Alternative scartate: (A) solo righe impilate — semplice ma una mezza verticale sembra orizzontale; (C) griglia libera 12 celle con posizionamento manuale — 1/2 verticale e 1/3 orizzontale non sono rettangoli di celle intere su una griglia 3×4, serve un editor di posizionamento, sproporzionato.
+- Ogni blocco mostra l'anteprima del PROPRIO file (pivot `content_file_id` o file più recente) al posto dell'immagine unica a tutta card; controlli (spazio, ✏️, ↗, ✕) su hover/focus del blocco; vista Lista invariata; export PDF invariato (eventuale estensione dopo).
+- Passi: **7a** layout in sola lettura (nessuna migration); **7b** ordine dei contenuti nella pagina: colonna `page_content.position` (migration nuova e reversibile, default = ordine di assegnazione), bottoni ↑/↓ + evento realtime; **7c** (solo se 7b regge) drag&drop dentro la card: rischio di conflitto con il Sortable delle pagine (MultiDrag, handle) e con il morph di Livewire.
+- Limiti dichiarati: è una rappresentazione, non l'impaginato reale; con zoom S e 4+ contenuti i nomi si troncano (tooltip); le pagine «oltre capienza» si scalano in proporzione con l'avviso rosso; orientamento degli articoli fisso finché non si aggiunge una scelta per pagina.
+- Risposte: B; anteprima per blocco; ↑/↓ (7c solo se 7b regge); articoli sempre orizzontali.
+- **7a fatto** (2026-10-27): `PageLayoutPlanner`, `ContentOrientation`, `AdFormat::orientation()`, `Page::layout()`/`previewFileFor()`, blocchi nella card, comandi compatti; tolta la barra laterale di riempimento. **7b fatto** (2026-10-27): `page_content.position`, `PageContentOrder`, `Grid::moveContentInPage()`, `PageContentsReordered`, frecce ↑/↓ nei comandi del blocco. **7c**: da proporre/decidere dopo che l'utente ha provato 7b (rischi nel debito #77).
+
 ---
 
 ## 3. Note operative sull'ambiente (macchina di sviluppo)
@@ -94,7 +103,7 @@ Fase 7 (opzionale, solo dopo ok): **proporre prima l'approccio** (impilamento ve
 - **Fase 5: migration `2026_10_27_300000_add_placeholder_ads` applicata** (batch 5). Attenzione: l'utente ricostruisce anche da sé lo stack, quindi le migration possono risultare applicate prima del previsto — controllare sempre `migrate:status` (il 2026-10-27 la migration della miniatura, poi tolta, era stata applicata così: colonne e riga di `migrations` rimosse a mano, vedi HANDOFF).
 - **Fase 3: migration `2026_10_27_100000` applicata** (batch 3, 2026-10-27, con `docker compose up -d --build`). Lo stack esegue `migrate` all'avvio: ogni rebuild applica le migration pendenti.
 - **DB di sviluppo** (Docker, MySQL `timone`): le migration della Fase 2 sono **applicate** (batch 2, alle 18:07 del 2026-10-26, all'avvio dello stack ricostruito). Numeri presenti: #1/#2 (62 interne), #3 (210 interne; la bandella creata dalla conversione è stata poi tolta dall'interfaccia, quindi il rollback non sarebbe più esatto per questo numero), #4 (210), #5 «TTOT» (30, creato poco prima della conversione).
-- **Test** (ultimo stato, Fase 6: 722 + 40 skipped in locale, 762/762 con imagick): `php artisan test` in locale (MAMP, senza imagick: 38 test saltati). Suite completa con imagick, senza toccare i container in esecuzione:
+- **Test** (ultimo stato, Fase 7b: 747 + 40 skipped in locale, 787/787 con imagick): `php artisan test` in locale (MAMP, senza imagick: 38 test saltati). Suite completa con imagick, senza toccare i container in esecuzione:
   ```bash
   docker run --rm --entrypoint sh -v "$PWD":/app -w /app \
     -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
@@ -103,7 +112,7 @@ Fase 7 (opzionale, solo dopo ok): **proporre prima l'approccio** (impilamento ve
 - Comandi artisan contro il DB di sviluppo con il codice del repo (es. un dry-run), senza ricostruire: stesso `docker run` con `--network timone-rivista_timone` e senza le variabili `DB_*` (usa `.env`).
 - Asset: `npm run build` dopo modifiche a JS/CSS/classi Tailwind (in locale esiste `public/hot`, che punta al Vite dev server).
 - I test che fanno broadcast vanno scritti con `Event::fake([...])` (vedi `docs/10-debugging.md`, "Could not resolve host: reverb"). Gli helper `reorderableIssue()`/`editorFor()` stanno in `tests/Feature/Livewire/TimoneGridReorderTest.php`.
-- Fasi 1–2 committate dall'utente (`14184e3`, `0340c72`). Fasi 3–6 nel working tree, non committate (rimossi con `git rm`: `app/Support/PagePercentageAllocator.php`, `tests/Unit/PagePercentageAllocatorTest.php`).
+- Fasi 1–2 committate dall'utente (`14184e3`, `0340c72`). Fasi 3–7b nel working tree, non committate (rimossi con `git rm`: `app/Support/PagePercentageAllocator.php`, `tests/Unit/PagePercentageAllocatorTest.php`).
 
 ---
 

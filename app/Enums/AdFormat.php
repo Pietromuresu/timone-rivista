@@ -85,6 +85,27 @@ enum AdFormat: string
     }
 
     /**
+     * Orientamento nella disposizione della card (Fase 7a, 2026-10-27),
+     * ricavato dalle misure del listino (dimensionsMm(), unica fonte):
+     * alto quanto la pagina ma più stretto → colonna (mezza verticale,
+     * 1/3 verticale, 2/3); il piedino è una fascia in fondo; tutto il
+     * resto (pagine intere, mezza orizzontale, vetrina, formati senza
+     * misure) si impila in righe.
+     */
+    public function orientation(): ContentOrientation
+    {
+        if ($this === self::Piedino) {
+            return ContentOrientation::Bottom;
+        }
+
+        $size = $this->dimensionsMm();
+
+        return $size !== null && $size['height'] >= 270.0 && $size['width'] < 210.0
+            ? ContentOrientation::Vertical
+            : ContentOrientation::Horizontal;
+    }
+
+    /**
      * Misure nominali (mm, larghezza×altezza) del formato secondo il
      * listino ADV ufficiale allegato dall'utente in Fase 2 — usate dal
      * controllo formato (§2.3, vedi App\Support\PdfFormatChecker) per

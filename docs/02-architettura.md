@@ -58,6 +58,7 @@ CLAUDE_PROMPTS/            Specifica originale e prompt di lavoro usati durante 
    - `AdLoadCalculator` (carico pubblicitario, in dodicesimi)
    - `PageOccupancy` (value object dell'occupazione totale in dodicesimi, con la distribuzione 12, 12, 6…)
    - `AdPlacement\AdPlacementService` (regola di posizionamento delle pubblicità previste, Fase 5), `AdPlacement\PlaceholderAdCreator`
+   - `PageLayoutPlanner` (disposizione proporzionale dei contenuti nella card, Fase 7a: rettangoli in % da dodicesimi + orientamento)
    - `IssueSummary` (barra di riepilogo, Fase 6: compone PageCapacity, AdLoadCalculator, peso e segnaposto senza calcoli propri)
    - `ContentCreator` / `ContentPlacer` (creazione e posizionamento di un contenuto), `ContentUpdater` (modifica, Fase 4), `ContentFormRules` (regole condivise dai moduli di creazione e modifica)
 

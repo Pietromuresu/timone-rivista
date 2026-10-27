@@ -210,6 +210,7 @@ class MigrateLegacyPageFilesToContents extends Command
 
                 $page->contents()->attach($content->id, [
                     'occupied_twelfths' => Twelfths::PER_PAGE,
+                    'position' => 1,
                     'content_file_id' => $contentFile->id,
                 ]);
             }

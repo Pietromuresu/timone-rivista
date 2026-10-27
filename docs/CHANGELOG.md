@@ -106,3 +106,35 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - `App\Support\IssueSummary` (sostituisce `PlaceholderAdCounter`), partial `summary-bar.blade.php`, `Grid::$summaryHighlight` + `toggleSummaryHighlight()`, `--app-header-height` nel layout.
 - Rimossi `Grid::updateAdThreshold()` e la soglia da `Magazines\Create/Edit`, `Magazine` (fillable/cast), factory ed export; colonna `magazines.ad_threshold_percentage` lasciata, non usata. Nessuna migration.
 
+## Fase 7a — Disposizione dei contenuti nella pagina (2026-10-27)
+
+### Visibili agli utenti
+- Nella card (griglia e doppia pagina) ogni contenuto è un **blocco grande quanto il suo spazio reale**: pubblicità verticali (mezza verticale, 1/3 verticale, 2/3) come colonne a tutta altezza, gli altri come righe impilate, il piedino in fondo, lo spazio libero come riquadro tratteggiato «libero».
+- Ogni blocco mostra l'**anteprima del proprio PDF** (prima un'unica immagine copriva tutta la card); senza PDF un fondo azzurro (articolo) o ambra (pubblicità). I segnaposto restano tratteggiati.
+- I comandi del contenuto (spazio, ✏️, ↗, ✕) compaiono passando sul blocco o raggiungendolo con Tab. Vista Lista invariata.
+- Tolta la barra laterale di riempimento della card (lo spazio libero si vede nei blocchi); resta l'etichetta «Libero: …/Piena».
+
+### Tecniche
+- `App\Support\PageLayoutPlanner` (puro), `App\Enums\ContentOrientation`, `AdFormat::orientation()`; `Page::layout()`, `Page::previewFileFor()` (estratto da `previewFile()`); `Page::contents()` ordinata per `page_content.id`; riga del contenuto con modalità `compact`; rimosso `PageFillStatus::barClasses()`. Nessuna migration.
+
+## Fase 7b — Ordine dei contenuti nella pagina (2026-10-27)
+
+### Visibili agli utenti
+- Frecce **↑ ↓** tra i comandi di ogni contenuto (sulla card compaiono passando sul blocco) quando la pagina ha più contenuti: spostano il contenuto prima o dopo nell'ordine della pagina, e la disposizione si ridisegna subito (colonne verticali sinistra → destra, righe alto → basso, piedino sempre in fondo). Salvato e visibile anche ai colleghi; non disponibile su una pagina bloccata.
+
+### Tecniche
+- Migration `2026_10_27_400000_add_position_to_page_content_table` (`page_content.position`, nullable; righe esistenti numerate nell'ordine attuale; reversibile, verificata su copia MySQL).
+- `App\Support\PageContentOrder` (puro), `Grid::moveContentInPage()`, evento `App\Events\PageContentsReordered` + listener; `Page::contents()` ordinata per posizione; `ContentPageAttacher` mette i nuovi contenuti in fondo.
+- Test: `$content->pages()` con `pages.position` (la colonna `position` ora esiste anche sul pivot).
+
+## Correzione — miniature nell'export PDF del timone (2026-10-27)
+
+- **Visibile**: con l'opzione «miniature» il PDF esportato mostra di nuovo le anteprime, per pagine interne e copertine (la stessa anteprima della card del timone). Prima non compariva nessuna miniatura per il materiale caricato sui contenuti, cioè da settembre in poi.
+- **Causa**: `exports/timone.blade.php` leggeva solo `$page->files` (PDF caricati direttamente sulla pagina, percorso tolto col Punto 4 del 2026-09-02); il test esistente verificava solo l'assenza di errori.
+- **Tecnico**: `App\Support\ExportThumbnail::dataUri()` (stato pronto, file presente, formato supportato da dompdf: PNG/JPEG/GIF, WEBP solo se la GD lo legge), `Page::previewFile()` come fonte, `contents.files` caricato nel controller. Test che controllano l'immagine dentro il PDF (`/Subtype /Image`).
+- **Seconda segnalazione** (stesso giorno, «c'è solo una miniatura, non tutte quelle della pagina»): ogni pagina dell'export mostra ora la **disposizione** dei suoi contenuti (stessi blocchi della card, Fase 7a), ciascuno con la propria miniatura. Tecnico: `App\Support\ExportPageLayout` (rettangoli in punti in un box a misura fissa, proporzioni del formato del numero), verificata rasterizzando un PDF reale con `pdftoppm`.
+
+
+## Restyling dell'export PDF del timone (2026-10-27)
+
+- Pagine tutte uguali con le proporzioni del formato, affiancate in doppie pagine come la rivista; contenuti disegnati come blocchi con miniatura e nome; stato come pallino colorato; intestazione con i numeri del riepilogo (pagine, spazio libero, % pubblicità, da assegnare, copertine, peso); legenda compatta; «Foglio N di M». Tecnico: `exports/partials/timone-sheet.blade.php`, `PageSpreadBuilder::slots()`, `ExportPageLayout` con etichette.

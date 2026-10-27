@@ -30,7 +30,7 @@ test('ctrl+click on a page activates selection mode by itself and selects that p
 test('ctrl+click on an already-selected page deselects it without turning off selection mode', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('ctrlClickPage', $pages[0]->id)
@@ -55,7 +55,7 @@ test('a plain click on a page does nothing while selection mode is off', functio
 test('a plain click on a page while selection mode is on replaces the current selection with just that page', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('ctrlClickPage', $pages[0]->id)
@@ -82,7 +82,7 @@ test('Ctrl+Shift+G links an unlinked selection of 2+ pages, same effect as the e
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('ctrlClickPage', $pages[0]->id)
@@ -101,7 +101,7 @@ test('Ctrl+Shift+G unlinks the selection when it exactly matches an already-link
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
@@ -129,7 +129,7 @@ test('Ctrl+Shift+G on a subset of a larger existing group still dissolves the wh
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id]);
@@ -151,7 +151,7 @@ test('Ctrl+Shift+G on a subset of a larger existing group still dissolves the wh
 test('Ctrl+Shift+G on pages split across two different groups is rejected with feedback, not a silent no-op', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $groupA = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $groupB = PageGroup::create(['issue_id' => $issue->id, 'color' => 'sky']);
@@ -171,7 +171,7 @@ test('Ctrl+Shift+G on pages split across two different groups is rejected with f
 test('Ctrl+Shift+G with fewer than 2 pages selected does nothing and gives feedback instead of failing silently', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $page = $issue->pages()->orderBy('position')->first();
+    $page = $issue->pages()->orderBy('pages.position')->first();
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('ctrlClickPage', $page->id)
@@ -218,7 +218,7 @@ test('a multi-selected page is visually highlighted differently from a swap-sele
 test('Ctrl+Shift+G delegates locked-page rejection to the same unlinkGroup rule, no bespoke logic', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $pages = $issue->pages()->orderBy('position')->get();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
 
     $group = PageGroup::create(['issue_id' => $issue->id, 'color' => 'rose']);
     $pages[0]->update(['page_group_id' => $group->id, 'locked_at' => now(), 'locked_by' => $user->id]);

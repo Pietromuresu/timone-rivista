@@ -63,7 +63,7 @@ test('bug 1: a 3-page pdf created from "Nuovo contenuto" occupies 3 consecutive 
         ->call('assignContent', $content->id, $dropPage->id)
         ->assertHasNoErrors();
 
-    $pages = $content->fresh()->pages()->orderBy('position')->get();
+    $pages = $content->fresh()->pages()->orderBy('pages.position')->get();
 
     expect($pages->pluck('position')->all())->toBe([2, 3, 4]);
 
@@ -93,7 +93,7 @@ test('bug 1: the same 3-page pdf from "Carica materiale" (anchored) lands on the
         ->assertHasNoErrors();
 
     $content = Content::where('title', 'Servizio ancorato')->firstOrFail();
-    $pages = $content->pages()->orderBy('position')->get();
+    $pages = $content->pages()->orderBy('pages.position')->get();
 
     expect($pages->pluck('position')->all())->toBe([2, 3, 4])
         ->and($content->occupancy_twelfths)->toBe(36);

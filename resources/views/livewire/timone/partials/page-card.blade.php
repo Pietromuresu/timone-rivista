@@ -228,20 +228,74 @@
     </div>
 
     {{--
-        Segnalato dall'utente dopo un test dal vivo (2026-07-31): la
-        miniatura PDF pronta deve essere l'elemento visivo principale della
-        card, non un'icona minuscola in fondo insieme a 📤/🕐/📝 — prima
-        stava sempre nella riga di icone sotto, 24×32px, indipendentemente
-        da quanto contenuto/materiale ci fosse. Ora, quando la miniatura è
-        pronta, riempie l'area centrale della card (al posto dell'elenco
-        contenuti, che diventa una didascalia sovrapposta in basso — resta
-        interamente funzionale: percentuale modificabile, "↗"/"✕" invariati)
-        — quando non c'è ancora un'anteprima pronta (nessun file, in
-        elaborazione, fallita), l'area centrale resta l'elenco contenuti
-        testuale di sempre.
+        Fase 7a (2026-10-27, approccio "B" scelto dall'utente): ogni contenuto
+        è un blocco proporzionale alla sua occupazione reale su questa pagina
+        (Page::layout() → App\Support\PageLayoutPlanner): colonne a tutta
+        altezza per i formati verticali (mezza/1/3 verticale, 2/3), righe
+        impilate per gli altri, il piedino in fondo, lo spazio libero come
+        riquadro tratteggiato. Ogni blocco mostra l'anteprima del PROPRIO
+        file (prima un'unica immagine copriva tutta la card) e, sopra, la
+        riga del contenuto in modalità compatta. Senza contenuti resta la
+        scritta di sempre; una pagina legacy con solo un PageFile diretto
+        (Punto 8 non migrato) mostra ancora la sua miniatura a tutta card.
     --}}
-    <div class="relative flex-1 mt-1 min-h-0 rounded overflow-hidden">
-        @if ($previewImageUrl)
+    @php
+        $layout = $page->contents->isNotEmpty() ? $page->layout() : null;
+    @endphp
+    <div class="relative flex-1 mt-1 min-h-0 rounded overflow-hidden" data-testid="page-layout">
+        @if ($layout)
+            @foreach ($layout['blocks'] as $block)
+                @php
+                    $content = $block['content'];
+                    $rect = $block['rect'];
+                    $blockFile = $block['file'];
+                    $blockTone = $content->type->value === 'articolo'
+                        ? 'bg-sky-50 text-sky-950 dark:bg-sky-950/60 dark:text-sky-50'
+                        : 'bg-amber-50 text-amber-950 dark:bg-amber-950/60 dark:text-amber-50';
+                @endphp
+                <div
+                    wire:key="page-{{ $page->id }}-block-{{ $content->id }}"
+                    class="group/block absolute overflow-hidden border {{ $content->isPlaceholder() ? 'border-dashed border-amber-500' : 'border-white/80 dark:border-gray-900/80' }} {{ $block['imageUrl'] ? 'bg-gray-200 dark:bg-gray-700' : $blockTone }}"
+                    style="left: {{ $rect['x'] }}%; top: {{ $rect['y'] }}%; width: {{ $rect['w'] }}%; height: {{ $rect['h'] }}%;"
+                    title="{{ $content->displayLabel() }} — {{ \App\Support\Twelfths::pagesLabel((int) $content->pivot->occupied_twelfths) }}"
+                    data-testid="layout-block"
+                    data-content-id="{{ $content->id }}"
+                    data-twelfths="{{ (int) $content->pivot->occupied_twelfths }}"
+                    tabindex="0"
+                    x-on:keydown.arrow-left.stop
+                    x-on:keydown.arrow-right.stop
+                >
+                    @if ($block['imageUrl'])
+                        <a
+                            href="{{ route('content-files.show', $blockFile).($blockFile->pdf_page_number > 1 ? '#page='.$blockFile->pdf_page_number : '') }}"
+                            target="_blank"
+                            rel="noopener"
+                            x-on:click.stop
+                            class="absolute inset-0 block"
+                            title="{{ $blockFile->original_name }} — apri in una nuova scheda"
+                        >
+                            <img src="{{ $block['imageUrl'] }}" alt="" class="w-full h-full object-cover" />
+                        </a>
+                        <div class="absolute inset-x-0 bottom-0 max-h-full overflow-hidden bg-black/60 px-0.5 py-px">
+                            @include('livewire.timone.partials.page-content-entry', ['variant' => 'overlay', 'compact' => true])
+                        </div>
+                    @else
+                        <div class="absolute inset-0 overflow-hidden p-0.5 flex flex-col justify-center">
+                            @include('livewire.timone.partials.page-content-entry', ['variant' => 'card', 'compact' => true])
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+
+            @if ($layout['free'])
+                <div
+                    class="absolute border border-dashed border-gray-400/80 dark:border-gray-500/80 flex items-center justify-center text-[9px] text-gray-500 dark:text-gray-400 pointer-events-none"
+                    style="left: {{ $layout['free']['x'] }}%; top: {{ $layout['free']['y'] }}%; width: {{ $layout['free']['w'] }}%; height: {{ $layout['free']['h'] }}%;"
+                    data-testid="layout-free"
+                    aria-hidden="true"
+                >libero</div>
+            @endif
+        @elseif ($previewImageUrl)
             <a
                 href="{{ $fileUrl }}"
                 target="_blank"
@@ -250,31 +304,13 @@
                 class="absolute inset-0 block"
                 title="{{ $previewFile->original_name }} — apri in una nuova scheda{{ $previewFile->pdf_page_number > 1 ? ' (pagina '.$previewFile->pdf_page_number.')' : '' }}"
             >
-                <img
-                    src="{{ $previewImageUrl }}"
-                    alt=""
-                    class="w-full h-full object-cover"
-                />
+                <img src="{{ $previewImageUrl }}" alt="" class="w-full h-full object-cover" />
             </a>
-
-            <div class="absolute inset-x-0 bottom-0 max-h-[60%] overflow-y-auto bg-black/60 px-1 py-0.5 space-y-0.5">
-                @forelse ($page->contents as $content)
-                    @include('livewire.timone.partials.page-content-entry', ['variant' => 'overlay'])
-                @empty
-                    <p class="italic text-white/70 text-center leading-tight">
-                        {{ $page->content_type->value === 'bianca' ? 'Pagina bianca' : 'Da assegnare' }}
-                    </p>
-                @endforelse
-            </div>
         @else
-            <div class="h-full flex flex-col justify-center gap-1">
-                @forelse ($page->contents as $content)
-                    @include('livewire.timone.partials.page-content-entry', ['variant' => 'card'])
-                @empty
-                    <p class="italic opacity-60 text-center leading-tight">
-                        {{ $page->content_type->value === 'bianca' ? 'Pagina bianca' : 'Da assegnare' }}
-                    </p>
-                @endforelse
+            <div class="h-full flex flex-col justify-center">
+                <p class="italic opacity-60 text-center leading-tight">
+                    {{ $page->content_type->value === 'bianca' ? 'Pagina bianca' : 'Da assegnare' }}
+                </p>
             </div>
         @endif
     </div>

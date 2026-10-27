@@ -62,7 +62,7 @@ test('a new multi-page pdf is spread over the pages the content occupies, one pd
         ->call('save')
         ->assertHasNoErrors();
 
-    $pivots = $content->pages()->orderBy('position')->get()->map(fn ($p) => ContentFile::find($p->pivot->content_file_id)?->pdf_page_number)->all();
+    $pivots = $content->pages()->orderBy('pages.position')->get()->map(fn ($p) => ContentFile::find($p->pivot->content_file_id)?->pdf_page_number)->all();
     expect($pivots)->toBe([1, 2]);
 });
 

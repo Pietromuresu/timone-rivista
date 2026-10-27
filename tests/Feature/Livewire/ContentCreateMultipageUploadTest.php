@@ -99,10 +99,10 @@ test('a multi-page pdf with no conflicts shows a summary and occupies the follow
     expect(ContentFile::where('thumbnail_status', ThumbnailStatus::Pending)->count())->toBe(3);
 
     $content = Content::sole();
-    $positions = $content->pages()->orderBy('position')->pluck('position')->all();
+    $positions = $content->pages()->orderBy('pages.position')->pluck('pages.position')->all();
     expect($positions)->toBe([2, 3, 4]);
 
-    foreach ($content->pages()->orderBy('position')->get() as $i => $targetPage) {
+    foreach ($content->pages()->orderBy('pages.position')->get() as $i => $targetPage) {
         $contentFile = ContentFile::find($targetPage->pivot->content_file_id);
         expect($contentFile->pdf_page_number)->toBe($i + 1);
     }
@@ -113,7 +113,7 @@ test('a multi-page pdf with no conflicts shows a summary and occupies the follow
     // automaticamente tra loro, stessa funzione già usata da "🔗 Collega
     // selezionate"/Ctrl+Shift+G (App\Support\PageGroupLinker::link()).
     $group = PageGroup::sole();
-    expect($content->pages()->orderBy('position')->pluck('page_group_id')->all())->toBe([$group->id, $group->id, $group->id]);
+    expect($content->pages()->orderBy('pages.position')->pluck('page_group_id')->all())->toBe([$group->id, $group->id, $group->id]);
 });
 
 test('conflicting pages are detected and can be skipped, leaving the existing content untouched', function () {
@@ -226,7 +226,7 @@ test('a pdf reaching past the end of the issue is capped to the pages actually a
     // (posizioni 5 e 6) ricevono il contenuto.
     $content = Content::sole();
     expect(ContentFile::query()->count())->toBe(4)
-        ->and($content->pages()->orderBy('position')->pluck('position')->all())->toBe([5, 6]);
+        ->and($content->pages()->orderBy('pages.position')->pluck('pages.position')->all())->toBe([5, 6]);
 });
 
 test('shifting conflicting pages relocates their existing content instead of losing it, then attaches the new content in place', function () {

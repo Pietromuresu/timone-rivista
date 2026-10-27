@@ -11,6 +11,7 @@ use App\Events\ContentListChanged;
 use App\Events\ContentUnassigned;
 use App\Events\CoversChanged;
 use App\Events\IssuePageCountUpdated;
+use App\Events\PageContentsReordered;
 use App\Events\PageGroupsChanged;
 use App\Events\PageLocked;
 use App\Events\PageMoved;
@@ -32,6 +33,7 @@ use App\Support\ContentPlacer;
 use App\Support\IssueCovers;
 use App\Support\IssueSummary;
 use App\Support\PageCapacity;
+use App\Support\PageContentOrder;
 use App\Support\PageCountResizer;
 use App\Support\PageGroupLinker;
 use App\Support\PageGroupResolver;
@@ -2051,6 +2053,60 @@ class Grid extends Component
             assignedByUserName: auth()->user()->name,
         ))->toOthers();
         $this->issue->markPagesUpdated();
+    }
+
+    /**
+     * Fase 7b (2026-10-27): sposta un contenuto di un posto (prima/dopo)
+     * nell'ordine della pagina, che decide la disposizione dei blocchi
+     * (PageLayoutPlanner). Rinumera tutti i contenuti della pagina 1…n, così
+     * anche le righe senza posizione (assegnate prima della 7b o da un
+     * attach() senza posizione) ottengono un ordine esplicito. Una pagina
+     * bloccata non si modifica, come per lo spazio occupato.
+     */
+    public function moveContentInPage(int $pageId, int $contentId, int $delta): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $page = Page::findOrFail($pageId);
+
+        if ($page->issue_id !== $this->issue->id || $this->blockIfLocked($page)) {
+            return;
+        }
+
+        $contents = $page->contents()->get();
+        $order = PageContentOrder::move($contents->pluck('id')->all(), $contentId, $delta);
+
+        if ($order === null) {
+            return;
+        }
+
+        DB::transaction(function () use ($page, $order) {
+            foreach ($order as $index => $id) {
+                $page->contents()->updateExistingPivot($id, ['position' => $index + 1]);
+            }
+        });
+
+        $moved = $contents->firstWhere('id', $contentId);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Page',
+            entityId: $page->id,
+            action: 'page.contents_reordered',
+            description: "«{$moved->displayLabel()}» spostato ".($delta < 0 ? 'prima' : 'dopo')." nell'ordine della {$page->label()}",
+            new: ['order' => $order],
+        );
+
+        broadcast(new PageContentsReordered(issueId: $this->issue->id, pageId: $page->id))->toOthers();
+        $this->issue->markPagesUpdated();
+        $this->lastKnownPagesUpdatedAt = $this->issue->fresh()->getRawOriginal('pages_updated_at');
+    }
+
+    #[On('echo-presence:issue.{issue.id},.PageContentsReordered')]
+    public function onPageContentsReordered(): void
+    {
+        // render() ridisegna la disposizione dal database.
+        $this->notifyRemoteChange('L\'ordine dei contenuti di una pagina è stato cambiato da un altro utente.');
     }
 
     public function unassignContent(int $contentId, int $pageId): void

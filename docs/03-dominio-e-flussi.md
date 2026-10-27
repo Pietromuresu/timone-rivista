@@ -100,6 +100,14 @@ Fonte: `app/Policies/*`, `app/Enums/UserRole.php`, `MANUALE_UTENTE.md` §14.
 - **Bug corretto**: le prenotate del carico pubblicitario venivano dalla lista "Contenuti da assegnare" già filtrata dalla ricerca per titolo; ora `render()` carica tutti i non assegnati e filtra in memoria solo l'elenco mostrato.
 - **Perché non un componente Livewire a sé** (proposta del debito #52): dovrebbe ripetere tutti i listener realtime di Grid (spostamenti, assegnazioni, stati, copertine…) e il polling per restare aggiornato; come partial di Grid si aggiorna gratis a ogni re-render. La logica è comunque fuori da Grid (`IssueSummary`).
 
+## Disposizione dei contenuti nella pagina (Fase 7a, 2026-10-27)
+
+- **Approccio "B"** scelto dall'utente tra tre proposte (A: solo righe; B: impilamento con orientamento; C: griglia libera a 12 celle, scartata perché alcune frazioni non sono rettangoli di celle intere e servirebbe un editor). Proposta completa in `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md`.
+- **Calcolo**: `App\Support\PageLayoutPlanner::plan()` (puro). Contenuti verticali = colonne a tutta altezza larghe dodicesimi/12, da sinistra; orizzontali = righe dall'alto nella larghezza rimasta R, alte (dodicesimi/12)/R (l'area resta la quota esatta); piedino (`ContentOrientation::Bottom`) dal basso; il resto è un rettangolo libero. Pagina oltre capienza: righe proporzionali tra loro, `overfull`.
+- **Orientamento**: `AdFormat::orientation()` ricavato da `dimensionsMm()` (alto ≥ 270 mm e più stretto di 210 mm → verticale: mezza verticale, 1/3 verticale, 2/3); piedino = in fondo; articoli sempre orizzontali.
+- **Ordine** (Fase 7b): `page_content.position` (1…n per pagina). `Page::contents()` ordina per posizione, poi le righe senza posizione in coda per id (ordine di assegnazione). Un nuovo contenuto va in fondo (`ContentPageAttacher`, max + 1 calcolato sulla tabella pivot). Frecce ↑/↓ nella riga del contenuto → `Grid::moveContentInPage(page, content, ±1)`: `App\Support\PageContentOrder::move()` (puro, scambio col vicino, nulla ai bordi), rinumerazione 1…n di tutta la pagina in transazione, log `page.contents_reordered`, broadcast `App\Events\PageContentsReordered` + `markPagesUpdated()`. Pagina bloccata → errore `locked`. L'ordine conta tra le colonne verticali (sinistra → destra) e tra le righe (alto → basso); i piedini restano in fondo.
+- **Rendering**: `Page::layout()` (blocchi con contenuto, rettangolo e anteprima del proprio file via `Page::previewFileFor()`), card in `partials/page-card.blade.php` (blocchi `absolute` con `left/top/width/height` in %), riga del contenuto in modalità `compact` (comandi su hover/focus, `group/block`). Lista invariata. Nessun dato salvato: la disposizione si ricalcola a ogni render. La barra laterale di riempimento della Fase 3 è stata tolta (lo spazio libero ora si vede nei blocchi); resta l'etichetta.
+
 ## Flusso 4 — Apertura del timone
 
 `Issues\Show::mount()` (`authorize('view')`) monta:
@@ -199,7 +207,7 @@ Limite noto: non è consapevole dei gruppi di pagine (`HANDOFF.md`, "Debito noto
 
 | Export | Rotta | Codice | Libreria |
 |---|---|---|---|
-| Timone completo PDF | `issues.export.timone-pdf` | `TimoneExportController::pdf` (`app/Http/Controllers/TimoneExportController.php:25`), view `resources/views/exports/timone.blade.php` | barryvdh/laravel-dompdf |
+| Timone completo PDF | `issues.export.timone-pdf` | `TimoneExportController::pdf` (`app/Http/Controllers/TimoneExportController.php:25`), view `resources/views/exports/timone.blade.php`; disposizione dei contenuti per pagina da `App\Support\ExportPageLayout` (stessi blocchi della card, `Page::layout()`, convertiti in punti in un box a misura fissa: dompdf posiziona in modo affidabile solo con unità assolute), con la miniatura di ciascun contenuto se c'è l'opzione `withThumbnails` (`App\Support\ExportThumbnail`); pagine senza contenuti: miniatura del vecchio PageFile. Corretto il 2026-10-27 in due passi: prima leggeva solo i vecchi PageFile, poi mostrava una sola miniatura per pagina | barryvdh/laravel-dompdf |
 | Carico pubblicitario CSV | `issues.export.ad-dashboard-csv` | `AdDashboardExportController::csv` (`:18`, `streamDownload`) | nativo |
 | Carico pubblicitario PDF | `issues.export.ad-dashboard-pdf` | `AdDashboardExportController::pdf` (`:61`), view `exports/ad-dashboard.blade.php` | dompdf |
 

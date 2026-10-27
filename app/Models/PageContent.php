@@ -15,6 +15,7 @@ class PageContent extends Pivot
         'page_id',
         'content_id',
         'occupied_twelfths',
+        'position',
         'content_file_id',
     ];
 
@@ -22,6 +23,7 @@ class PageContent extends Pivot
     {
         return [
             'occupied_twelfths' => 'integer',
+            'position' => 'integer',
         ];
     }
 
