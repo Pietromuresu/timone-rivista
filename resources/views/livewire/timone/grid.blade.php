@@ -655,6 +655,8 @@
 
     @can('update', $issue)
         <livewire:timone.content-create :issue="$issue" :key="'content-create-'.$issue->id" />
+        {{-- Fase 4: modale di modifica, aperta da ✏️ (evento open-content-edit). --}}
+        <livewire:timone.content-edit :issue="$issue" :key="'content-edit-'.$issue->id" />
     @endcan
 
     <livewire:timone.page-file-history :issue="$issue" :key="'page-file-history-'.$issue->id" />
@@ -674,6 +676,10 @@
         </div>
 
         @error('percentage')
+            <p class="text-xs text-red-600 dark:text-red-400 mb-2">{{ $message }}</p>
+        @enderror
+
+        @error('rename')
             <p class="text-xs text-red-600 dark:text-red-400 mb-2">{{ $message }}</p>
         @enderror
 

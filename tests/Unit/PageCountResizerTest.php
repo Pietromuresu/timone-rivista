@@ -20,12 +20,12 @@ function fakePage(int $position, array $contents = [], array $files = []): Page
 function fakeAssignedContent(): Content
 {
     $content = new Content(['type' => ContentType::Articolo]);
-    $content->setRelation('pivot', new PageContent(['occupied_percentage' => '100']));
+    $content->setRelation('pivot', new PageContent(['occupied_twelfths' => 12]));
     // Page::previewFile() (Punto 4, 2026-09-02) legge $content->files —
     // stub esplicito a vuoto, altrimenti l'accesso lazy andrebbe in
     // errore qui: i test in tests/Unit/ non hanno un database (solo
     // tests/Feature/ usa RefreshDatabase, vedi tests/Pest.php).
-    $content->setRelation('files', new Collection());
+    $content->setRelation('files', new Collection);
 
     return $content;
 }

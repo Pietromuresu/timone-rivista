@@ -10,6 +10,7 @@ use App\Models\ContentFile;
 use App\Models\Page;
 use App\Models\PageFile;
 use App\Support\PageGroupLinker;
+use App\Support\Twelfths;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -174,8 +175,9 @@ class MigrateLegacyPageFilesToContents extends Command
                 'title' => $title,
                 // Bug 5 (2026-10-12, occupazione obbligatoria): qui il dato
                 // è certo, non inventato — ogni pagina del gruppo era
-                // occupata al 100% dal suo PDF legacy.
-                'page_occupancy' => $group->count(),
+                // occupata per intero dal suo PDF legacy (Fase 3: in
+                // dodicesimi, 12 per pagina).
+                'occupancy_twelfths' => $group->count() * Twelfths::PER_PAGE,
             ]);
 
             Article::create([
@@ -207,7 +209,7 @@ class MigrateLegacyPageFilesToContents extends Command
                 ]);
 
                 $page->contents()->attach($content->id, [
-                    'occupied_percentage' => 100,
+                    'occupied_twelfths' => Twelfths::PER_PAGE,
                     'content_file_id' => $contentFile->id,
                 ]);
             }

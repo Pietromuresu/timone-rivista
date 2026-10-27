@@ -73,9 +73,13 @@ final class ContentCreator
     }
 
     /**
-     * Occupazione effettiva del contenuto: scelta dall'utente per un
-     * articolo, derivata dal formato per la pubblicità (vedi
-     * PageOccupancy::forAdFormat()). Verifica anche la coerenza con il PDF.
+     * Occupazione effettiva del contenuto in dodicesimi (Fase 3,
+     * 2026-10-27): dai campi "Pagine intere" (`whole_pages`) + "Frazione"
+     * (`fraction_twelfths`) del modulo, per articoli e pubblicità. Per una
+     * pubblicità il formato la propone (il modulo precompila i campi) ed è
+     * il ripiego se i campi arrivano vuoti; se l'utente ha scelto di usare
+     * più pagine del PDF di quante ne preveda il formato (bug 8), occupa
+     * quelle N pagine intere. Verifica anche la coerenza con il PDF.
      *
      * @param  array<string, mixed>  $data  campi già validati dal form
      *
@@ -83,6 +87,8 @@ final class ContentCreator
      */
     public static function resolveOccupancy(array $data, ?int $pdfPageCount): PageOccupancy
     {
+        $fromFields = self::occupancyFromFields($data);
+
         if ($data['type'] === ContentType::Pubblicita->value) {
             $format = AdFormat::tryFrom((string) ($data['format'] ?? ''));
 
@@ -90,33 +96,63 @@ final class ContentCreator
                 throw ValidationException::withMessages(['format' => 'Il formato della pubblicità è obbligatorio: determina quanta pagina occupa.']);
             }
 
-            // Fase 1, bug 8 (2026-10-26): un PDF con più pagine del formato
-            // non è più un errore — l'occupazione segue le pagine scelte
-            // dall'utente (App\Support\AdPdfPagePlan).
             $plan = self::pagePlan($data, $pdfPageCount);
 
-            return $plan !== null ? $plan->occupancy($format) : PageOccupancy::forAdFormat($format);
+            if ($plan !== null && $plan->expandsFormat($format)) {
+                return PageOccupancy::wholePages($plan->pageCount());
+            }
+
+            return $fromFields ?? PageOccupancy::forAdFormat($format);
         }
 
-        $occupancy = PageOccupancy::tryFrom($data['page_occupancy'] ?? null);
-
-        if ($occupancy === null) {
-            throw ValidationException::withMessages(['page_occupancy' => "L'occupazione di pagina è obbligatoria."]);
+        if ($fromFields === null) {
+            throw ValidationException::withMessages(['occupancy' => "Indica quanto spazio occupa l'articolo: almeno una pagina intera o una frazione."]);
         }
 
+        self::assertPdfFits($fromFields, $pdfPageCount);
+
+        return $fromFields;
+    }
+
+    /**
+     * Un PDF di N pagine (N > 1) va distribuito su N pagine del timone,
+     * quindi l'occupazione deve attraversarne esattamente N (3 pagine o
+     * 2 e 1/2, non 2); un PDF di una pagina non può coprirne più di una.
+     * Usato dalla creazione di un articolo e da ogni modifica
+     * (ContentUpdater), dove vale anche per la pubblicità: la scelta "usa
+     * tutte / da X a Y" del bug 8 esiste solo in creazione.
+     *
+     * @throws ValidationException
+     */
+    public static function assertPdfFits(PageOccupancy $occupancy, ?int $pdfPageCount, string $errorKey = 'occupancy'): void
+    {
         if ($pdfPageCount !== null && $pdfPageCount > 1 && $occupancy->pagesSpanned() !== $pdfPageCount) {
             throw ValidationException::withMessages([
-                'page_occupancy' => "Il PDF allegato ha {$pdfPageCount} pagine: l'occupazione deve essere di {$pdfPageCount} pagine.",
+                $errorKey => "Il PDF allegato ha {$pdfPageCount} pagine, ma l'occupazione indicata ({$occupancy->label()}) ne attraversa {$occupancy->pagesSpanned()}: devono coincidere.",
             ]);
         }
 
         if ($pdfPageCount === 1 && $occupancy->pagesSpanned() > 1) {
             throw ValidationException::withMessages([
-                'page_occupancy' => "Il PDF allegato ha una sola pagina: scegli un'occupazione di al massimo 1 pagina.",
+                $errorKey => "Il PDF allegato ha una sola pagina: scegli un'occupazione di al massimo 1 pagina.",
             ]);
         }
+    }
 
-        return $occupancy;
+    /**
+     * Null se i due campi sono vuoti/zero o la frazione non è ammessa.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function occupancyFromFields(array $data): ?PageOccupancy
+    {
+        $whole = $data['whole_pages'] ?? null;
+        $fraction = $data['fraction_twelfths'] ?? 0;
+
+        return PageOccupancy::fromParts(
+            $whole === null || $whole === '' ? null : (int) $whole,
+            $fraction === null || $fraction === '' ? 0 : (int) $fraction,
+        );
     }
 
     /**
@@ -170,24 +206,13 @@ final class ContentCreator
         $occupancy = self::resolveOccupancy($data, $pdfPageCount);
         $plan = self::pagePlan($data, $pdfPageCount);
 
-        // Fase 1, bug 8: se l'utente ha scelto di usare più pagine di quante
-        // ne preveda il formato (es. una "mezza pagina" consegnata su 3
-        // pagine intere), ogni pagina è occupata per intero — la percentuale
-        // del listino (50%) non avrebbe senso su ciascuna. Una percentuale
-        // indicata a mano resta comunque prioritaria.
-        $format = AdFormat::tryFrom((string) ($data['format'] ?? ''));
-
-        if ($plan !== null && $format !== null && $data['type'] === ContentType::Pubblicita->value && $plan->expandsFormat($format) && ($data['occupied_percentage_override'] ?? null) === null) {
-            $data['occupied_percentage_override'] = 100;
-        }
-
         $content = DB::transaction(function () use ($issue, $data, $occupancy) {
             $content = Content::create([
                 'issue_id' => $issue->id,
                 'section_id' => $data['section_id'] ?? null,
                 'type' => $data['type'],
                 'title' => $data['title'],
-                'page_occupancy' => $occupancy->value,
+                'occupancy_twelfths' => $occupancy->twelfths,
             ]);
 
             if ($data['type'] === ContentType::Articolo->value) {
@@ -204,7 +229,6 @@ final class ContentCreator
                     'agency' => $data['agency'] ?? null,
                     'format' => $data['format'],
                     'preferred_position' => $data['preferred_position'] ?? null,
-                    'occupied_percentage_override' => $data['occupied_percentage_override'] ?? null,
                     'confirmation_status' => $data['confirmation_status'],
                     'commercial_notes' => $data['commercial_notes'] ?? null,
                 ]);
@@ -219,17 +243,29 @@ final class ContentCreator
             entityId: $content->id,
             action: 'content.created',
             description: "Contenuto «{$content->title}» creato (".($data['type'] === 'articolo' ? 'articolo' : 'pubblicità').', '.$occupancy->label().')',
-            new: ['type' => $data['type'], 'title' => $content->title, 'page_occupancy' => $occupancy->value],
+            new: ['type' => $data['type'], 'title' => $content->title, 'occupancy_twelfths' => $occupancy->twelfths],
         );
 
         if ($file !== null) {
             // Solo le pagine scelte (bug 8), col loro numero ORIGINALE nel PDF.
-            foreach ($plan?->pdfPages() ?? [1] as $pdfPageNumber) {
-                self::storeFile($issue, $content, $file, $pdfPageNumber, $pdfPageCount ?? 1, $userId);
-            }
+            self::storeFiles($issue, $content, $file, $plan?->pdfPages() ?? [1], $pdfPageCount ?? 1, $userId);
         }
 
         return $content;
+    }
+
+    /**
+     * Un ContentFile (con miniatura in coda) per ogni pagina sorgente
+     * indicata; pubblico dalla Fase 4 perché la modifica di un contenuto
+     * (ContentUpdater, sostituzione del PDF) salva i file allo stesso modo.
+     *
+     * @param  list<int>  $pdfPages
+     */
+    public static function storeFiles(Issue $issue, Content $content, UploadedFile $file, array $pdfPages, int $totalPdfPages, ?int $userId): void
+    {
+        foreach ($pdfPages as $pdfPageNumber) {
+            self::storeFile($issue, $content, $file, $pdfPageNumber, $totalPdfPages, $userId);
+        }
     }
 
     /**

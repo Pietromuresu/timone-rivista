@@ -119,13 +119,14 @@ final class AdPdfPagePlan
     {
         return $this->pageCount() === self::formatSpan($format)
             ? PageOccupancy::forAdFormat($format)
-            : PageOccupancy::from($this->pageCount());
+            : PageOccupancy::wholePages($this->pageCount());
     }
 
     /**
      * Vero se la scelta fa occupare alla pubblicità più pagine del formato:
-     * in quel caso ogni pagina è occupata per intero (vedi
-     * ContentCreator::create(), percentuale 100 se non indicata a mano).
+     * in quel caso ogni pagina è occupata per intero (dalla Fase 3
+     * l'occupazione diventa N pagine intere, vedi
+     * ContentCreator::resolveOccupancy()).
      */
     public function expandsFormat(AdFormat $format): bool
     {

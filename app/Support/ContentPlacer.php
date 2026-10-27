@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\DB;
 /**
  * Posiziona un contenuto a partire da una pagina (drop dal pannello
  * "Contenuti da assegnare", bug 1, 2026-10-12): occupa tante pagine
- * consecutive quante ne dichiara la sua occupazione (PageOccupancy), e per
+ * consecutive quante ne dichiara la sua occupazione (PageOccupancy), con
+ * la distribuzione di default in dodicesimi (Fase 3, 2026-10-27: pagine
+ * intere e la frazione sull'ultima, 2,5 pagine → 12, 12, 6), e per
  * un PDF multipagina aggancia a ciascuna pagina il ContentFile della
  * pagina sorgente corrispondente (pivot content_file_id), così ogni card
  * mostra la propria miniatura.
@@ -30,21 +32,22 @@ use Illuminate\Support\Facades\DB;
 final class ContentPlacer
 {
     /**
-     * Le pagine occupate (in ordine), la percentuale per pagina e
-     * l'eventuale gruppo creato — oppure il messaggio d'errore.
+     * Le pagine occupate (in ordine), i dodicesimi scritti su ciascuna
+     * (stesso ordine) e l'eventuale gruppo creato — oppure il messaggio
+     * d'errore.
      *
-     * @return array{pages: Collection<int, Page>, percentage: string, group: PageGroup|null}|string
+     * @return array{pages: Collection<int, Page>, twelfths: list<int>, group: PageGroup|null}|string
      */
     public static function place(Content $content, Page $startPage): array|string
     {
         $occupancy = $content->occupancy();
-        $percentage = $content->occupiedPercentagePerPage();
 
-        if ($occupancy === null || $percentage === null) {
+        if ($occupancy === null) {
             return "«{$content->displayLabel()}» non ha un'occupazione di pagina: impostala prima di posizionarlo (nessuna pagina è stata modificata).";
         }
 
         $span = $occupancy->pagesSpanned();
+        $distribution = $occupancy->distribution();
 
         $targetPages = $startPage->isCover()
             ? self::coverTargets($startPage, $span)
@@ -54,15 +57,16 @@ final class ContentPlacer
             return str_replace('{content}', $content->displayLabel(), $targetPages);
         }
 
-        foreach ($targetPages as $page) {
+        foreach ($targetPages->values() as $index => $page) {
             if ($page->isLocked()) {
                 return 'La '.$page->label()." è bloccata: sbloccala o scegli un'altra pagina di partenza (nessuna pagina è stata modificata).";
             }
 
-            $occupied = $page->contents()->pluck('occupied_percentage')->all();
+            $occupied = $page->contents()->pluck('occupied_twelfths')->all();
 
-            if (! PagePercentageAllocator::fits($occupied, $percentage)) {
-                return 'Spazio insufficiente sulla '.$page->label()." per «{$content->displayLabel()}» ({$percentage}% richiesto): nessuna pagina è stata modificata.";
+            if (! PageCapacity::fits($occupied, $distribution[$index])) {
+                return PageCapacity::insufficientSpaceMessage($page->label(), $distribution[$index], PageCapacity::free($occupied), $content->displayLabel())
+                    .' Nessuna pagina è stata modificata.';
             }
         }
 
@@ -78,7 +82,7 @@ final class ContentPlacer
         $filesInPdfOrder = $files->reverse()->keyBy('pdf_page_number')->sortKeys()->values();
         $latestFileId = $files->first()?->id;
 
-        $group = DB::transaction(function () use ($content, $targetPages, $filesInPdfOrder, $latestFileId, $percentage, $span) {
+        $group = DB::transaction(function () use ($content, $targetPages, $filesInPdfOrder, $latestFileId, $distribution, $span) {
             foreach ($targetPages->values() as $index => $page) {
                 // Multipagina: la pagina sorgente del PDF che corrisponde a
                 // questa posizione. Pagina singola: il file più recente del
@@ -87,7 +91,7 @@ final class ContentPlacer
                 $contentFileId = $span > 1
                     ? $filesInPdfOrder->get($index)?->id
                     : $latestFileId;
-                ContentPageAttacher::attach($content, $page, $contentFileId, $percentage);
+                ContentPageAttacher::attach($content, $page, $contentFileId, $distribution[$index]);
             }
 
             // Stesso collegamento automatico del percorso "📎 Carica
@@ -105,7 +109,7 @@ final class ContentPlacer
             return $result instanceof PageGroup ? $result : null;
         });
 
-        return ['pages' => $targetPages, 'percentage' => (string) $percentage, 'group' => $group];
+        return ['pages' => $targetPages, 'twelfths' => $distribution, 'group' => $group];
     }
 
     /**

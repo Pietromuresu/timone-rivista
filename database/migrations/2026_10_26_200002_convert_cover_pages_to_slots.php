@@ -13,7 +13,7 @@ use Illuminate\Database\Migrations\Migration;
  * le assegnazioni sono per id di pagina, che non cambia.
  *
  * Il dettaglio di cosa diventa cosa si vede PRIMA con
- * `php artisan timone:convert-covers --dry-run` (stesso pianificatore:
+ * `php artisan timone:covers-dry-run` (stesso pianificatore:
  * App\Support\Covers\CoverConversionPlanner). down() ripristina tutto dal
  * registro cover_conversion_logs.
  */

@@ -48,30 +48,39 @@ enum AdFormat: string
     }
 
     /**
-     * Percentuale di pagina occupata di default per questo formato.
-     * Battente copertina/Doppia pagina occupano 100% di CIASCUNA delle due
-     * pagine affiancate a cui vanno assegnati (non 200% di una sola): lo
-     * stesso Content va assegnato a entrambe le pagine tramite
-     * Grid::extendToPage(), già esistente per i contenuti multipagina — non
-     * serve nessun concetto nuovo nello schema per rappresentarli.
+     * Occupazione del formato in dodicesimi di pagina (Fase 3, 2026-10-27)
+     * — sostituisce defaultPercentage(): una sola fonte per "quanto spazio
+     * occupa questo formato", da cui il modulo propone pagine intere +
+     * frazione (sempre modificabili) e il cruscotto conta il carico.
+     *
+     * Mappatura dei formati esistenti (concordata nella consegna della
+     * Fase 3, vedi HANDOFF.md):
+     * - le percentuali di listino che non erano frazioni esatte diventano
+     *   la frazione che rappresentano: Piedino 32.6% → 1/3 (4), 2/3 di
+     *   pagina 70.5% → 2/3 (8);
+     * - Copertina (2ª/3ª/4ª) 52% → pagina intera (12): occupa una
+     *   copertina intera, il 52% era un rapporto di listino, non spazio;
+     * - Battente copertina → 12: dalla Fase 2 la bandella è UN solo slot
+     *   (che vale 2 facciate nel peso), quindi una pagina del timone;
+     * - Doppia pagina → 24: due pagine intere affiancate;
+     * - "1/4 di pagina" è la vetrina, "Piedino" il piedino 1/3.
      */
-    public function defaultPercentage(): float
+    public function twelfths(): int
     {
         return match ($this) {
             self::PaginaIntera,
             self::BattenteCopertina,
-            self::DoppiaPagina,
+            self::CopertinaSecondaTerzaQuarta,
             self::PrimaRomana,
             self::Controsommario,
             self::ElencoInserzionisti,
             self::Controeditoriale,
-            self::Pubbliredazionale => 100.0,
-            self::MezzaPaginaOrizzontale, self::MezzaPaginaVerticale => 50.0,
-            self::UnTerzoPaginaOrizzontale, self::UnTerzoPaginaVerticale => 33.3,
-            self::UnQuartoPagina => 25.0,
-            self::CopertinaSecondaTerzaQuarta => 52.0,
-            self::Piedino => 32.6,
-            self::DueTerziPagina => 70.5,
+            self::Pubbliredazionale => 12,
+            self::DoppiaPagina => 24,
+            self::DueTerziPagina => 8,
+            self::MezzaPaginaOrizzontale, self::MezzaPaginaVerticale => 6,
+            self::UnTerzoPaginaOrizzontale, self::UnTerzoPaginaVerticale, self::Piedino => 4,
+            self::UnQuartoPagina => 3,
         };
     }
 
@@ -88,7 +97,7 @@ enum AdFormat: string
      * Note sui casi non ovvi:
      * - Doppia pagina: il listino dà 210×270 per CIASCUNA delle due pagine
      *   affiancate (non il totale) — stessa misura di "1 pagina intera",
-     *   coerente con defaultPercentage() sopra (100% per pagina).
+     *   coerente con twelfths() sopra (12 per ciascuna delle due pagine).
      * - Un terzo pagina orizzontale: il listino ha una sola voce "1/3 di
      *   pagina" (58×270, chiaramente una striscia stretta e alta, quindi
      *   assegnata qui a UnTerzoPaginaVerticale) — nessuna misura

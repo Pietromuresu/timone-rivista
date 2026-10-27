@@ -28,7 +28,7 @@ test('a long content title is fully rendered on the card, without any truncating
         'issue_id' => $issue->id,
         'title' => $longTitle,
     ]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => 50]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 6]);
 
     $html = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])->html();
 

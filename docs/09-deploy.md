@@ -232,6 +232,12 @@ docker compose build
 # (es. due pagine con lo stesso ruolo copertina). Vedi 04-database.md, cover_conversion_logs.
 docker compose run --rm --no-deps app php artisan timone:covers-dry-run
 
+# 5ter. (una tantum, deploy della Fase 3 del 2026-10-27) anteprima della conversione
+# dell'occupazione da percentuali a dodicesimi di pagina, senza scrivere nulla.
+# Con la NUOVA immagine e PRIMA del migrate. Controllare le righe ⚠️ (pagine che
+# dopo l'arrotondamento superano la capienza: vanno sistemate a mano dopo il deploy).
+docker compose run --rm --no-deps app php artisan timone:occupancy-dry-run
+
 # 6. Migrazioni con la nuova immagine, prima di sostituire i container
 docker compose run --rm --no-deps app php artisan migrate --force
 
@@ -276,6 +282,8 @@ for s in app nginx worker reverb scheduler; do docker tag timone-rivista-$s:late
 ⚠️ DA VERIFICARE: i nomi esatti delle immagini con `docker images | grep timone-rivista` sul server.
 
 La migration `2026_10_12_100001` ha un `down()` che rende di nuovo nullable `page_occupancy`: il rollback è sicuro.
+
+La migration `2026_10_27_100000_convert_occupancy_to_twelfths` (Fase 3) ha un `down()` che riporta lo schema alle percentuali: le colonne vecchie conservano i valori originali, le righe create dopo il deploy ricevono valori ricavati dai dodicesimi (2 e 1/2 pagine diventa 3 pagine, il vecchio modello non le rappresenta). Le modifiche fatte dopo il deploy allo spazio delle assegnazioni **esistenti** non vengono riportate indietro (il rollback torna ai valori di prima del deploy).
 
 ## e) Checklist post-deploy
 

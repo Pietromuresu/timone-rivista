@@ -44,3 +44,39 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - `App\Support\IssueCovers` (creazione, bandella, scambio, `pagine_copertina`); `IssueObserver` crea sempre I–IV; evento `App\Events\CoversChanged`; `Grid::swapCovers()/addBandella()/removeBandella()`; `ContentPlacer::coverTargets()`.
 - Rimossi `PageRole`, `PageRoleAssigner`, `PageNumberer`, `Timone\CoverSection` (e i loro test); tolto l'avviso del peso "ruoli copertina ≠ pagine copertina".
 - **Migration di dati** `2026_10_26_200002_convert_cover_pages_to_slots` con registro `cover_conversion_logs` (reversibile, anche per i numeri creati dopo), anteprima `php artisan timone:covers-dry-run`. Verificata su una copia MySQL dei dati di sviluppo: andata e ritorno identici.
+
+## Fase 3 — Occupazione a frazioni di pagina (2026-10-27)
+
+### Visibili agli utenti
+- **Occupazione con frazioni**: nel modulo di creazione la select unica è sostituita da **"Pagine intere"** + **"Frazione"** (nessuna, 1/4, 1/3, 1/2, 2/3, 3/4), con il totale sotto («Occupa 2 e 1/2 pagine»). Almeno uno dei due > 0. Vale per articoli e pubblicità.
+- **Pubblicità**: il formato **propone** l'occupazione (compila i due campi), modificabile; accanto a ogni formato è indicato lo spazio («(1/2 di pagina)»). Rimosso il campo "Percentuale manuale" (sostituito dai due campi).
+- **Distribuzione** sulle pagine: pagine intere in sequenza e la frazione sull'ultima (2 e 1/2 → intera, intera, 1/2).
+- **Spazio per pagina** sulla card: menu da 1/12 a «intera» al posto del numero percentuale libero.
+- **Capienza**: una pagina contiene al massimo una pagina intera di contenuti; oltre, errore bloccante che dice quanto spazio resta («resta libero solo 1/3 di pagina»).
+- **Riempimento visibile**: barra sul bordo sinistro della card ed etichetta «○ Vuota» / «◐ Libero: 1/3» / «● Piena» (in Lista la sola etichetta); pagina piena scura con ●, distinguibile anche senza colori. «⚠ Oltre capienza» in rosso per eventuali anomalie dei dati convertiti.
+- **Carico pubblicitario esatto** (in dodicesimi): tre terzi di pagina su 3 pagine = 33,33%.
+- Export PDF del timone: lo spazio di ogni contenuto è in frazioni («1/2 di pagina»), non più in percentuale.
+
+### Tecniche
+- `App\Support\Twelfths` (unità e formattazione), `App\Support\PageCapacity` (sostituisce `PagePercentageAllocator`, rimosso), `App\Enums\PageFillStatus`; `App\Support\PageOccupancy` riscritto in dodicesimi (`fromParts()`, `distribution()`, `perExtraPage()`); `AdFormat::twelfths()` sostituisce `defaultPercentage()`; `Advertisement::occupiedPercentage()` e `Content::occupiedPercentagePerPage()` rimossi.
+- `Grid::updateContentOccupancy()` sostituisce `updateContentPercentage()`; evento `ContentAssigned` con `twelfths` (int) al posto di `percentage`.
+- `ContentCreate`: proprietà `whole_pages` (`?int`) + `fraction_twelfths`, `updatedFormat()`; `ContentCreator::occupancyFromFields()`; errore sotto la chiave `occupancy`.
+- Partial `livewire/timone/partials/page-content-entry.blade.php` (riga contenuto, prima triplicata tra card e lista) e `page-fill.blade.php`.
+- **Migration** `2026_10_27_100000_convert_occupancy_to_twelfths` (reversibile): `contents.occupancy_twelfths`, `page_content.occupied_twelfths` (default 12); colonne vecchie rese nullable e non più usate. Conversione: `App\Support\Occupancy\OccupancyConversionPlanner` + `OccupancyConversion`; dry-run `php artisan timone:occupancy-dry-run`. Verificata su copia MySQL dei dati di sviluppo.
+- `timone:missing-occupancy` dice che non serve più su un database convertito.
+- Nessuna dipendenza nuova.
+
+## Fase 4 — Gestione contenuti (2026-10-27)
+
+### Visibili agli utenti
+- **Modifica di un contenuto**: ✏️ sulla riga del contenuto in pagina o sul chip in "Contenuti da assegnare" apre la finestra "Modifica contenuto" con tutti i campi della creazione (tipo, titolo, rubrica, campi articolo/pubblicità, occupazione, materiale di stampa). Le modifiche valgono su tutte le pagine del contenuto; cambiare l'occupazione lo ridistribuisce dalla prima pagina (tutto o niente); cambiare il PDF sostituisce quello vecchio e ogni pagina riceve la sua pagina del PDF.
+- **Nessuna miniatura separata**: il PDF/immagine di stampa resta l'anteprima del contenuto (la miniatura richiesta dalla specifica è stata implementata e poi tolta su indicazione dell'utente: il PDF principale è già la miniatura).
+- **Rinomina inline**: doppio click sul nome del contenuto in pagina, Invio salva, Esc annulla. Aggiorna tutte le pagine e gli altri utenti collegati. Per una pubblicità si cambia il cliente (il nome mostrato).
+
+### Tecniche
+- `App\Livewire\Timone\ContentEdit` (modale), `App\Support\ContentUpdater`, `App\Support\ContentFormRules` (regole condivise con `ContentCreate`), trait `App\Livewire\Concerns\HasOccupancyFields`; `ContentCreator::assertPdfFits()` e `storeFiles()` pubblici.
+- `Grid::renameContent()`; `ContentListChanged` con azioni `updated`/`renamed`.
+- `Content::previewImageUrl()`, `Page::previewImageUrl()` (URL dell'anteprima pronta, prima costruito nei Blade). Nessuna migration.
+- Partial `content-edit.blade.php`; riga del contenuto con rinomina e ✏️.
+- Nessuna dipendenza nuova.
+

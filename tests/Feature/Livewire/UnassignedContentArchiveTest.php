@@ -1,12 +1,13 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Events\ContentListChanged;
 use App\Livewire\Timone\Grid;
+use App\Models\Article;
 use App\Models\Content;
 use App\Models\User;
-use Livewire\Livewire;
-use App\Events\ContentListChanged;
 use Illuminate\Support\Facades\Event;
+use Livewire\Livewire;
 
 // Fase 1, bug 3: archivia/ripristina/elimina ora trasmettono
 // ContentListChanged — finto qui come ogni altro broadcast nei test (vedi
@@ -80,7 +81,7 @@ test('deleting an unassigned content with confirmation removes it permanently, i
         ->call('deleteUnassignedContent', $content->id, true);
 
     expect(Content::find($content->id))->toBeNull()
-        ->and(\App\Models\Article::find($articleId))->toBeNull();
+        ->and(Article::find($articleId))->toBeNull();
 });
 
 test('a content already assigned to a page cannot be deleted through this method', function () {
@@ -88,7 +89,7 @@ test('a content already assigned to a page cannot be deleted through this method
     $user = editorFor($issue);
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
     $page = $issue->pages()->where('position', 1)->first();
-    $page->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('deleteUnassignedContent', $content->id, true);
@@ -101,7 +102,7 @@ test('a content already assigned to a page cannot be archived through this metho
     $user = editorFor($issue);
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
     $page = $issue->pages()->where('position', 1)->first();
-    $page->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('archiveContent', $content->id);

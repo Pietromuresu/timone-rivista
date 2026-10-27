@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Enums\ContentType;
+use App\Models\Advertisement;
+use App\Models\Page;
 use Illuminate\Support\Collection;
 
 class AdLoadCalculator
@@ -12,16 +14,21 @@ class AdLoadCalculator
      * equivalenti e carico percentuale (§7 della specifica), calcolati a
      * partire dalle pagine già caricate da Grid::render() — nessuna query
      * propria, stesso pattern "puro/testabile" di PageSpreadBuilder e
-     * PageReorderer. La formula usa le percentuali *effettivamente
-     * occupate* in `page_content` (non il default del formato), perché
-     * sono modificabili manualmente pagina per pagina.
+     * PageReorderer. La formula usa lo spazio *effettivamente occupato*
+     * in `page_content` (non il default del formato), perché è
+     * modificabile manualmente pagina per pagina.
+     *
+     * Fase 3 (2026-10-27): tutto in dodicesimi interi (pivot
+     * `occupied_twelfths`), la percentuale è calcolata una sola volta alla
+     * fine sui dodicesimi totali delle pagine interne (pagine × 12): niente
+     * più somme di decimali come 33.3 + 33.3 + 33.3. Le "pagine
+     * equivalenti" restituite sono solo per la lettura (Twelfths::toPages()).
      *
      * $reservedAdvertisements (Fase 3, §3): pubblicità "prenotate" — un
      * `Content` di tipo pubblicità non ancora assegnato a nessuna pagina,
      * quindi mai presente nel loop su `$pages` sopra. Il carico che
-     * occuperebbero *una volta piazzate* (il default del loro formato, o
-     * la percentuale manuale se impostata — `Advertisement::occupiedPercentage()`,
-     * la stessa logica già usata da `Grid::assignContent()`) va comunque
+     * occuperebbero *una volta piazzate* (dalla Fase 3 l'occupazione del
+     * loro Content, `occupancy_twelfths`) va comunque
      * incluso nel carico pubblicitario totale ("occupa comunque il carico
      * pubblicitario nel cruscotto percentuali", richiesta esplicita della
      * Fase 3) — ma tenuto separato in `placedAdEquivalentPages`/
@@ -30,8 +37,8 @@ class AdLoadCalculator
      * (default nessuna prenotazione) per restare compatibile con le
      * chiamate/i test esistenti da prima della Fase 3.
      *
-     * @param  Collection<int, \App\Models\Page>  $pages
-     * @param  Collection<int, \App\Models\Advertisement>|null  $reservedAdvertisements
+     * @param  Collection<int, Page>  $pages
+     * @param  Collection<int, Advertisement>|null  $reservedAdvertisements
      * @return array{
      *     totalPages: int,
      *     adEquivalentPages: float,
@@ -39,6 +46,8 @@ class AdLoadCalculator
      *     reservedAdEquivalentPages: float,
      *     editorialEquivalentPages: float,
      *     adLoadPercentage: float,
+     *     adTwelfths: int,
+     *     capacityTwelfths: int,
      *     assignedAdCount: int,
      *     reservedAdCount: int,
      *     formatBreakdown: array<string, int>,
@@ -50,23 +59,23 @@ class AdLoadCalculator
         $reservedAdvertisements ??= new Collection;
 
         $totalPages = $pages->count();
-        $adPercentageSum = 0.0;
-        $editorialPercentageSum = 0.0;
+        $placedAdTwelfths = 0;
+        $editorialTwelfths = 0;
         $assignedAdCount = 0;
         $formatBreakdown = [];
         $confirmationBreakdown = [];
 
         foreach ($pages as $page) {
             foreach ($page->contents as $content) {
-                $occupied = (float) $content->pivot->occupied_percentage;
+                $occupied = (int) $content->pivot->occupied_twelfths;
 
                 if ($content->type !== ContentType::Pubblicita) {
-                    $editorialPercentageSum += $occupied;
+                    $editorialTwelfths += $occupied;
 
                     continue;
                 }
 
-                $adPercentageSum += $occupied;
+                $placedAdTwelfths += $occupied;
                 $assignedAdCount++;
 
                 if ($content->advertisement !== null) {
@@ -76,27 +85,26 @@ class AdLoadCalculator
             }
         }
 
-        $placedAdEquivalentPages = round($adPercentageSum / 100, 2);
-
-        $reservedPercentageSum = 0.0;
+        $reservedAdTwelfths = 0;
 
         foreach ($reservedAdvertisements as $advertisement) {
-            $reservedPercentageSum += $advertisement->occupiedPercentage();
+            $reservedAdTwelfths += (int) $advertisement->content?->occupancy_twelfths;
             self::tally($formatBreakdown, $advertisement->format->value);
             self::tally($confirmationBreakdown, $advertisement->confirmation_status->value);
         }
 
-        $reservedAdEquivalentPages = round($reservedPercentageSum / 100, 2);
-        $adEquivalentPages = round(($adPercentageSum + $reservedPercentageSum) / 100, 2);
-        $editorialEquivalentPages = round($editorialPercentageSum / 100, 2);
+        $adTwelfths = $placedAdTwelfths + $reservedAdTwelfths;
+        $capacityTwelfths = $totalPages * Twelfths::PER_PAGE;
 
         return [
             'totalPages' => $totalPages,
-            'adEquivalentPages' => $adEquivalentPages,
-            'placedAdEquivalentPages' => $placedAdEquivalentPages,
-            'reservedAdEquivalentPages' => $reservedAdEquivalentPages,
-            'editorialEquivalentPages' => $editorialEquivalentPages,
-            'adLoadPercentage' => $totalPages > 0 ? round($adEquivalentPages / $totalPages * 100, 2) : 0.0,
+            'adEquivalentPages' => Twelfths::toPages($adTwelfths),
+            'placedAdEquivalentPages' => Twelfths::toPages($placedAdTwelfths),
+            'reservedAdEquivalentPages' => Twelfths::toPages($reservedAdTwelfths),
+            'editorialEquivalentPages' => Twelfths::toPages($editorialTwelfths),
+            'adLoadPercentage' => Twelfths::percentage($adTwelfths, $capacityTwelfths),
+            'adTwelfths' => $adTwelfths,
+            'capacityTwelfths' => $capacityTwelfths,
             'assignedAdCount' => $assignedAdCount,
             'reservedAdCount' => $reservedAdvertisements->count(),
             'formatBreakdown' => $formatBreakdown,

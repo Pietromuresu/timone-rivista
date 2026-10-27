@@ -4,15 +4,19 @@ use App\Enums\AdFormat;
 use App\Enums\ContentType;
 use App\Enums\CoverSlot;
 use App\Events\ContentAssigned;
+use App\Events\ContentCreated;
 use App\Events\CoversChanged;
+use App\Events\IssuePageCountUpdated;
 use App\Events\PageMoved;
 use App\Livewire\Issues\Create as IssueCreate;
+use App\Livewire\Timone\ContentCreate;
 use App\Livewire\Timone\Grid;
 use App\Models\Advertisement;
 use App\Models\Content;
 use App\Models\Issue;
 use App\Models\Magazine;
 use App\Support\ContentPlacer;
+use App\Support\IssueCovers;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 
@@ -29,10 +33,11 @@ function coverOf(Issue $issue, CoverSlot $slot)
     return $issue->covers()->where('cover_slot', $slot->value)->firstOrFail();
 }
 
-function adWithOccupancy(Issue $issue, string $occupancy): Content
+// Fase 3: $pages = pagine intere (occupazione in dodicesimi = 12 × pagine).
+function adWithOccupancy(Issue $issue, string $pages): Content
 {
-    $content = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Pubblicita, 'page_occupancy' => $occupancy]);
-    Advertisement::factory()->create(['content_id' => $content->id, 'format' => AdFormat::PaginaIntera, 'occupied_percentage_override' => null]);
+    $content = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Pubblicita, 'occupancy_twelfths' => 12 * (int) $pages]);
+    Advertisement::factory()->create(['content_id' => $content->id, 'format' => AdFormat::PaginaIntera]);
 
     return $content->fresh();
 }
@@ -92,7 +97,7 @@ test('two covers can be swapped and their contents follow them', function () {
     $ii = coverOf($issue, CoverSlot::II);
     $iii = coverOf($issue, CoverSlot::III);
     $ad = adWithOccupancy($issue, '1');
-    $ii->contents()->attach($ad->id, ['occupied_percentage' => 100]);
+    $ii->contents()->attach($ad->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
         ->call('swapCovers', $ii->id, $iii->id)
@@ -185,8 +190,8 @@ test('the bandella can be added and removed, and the cover pages of the weight f
 
 test('a bandella with contents cannot be removed', function () {
     $issue = reorderableIssue();
-    \App\Support\IssueCovers::addBandella($issue);
-    coverOf($issue, CoverSlot::Bandella)->contents()->attach(adWithOccupancy($issue, '1')->id, ['occupied_percentage' => 100]);
+    IssueCovers::addBandella($issue);
+    coverOf($issue, CoverSlot::Bandella)->contents()->attach(adWithOccupancy($issue, '1')->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
         ->call('removeBandella')
@@ -196,7 +201,7 @@ test('a bandella with contents cannot be removed', function () {
 });
 
 test('resizing the internal pages never touches the covers', function () {
-    Event::fake([\App\Events\IssuePageCountUpdated::class]);
+    Event::fake([IssuePageCountUpdated::class]);
     $issue = reorderableIssue();
 
     Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
@@ -219,7 +224,7 @@ test('cover cards are draggable only onto other covers, never through the intern
     $start = mb_strpos($html, 'wire:key="page-'.$ii->id.'"');
     $card = mb_substr($html, $start, 3000);
 
-    expect($card)->toContain("text/cover-id")
+    expect($card)->toContain('text/cover-id')
         ->and($card)->toContain('data-cover-slot="II"')
         ->and($card)->not->toContain('drag-handle')
         ->and($card)->not->toContain('nudgePage');
@@ -230,11 +235,11 @@ test('cover cards are draggable only onto other covers, never through the intern
 })->with(['griglia', 'doppia', 'lista']);
 
 test('material uploaded from a cover is assigned to that cover', function () {
-    Event::fake([\App\Events\ContentCreated::class, ContentAssigned::class]);
+    Event::fake([ContentCreated::class, ContentAssigned::class]);
     $issue = reorderableIssue();
     $iv = coverOf($issue, CoverSlot::IV);
 
-    Livewire::actingAs(editorFor($issue))->test(\App\Livewire\Timone\ContentCreate::class, ['issue' => $issue])
+    Livewire::actingAs(editorFor($issue))->test(ContentCreate::class, ['issue' => $issue])
         ->call('openForPage', $iv->id)
         ->set('type', 'pubblicita')
         ->set('title', 'Quarta di copertina')

@@ -1,6 +1,6 @@
 # Batch "revisione con gli utenti" — file di ripartenza
 
-Ultimo aggiornamento: 2026-10-26, fine sessione. **Fasi 1 e 2 completate e approvate. Prossima: Fase 3.**
+Ultimo aggiornamento: 2026-10-27. **Fasi 1, 2 e 3 completate e approvate. Fase 4 implementata, in attesa di ok (nessuna migration: la miniatura separata è stata tolta su richiesta).**
 
 Questo file serve a riprendere il lavoro in una sessione nuova senza ricostruire il contesto. Contiene:
 1. come ripartire (testo da incollare);
@@ -16,9 +16,9 @@ Il dettaglio tecnico completo di ogni fase è in `HANDOFF.md` (sezioni "Sessione
 
 Incollare in una nuova sessione:
 
-> Leggi `CLAUDE.md`, poi `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md` (stato del batch e prompt originale) e le ultime sezioni di `HANDOFF.md`. Le Fasi 1 e 2 sono completate e approvate. Riprendi dalla **Fase 3 — Occupazione a frazioni di pagina**, seguendo le regole generali del prompt originale (fasi con ok esplicito, migration nuove e reversibili con dry-run mostrato prima di eseguirla, una sola fonte di verità per i calcoli, test di regressione, documentazione aggiornata a fine fase incluso il file Nextcloud).
+> Leggi `CLAUDE.md`, poi `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md` (stato del batch e prompt originale) e le ultime sezioni di `HANDOFF.md`. Le Fasi 1 e 2 sono completate e approvate; la Fase 3 è implementata (vedi stato sotto: se approvata, applicare la migration e passare alla **Fase 4 — Gestione contenuti**), seguendo le regole generali del prompt originale (fasi con ok esplicito, migration nuove e reversibili con dry-run mostrato prima di eseguirla, una sola fonte di verità per i calcoli, test di regressione, documentazione aggiornata a fine fase incluso il file Nextcloud).
 
-Prima di scrivere codice per la Fase 3: leggere `App\Support\PageOccupancy`, `App\Support\PagePercentageAllocator`, `App\Support\ContentPlacer`, `App\Support\ContentPageAttacher`, `App\Support\AdLoadCalculator`, `App\Support\AdPdfPagePlan` (bug 8), `App\Enums\AdFormat`, il pivot `page_content` (`occupied_percentage`) e `contents.page_occupancy`. La Fase 3 li sostituisce/affianca con i dodicesimi.
+Prima di scrivere codice per la Fase 4: leggere `App\Livewire\Timone\ContentCreate` (+ `partials/occupancy-fields.blade.php`), `App\Support\ContentCreator`, `App\Support\PageOccupancy` (`distribution()`), `partials/page-content-entry.blade.php` (punto naturale per la rinomina inline) e i debiti #55, #56, #59 di `docs/11-debito-tecnico.md` (riguardano proprio la modifica di un contenuto).
 
 ---
 
@@ -28,8 +28,8 @@ Prima di scrivere codice per la Fase 3: leggere `App\Support\PageOccupancy`, `Ap
 |---|---|---|
 | 1 — Bug (9 punti) | ✅ completata e approvata (bug 8 implementato dopo l'ok sul flusso) | `HANDOFF.md` "Fase 1: bug" + "Fase 1 approvata; bug 8 implementato" |
 | 2 — Copertine separate | ✅ completata e approvata; migration applicata sul DB di sviluppo | `HANDOFF.md` "Fase 2: copertine separate dalle pagine" + "Fase 2 approvata: copertine in un'unica fascia" |
-| 3 — Occupazione in dodicesimi | ⏳ da fare | — |
-| 4 — Gestione contenuti (modifica, miniatura, rinomina inline) | ⏳ da fare | — |
+| 3 — Occupazione in dodicesimi | ✅ completata e approvata; migration applicata sul DB di sviluppo (2026-10-27) | `HANDOFF.md` "Sessione 2026-10-27 — … Fase 3" |
+| 4 — Gestione contenuti (modifica, rinomina inline; miniatura tolta su richiesta) | 🟡 implementata, in attesa di ok | `HANDOFF.md` "Sessione 2026-10-27 (continuazione) — … Fase 4" |
 | 5 — Pubblicità previste alla creazione (segnaposto, `AdPlacementService`) | ⏳ da fare | — |
 | 6 — Riepilogo stile dashboard | ⏳ da fare | — |
 | 7 — Disposizione dei contenuti nella pagina (opzionale) | ⏳ solo dopo ok, proporre prima l'approccio | — |
@@ -52,11 +52,25 @@ Prima di scrivere codice per la Fase 3: leggere `App\Support\PageOccupancy`, `Ap
 - Rimossi `PageRole`, `PageRoleAssigner`, `PageNumberer`, `Timone\CoverSection`; colonne `pages.role` e `magazines.battente_counted_in_total` lasciate (non più lette).
 - Migration `2026_10_26_200000/200001/200002` (schema, registro `cover_conversion_logs`, conversione dati) reversibili; dry-run `php artisan timone:covers-dry-run`.
 
+### Fase 3 — cosa è stato fatto (sintesi)
+- Dodicesimi interi: `App\Support\Twelfths` (unità + formattazione), `PageCapacity` (sostituisce `PagePercentageAllocator`), `PageFillStatus`, `PageOccupancy` riscritto (`fromParts`, `distribution` 12/12/6), `AdFormat::twelfths()` (sostituisce `defaultPercentage`).
+- `contents.occupancy_twelfths`, `page_content.occupied_twelfths`; colonne vecchie nullable e non più usate.
+- Modulo: "Pagine intere" + "Frazione", anteprima «Occupa …»; il formato propone, modificabile; via la "Percentuale manuale".
+- Card: select 1/12…intera per pagina (`Grid::updateContentOccupancy`), barra + etichetta «Vuota / Libero: 1/3 / Piena».
+- Migration `2026_10_27_100000_convert_occupancy_to_twelfths` + dry-run `php artisan timone:occupancy-dry-run`; conversione = dodicesimo più vicino (non "12 su ogni pagina": avrebbe creato pagine a 24/12 sui dati reali).
+
+### Fase 4 — cosa è stato fatto (sintesi)
+- Modale `Timone\ContentEdit` + `App\Support\ContentUpdater` (campi, cambio tipo, ridistribuzione se cambia l'occupazione, sostituzione PDF); regole condivise `ContentFormRules`, trait `HasOccupancyFields`.
+- Miniatura separata (punto 4.2 della specifica): implementata e poi **tolta su richiesta dell'utente** («il PDF principale è già la miniatura»). Non riproporla.
+- Rinomina inline: doppio click sul nome in pagina → `Grid::renameContent()` (articolo: titolo; pubblicità: cliente).
+
 ### Decisioni prese con una scelta di default (da tenere presenti)
 - Bandella = vecchio "battente", slot facoltativo; un nuovo numero la riceve se la rivista ha 6 pagine di copertina nei parametri del peso.
 - Copertine fuori da selezione multipla, modalità scambio, frecce, gruppi collegati, cruscotto pubblicitario e conteggi delle pagine interne (conteggio a parte nell'intestazione).
 - Bug 8: scelta "usa tutte / da X a Y" solo per le pubblicità (non per gli articoli); un PDF più corto del formato non chiede nulla; se la scelta supera le pagine del formato la percentuale per pagina diventa 100 (da riassorbire nei dodicesimi in Fase 3).
 - In vista doppia la II non è affiancata alla pagina 1 (fascia separata).
+- Fase 4: rinomina di una pubblicità = cliente; ridistribuzione sempre dalla prima pagina su pagine consecutive; in modifica niente scelta "usa tutte / da X a Y" del PDF (il PDF deve coincidere con l'occupazione); ✏️ = modale completa, doppio click = rinomina.
+- Fase 3: conversione al dodicesimo più vicino invece di "12 su ogni pagina"; copertina 2ª/3ª/4ª e battente = 12, piedino = 4, 2/3 = 8, 1/4 = vetrina (DV-28); pivot con default 12; bug 8 "usa tutte" = N pagine intere a prescindere dai campi; estendere a una pagina in più = pagina intera (o tutto il contenuto se < 1 pagina).
 
 ### Punti aperti / da verificare
 - `docs/DA-VERIFICARE.md` DV-23 (causa reale degli upload in produzione: eseguire `timone:diagnose-upload` sul server), DV-24 (verifiche nel browser della Fase 1: nessun Dusk), DV-25 (regole copertina su più pagine da confermare con la redazione), DV-26 (dry-run delle copertine sul server prima del `migrate` in produzione).
@@ -68,9 +82,9 @@ Prima di scrivere codice per la Fase 3: leggere `App\Support\PageOccupancy`, `Ap
 
 ## 3. Note operative sull'ambiente (macchina di sviluppo)
 
+- **Fase 3: migration `2026_10_27_100000` applicata** (batch 3, 2026-10-27, con `docker compose up -d --build`). Lo stack esegue `migrate` all'avvio: ogni rebuild applica le migration pendenti.
 - **DB di sviluppo** (Docker, MySQL `timone`): le migration della Fase 2 sono **applicate** (batch 2, alle 18:07 del 2026-10-26, all'avvio dello stack ricostruito). Numeri presenti: #1/#2 (62 interne), #3 (210 interne; la bandella creata dalla conversione è stata poi tolta dall'interfaccia, quindi il rollback non sarebbe più esatto per questo numero), #4 (210), #5 «TTOT» (30, creato poco prima della conversione).
-- Il container `app` in esecuzione non ha ancora la modifica "copertine in un'unica fascia": `docker compose up -d --build`.
-- **Test** (ultimo stato: 674 + 38 skipped in locale, 712/712 con imagick): `php artisan test` in locale (MAMP, senza imagick: 38 test saltati). Suite completa con imagick, senza toccare i container in esecuzione:
+- **Test** (ultimo stato, Fase 4: 706 + 40 skipped in locale, 746/746 con imagick): `php artisan test` in locale (MAMP, senza imagick: 38 test saltati). Suite completa con imagick, senza toccare i container in esecuzione:
   ```bash
   docker run --rm --entrypoint sh -v "$PWD":/app -w /app \
     -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
@@ -79,7 +93,7 @@ Prima di scrivere codice per la Fase 3: leggere `App\Support\PageOccupancy`, `Ap
 - Comandi artisan contro il DB di sviluppo con il codice del repo (es. un dry-run), senza ricostruire: stesso `docker run` con `--network timone-rivista_timone` e senza le variabili `DB_*` (usa `.env`).
 - Asset: `npm run build` dopo modifiche a JS/CSS/classi Tailwind (in locale esiste `public/hot`, che punta al Vite dev server).
 - I test che fanno broadcast vanno scritti con `Event::fake([...])` (vedi `docs/10-debugging.md`, "Could not resolve host: reverb"). Gli helper `reorderableIssue()`/`editorFor()` stanno in `tests/Feature/Livewire/TimoneGridReorderTest.php`.
-- Nulla è stato committato: tutte le modifiche delle Fasi 1–2 sono nel working tree (le cancellazioni di file della Fase 2 sono già in stage con `git rm`).
+- Fasi 1–2 committate dall'utente (`14184e3`, `0340c72`). Fasi 3–4 nel working tree, non committate (rimossi con `git rm`: `app/Support/PagePercentageAllocator.php`, `tests/Unit/PagePercentageAllocatorTest.php`).
 
 ---
 
@@ -321,5 +335,6 @@ file Nextcloud.
 ---
 
 ### Modifiche alla specifica concordate durante il lavoro
+- Fase 4, punto 2 (miniatura): **tolto** su richiesta dell'utente (2026-10-27): il PDF principale è già la miniatura.
 - Fase 2, interfaccia: **tutte le copertine (I, bandella, II, III, IV) in un'unica fascia in cima al timone**, prima della pagina 1 — non più III e IV dopo l'ultima pagina (richiesta dell'utente all'ok della Fase 2).
 - Fase 1, bug 8: "organizzati in base alla richiesta e fai come credi" — ramo copertina implementato con le regole II/III descritte sopra, scelta pagine solo per le pubblicità.

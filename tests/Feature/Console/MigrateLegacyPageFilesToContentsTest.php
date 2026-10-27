@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ContentType;
+use App\Models\Article;
 use App\Models\Content;
 use App\Models\ContentFile;
 use App\Models\Page;
@@ -93,9 +94,9 @@ test('a page whose preview already comes from a content (not the legacy PageFile
     // preferisce quest'ultimo, quindi non c'è nulla da migrare qui.
     PageFile::factory()->for($page)->create();
     $modernContent = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Articolo]);
-    \App\Models\Article::factory()->for($modernContent)->create();
+    Article::factory()->for($modernContent)->create();
     $modernFile = ContentFile::factory()->for($modernContent)->ready()->create();
-    $page->contents()->attach($modernContent->id, ['occupied_percentage' => 100, 'content_file_id' => $modernFile->id]);
+    $page->contents()->attach($modernContent->id, ['occupied_twelfths' => 12, 'content_file_id' => $modernFile->id]);
 
     $this->artisan('timone:migrate-legacy-page-files')->assertSuccessful();
 

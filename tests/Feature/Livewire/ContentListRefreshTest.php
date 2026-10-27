@@ -30,7 +30,7 @@ test('creating a content dispatches the local content-created event', function (
         ->call('toggleForm')
         ->set('type', 'articolo')
         ->set('title', 'Articolo appena creato')
-        ->set('page_occupancy', '1')
+        ->set('whole_pages', 1)
         ->call('save')
         ->assertHasNoErrors()
         ->assertDispatched('content-created', contentId: Content::where('title', 'Articolo appena creato')->value('id'));

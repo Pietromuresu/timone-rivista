@@ -2,6 +2,7 @@
 
 use App\Enums\PageContentType;
 use App\Enums\ThumbnailStatus;
+use App\Enums\UserRole;
 use App\Events\ContentAssigned;
 use App\Events\ContentCreated;
 use App\Events\ContentFileUploaded;
@@ -9,6 +10,7 @@ use App\Jobs\GenerateContentFileThumbnail;
 use App\Livewire\Timone\ContentCreate;
 use App\Models\Content;
 use App\Models\ContentFile;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
@@ -41,7 +43,7 @@ test('attaching an image to a new content generates a ready thumbnail synchronou
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Articolo con foto allegata')->set('page_occupancy', '1')
+        ->set('title', 'Articolo con foto allegata')->set('whole_pages', 1)
         ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
         ->call('save')
         ->assertHasNoErrors();
@@ -73,7 +75,7 @@ test('opening the form anchored to a page and uploading an image attaches the co
         ->assertSet('anchorPageId', $page->id)
         ->assertSet('showForm', true)
         ->set('type', 'articolo')
-        ->set('title', 'Foto ancorata alla pagina')->set('page_occupancy', '1')
+        ->set('title', 'Foto ancorata alla pagina')->set('whole_pages', 1)
         ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
         ->call('save')
         ->assertHasNoErrors();
@@ -97,7 +99,7 @@ test('a content created from the free-standing "+ Nuovo contenuto" form (no anch
         ->call('toggleForm')
         ->assertSet('anchorPageId', null)
         ->set('type', 'articolo')
-        ->set('title', 'Foto non ancorata')->set('page_occupancy', '1')
+        ->set('title', 'Foto non ancorata')->set('whole_pages', 1)
         ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
         ->call('save')
         ->assertHasNoErrors();
@@ -116,12 +118,12 @@ test('anchored upload reports insufficient space instead of failing silently, th
 
     // La pagina è già piena (100%): non c'è spazio per il nuovo contenuto.
     $existingContent = Content::factory()->create(['issue_id' => $issue->id]);
-    $page->contents()->attach($existingContent->id, ['occupied_percentage' => 100]);
+    $page->contents()->attach($existingContent->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('openForPage', $page->id)
         ->set('type', 'articolo')
-        ->set('title', 'Foto senza spazio')->set('page_occupancy', '1')
+        ->set('title', 'Foto senza spazio')->set('whole_pages', 1)
         ->set('file', UploadedFile::fake()->image('foto.jpg', 100, 100))
         ->call('save')
         ->assertHasErrors('anchor');
@@ -144,7 +146,7 @@ test('attaching a real pdf actually converts its first page to a ready thumbnail
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Articolo con PDF reale')->set('page_occupancy', '1')
+        ->set('title', 'Articolo con PDF reale')->set('whole_pages', 1)
         ->set('file', UploadedFile::fake()->createWithContent('bozza.pdf', minimalValidPdfBytes()))
         ->call('save')
         ->assertHasNoErrors();
@@ -165,7 +167,7 @@ test('a content can be created with no file attached, exactly as before this pha
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Articolo senza allegati')->set('page_occupancy', '1')
+        ->set('title', 'Articolo senza allegati')->set('whole_pages', 1)
         ->call('save')
         ->assertHasNoErrors();
 
@@ -191,7 +193,7 @@ test('attaching a pdf dispatches the thumbnail generation job for the content fi
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Articolo con PDF allegato')->set('page_occupancy', '1')
+        ->set('title', 'Articolo con PDF allegato')->set('whole_pages', 1)
         ->set('file', UploadedFile::fake()->createWithContent('bozza.pdf', minimalValidPdfBytes()))
         ->call('save')
         ->assertHasNoErrors();
@@ -221,7 +223,7 @@ test('a file with a disallowed mime type is rejected at upload time, before save
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
         ->set('type', 'articolo')
-        ->set('title', 'Articolo con file non ammesso')->set('page_occupancy', '1')
+        ->set('title', 'Articolo con file non ammesso')->set('whole_pages', 1)
         ->set('file', UploadedFile::fake()->create('note.txt', 10, 'text/plain'))
         ->assertHasErrors('file');
 
@@ -234,16 +236,16 @@ test('each content on a mixed page keeps its own file, resolving the page-scoped
     $page = $issue->pages()->where('position', 1)->first();
 
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
-        ->call('toggleForm')->set('type', 'articolo')->set('title', 'Articolo A')->set('page_occupancy', '1')
+        ->call('toggleForm')->set('type', 'articolo')->set('title', 'Articolo A')->set('whole_pages', 1)
         ->set('file', UploadedFile::fake()->image('a.jpg'))->call('save');
 
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
-        ->call('toggleForm')->set('type', 'articolo')->set('title', 'Articolo B')->set('page_occupancy', '1')
+        ->call('toggleForm')->set('type', 'articolo')->set('title', 'Articolo B')->set('whole_pages', 1)
         ->set('file', UploadedFile::fake()->image('b.jpg'))->call('save');
 
     $contentA = Content::where('title', 'Articolo A')->first();
     $contentB = Content::where('title', 'Articolo B')->first();
-    $page->contents()->attach([$contentA->id => ['occupied_percentage' => 50], $contentB->id => ['occupied_percentage' => 50]]);
+    $page->contents()->attach([$contentA->id => ['occupied_twelfths' => 6], $contentB->id => ['occupied_twelfths' => 6]]);
 
     expect($contentA->files->first()->original_name)->toBe('a.jpg')
         ->and($contentB->files->first()->original_name)->toBe('b.jpg')
@@ -262,7 +264,7 @@ test('a guest cannot download a content file', function () {
 test('a user without access to the magazine cannot download a content file', function () {
     $issue = reorderableIssue();
     $owner = editorFor($issue);
-    $outsider = \App\Models\User::factory()->create(['role' => \App\Enums\UserRole::Redattore]);
+    $outsider = User::factory()->create(['role' => UserRole::Redattore]);
     $content = Content::factory()->create(['issue_id' => $issue->id]);
     $contentFile = ContentFile::factory()->create(['content_id' => $content->id, 'uploaded_by' => $owner->id]);
 

@@ -6,11 +6,10 @@ use App\Enums\ContentType;
 use App\Enums\CoverSlot;
 use App\Enums\PageStatus;
 use App\Enums\ThumbnailStatus;
-use App\Enums\PageContentType;
 use App\Events\ContentAssigned;
 use App\Events\ContentListChanged;
-use App\Events\CoversChanged;
 use App\Events\ContentUnassigned;
+use App\Events\CoversChanged;
 use App\Events\IssuePageCountUpdated;
 use App\Events\PageGroupsChanged;
 use App\Events\PageLocked;
@@ -24,22 +23,22 @@ use App\Models\ContentFile;
 use App\Models\Issue;
 use App\Models\Page;
 use App\Models\PageFile;
-use App\Models\PageGroup;
 use App\Models\PageReorderLog;
 use App\Support\ActivityLogger;
 use App\Support\AdLoadCalculator;
 use App\Support\AutomaticChecks;
-use App\Support\IssueCovers;
 use App\Support\ContentPageAttacher;
 use App\Support\ContentPlacer;
+use App\Support\IssueCovers;
+use App\Support\PageCapacity;
 use App\Support\PageCountResizer;
 use App\Support\PageGroupLinker;
 use App\Support\PageGroupResolver;
 use App\Support\PageInserter;
-use App\Support\PagePercentageAllocator;
 use App\Support\PageReorderer;
 use App\Support\PageSpreadBuilder;
 use App\Support\ThumbnailProgressEstimator;
+use App\Support\Twelfths;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -1298,7 +1297,7 @@ class Grid extends Component
         }
 
         if ($newStatus === PageStatus::OkStampa && ! $this->pageHasFile($page)) {
-            $this->addError('pdfRequired', 'La '.$page->label()." non ha ancora un PDF caricato: non può essere segnata «Ok stampa».");
+            $this->addError('pdfRequired', 'La '.$page->label().' non ha ancora un PDF caricato: non può essere segnata «Ok stampa».');
 
             return;
         }
@@ -1409,7 +1408,7 @@ class Grid extends Component
                 entityType: 'Page',
                 entityId: $page->id,
                 action: 'page.unlocked',
-                description: ucfirst($page->label())." sbloccata",
+                description: ucfirst($page->label()).' sbloccata',
             );
 
             broadcast(new PageUnlocked(
@@ -1430,7 +1429,7 @@ class Grid extends Component
             entityType: 'Page',
             entityId: $page->id,
             action: 'page.locked',
-            description: ucfirst($page->label())." bloccata",
+            description: ucfirst($page->label()).' bloccata',
         );
 
         broadcast(new PageLocked(
@@ -1777,6 +1776,58 @@ class Grid extends Component
      * riallineiamo anche il riferimento del polling per non mostrarci un
      * toast "da un altro utente" per una modifica nostra.
      */
+    /**
+     * Fase 4 (2026-10-27): rinomina inline dalla riga del contenuto in una
+     * pagina (doppio click o ✏️ → Invio). Il nome è del contenuto, non
+     * della pagina: si aggiorna su tutte le pagine che lo mostrano e, via
+     * ContentListChanged + pages_updated_at, anche per gli altri utenti.
+     * Si rinomina ciò che la riga mostra (Content::displayLabel()): il
+     * titolo per un articolo, il cliente per una pubblicità — altrimenti
+     * l'utente scriverebbe un nome e ne vedrebbe un altro.
+     * Una pagina bloccata non impedisce la rinomina: il blocco riguarda
+     * spostamenti e spazio sulla pagina, non i dati del contenuto.
+     */
+    public function renameContent(int $contentId, string $name): void
+    {
+        $this->authorize('update', $this->issue);
+
+        $content = Content::with('advertisement')->findOrFail($contentId);
+
+        if ($content->issue_id !== $this->issue->id) {
+            return;
+        }
+
+        $name = trim($name);
+        $isAd = $content->type === ContentType::Pubblicita && $content->advertisement !== null;
+        $max = $isAd ? 180 : 255;
+
+        if ($name === '' || mb_strlen($name) > $max) {
+            $this->addError('rename', $name === '' ? 'Il nome non può essere vuoto.' : "Il nome può avere al massimo {$max} caratteri.");
+
+            return;
+        }
+
+        $oldName = $content->displayLabel();
+
+        if ($name === $oldName) {
+            return;
+        }
+
+        $isAd ? $content->advertisement->update(['client' => $name]) : $content->update(['title' => $name]);
+
+        ActivityLogger::log(
+            issue: $this->issue,
+            entityType: 'Content',
+            entityId: $content->id,
+            action: 'content.renamed',
+            description: "Contenuto «{$oldName}» rinominato in «{$name}»",
+            old: [$isAd ? 'client' : 'title' => $oldName],
+            new: [$isAd ? 'client' : 'title' => $name],
+        );
+
+        $this->broadcastContentListChanged($content->id, 'renamed');
+    }
+
     private function broadcastContentListChanged(int $contentId, string $action): void
     {
         broadcast(new ContentListChanged(issueId: $this->issue->id, contentId: $contentId, action: $action))->toOthers();
@@ -1833,21 +1884,23 @@ class Grid extends Component
             return;
         }
 
-        foreach ($result['pages'] as $targetPage) {
+        foreach ($result['pages']->values() as $index => $targetPage) {
+            $twelfths = $result['twelfths'][$index];
+
             ActivityLogger::log(
                 issue: $this->issue,
                 entityType: 'Content',
                 entityId: $content->id,
                 action: 'content.assigned',
-                description: "Contenuto «{$content->displayLabel()}» assegnato alla {$targetPage->label()} ({$result['percentage']}%)",
-                new: ['page_id' => $targetPage->id, 'occupied_percentage' => $result['percentage']],
+                description: "Contenuto «{$content->displayLabel()}» assegnato alla {$targetPage->label()} (".Twelfths::pagesLabel($twelfths).')',
+                new: ['page_id' => $targetPage->id, 'occupied_twelfths' => $twelfths],
             );
 
             broadcast(new ContentAssigned(
                 issueId: $this->issue->id,
                 pageId: $targetPage->id,
                 contentId: $content->id,
-                percentage: (float) $result['percentage'],
+                twelfths: $twelfths,
                 assignedByUserId: auth()->id(),
                 assignedByUserName: auth()->user()->name,
             ))->toOthers();
@@ -1911,8 +1964,9 @@ class Grid extends Component
     }
 
     /**
-     * Logica condivisa tra assignContent() ed extendToPage(): calcola la
-     * percentuale, verifica lo spazio disponibile, allega il contenuto e
+     * Logica condivisa tra assignContent() ed extendToPage(): sceglie lo
+     * spazio (dodicesimi, vedi ContentPageAttacher::attach()), verifica
+     * quello disponibile, allega il contenuto e
      * trasmette lo stesso evento ContentAssigned in entrambi i casi — dal
      * punto di vista degli altri utenti collegati è la stessa identica
      * cosa (un contenuto è comparso su una pagina), non ha senso avere due
@@ -1924,10 +1978,10 @@ class Grid extends Component
             return;
         }
 
-        $percentage = ContentPageAttacher::attach($content, $page);
+        $twelfths = ContentPageAttacher::attach($content, $page);
 
-        if ($percentage === null) {
-            $this->addError($errorKey, 'Spazio insufficiente su questa pagina per assegnare il contenuto.');
+        if (is_string($twelfths)) {
+            $this->addError($errorKey, $twelfths);
 
             return;
         }
@@ -1937,22 +1991,29 @@ class Grid extends Component
             entityType: 'Content',
             entityId: $content->id,
             action: 'content.assigned',
-            description: "Contenuto «{$content->displayLabel()}» assegnato alla {$page->label()} ({$percentage}%)",
-            new: ['page_id' => $page->id, 'occupied_percentage' => $percentage],
+            description: "Contenuto «{$content->displayLabel()}» assegnato alla {$page->label()} (".Twelfths::pagesLabel($twelfths).')',
+            new: ['page_id' => $page->id, 'occupied_twelfths' => $twelfths],
         );
 
         broadcast(new ContentAssigned(
             issueId: $this->issue->id,
             pageId: $page->id,
             contentId: $content->id,
-            percentage: (float) $percentage,
+            twelfths: $twelfths,
             assignedByUserId: auth()->id(),
             assignedByUserName: auth()->user()->name,
         ))->toOthers();
         $this->issue->markPagesUpdated();
     }
 
-    public function updateContentPercentage(int $pageId, int $contentId, float $percentage): void
+    /**
+     * Fase 3 (2026-10-27): spazio di un contenuto su UNA pagina, in
+     * dodicesimi (1–12, select sulla card) — prima una percentuale libera.
+     * Cambia solo questa pagina: la distribuzione di default (12, 12, 6…)
+     * è un punto di partenza, poi ogni pagina si regola a mano. Oltre la
+     * capienza è un errore bloccante che dice quanto spazio resta.
+     */
+    public function updateContentOccupancy(int $pageId, int $contentId, int $twelfths): void
     {
         $this->authorize('update', $this->issue);
 
@@ -1966,33 +2027,45 @@ class Grid extends Component
             return;
         }
 
-        $others = $page->contents()->where('content_id', '!=', $contentId)->pluck('occupied_percentage')->all();
+        $current = $page->contents()->where('content_id', $contentId)->first();
 
-        if (! PagePercentageAllocator::fits($others, $percentage)) {
-            $this->addError('percentage', 'La percentuale indicata supera lo spazio disponibile sulla pagina.');
+        if ($current === null) {
+            return;
+        }
+
+        if ($twelfths < 1 || $twelfths > Twelfths::PER_PAGE) {
+            $this->addError('percentage', 'Lo spazio su una pagina va da 1/12 a una pagina intera.');
 
             return;
         }
 
-        $oldPercentage = (float) $page->contents()->where('content_id', $contentId)->first()->pivot->occupied_percentage;
+        $others = $page->contents()->where('content_id', '!=', $contentId)->pluck('occupied_twelfths')->all();
 
-        $page->contents()->updateExistingPivot($contentId, ['occupied_percentage' => (string) $percentage]);
+        if (! PageCapacity::fits($others, $twelfths)) {
+            $this->addError('percentage', PageCapacity::insufficientSpaceMessage($page->label(), $twelfths, PageCapacity::free($others), $current->displayLabel()));
+
+            return;
+        }
+
+        $oldTwelfths = (int) $current->pivot->occupied_twelfths;
+
+        $page->contents()->updateExistingPivot($contentId, ['occupied_twelfths' => $twelfths]);
 
         ActivityLogger::log(
             issue: $this->issue,
             entityType: 'Content',
             entityId: $contentId,
-            action: 'content.percentage_changed',
-            description: "Percentuale del contenuto sulla {$page->label()} cambiata da {$oldPercentage}% a {$percentage}%",
-            old: ['occupied_percentage' => $oldPercentage],
-            new: ['occupied_percentage' => $percentage],
+            action: 'content.occupancy_changed',
+            description: "Spazio di «{$current->displayLabel()}» sulla {$page->label()} cambiato da ".Twelfths::pagesLabel($oldTwelfths).' a '.Twelfths::pagesLabel($twelfths),
+            old: ['occupied_twelfths' => $oldTwelfths],
+            new: ['occupied_twelfths' => $twelfths],
         );
 
         broadcast(new ContentAssigned(
             issueId: $this->issue->id,
             pageId: $page->id,
             contentId: $contentId,
-            percentage: $percentage,
+            twelfths: $twelfths,
             assignedByUserId: auth()->id(),
             assignedByUserName: auth()->user()->name,
         ))->toOthers();
@@ -2249,9 +2322,12 @@ class Grid extends Component
         // cruscotto — riusa $unassignedContents, già caricato per il
         // pannello "contenuti da assegnare" con 'advertisement' già
         // eager-loaded, nessuna query aggiuntiva.
+        // Fase 3: il carico prenotato è l'occupazione del Content
+        // (AdLoadCalculator legge $advertisement->content): relazione
+        // impostata a mano per non fare una query per pubblicità.
         $reservedAdvertisements = $unassignedContents
             ->where('type', ContentType::Pubblicita)
-            ->map(fn ($content) => $content->advertisement)
+            ->map(fn ($content) => $content->advertisement?->setRelation('content', $content))
             ->filter()
             ->values();
 

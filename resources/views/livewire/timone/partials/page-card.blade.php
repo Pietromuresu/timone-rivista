@@ -42,9 +42,8 @@
     $fileUrl = $previewFile
         ? ($previewIsPageFile ? route('page-files.show', $previewFile) : route('content-files.show', $previewFile)).($previewFile->pdf_page_number > 1 ? '#page='.$previewFile->pdf_page_number : '')
         : null;
-    $thumbnailRouteUrl = $previewFile
-        ? ($previewIsPageFile ? route('page-files.thumbnail', $previewFile) : route('content-files.thumbnail', $previewFile))
-        : null;
+    // URL dell'anteprima pronta (Page::previewImageUrl()), null se non c'è.
+    $previewImageUrl = $page->previewImageUrl();
     // Stima PER QUESTA card (2026-07-31, vedi HANDOFF.md) — dati reali
     // (tempo di orologio trascorso, media osservata su questo numero),
     // mai un placeholder. $avgThumbnailSeconds arriva da Grid::render().
@@ -231,7 +230,7 @@
         testuale di sempre.
     --}}
     <div class="relative flex-1 mt-1 min-h-0 rounded overflow-hidden">
-        @if ($previewFile && $previewFile->thumbnail_status === \App\Enums\ThumbnailStatus::Ready)
+        @if ($previewImageUrl)
             <a
                 href="{{ $fileUrl }}"
                 target="_blank"
@@ -241,7 +240,7 @@
                 title="{{ $previewFile->original_name }} — apri in una nuova scheda{{ $previewFile->pdf_page_number > 1 ? ' (pagina '.$previewFile->pdf_page_number.')' : '' }}"
             >
                 <img
-                    src="{{ $thumbnailRouteUrl }}"
+                    src="{{ $previewImageUrl }}"
                     alt=""
                     class="w-full h-full object-cover"
                 />
@@ -249,43 +248,7 @@
 
             <div class="absolute inset-x-0 bottom-0 max-h-[60%] overflow-y-auto bg-black/60 px-1 py-0.5 space-y-0.5">
                 @forelse ($page->contents as $content)
-                    <div wire:key="page-{{ $page->id }}-content-{{ $content->id }}" class="flex items-start gap-1 leading-tight text-white">
-                        <span class="break-words min-w-0 flex-1">
-                            {{ $content->type->value === 'articolo' ? '📄' : '📢' }} {{ $content->displayLabel() }}
-                            @if ($content->pages->count() > 1)
-                                <span class="opacity-70" title="Contenuto presente su {{ $content->pages->count() }} pagine">×{{ $content->pages->count() }}</span>
-                            @endif
-                        </span>
-                        @if ($locked)
-                            <span class="shrink-0 text-[10px] opacity-70">{{ $content->pivot->occupied_percentage }}%</span>
-                        @else
-                            <input
-                                type="number"
-                                min="0.1"
-                                max="100"
-                                step="0.1"
-                                value="{{ $content->pivot->occupied_percentage }}"
-                                x-on:keydown.stop
-                                x-on:click.stop
-                                x-on:focus="$store.pagePresence?.startEditing({{ $page->id }})"
-                                x-on:blur="$store.pagePresence?.stopEditing({{ $page->id }})"
-                                wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
-                                class="w-11 shrink-0 text-[10px] rounded border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 px-0.5 py-0"
-                            />
-                            <button
-                                type="button"
-                                x-on:click.stop="const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
-                                class="shrink-0 text-[10px] text-white/80 hover:text-white"
-                                title="Estendi questo contenuto a un'altra pagina"
-                            >↗</button>
-                            <button
-                                type="button"
-                                x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
-                                class="shrink-0 text-[10px] text-white/80 hover:text-red-400"
-                                title="Rimuovi"
-                            >✕</button>
-                        @endif
-                    </div>
+                    @include('livewire.timone.partials.page-content-entry', ['variant' => 'overlay'])
                 @empty
                     <p class="italic text-white/70 text-center leading-tight">
                         {{ $page->content_type->value === 'bianca' ? 'Pagina bianca' : 'Da assegnare' }}
@@ -295,43 +258,7 @@
         @else
             <div class="h-full flex flex-col justify-center gap-1">
                 @forelse ($page->contents as $content)
-                    <div wire:key="page-{{ $page->id }}-content-{{ $content->id }}" class="flex items-start gap-1 leading-tight">
-                        <span class="break-words min-w-0 flex-1">
-                            {{ $content->type->value === 'articolo' ? '📄' : '📢' }} {{ $content->displayLabel() }}
-                            @if ($content->pages->count() > 1)
-                                <span class="opacity-60" title="Contenuto presente su {{ $content->pages->count() }} pagine">×{{ $content->pages->count() }}</span>
-                            @endif
-                        </span>
-                        @if ($locked)
-                            <span class="shrink-0 text-[10px] opacity-60">{{ $content->pivot->occupied_percentage }}%</span>
-                        @else
-                            <input
-                                type="number"
-                                min="0.1"
-                                max="100"
-                                step="0.1"
-                                value="{{ $content->pivot->occupied_percentage }}"
-                                x-on:keydown.stop
-                                x-on:click.stop
-                                x-on:focus="$store.pagePresence?.startEditing({{ $page->id }})"
-                                x-on:blur="$store.pagePresence?.stopEditing({{ $page->id }})"
-                                wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
-                                class="w-11 shrink-0 text-[10px] rounded border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 px-0.5 py-0"
-                            />
-                            <button
-                                type="button"
-                                x-on:click.stop="const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
-                                class="shrink-0 text-[10px] opacity-60 hover:opacity-100"
-                                title="Estendi questo contenuto a un'altra pagina"
-                            >↗</button>
-                            <button
-                                type="button"
-                                x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
-                                class="shrink-0 text-[10px] opacity-60 hover:opacity-100 hover:text-red-600"
-                                title="Rimuovi"
-                            >✕</button>
-                        @endif
-                    </div>
+                    @include('livewire.timone.partials.page-content-entry', ['variant' => 'card'])
                 @empty
                     <p class="italic opacity-60 text-center leading-tight">
                         {{ $page->content_type->value === 'bianca' ? 'Pagina bianca' : 'Da assegnare' }}
@@ -348,6 +275,12 @@
          a questa pagina). L'anteprima/gli avvisi restano identici nella
          forma, solo la fonte dati cambia ($previewFile invece di
          $latestFile, vedi @php sopra). --}}
+    {{-- Fase 3: barra di riempimento sul bordo sinistro + etichetta
+         "Libero: 1/3"/"Piena" (partials/page-fill). --}}
+    <div class="flex items-center justify-between gap-1 mt-1 text-[10px]">
+        @include('livewire.timone.partials.page-fill', ['variant' => 'card'])
+    </div>
+
     <div class="flex items-center justify-between gap-1 mt-1 text-[10px] opacity-70">
         @if (! $previewFile)
             @unless ($locked)

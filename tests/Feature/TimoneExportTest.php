@@ -9,6 +9,7 @@ use App\Models\Advertisement;
 use App\Models\Content;
 use App\Models\PageFile;
 use App\Models\User;
+use App\Support\IssueCovers;
 use Illuminate\Support\Facades\Storage;
 
 // reorderableIssue() ed editorFor() sono definite globalmente in
@@ -34,7 +35,7 @@ test('the onlyAds filter excludes pages without an advertisement', function () {
         'confirmation_status' => AdConfirmationStatus::Confermata,
     ]);
     $adPage = $issue->pages()->where('position', 1)->first();
-    $adPage->contents()->attach($adContent->id, ['occupied_percentage' => 100]);
+    $adPage->contents()->attach($adContent->id, ['occupied_twelfths' => 12]);
 
     $response = $this->actingAs($user)->get(route('issues.export.timone-pdf', [$issue->magazine, $issue, 'onlyAds' => 1]));
 
@@ -93,7 +94,7 @@ test('the export renders the covers in a separate section before the internal pa
     // Fase 2 (2026-10-26): copertine I-IV (e bandella) come slot separati.
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    \App\Support\IssueCovers::addBandella($issue);
+    IssueCovers::addBandella($issue);
 
     $response = $this->actingAs($user)->get(route('issues.export.timone-pdf', [$issue->magazine, $issue]));
     $response->assertOk();

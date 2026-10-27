@@ -5,11 +5,12 @@ namespace Database\Factories;
 use App\Enums\AdConfirmationStatus;
 use App\Enums\AdFormat;
 use App\Enums\ContentType;
+use App\Models\Advertisement;
 use App\Models\Content;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Advertisement>
+ * @extends Factory<Advertisement>
  */
 class AdvertisementFactory extends Factory
 {
@@ -25,7 +26,6 @@ class AdvertisementFactory extends Factory
             'client' => fake()->company(),
             'agency' => fake()->optional()->company(),
             'format' => fake()->randomElement(AdFormat::cases())->value,
-            'occupied_percentage_override' => null,
             'confirmation_status' => fake()->randomElement(AdConfirmationStatus::cases())->value,
             'commercial_notes' => null,
         ];

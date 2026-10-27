@@ -13,10 +13,17 @@
 | **Apertura / doppia pagina** (spread) | Coppia di pagine affiancate (pari a sinistra, dispari a destra) | `App\Support\PageSpreadBuilder` |
 | **Contenuto** | Articolo o pubblicità da collocare nel numero | `Content` (`type`) |
 | **Rubrica** | Sezione ricorrente della rivista | `Section` |
-| **Occupazione (di pagina)** | Quanto spazio prende un contenuto: frazione di pagina (¼, ⅓, ½, ⅔) o numero intero di pagine. Obbligatoria dal 2026-10-12 | `contents.page_occupancy`, `App\Support\PageOccupancy` |
-| **Percentuale occupata** | Quota di **una** pagina presa da un contenuto (0–100, somma ≤ 100 per pagina) | `page_content.occupied_percentage`, `PagePercentageAllocator` |
+| **Occupazione (di pagina)** | Quanto spazio prende un contenuto, in **dodicesimi di pagina**: pagine intere + una frazione (¼, ⅓, ½, ⅔, ¾), es. 2 e ½ pagine = 30/12. Obbligatoria dal 2026-10-12, in dodicesimi dal 2026-10-27 | `contents.occupancy_twelfths`, `App\Support\PageOccupancy` |
+| **Dodicesimo (di pagina)** | Unità con cui il sistema conta lo spazio: 12 = pagina intera, ¼ = 3, ⅓ = 4, ½ = 6, ⅔ = 8, ¾ = 9. Sempre un intero, così le somme sono esatte | `App\Support\Twelfths` |
+| **Spazio occupato su una pagina** | Quota di **una** pagina presa da un contenuto, da 1/12 a intera; somma ≤ 12 per pagina (capienza). Prima del 2026-10-27 era una percentuale | `page_content.occupied_twelfths`, `App\Support\PageCapacity` |
+| **Capienza (della pagina)** | 12 dodicesimi: più contenuti possono stare sulla stessa pagina finché la somma non supera la pagina intera | `PageCapacity::fits()` |
+| **Riempimento (della pagina)** | Stato della pagina rispetto alla capienza: vuota (○), parziale («Libero: 1/3», ◐), piena (●), oltre capienza (⚠, solo da dati convertiti) | `App\Enums\PageFillStatus`, `partials/page-fill.blade.php` |
+| **Pagina bianca** | Pagina interna senza alcun contenuto (occupazione 0); sulla card «○ Vuota» | `PageFillStatus::Empty`, `PageContentType::Bianca` |
+| **Anteprima (di un contenuto)** | Immagine del PDF o dell'immagine di stampa allegati, generata in automatico: è la miniatura del contenuto nel timone (non esiste un'immagine separata) | `content_files.thumbnail_path`, `GenerateContentFileThumbnail` |
+| **Vetrina** | Pubblicità da ¼ di pagina (formato «Un quarto pagina») | `AdFormat::UnQuartoPagina` (3/12) |
+| **Piedino** | Pubblicità a fascia in basso, ⅓ di pagina | `AdFormat::Piedino` (4/12) |
 | **Pagina mista** | Pagina con contenuti editoriali e pubblicitari insieme | `PageContentType::Mista` |
-| **Carico pubblicitario** | Percentuale del numero occupata da pubblicità, comprese le prenotazioni | `App\Support\AdLoadCalculator` |
+| **Carico pubblicitario** | Percentuale delle pagine interne occupata da pubblicità, comprese le prenotazioni; calcolata in dodicesimi (esatta) | `App\Support\AdLoadCalculator` |
 | **Gruppo collegato** | Pagine legate tra loro (🔗) che si spostano sempre insieme, con il mouse o con le frecce | `PageGroup`, `pages.page_group_id`, `Grid::nudgePage()` |
 | **Zoom delle pagine (S/M/L)** | Dimensione delle miniature nel timone, scelta da ciascun utente e ricordata dal suo browser | store Alpine `timoneZoom` (`resources/js/timone-alpine.js`) |
 | **Soglia di allarme** | Carico pubblicitario oltre il quale il cruscotto diventa rosso; impostata per rivista | `magazines.ad_threshold_percentage` |

@@ -174,22 +174,22 @@ test('a content cannot be assigned to a locked page', function () {
     Event::assertNotDispatched(ContentAssigned::class);
 });
 
-test('a content percentage cannot be updated on a locked page', function () {
+test('a content occupancy cannot be updated on a locked page', function () {
     Event::fake([PageLocked::class, ContentAssigned::class]);
 
     $issue = reorderableIssue();
     $user = editorFor($issue);
     $page = $issue->pages()->where('position', 1)->first();
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => 50]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 6]);
 
     $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('togglePageLock', $page->id);
 
-    $component->call('updateContentPercentage', $page->id, $content->id, 80)
+    $component->call('updateContentOccupancy', $page->id, $content->id, 9)
         ->assertHasErrors('locked');
 
-    expect((float) $page->contents()->where('content_id', $content->id)->first()->pivot->occupied_percentage)->toBe(50.0);
+    expect($page->contents()->where('content_id', $content->id)->first()->pivot->occupied_twelfths)->toBe(6);
 });
 
 test('a content cannot be unassigned from a locked page', function () {
@@ -199,7 +199,7 @@ test('a content cannot be unassigned from a locked page', function () {
     $user = editorFor($issue);
     $page = $issue->pages()->where('position', 1)->first();
     $content = Content::factory()->article()->create(['issue_id' => $issue->id, 'type' => ContentType::Articolo]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('togglePageLock', $page->id);

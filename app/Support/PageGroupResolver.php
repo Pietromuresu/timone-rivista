@@ -21,11 +21,11 @@ class PageGroupResolver
      * mai un'operazione bloccata o silenziosamente parziale).
      *
      * Pura: nessuna query Eloquent, opera solo sui dati già passati — stesso
-     * pattern di PageReorderer/PagePercentageAllocator/AdLoadCalculator.
+     * pattern di PageReorderer/PageCapacity/AdLoadCalculator.
      *
      * @param  array<int, int|null>  $groupIdByPageId  page_id => page_group_id (o null se non collegata)
      * @param  list<int>  $seedPageIds
-     * @return list<int>  seme ∪ pagine con un gruppo in comune con un seme, deduplicate
+     * @return list<int> seme ∪ pagine con un gruppo in comune con un seme, deduplicate
      */
     public static function expand(array $groupIdByPageId, array $seedPageIds): array
     {

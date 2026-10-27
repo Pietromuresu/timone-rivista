@@ -85,7 +85,7 @@ test('a corrupted file on a page with an applicable ad format is unverifiable, n
     $page = Page::factory()->create();
     $content = Content::factory()->advertisement()->create(['issue_id' => $page->issue_id]);
     $content->advertisement->update(['format' => AdFormat::PaginaIntera]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => '100']);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Storage::disk('local')->put("pages/{$page->id}/corrotto.pdf", 'questo non è un pdf valido');
     $pageFile = PageFile::factory()->for($page)->create([
@@ -145,7 +145,7 @@ test('a matching pdf format is marked as matching, with measured dimensions stor
     $page = Page::factory()->create();
     $content = Content::factory()->advertisement()->create(['issue_id' => $page->issue_id]);
     $content->advertisement->update(['format' => AdFormat::PaginaIntera]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => '100']);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     // 210x270mm + 6mm di abbondanza = 216x276mm
     Storage::disk('local')->put("pages/{$page->id}/test.pdf", multiPagePdfBytes([
@@ -171,7 +171,7 @@ test('a mismatching pdf format is marked as mismatch', function () {
     $page = Page::factory()->create();
     $content = Content::factory()->advertisement()->create(['issue_id' => $page->issue_id]);
     $content->advertisement->update(['format' => AdFormat::PaginaIntera]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => '100']);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     // Molto più piccolo del formato atteso (210x270mm + abbondanza)
     Storage::disk('local')->put("pages/{$page->id}/test.pdf", multiPagePdfBytes([

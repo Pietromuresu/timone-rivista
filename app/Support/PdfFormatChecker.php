@@ -5,7 +5,7 @@ namespace App\Support;
 /**
  * Confronta le dimensioni reali (mm) di una pagina PDF con quelle nominali
  * di un formato pubblicitario (§2.3) — puro/testabile come PageReorderer/
- * PagePercentageAllocator: nessuna dipendenza da Imagick/filesystem, opera
+ * PageCapacity: nessuna dipendenza da Imagick/filesystem, opera
  * solo su numeri già estratti (da App\Support\PdfPageMeasurer, separato
  * apposta per poter testare questa logica di confronto senza `ext-imagick`).
  */

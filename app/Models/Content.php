@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ContentType;
+use App\Enums\ThumbnailStatus;
 use App\Support\PageOccupancy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,7 @@ class Content extends Model
         'section_id',
         'type',
         'title',
-        'page_occupancy',
+        'occupancy_twelfths',
         'archived_at',
     ];
 
@@ -29,35 +30,34 @@ class Content extends Model
         return [
             'type' => ContentType::class,
             'archived_at' => 'datetime',
-            'page_occupancy' => 'decimal:2',
+            'occupancy_twelfths' => 'integer',
         ];
     }
 
     /**
-     * Bug 5 (2026-10-12): null solo per i contenuti creati prima che
-     * l'occupazione diventasse obbligatoria e non ancora valorizzati (vedi
-     * `php artisan timone:missing-occupancy`) — chi la legge deve trattare
-     * null come "dato mancante" e rifiutare l'operazione, mai come 1 pagina.
+     * Occupazione totale in dodicesimi (Fase 3, 2026-10-27). Null solo se
+     * il dato manca (non dovrebbe: la colonna è NOT NULL dalla conversione)
+     * — chi la legge rifiuta l'operazione, mai un default silenzioso.
+     * Vale per articoli e pubblicità allo stesso modo: per la pubblicità il
+     * formato la PROPONE alla creazione, ma resta modificabile.
      */
     public function occupancy(): ?PageOccupancy
     {
-        return PageOccupancy::tryFrom($this->page_occupancy);
+        return PageOccupancy::tryFromTwelfths($this->occupancy_twelfths);
     }
 
     /**
-     * Percentuale occupata su ciascuna pagina attraversata dal contenuto:
-     * per la pubblicità resta quella di listino/manuale
-     * (Advertisement::occupiedPercentage(), che può non essere una frazione
-     * esatta: 52%, 32.6%...), per un articolo la deriva l'occupazione.
-     * Null se il dato manca.
+     * Anteprima pronta del file più recente del contenuto (chip dei
+     * contenuti da assegnare), o null. Il PDF/immagine di stampa È la
+     * miniatura: non esiste un'immagine separata (scelta confermata
+     * dall'utente nella Fase 4, 2026-10-27).
+     * Richiede `files` eager-loaded per non fare una query per contenuto.
      */
-    public function occupiedPercentagePerPage(): ?float
+    public function previewImageUrl(): ?string
     {
-        if ($this->type === ContentType::Pubblicita) {
-            return $this->advertisement?->occupiedPercentage();
-        }
+        $file = $this->files->sortByDesc('created_at')->first();
 
-        return $this->occupancy()?->percentagePerPage();
+        return $file?->thumbnail_status === ThumbnailStatus::Ready ? route('content-files.thumbnail', $file) : null;
     }
 
     public function isArchived(): bool
@@ -107,7 +107,7 @@ class Content extends Model
             // content_file_id (Punto 4, 2026-09-02): quale file di questo
             // contenuto è rilevante per ciascuna pagina — vedi
             // PageContent::contentFile().
-            ->withPivot('occupied_percentage', 'content_file_id')
+            ->withPivot('occupied_twelfths', 'content_file_id')
             ->withTimestamps();
     }
 

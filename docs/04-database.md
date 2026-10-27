@@ -120,9 +120,10 @@ Numeri e riviste **già esistenti** al momento della migration:
 
 ### `contents`
 - **Scopo**: articolo o pubblicità del numero, assegnato o no.
-- **Colonne**: `type` (`articolo`/`pubblicita`), `title`, `section_id`, `page_occupancy` (decimal 5,2: frazioni `0.25/0.33/0.50/0.67` oppure numero intero di pagine; vedi `App\Support\PageOccupancy`), `archived_at`.
+- **Colonne**: `type` (`articolo`/`pubblicita`), `title`, `section_id`, `occupancy_twelfths` (smallint unsigned, NOT NULL, dal 2026-10-27: occupazione totale in dodicesimi di pagina, 30 = 2 pagine e mezza; vedi `App\Support\PageOccupancy`), `archived_at`.
+- **Colonna non più usata**: `page_occupancy` (decimal 5,2, il vecchio valore in pagine: `0.25/0.33/0.50/0.67` o N). Resa nullable dalla migration della Fase 3, non più letta né scritta; tiene i valori originali per il rollback.
 - **Indici**: `(issue_id, type)`.
-- **Scrive**: `ContentCreator::create`, `Grid::archiveContent`/`deleteUnassignedContent`.
+- **Scrive**: `ContentCreator::create`, `ContentUpdater::update` (Fase 4), `Grid::renameContent`/`archiveContent`/`deleteUnassignedContent`.
 
 ### `articles`
 - 1:1 con `contents`.
@@ -130,13 +131,21 @@ Numeri e riviste **già esistenti** al momento della migration:
 
 ### `advertisements`
 - 1:1 con `contents`.
-- **Colonne**: `client`, `agency`, `format` (enum `AdFormat`, 16 formati di listino), `occupied_percentage_override`, `confirmation_status` (`in_trattativa`/`confermata`/`annullata`), `preferred_position`, `commercial_notes`.
+- **Colonne**: `client`, `agency`, `format` (enum `AdFormat`, 16 formati di listino; propone l'occupazione con `AdFormat::twelfths()`), `confirmation_status` (`in_trattativa`/`confermata`/`annullata`), `preferred_position`, `commercial_notes`.
+- **Colonna non più usata**: `occupied_percentage_override` (dal 2026-10-27 l'occupazione della pubblicità sta nel `Content`, modificabile come per un articolo).
 
 ### `page_content`
 - **Scopo**: pivot pagina ↔ contenuto.
-- **Colonne**: `occupied_percentage` (decimal, default 100; **nessun vincolo DB** su range o somma: la validazione è in `PagePercentageAllocator`), `content_file_id` (FK content_files, nullOnDelete: quale pagina del PDF mostrare).
+- **Colonne**: `occupied_twelfths` (tinyint unsigned 1–12, default 12, dal 2026-10-27; **nessun vincolo DB** sulla somma per pagina: la validazione è in `App\Support\PageCapacity`), `content_file_id` (FK content_files, nullOnDelete: quale pagina del PDF mostrare).
 - **Vincoli**: `unique(page_id, content_id)`.
+- **Colonna non più usata**: `occupied_percentage` (decimal, la vecchia percentuale; nullable dal 2026-10-27, tenuta per il rollback).
 - Ha un modello dedicato: `App\Models\PageContent`.
+
+### Conversione in dodicesimi (Fase 3, 2026-10-27)
+- Migration `2026_10_27_100000_convert_occupancy_to_twelfths`: aggiunge `contents.occupancy_twelfths` e `page_content.occupied_twelfths`, li calcola con `App\Support\Occupancy\OccupancyConversion` (regole in `OccupancyConversionPlanner`, vedi [03-dominio-e-flussi.md](03-dominio-e-flussi.md#occupazione-in-dodicesimi-fase-3-2026-10-27)), li rende NOT NULL e rende nullable le colonne vecchie.
+- **Prima del deploy**: `php artisan timone:occupancy-dry-run [--issue=ID]` mostra per ogni numero cosa diventa cosa e segnala le pagine che dopo l'arrotondamento superano 12/12. Nessuna scrittura; funziona prima e dopo la migration.
+- **Rollback** (`down()`): le colonne vecchie conservano i valori originali; per le righe nate dopo la conversione li ricava dai dodicesimi (percentuale = dodicesimi × 100 / 12; occupazione = frazione più vicina sotto la pagina, altrimenti pagine attraversate: 2 e 1/2 → 3). Verificato su una copia MySQL dei dati di sviluppo (migrate → rollback → migrate, 15/15 assegnazioni, valori originali identici).
+- `$withinTransaction = false`: su SQLite `->change()` ricostruisce le tabelle e solo fuori transazione Laravel riesce a spegnere le foreign key (altrimenti la ricostruzione di `contents` cancellerebbe in cascata il pivot). Su MySQL il DDL non è comunque transazionale.
 
 ### `content_files`
 - **Scopo**: file allegati a un contenuto, **una riga per pagina del PDF**, ognuna con la propria copia del file.
@@ -197,6 +206,8 @@ docker compose exec app php artisan migrate --force
 ```
 
 Sul DB di sviluppo, al 2026-10-12, risultavano 17 contenuti senza occupazione.
+
+Dal 2026-10-27 (Fase 3) l'occupazione è in `contents.occupancy_twelfths` (NOT NULL): su un database già convertito `timone:missing-occupancy` risponde che non serve più. Resta utile solo su un database fermo a prima di questa migration del 2026-10-12, che va applicata prima di quella della Fase 3 (l'ordine delle migration lo garantisce).
 
 ⚠️ DA VERIFICARE: se in produzione questa migration è già stata applicata o è ancora *Pending*. Si controlla con `php artisan migrate:status` sul server. Va anche deciso chi definisce i valori di backfill.
 

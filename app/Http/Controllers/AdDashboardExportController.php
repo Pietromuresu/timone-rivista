@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AdConfirmationStatus;
+use App\Enums\AdFormat;
 use App\Models\Advertisement;
 use App\Models\Issue;
 use App\Models\Magazine;
@@ -45,13 +47,13 @@ class AdDashboardExportController extends Controller
 
             fputcsv($handle, ['Formato pubblicitario', 'Conteggio']);
             foreach ($adLoad['formatBreakdown'] as $format => $count) {
-                fputcsv($handle, [\App\Enums\AdFormat::from($format)->label(), $count]);
+                fputcsv($handle, [AdFormat::from($format)->label(), $count]);
             }
             fputcsv($handle, []);
 
             fputcsv($handle, ['Stato commerciale', 'Conteggio']);
             foreach ($adLoad['confirmationBreakdown'] as $status => $count) {
-                fputcsv($handle, [\App\Enums\AdConfirmationStatus::from($status)->label(), $count]);
+                fputcsv($handle, [AdConfirmationStatus::from($status)->label(), $count]);
             }
 
             fclose($handle);
@@ -99,7 +101,7 @@ class AdDashboardExportController extends Controller
         // per l'esportazione del timone completo).
         $reservedAdvertisements = Advertisement::whereHas(
             'content', fn ($query) => $query->where('issue_id', $issue->id)->whereDoesntHave('pages')
-        )->get();
+        )->with('content')->get();
 
         return [$issue, AdLoadCalculator::summarize($pages, $reservedAdvertisements)];
     }

@@ -17,7 +17,8 @@ class ContentAssigned implements ShouldBroadcastNow
         public int $issueId,
         public int $pageId,
         public int $contentId,
-        public float $percentage,
+        // Fase 3 (2026-10-27): dodicesimi occupati sulla pagina (era una percentuale).
+        public int $twelfths,
         public int $assignedByUserId,
         public string $assignedByUserName,
     ) {}
@@ -37,7 +38,7 @@ class ContentAssigned implements ShouldBroadcastNow
         return [
             'pageId' => $this->pageId,
             'contentId' => $this->contentId,
-            'percentage' => $this->percentage,
+            'twelfths' => $this->twelfths,
             'assignedByUserId' => $this->assignedByUserId,
             'assignedByUserName' => $this->assignedByUserName,
         ];

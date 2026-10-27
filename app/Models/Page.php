@@ -4,7 +4,10 @@ namespace App\Models;
 
 use App\Enums\CoverSlot;
 use App\Enums\PageContentType;
+use App\Enums\PageFillStatus;
 use App\Enums\PageStatus;
+use App\Enums\ThumbnailStatus;
+use App\Support\PageCapacity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -100,7 +103,8 @@ class Page extends Model
     }
 
     /**
-     * Contenuti assegnati a questa pagina, con la percentuale di spazio occupato.
+     * Contenuti assegnati a questa pagina, con lo spazio occupato da
+     * ciascuno in dodicesimi (pivot occupied_twelfths, Fase 3).
      */
     public function contents(): BelongsToMany
     {
@@ -109,8 +113,30 @@ class Page extends Model
             // content_file_id (Punto 4, 2026-09-02): quale file di quel
             // contenuto è rilevante per QUESTA pagina — vedi
             // PageContent::contentFile().
-            ->withPivot('occupied_percentage', 'content_file_id')
+            ->withPivot('occupied_twelfths', 'content_file_id')
             ->withTimestamps();
+    }
+
+    /**
+     * Dodicesimi occupati sulla pagina (Fase 3). Usa la relazione già
+     * caricata se c'è (Grid::render() la eager-loada: nessuna query per
+     * card), altrimenti la interroga. $exceptContentId esclude il
+     * contenuto in modifica, per chiedersi "ci sta con il nuovo valore?".
+     */
+    public function occupiedTwelfths(?int $exceptContentId = null): int
+    {
+        $contents = $this->relationLoaded('contents')
+            ? $this->contents
+            : $this->contents()->get();
+
+        return $contents
+            ->reject(fn (Content $content) => $content->id === $exceptContentId)
+            ->sum(fn (Content $content) => (int) $content->pivot->occupied_twelfths);
+    }
+
+    public function fillStatus(): PageFillStatus
+    {
+        return PageCapacity::status($this->occupiedTwelfths());
     }
 
     /**
@@ -166,6 +192,22 @@ class Page extends Model
         }
 
         return $this->files->sortByDesc('created_at')->first();
+    }
+
+    /**
+     * URL dell'anteprima pronta di previewFile() (card e riga), o null se
+     * non c'è o non è ancora generata — calcolato qui invece che in due
+     * copie nei Blade (Fase 4, 2026-10-27).
+     */
+    public function previewImageUrl(): ?string
+    {
+        $file = $this->previewFile();
+
+        if ($file === null || $file->thumbnail_status !== ThumbnailStatus::Ready) {
+            return null;
+        }
+
+        return $file instanceof PageFile ? route('page-files.thumbnail', $file) : route('content-files.thumbnail', $file);
     }
 
     public function reorderLogs(): HasMany

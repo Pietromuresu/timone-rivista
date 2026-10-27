@@ -7,7 +7,7 @@ use App\Models\Issue;
 
 /**
  * A differenza delle altre classi in App\Support (PageReorderer,
- * PagePercentageAllocator, AdLoadCalculator, PageCountResizer), questa
+ * PageCapacity, AdLoadCalculator, PageCountResizer), questa
  * NON è pura: scrive su database e legge l'utente/IP della richiesta
  * corrente. Resta comunque sotto App\Support perché è un servizio di
  * supporto a scopo unico, non logica di dominio — un helper statico è

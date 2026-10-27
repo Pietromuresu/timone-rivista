@@ -2,10 +2,12 @@
 
 use App\Enums\AdFormat;
 use App\Models\Content;
+use App\Models\ContentFile;
 use App\Support\ContentCreator;
 use App\Support\ContentPlacer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 /*
@@ -20,7 +22,7 @@ use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
     Queue::fake();
-    \Illuminate\Support\Facades\Storage::fake('local');
+    Storage::fake('local');
 });
 
 function adPdfData(array $extra = []): array
@@ -46,9 +48,9 @@ test('a cover ad with a 3-page pdf using all pages occupies 3 whole pages', func
 
     $content = ContentCreator::create($issue, adPdfData(['pdf_page_from' => 1, 'pdf_page_to' => 3]), fakeAdPdf(), editorFor($issue)->id, 3);
 
-    expect($content->occupancy()->value)->toBe('3')
-        ->and($content->files()->orderBy('pdf_page_number')->pluck('pdf_page_number')->all())->toBe([1, 2, 3])
-        ->and((float) $content->advertisement->occupied_percentage_override)->toBe(100.0);
+    expect($content->occupancy()->twelfths)->toBe(36)
+        ->and($content->occupancy()->distribution())->toBe([12, 12, 12])
+        ->and($content->files()->orderBy('pdf_page_number')->pluck('pdf_page_number')->all())->toBe([1, 2, 3]);
 });
 
 test('using only a range of pages stores just those pdf pages, with their original numbers', function () {
@@ -57,9 +59,8 @@ test('using only a range of pages stores just those pdf pages, with their origin
     $content = ContentCreator::create($issue, adPdfData(['pdf_page_from' => 2, 'pdf_page_to' => 2]), fakeAdPdf(), editorFor($issue)->id, 3);
 
     expect($content->files()->pluck('pdf_page_number')->all())->toBe([2])
-        // Una sola pagina su un formato da una pagina: occupazione del formato, percentuale del listino.
-        ->and($content->occupancy()->value)->toBe(\App\Support\PageOccupancy::forAdFormat(AdFormat::CopertinaSecondaTerzaQuarta)->value)
-        ->and($content->advertisement->occupied_percentage_override)->toBeNull();
+        // Una sola pagina su un formato da una pagina: occupazione del formato.
+        ->and($content->occupancy()->twelfths)->toBe(AdFormat::CopertinaSecondaTerzaQuarta->twelfths());
 });
 
 test('without a choice the longer pdf asks for one instead of failing on the file', function () {
@@ -89,7 +90,7 @@ test('placing a range starting at pdf page 2 shows pdf pages 2 and 3 on the two 
 
     $shown = $issue->pages()->whereIn('position', [3, 4])->orderBy('position')->get()
         ->map(fn ($page) => $page->contents()->first()->pivot->content_file_id)
-        ->map(fn ($id) => \App\Models\ContentFile::find($id)->pdf_page_number)
+        ->map(fn ($id) => ContentFile::find($id)->pdf_page_number)
         ->all();
 
     expect($shown)->toBe([2, 3]);

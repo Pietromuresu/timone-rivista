@@ -54,10 +54,10 @@ CLAUDE_PROMPTS/            Specifica originale e prompt di lavoro usati durante 
 1. **Livewire come livello di orchestrazione.** Ogni schermata è un componente Livewire (`routes/web.php` mappa le rotte direttamente su classi Livewire full-page). Il componente valida l'input, chiama `authorize()` e poi una classe `App\Support`, salva, registra l'attività e invia il broadcast. Non ci sono Service container, Repository o Action.
 2. **`App\Support`: logica pura statica.** Calcoli e regole di dominio stanno in classi con metodi `static`, senza stato. Molte non toccano Eloquent e sono unit-testate in `tests/Unit/`. Esempi:
    - `PageReorderer` (nuove posizioni dopo un drag)
-   - `PagePercentageAllocator` (spazio libero su una pagina)
-   - `AdLoadCalculator` (carico pubblicitario)
-   - `PageOccupancy` (value object dell'occupazione)
-   - `ContentCreator` / `ContentPlacer` (creazione e posizionamento di un contenuto)
+   - `Twelfths` (unità "dodicesimo di pagina" e unica formattazione in frazioni) e `PageCapacity` (capienza 12 per pagina, vuota/parziale/piena, messaggio "non ci sta") — dalla Fase 3 (2026-10-27) al posto di `PagePercentageAllocator`
+   - `AdLoadCalculator` (carico pubblicitario, in dodicesimi)
+   - `PageOccupancy` (value object dell'occupazione totale in dodicesimi, con la distribuzione 12, 12, 6…)
+   - `ContentCreator` / `ContentPlacer` (creazione e posizionamento di un contenuto), `ContentUpdater` (modifica, Fase 4), `ContentFormRules` (regole condivise dai moduli di creazione e modifica)
 
    La scelta "statico, nessuna interfaccia" è voluta e motivata in `CLAUDE.md` (regola 3) e in `HANDOFF.md`.
 3. **Enum come fonte di verità per stati e varianti.** Etichette, colori e classi Tailwind stanno negli enum (es. `PageStatus::colorClasses()`, `AdFormat`).
@@ -156,6 +156,7 @@ Fonte principale: `HANDOFF.md`, sezione "Decisioni architetturali da ricordare" 
 | Ogni servizio compose ha `build.target` esplicito | L'ultimo stage del Dockerfile è nginx: senza target, `app` diventava nginx | `docker-compose.yml`, `HANDOFF.md` §Decisioni |
 | `display_errors=Off` in PHP | Un warning di `post_max_size` stampato in HTML corrompeva il JSON di Livewire durante l'upload | `docker/php/uploads.ini` |
 | Occupazione di pagina obbligatoria; nessun fallback "1 pagina" | Il fallback silenzioso era la causa del bug "PDF multipagina su una sola pagina" | `App\Support\ContentCreator`, `ContentPlacer`, migration `2026_10_12_*` |
+| Occupazione in **dodicesimi di pagina interi** (2026-10-27), non percentuali decimali | 12 è il minimo comune multiplo di 1/4, 1/3, 1/2, 2/3, 3/4: somme e confronti esatti (1/3 × 3 = pagina piena, prima 99,9%). Colonne vecchie lasciate, non più lette | `App\Support\Twelfths`, `PageCapacity`, `PageOccupancy`, migration `2026_10_27_100000_*` |
 | `fakerphp/faker` in `require` (non dev) | Il seeder demo deve funzionare anche nell'immagine `--no-dev` | `composer.json`, `HANDOFF.md` §Decisioni |
 | Ruoli come colonna `users.role` (enum), non un pacchetto permessi | Semplicità: 4 ruoli fissi | `app/Enums/UserRole.php` |
 

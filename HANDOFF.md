@@ -1448,3 +1448,104 @@ Nuovi: `tests/Unit/CoverConversionPlannerTest.php` (7), `tests/Feature/Covers/Co
 - Il container `app` in esecuzione NON contiene ancora la modifica "fascia unica" (fatta dopo il rebuild): serve `docker compose up -d --build`.
 - File di ripartenza per la sessione successiva: `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md` (prompt originale completo + stato di ogni fase).
 - Suite dopo la modifica "fascia unica": 674 + 38 skipped in locale; **712/712 con imagick**.
+
+## Sessione 2026-10-27 — Batch "revisione con gli utenti", Fase 3: occupazione a frazioni di pagina (dodicesimi)
+
+Ripartenza da `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md` (Fasi 1–2 approvate e committate: `14184e3`, `0340c72`). **La migration della Fase 3 NON è stata eseguita sul DB di sviluppo** (in attesa di ok sul dry-run, come richiesto dal prompt). Attenzione: lo stack Docker esegue `migrate` all'avvio, quindi **ricostruire/riavviare i container applica la migration** (è successo con la Fase 2) — farlo solo dopo l'ok.
+
+### Modello (decisione architetturale)
+- Unità = **dodicesimo di pagina, intero** (`App\Support\Twelfths::PER_PAGE = 12`): 1/4 = 3, 1/3 = 4, 1/2 = 6, 2/3 = 8, 3/4 = 9. Somme e confronti esatti; niente float. `Twelfths` è anche l'unico punto che trasforma un intero in testo ("1/3", "2 e 1/2 pagine"): viste, messaggi, log ed export passano da lì.
+- `contents.occupancy_twelfths` = occupazione **totale** del contenuto (30 = 2,5 pagine). Value object `App\Support\PageOccupancy` riscritto: `fromParts(intere, frazione)`, `fromTwelfths()`, `wholePages()`, `forAdFormat()`, `pagesSpanned()` (ceil), `distribution()` (12, 12, …, frazione sull'ultima), `perExtraPage()`, `label()`.
+- `page_content.occupied_twelfths` = spazio su quella pagina (1–12, default 12 come il vecchio default 100%), modificabile per pagina.
+- `App\Support\PageCapacity` (sostituisce `PagePercentageAllocator`, rimosso): `used/free/fits` (somma ≤ 12), `status()` → `App\Enums\PageFillStatus` (Empty/Partial/Full/Overfull, con icona e classi: Open/Closed, nuovi stati = nuovo case), `statusLabel()` ("Vuota", "Libero: 1/3", "Piena", "Oltre capienza (+1/6)"), `insufficientSpaceMessage()` (errore bloccante che dice quanto resta — un solo testo per ContentPlacer, ContentPageAttacher e Grid).
+- `AdFormat::twelfths()` sostituisce `defaultPercentage()` (rimosso). Mappatura: intera, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale → 12; **copertina 2ª/3ª/4ª → 12** (il 52% era un rapporto di listino, non spazio); **battente → 12** (dalla Fase 2 la bandella è UN riquadro; prima valeva "2 pagine", che dalla Fase 2 faceva fallire il drop sulla bandella — bug latente chiuso di passaggio); doppia pagina → 24; 2/3 (70,5%) → 8; mezza O/V → 6; 1/3 O/V e **piedino (32,6%) → 4**; 1/4 (vetrina) → 3. Da confermare con la redazione: DV-28.
+- Pubblicità: l'occupazione sta nel `Content` come per gli articoli; il formato la **propone**. `Advertisement::occupiedPercentage()`, `Content::occupiedPercentagePerPage()` e il campo "Percentuale manuale" rimossi.
+- Bug 8 (PDF più lungo del formato, "usa tutte le N pagine"): l'occupazione resta N pagine intere, indipendentemente dai campi (debito #55).
+
+### Servizi aggiornati
+- `ContentCreator::resolveOccupancy()` legge `whole_pages` + `fraction_twelfths` (`occupancyFromFields()`); errore sotto la chiave `occupancy` ("almeno una pagina intera o una frazione"); coerenza col PDF sulle pagine attraversate (un PDF di 3 pagine accetta 3 o 2 e 1/2). Per la pubblicità ripiega sul formato se i campi arrivano vuoti.
+- `ContentPlacer::place()` usa `distribution()` per pagina e restituisce `twelfths` (lista) al posto di `percentage`. Stesso schema in `ContentCreate::attachConfirmedPages()` (per offset dalla pagina di partenza, come i file).
+- `ContentPageAttacher::attach()` → `int|string` (dodicesimi scritti o messaggio d'errore pronto per l'utente; prima `?string` e il chiamante inventava il messaggio).
+- `Grid::updateContentOccupancy(pageId, contentId, twelfths)` sostituisce `updateContentPercentage()`; valida 1–12, capienza, log `content.occupancy_changed`. `extendToPage` assegna `perExtraPage()`.
+- `ContentAssigned::$twelfths` (int) al posto di `$percentage` (nessun listener JS lo leggeva).
+- `AdLoadCalculator` somma interi (pivot per le assegnate, `occupancy_twelfths` del Content per le prenotate — `Grid::render()` imposta a mano la relazione `content` per non fare query; l'export la eager-loada) e calcola la percentuale una sola volta su pagine × 12. Nuove chiavi `adTwelfths`, `capacityTwelfths`; le "pagine equivalenti" restano per la lettura.
+- `Page::occupiedTwelfths(?exceptContentId)` (usa la relazione già caricata, nessuna query per card) e `Page::fillStatus()`.
+- `MigrateLegacyPageFilesToContents` scrive i dodicesimi; `ListMissingOccupancy` dice "non più necessario" se la colonna nuova esiste e legge le vecchie percentuali col query builder (i modelli non le caricano più).
+
+### Interfaccia
+- Modulo: partial `livewire/timone/partials/occupancy-fields.blade.php` ("Pagine intere" `?int` con `NormalizesEmptyNumericInput`, "Frazione" select di `Twelfths::FRACTIONS`), anteprima «Occupa 2 e 1/2 pagine» calcolata da `ContentCreator::occupancyFromFields()` in `render()` (nessun calcolo nel Blade). Per la pubblicità `updatedFormat()` precompila i campi; i formati mostrano «(1/2 di pagina)».
+- Card/lista: nuovo partial `page-content-entry.blade.php` (la riga del contenuto era copiata tre volte tra card con miniatura, card senza e lista) con select 1/12…«intera»; nuovo `page-fill.blade.php`: barra verticale sul bordo sinistro (riempimento dal basso) + etichetta con icona (○/◐/●/⚠) e testo; in lista solo l'etichetta. Piena = scura con ●, vuota = tratteggiata, parziale = ambra: distinguibili senza colore.
+- Export PDF: spazio in frazioni.
+- `npm run build` eseguito (nuove classi Tailwind).
+
+### Migration (nuova e reversibile)
+`2026_10_27_100000_convert_occupancy_to_twelfths`: aggiunge le colonne nuove, le calcola con `App\Support\Occupancy\OccupancyConversion` (query builder) + `OccupancyConversionPlanner` (puro), le rende NOT NULL; rende nullable `contents.page_occupancy` e `page_content.occupied_percentage` (lasciate, non più lette: rollback con i valori originali; `advertisements.occupied_percentage_override` intatta). `down()` riempie le colonne vecchie solo per le righe nate dopo la conversione e ripristina lo schema. `$withinTransaction = false`: su SQLite `->change()` ricostruisce la tabella e solo fuori transazione Laravel riesce a spegnere le foreign key (dentro, la ricostruzione di `contents` cancellava in cascata il pivot — **scoperto scrivendo il test**, non per lettura).
+- **Regole di conversione (scelta di default, diversa dalla lettera della specifica)**: la specifica diceva "i contenuti esistenti occupano 12 su ogni pagina assegnata", ma sui dati reali le pagine con due mezze pagine (#1 pag. 11: 50% + 50%; #3 pag. 4: 33% + 50%) sarebbero diventate 24/12, oltre capienza. Quindi: pivot = dodicesimo più vicino alla vecchia percentuale (mai 0, mai oltre 12); contenuto = occupazione dichiarata (frazioni → 3/4/6/8, N pagine → 12·N); pubblicità senza percentuale manuale → formato, con percentuale manuale → pagine × dodicesimo della percentuale. Pagine oltre 12 dopo l'arrotondamento: segnalate, non corrette.
+- **Dry-run** `php artisan timone:occupancy-dry-run [--issue=ID]` (stesso pianificatore). Sul DB di sviluppo: 15 contenuti, 15 assegnazioni, nessuna pagina oltre capienza; arrotondate 3 assegnazioni (#3: pag. 3 «TITITOL» 99,7% → intera, pag. 4 «TITITOL» 33% → 1/3, pag. 6 «TITOTLOCCK2» 49,8% → 1/2); #3 pag. 4 = 1/3 + 1/2 = 10/12.
+- **Verifica su copia MySQL dei dati di sviluppo** (container temporaneo, poi rimosso): migrate → valori attesi, colonne `occupied_twelfths tinyint NOT NULL default 12`, `occupancy_twelfths smallint NOT NULL`; rollback → 15 assegnazioni, somma percentuali 1232,50 identica a prima, colonne di nuovo NOT NULL; migrate di nuovo pulito.
+- Corretto di passaggio il docblock della migration della Fase 2, che citava un comando inesistente (`timone:convert-covers --dry-run` → `timone:covers-dry-run`).
+
+### Test
+Nuovi: `tests/Unit/PageCapacityTest.php` (6: 6+4+3 = 13 → errore, 6+3+3 = 12 → piena, stati, messaggio, formattazione), `tests/Unit/PageOccupancyTest.php` riscritto (5: 2 intere + 1/2 = 30 → 12/12/6), `tests/Feature/Occupancy/OccupancyConversionMigrationTest.php` (3: conversione, rollback con righe nuove, dry-run con pagina oltre capienza), `tests/Feature/Livewire/PageFillIndicatorTest.php` (6: vuota/parziale/piena nelle 3 viste, select dei dodicesimi, anteprima del modulo, frazione non ammessa), in `ContentPlacerTest` 2,5 pagine → 12/12/6 e rifiuto "resta libero 1/2", in `AdLoadCalculatorTest` percentuale esatta (3 × 1/3 su 3 pagine = 33,33%), `AdFormatTest` mappatura, `TimoneGridContentAssignmentTest` modifica per pagina (oltre capienza con messaggio, broadcast, fuori 1–12). Aggiornati (stessa verifica, nuova unità): ~25 file che scrivevano `occupied_percentage`/`page_occupancy` o chiamavano `updateContentPercentage`. Rimosso `tests/Unit/PagePercentageAllocatorTest.php` con la classe. `vendor/bin/pint --dirty` applicato.
+Suite: **684 + 38 skipped in locale; 722/722 nel container con imagick**.
+
+### SOLID / scelte pragmatiche
+- Logica in `App\Support` (Twelfths, PageCapacity, PageOccupancy, Occupancy\*), componenti Livewire solo orchestrazione. `PageFillStatus` enum per gli stati visivi (Open/Closed).
+- Nessuna interfaccia nuova (classi statiche come il resto del progetto, CLAUDE.md regola 3).
+- Segnalazione (regola 2): `ContentCreate.php` cresce ancora (debito #59); con la modale di modifica della Fase 4 conviene un form object condiviso creazione/modifica invece di duplicare i campi.
+
+### Da verificare a mano nel browser (nessun Dusk) — DV-29
+1. Card in griglia, doppia e lista: barra sul bordo sinistro proporzionale (1/3, 1/2, piena), etichette «○ Vuota» / «◐ Libero: …» / «● Piena» leggibili in tema chiaro e scuro, anche sopra una miniatura.
+2. Select dello spazio sulla card (anche in sovrimpressione sulla miniatura): cambio valore → la barra si aggiorna; valore che non ci sta → messaggio rosso "resta libero solo …".
+3. Modulo: "Pagine intere" svuotato non dà errori; «Occupa …» si aggiorna; scegliendo un formato pubblicitario i campi si compilano.
+4. Drop di un contenuto da 2 e 1/2 pagine: tre pagine collegate, l'ultima a 1/2.
+5. Un secondo browser collegato vede gli aggiornamenti (polling/Reverb invariati: stessi eventi e `markPagesUpdated()`).
+
+### Documentazione aggiornata
+`MANUALE_UTENTE.md` (§3 tabella della card, §5 rinominata "…modificare lo spazio occupato" con i link aggiornati, §5bis riscritta, §8), `README.md`, `docs/02-architettura.md`, `docs/03-dominio-e-flussi.md` (nuova sezione "Occupazione in dodicesimi"), `docs/04-database.md`, `docs/08-job-e-scheduler.md`, `docs/09-deploy.md` (passo 5ter, rollback), `docs/10-debugging.md`, `docs/11-debito-tecnico.md` (#30, #31 aggiornati; #54–#59 nuovi), `docs/12-glossario.md`, `docs/DA-VERIFICARE.md` (DV-27, DV-28, DV-29), `docs/CHANGELOG.md`, `docs/nextcloud/timone-rivista.md` (sezione per la redazione), `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md`.
+
+## Sessione 2026-10-27 (continuazione) — Fase 3 approvata, migration applicata
+
+- Ok dell'utente sul dry-run. `docker compose up -d --build`: la migration `2026_10_27_100000_convert_occupancy_to_twelfths` è partita all'avvio dello stack (batch 3). Esito identico al dry-run: 15 contenuti, 15 assegnazioni, nessuna pagina oltre capienza.
+- Unica differenza osservata subito dopo: #3 pagina 4 «TITITOL» a 3/12 invece di 4/12 — non è la conversione, è una modifica fatta dall'interfaccia alle 08:50 (cronologia: `content.occupancy_changed`, «da 1/3 di pagina a 1/4 di pagina»). Conferma anche che la select dei dodicesimi funziona sullo stack reale.
+- I container in esecuzione hanno ora il codice della Fase 3 (inclusa la fascia unica delle copertine della Fase 2).
+
+## Sessione 2026-10-27 (continuazione) — Batch "revisione con gli utenti", Fase 4: gestione contenuti
+
+Tre punti: modifica di un contenuto esistente, miniatura, rinomina inline. **Migration nuova** `2026_10_27_200000_add_thumbnail_to_contents_table` (solo due colonne nullable, nessun dato da convertire): **non ancora applicata sul DB di sviluppo** — si applica con `docker compose up -d --build` (lo stack fa `migrate` all'avvio), dopo l'ok della fase.
+
+### 4.1 — Modifica di un contenuto
+- **Componente a sé** `App\Livewire\Timone\ContentEdit` (modale con stato sul server `$showModal`, aperta dall'evento browser `open-content-edit` {contentId}) e **servizio** `App\Support\ContentUpdater::update()`. Scelta motivata (regola 2/3): la creazione ha flussi che in modifica non esistono (pagina d'ancoraggio, modale di conflitto, scelta pagine del PDF); ciò che è davvero comune è condiviso: `App\Support\ContentFormRules` (regole + messaggi, ora usate anche da `ContentCreate::validatedFields()`), trait `App\Livewire\Concerns\HasOccupancyFields` (`whole_pages`/`fraction_twelfths`, `updatedFormat()`, anteprima), partial `occupancy-fields` e `thumbnail-field`. Un form object Livewire (`$form.*`) avrebbe cambiato ~40 test e ogni `wire:model` della creazione senza togliere logica dal componente.
+- `ContentUpdater`: occupazione dai campi; PDF (nuovo o attuale) coerente con le pagine attraversate via `ContentCreator::assertPdfFits()` (estratto da `resolveOccupancy()`; in modifica vale anche per le pubblicità: la scelta "usa tutte / da X a Y" del bug 8 resta solo in creazione); se cambiano occupazione o file e una pagina occupata è bloccata → errore. In transazione: campi + articolo/pubblicità (cambio tipo = elimina la riga dell'altro tipo, `updateOrCreate` del nuovo, `syncPageContentType` sulle pagine); **occupazione cambiata e contenuto posizionato → ridistribuzione** dalla prima pagina in ordine di sfoglio (`assignedPagesInReadingOrder()`: copertine poi interne) con `ContentPlacer::place()`, tutto o niente (stringa d'errore → `ValidationException` → rollback); il gruppo collegato viene sciolto solo se coincide esattamente con le pagine del contenuto. Fuori transazione (i job `GenerateContentFileThumbnail` devono trovare le righe): sostituzione del materiale (`replaceFiles()`: file fisici e righe vecchie eliminati, `ContentCreator::storeFiles()` ora pubblico, pivot `content_file_id` per posizione) e miniatura. Log `content.updated` con i soli campi cambiati.
+- Broadcast `ContentListChanged` con azione `updated` + `markPagesUpdated()` + evento locale `content-list-changed`.
+- Aperture: ✏️ sul chip dei contenuti da assegnare e sulla riga del contenuto in pagina.
+
+### 4.2 — Miniatura
+- Colonne `contents.thumbnail_path`/`thumbnail_mime`; `App\Support\ContentThumbnail::store()/remove()` (file su disco `local`, il vecchio cancellato solo dopo aver salvato il nuovo; log `content.thumbnail_added|replaced|removed`); `ContentThumbnailController` + rotta `contents.thumbnail` (`Gate::authorize('view', issue)`).
+- Precedenza sull'anteprima del PDF: `Content::previewImageUrl()` (chip) e `Page::previewImageUrl()` (card e riga — prima card/riga costruivano l'URL della miniatura in Blade). URL con `?v=` derivato dal percorso: stesso URL dopo una sostituzione = immagine vecchia dalla cache.
+- Regole `ContentFormRules::THUMBNAIL` (image, jpg/png/webp, 5 MB). Nessun ridimensionamento (niente Imagick in locale, nessuna dipendenza nuova; debito #62).
+- Anteprima della nuova immagine **nel browser** (`URL.createObjectURL`), non con `temporaryUrl()` di Livewire: quell'URL firmato ha lo stesso problema `APP_URL` dell'upload (Fase 1, bug 9).
+
+### 4.3 — Rinomina inline
+- `Grid::renameContent(contentId, name)`: rinomina ciò che la riga mostra (`displayLabel()`): titolo per l'articolo, **cliente** per la pubblicità (DV-31). Nome vuoto o troppo lungo → errore `rename`; log `content.renamed`; `ContentListChanged` `renamed`. Permessa anche su pagina bloccata (il blocco riguarda posizione e spazio).
+- UI in `partials/page-content-entry.blade.php`: doppio click sul nome → input (Alpine); Invio salva, Esc/blur annullano; ✏️ apre la modale completa.
+
+### Test
+Nuovi: `ContentRenameTest` (5: contenuto su 3 pagine rinominato ovunque + evento + cronologia, pubblicità → cliente, nome vuoto, altro numero, markup), `ContentEditTest` (10: caricamento campi, salvataggio ovunque + evento, **ridistribuzione 2 → 2 e 1/2 = 12/12/6**, riduzione che libera pagine e scioglie il gruppo, non ci sta → nulla cambia, pagina bloccata, articolo → pubblicità, formato riproposto e corretto, sola lettura 403, altro numero 404), `ContentThumbnailTest` (6), `ContentEditMaterialTest` (3, due solo con imagick: PDF di 2 pagine distribuito pagina per pagina, PDF incoerente rifiutato). Nota: la GD del container non genera WEBP finti (`imagewebp` assente): nei test si usano PNG/JPG; l'app non usa la GD per accettare un WEBP.
+Suite: **706 + 40 skipped in locale; 746/746 nel container con imagick**. `npm run build`, `pint --dirty` eseguiti.
+
+### Da verificare a mano nel browser (DV-30)
+1. Doppio click sul nome in una card (con e senza miniatura), in doppia pagina e in lista: Invio salva, Esc annulla, un secondo browser vede il nome nuovo.
+2. ✏️ → modale: scroll su schermi bassi, Esc e clic fuori chiudono, cambio tipo mostra i campi giusti.
+3. Cambio occupazione di un contenuto su 2 pagine → 2 e 1/2: terza pagina a 1/2, gruppo 🔗 aggiornato.
+4. Miniatura: anteprima immediata alla scelta, comparsa nella card al posto del PDF, rimozione.
+
+### Documentazione aggiornata
+`MANUALE_UTENTE.md` (nuova §5ter, §3 tabella, §5 miniatura e icone del chip), `README.md`, `docs/02`, `docs/03` (Flusso 6bis), `docs/04`, `docs/10`, `docs/11` (#25, #56, #59 aggiornati; #60–#63), `docs/12`, `docs/DA-VERIFICARE.md` (DV-30, DV-31), `docs/CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`, `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI.md`.
+
+## Sessione 2026-10-27 (continuazione) — Fase 4: miniatura separata tolta su richiesta
+
+- Richiesta dell'utente alla consegna della Fase 4: «togli la questione della miniatura, il pdf principale è già la miniatura». Rimossi: migration `2026_10_27_200000_add_thumbnail_to_contents_table` (mai applicata: nessun rollback necessario), `App\Support\ContentThumbnail`, `ContentThumbnailController` e rotta `contents.thumbnail`, partial `thumbnail-field`, campi `thumbnail`/`removeThumbnail` di `ContentCreate`/`ContentEdit`, parametri miniatura di `ContentUpdater::update()`, regola `ContentFormRules::THUMBNAIL`, `tests/Feature/Livewire/ContentThumbnailTest.php` (6 test).
+- Restano (utili a prescindere): `Content::previewImageUrl()` e `Page::previewImageUrl()`, ora solo l'URL dell'anteprima pronta del file (prima costruito in due copie nei Blade).
+- La sezione Fase 4 sopra descrive ancora il punto 4.2 com'era: vale questa voce. Documentazione utente e tecnica ripulita (manuale §5ter ora "Modificare un contenuto e rinominarlo", README, docs/02, 03, 04, 10, 11 #62 barrato, 12, DA-VERIFICARE DV-30, CHANGELOG, Nextcloud, file di ripartenza con nota "non riproporla").
+- Suite: 700 + 40 skipped in locale; 740/740 nel container con imagick.

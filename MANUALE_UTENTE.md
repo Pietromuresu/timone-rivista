@@ -55,11 +55,12 @@ La schermata del timone ha tre modalità, selezionabili in alto a destra:
 | Numero con ⠿ | Numero della pagina interna, da 1 in su (le copertine sono a parte, vedi [§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)). È anche la "maniglia" per trascinare la pagina |
 | 📘 «I di copertina» su sfondo blu | È una copertina, non una pagina interna: sta nella fascia azzurra «Copertine» in cima al timone, prima della pagina 1 ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)) |
 | Etichetta colorata (es. "In bozza") | Stato della pagina, stessa palette del bordo — cliccabile per cambiarlo, vedi [§6](#6-cambiare-lo-stato-di-una-pagina) |
-| 📄 / 📢 | Contenuto assegnato: 📄 articolo, 📢 pubblicità, seguito dal titolo/cliente |
+| 📄 / 📢 | Contenuto assegnato: 📄 articolo, 📢 pubblicità, seguito dal titolo/cliente e dal menu con lo spazio che occupa su quella pagina (1/4, 1/3, 1/2, … «intera») — vedi [§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato). **Doppio click sul nome** per rinominarlo, **✏️** per modificare tutto il contenuto ([§5ter](#5ter-modificare-un-contenuto-e-rinominarlo)) |
+| Barra sul bordo sinistro + etichetta «○ Vuota» / «◐ Libero: 1/3» / «● Piena» | **Quanto è piena la pagina**: la barra si riempie dal basso in proporzione allo spazio occupato; l'etichetta dice quanto resta libero. Pagina piena = barra ed etichetta scure con ●, pagina vuota = etichetta tratteggiata con ○, parziale = ambra con ◐ (simbolo e testo diversi, si distinguono anche senza i colori). «⚠ Oltre capienza» in rosso è un'anomalia da sistemare (vedi [§5bis](#5bis-occupazione-di-pagina-obbligatoria)). In Lista compare la sola etichetta |
 | Pallino verde con iniziali, animato | Un collega ha in questo momento il focus su quella pagina (sta cambiando qualcosa) |
 | 📤 | Nessun PDF caricato ancora — clic per caricarne uno |
 | ⏳ PDF | PDF caricato, anteprima in elaborazione |
-| Miniatura a piena card (griglia/doppia) | PDF pronto — riempie il centro della card, è l'elemento visivo principale; clic per aprirlo. Sotto, in sovrimpressione, restano titolo/percentuale/pulsanti del contenuto assegnato, invariati. In Lista resta una piccola icona, come prima. |
+| Miniatura a piena card (griglia/doppia) | PDF pronto — riempie il centro della card, è l'elemento visivo principale; clic per aprirlo. Sotto, in sovrimpressione, restano titolo/spazio occupato/pulsanti del contenuto assegnato, invariati. In Lista resta una piccola icona, come prima. |
 | ⚠️ PDF (rosso) | Generazione dell'anteprima fallita — clic per ricaricare il file |
 | 🕐 | Apre lo storico di tutti i PDF caricati su questa pagina (compare solo se ce n'è almeno uno) |
 | 📝 | La pagina ha una nota (passa il mouse per leggerla) |
@@ -95,7 +96,7 @@ Se nel frattempo un collega ha spostato o scambiato delle pagine e la tua vista 
 Bottone **🔓** su ogni card/riga (accanto allo stato) — clic per bloccarla, diventa **🔒**. Una pagina bloccata:
 
 - **non può essere spostata o scambiata di posto** (drag&drop, tastiera, modalità scambio: tutti rifiutati con un avviso);
-- **non può essere modificata**: niente cambio di stato, assegnazione/rimozione contenuti, modifica percentuale, caricamento di un nuovo PDF — tutti i controlli diventano di sola visualizzazione, in tutte e tre le modalità di vista;
+- **non può essere modificata**: niente cambio di stato, assegnazione/rimozione contenuti, modifica dello spazio occupato, caricamento di un nuovo PDF — tutti i controlli diventano di sola visualizzazione, in tutte e tre le modalità di vista;
 - **non può essere eliminata** riducendo il numero totale di pagine — se provi a ridurre e una delle pagine che verrebbero tolte è bloccata, l'operazione viene rifiutata (il bottone di conferma nel pannello "⚙️ Pagine totali" si disabilita da solo se questo succede).
 
 Per sbloccarla, clic sulla stessa icona (ora 🔒): torna 🔓 e la pagina è di nuovo modificabile normalmente. Utile per esempio per una pagina già mandata in stampa, che non deve più essere toccata per errore.
@@ -104,12 +105,12 @@ Per sbloccarla, clic sulla stessa icona (ora 🔒): torna 🔓 e la pagina è di
 
 ---
 
-## 5. Creare, assegnare/rimuovere contenuti e modificare la percentuale
+## 5. Creare, assegnare/rimuovere contenuti e modificare lo spazio occupato
 
 **Per creare un nuovo articolo o una nuova pubblicità:** bottone **"+ Nuovo contenuto"** sopra la griglia. Scegli il tipo (Articolo o Pubblicità): i campi del form cambiano di conseguenza.
 
 - **Articolo**: titolo, rubrica (opzionale), **occupazione di pagina (obbligatoria, vedi [§5bis](#5bis-occupazione-di-pagina-obbligatoria))**, autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
-- **Pubblicità**: titolo, rubrica, cliente, agenzia (opzionale), **formato (obbligatorio, nessun valore già scelto: è l'occupazione della pubblicità)** (l'intero listino ufficiale: pagina intera, mezza pagina orizzontale/verticale, 1/3, 1/4, 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale — mostra già accanto la percentuale di pagina che occuperebbe di default), percentuale manuale (opzionale — la usa al posto di quella del formato se la compili), **pagina preferita (opzionale)** — solo un promemoria di dove piazzarla, non assegna nulla da sola, visibile nel pannello "Pubblicità prenotate" ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), stato commerciale, note commerciali. Per **battente copertina** e **doppia pagina** (che occupano due pagine affiancate): trascinala sulla prima delle due pagine — occupa da sola anche la successiva, ciascuna al 100% come un'inserzione a piena pagina a sé, e le due pagine vengono collegate tra loro.
+- **Pubblicità**: titolo, rubrica, cliente, agenzia (opzionale), **formato (obbligatorio, nessun valore già scelto)** (l'intero listino ufficiale: pagina intera, mezza pagina orizzontale/verticale, 1/3, 1/4 (vetrina), 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale — accanto a ciascuno è indicato lo spazio che occupa, es. «(1/2 di pagina)»). Scelto il formato, i campi **"Pagine intere" + "Frazione"** ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)) si compilano da soli con lo spazio del formato, e puoi **correggerli** (es. una mezza pagina che in questo numero occupa 2/3). Poi **pagina preferita (opzionale)** — solo un promemoria di dove piazzarla, non assegna nulla da sola, visibile nel pannello "Pubblicità prenotate" ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), stato commerciale, note commerciali. Per la **doppia pagina** (2 pagine intere affiancate): trascinala sulla prima delle due pagine — occupa da sola anche la successiva, ciascuna per intero, e le due pagine vengono collegate tra loro. La **battente copertina** occupa la bandella, che nel timone è un solo riquadro ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)).
 
 **Rubrica**: accanto al menu a tendina ci sono due bottoni — **➕** crea una nuova rubrica (nome, poi "Crea": viene selezionata subito), **✏️** rinomina quella attualmente selezionata. Il nome deve essere unico all'interno della rivista.
 
@@ -121,36 +122,61 @@ Il contenuto appena creato compare subito nel pannello **"Contenuti da assegnare
 
 Sopra la griglia c'è appunto il pannello **"Contenuti da assegnare"**: tutti gli articoli e le pubblicità di questo numero non ancora messi su una pagina. Se l'elenco è lungo, usa il campo **"Cerca per titolo..."** accanto al titolo del pannello per restringerlo.
 
-**Archiviare o eliminare un contenuto non assegnato**: passando il mouse su un chip nel pannello "Contenuti da assegnare" compaiono due icone — **🗄️ Archivia** (lo nasconde dal pannello, ma resta nel database: recuperabile in qualsiasi momento dalla sezione "▸ Contenuti archiviati" subito sotto, bottone **↩️** per ripristinarlo) e **🗑️ Elimina** (cancellazione **definitiva**, non recuperabile — chiede doppia conferma). Un contenuto già assegnato a una pagina non può essere né archiviato né eliminato da qui: va prima rimosso dalla pagina ("✕" sulla card).
+**Archiviare o eliminare un contenuto non assegnato**: passando il mouse su un chip nel pannello "Contenuti da assegnare" compaiono tre icone — **✏️ Modifica** ([§5ter](#5ter-modificare-un-contenuto-e-rinominarlo)), **🗄️ Archivia** (lo nasconde dal pannello, ma resta nel database: recuperabile in qualsiasi momento dalla sezione "▸ Contenuti archiviati" subito sotto, bottone **↩️** per ripristinarlo) e **🗑️ Elimina** (cancellazione **definitiva**, non recuperabile — chiede doppia conferma). Un contenuto già assegnato a una pagina non può essere né archiviato né eliminato da qui: va prima rimosso dalla pagina ("✕" sulla card).
 
-**Per assegnare:** trascina un contenuto dal pannello sopra una pagina. Quanto spazio occupa lo decide la sua **occupazione** ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)):
-- un articolo da **una frazione** (1/4, 1/3, 1/2, 2/3) prende quella parte della pagina (25%, 33,3%, 50%, 66,7%);
-- un articolo da **N pagine** (es. un PDF di 3 pagine) occupa **N pagine consecutive** a partire da quella su cui lo lasci, ciascuna al 100% e con la miniatura della propria pagina del PDF; le pagine vengono collegate tra loro (🔗) e si spostano insieme;
-- una pubblicità prende la percentuale del suo formato (es. mezza pagina = 50%), a meno che non sia stata impostata una percentuale manuale sull'inserzione.
+**Per assegnare:** trascina un contenuto dal pannello sopra una pagina. Quanto spazio occupa lo decide la sua **occupazione** ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)), uguale per articoli e pubblicità:
+- **meno di una pagina** (es. 1/3): prende quella parte della pagina su cui lo lasci;
+- **pagine intere + una frazione** (es. 2 pagine e 1/2): occupa **pagine consecutive** a partire da quella su cui lo lasci — le pagine intere in sequenza e la frazione sull'ultima (pagina intera, pagina intera, 1/2). Con un PDF, ogni pagina mostra la miniatura della propria pagina del PDF; le pagine vengono collegate tra loro (🔗) e si spostano insieme.
 
-**Tutto o niente**: se il contenuto non ci sta (il numero finisce prima, una delle pagine è bloccata o già occupata), compare un messaggio che spiega il motivo e **nessuna pagina viene modificata** — scegli un'altra pagina di partenza o libera spazio. Un contenuto creato prima che l'occupazione diventasse obbligatoria e ancora senza occupazione non viene mai piazzato "a caso" su una pagina: il messaggio te lo segnala.
+**Tutto o niente**: se il contenuto non ci sta (il numero finisce prima, una delle pagine è bloccata o non ha abbastanza spazio), compare un messaggio che spiega il motivo — per lo spazio dice anche **quanto ne resta** (es. «richiede 1/2 di pagina, ma resta libero solo 1/3 di pagina») — e **nessuna pagina viene modificata** — scegli un'altra pagina di partenza o libera spazio. Un contenuto creato prima che l'occupazione diventasse obbligatoria e ancora senza occupazione non viene mai piazzato "a caso" su una pagina: il messaggio te lo segnala.
 
-**Per cambiare la percentuale** dopo l'assegnazione: modifica il numero accanto al contenuto direttamente sulla card. Se il nuovo valore supera lo spazio disponibile sulla pagina, viene rifiutato con un messaggio.
+**Per cambiare lo spazio su una pagina** dopo l'assegnazione: usa il menu accanto al contenuto direttamente sulla card (da 1/12 a «intera»). Cambia solo quella pagina: la distribuzione automatica (es. intera, intera, 1/2) è un punto di partenza, poi ogni pagina si regola a mano. Se il nuovo valore non ci sta, viene rifiutato con un messaggio che dice quanto spazio resta.
 
 **Per rimuovere:** clic sulla ✕ accanto al contenuto — torna nel pannello "contenuti da assegnare" (solo da quella pagina: se il contenuto è anche su altre pagine, resta lì).
 
-**Per un contenuto che continua su più pagine** (es. un articolo che prosegue da pagina 5 a pagina 8): una volta assegnato una prima volta, clicca sull'icona **"↗"** accanto al contenuto e indica il numero della pagina aggiuntiva. Il contenuto compare anche lì, con la sua percentuale calcolata separatamente per quella pagina; un piccolo **"×N"** accanto al titolo indica su quante pagine è presente in totale.
+**Per un contenuto che continua su più pagine** (es. un articolo che prosegue da pagina 5 a pagina 8): una volta assegnato una prima volta, clicca sull'icona **"↗"** accanto al contenuto e indica il numero della pagina aggiuntiva. Il contenuto compare anche lì, con una pagina intera (o tutto il contenuto, se occupa meno di una pagina), modificabile dal menu di quella pagina; un piccolo **"×N"** accanto al titolo indica su quante pagine è presente in totale.
 
-Una pagina può ospitare più contenuti insieme (es. metà pubblicità + metà articolo = pagina "mista"), purché il totale non superi il 100%.
+Una pagina può ospitare più contenuti insieme (es. metà pubblicità + metà articolo = pagina "mista"), purché il totale non superi la pagina intera: per esempio 1/2 + 1/4 + 1/4 riempie esattamente la pagina («● Piena»), 1/2 + 1/3 + 1/4 non ci sta.
 
 ---
 
 ## 5bis. Occupazione di pagina (obbligatoria)
 
-Ogni contenuto deve dichiarare **quanto spazio occupa nel timone**: è il dato che usano il posizionamento sulle pagine, il cruscotto pubblicitario e i conteggi di foliazione. Non c'è un valore già scelto: finché non lo scegli, "Crea contenuto" segnala l'errore e non crea nulla.
+Ogni contenuto deve dichiarare **quanto spazio occupa nel timone**: è il dato che usano il posizionamento sulle pagine, il cruscotto pubblicitario e i conteggi di foliazione. Non c'è un valore già scelto per gli articoli: finché non lo indichi, "Crea contenuto" segnala l'errore e non crea nulla.
 
-- **Articolo**: menu **"Occupazione di pagina"** — 1/4, 1/3, 1/2 o 2/3 di pagina, oppure 1, 2, 3… pagine intere (fino al numero di pagine del numero).
-- **Pubblicità**: l'occupazione **è il formato** scelto dal listino (mezza pagina, un quarto, doppia pagina…), anch'esso obbligatorio e senza valore preimpostato.
+**Come si inserisce** (uguale per articoli e pubblicità): due campi affiancati.
+- **Pagine intere**: 0, 1, 2, 3…
+- **Frazione**: nessuna, 1/4, 1/3, 1/2, 2/3 o 3/4 di pagina.
 
-**Con un PDF allegato**: appena scegli (o trascini) il file, il sistema ne conta le pagine e, se non hai ancora scelto l'occupazione di un articolo, te la **propone** — sotto il menu compare "📄 Il PDF allegato ha N pagine: proposta N pagine — controlla e conferma prima di creare". Se avevi già scelto un valore, non viene cambiato. Le regole:
-- PDF di **più pagine** → l'occupazione deve essere esattamente quel numero di pagine (altrimenti non si saprebbe come distribuirlo);
-- PDF di **una pagina** → puoi scegliere 1 pagina o una frazione (es. un articolo da mezza pagina);
+Sotto compare il totale, es. **«Occupa 2 e 1/2 pagine»**. Esempi: un articolo di due pagine e mezza = 2 + 1/2; una vetrina = 0 + 1/4; un piedino = 0 + 1/3; un servizio di 4 pagine = 4 + nessuna. Almeno uno dei due campi deve essere più di zero.
+
+**Pubblicità**: scegliendo il formato i due campi si compilano da soli (pagina intera = 1 + nessuna, 2/3 = 0 + 2/3, mezza pagina = 0 + 1/2, piedino e 1/3 = 0 + 1/3, vetrina/un quarto = 0 + 1/4, doppia pagina = 2 + nessuna, copertina 2ª/3ª/4ª e battente = 1 + nessuna); restano modificabili.
+
+**Come si distribuisce sulle pagine**: pagine intere in sequenza e la frazione sull'ultima. 2 e 1/2 pagine → pagina intera, pagina intera, 1/2 pagina. Poi lo spazio su ciascuna pagina si può cambiare dal menu sulla card ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato)).
+
+**Capienza della pagina**: una pagina contiene al massimo una pagina intera di contenuti. Il sistema conta in **dodicesimi di pagina** (1/4 = 3, 1/3 = 4, 1/2 = 6, 2/3 = 8, 3/4 = 9, intera = 12), così le somme sono sempre esatte: 1/3 + 1/3 + 1/3 fa esattamente una pagina piena, senza arrotondamenti. Non devi fare tu questi conti: li vedi solo come frazioni.
+
+**Con un PDF allegato**: appena scegli (o trascini) il file, il sistema ne conta le pagine e, se non hai ancora indicato l'occupazione di un articolo, **propone** tante pagine intere quante quelle del PDF (lo dice sotto i campi). Se avevi già indicato un valore, non viene cambiato. Le regole:
+- PDF di **più pagine** → l'occupazione deve attraversare esattamente quel numero di pagine (un PDF di 3 pagine va bene con 3 pagine intere o con 2 e 1/2, non con 2);
+- PDF di **una pagina** → al massimo 1 pagina, anche una frazione (es. mezza pagina);
 - PDF **illeggibile** (danneggiato o protetto) → viene rifiutato subito con un messaggio, invece di essere trattato come "1 pagina".
+
+**Contenuti creati prima di questa versione**: lo spazio che avevano sulle pagine è stato convertito alla frazione più vicina (50% → 1/2, 33% → 1/3, 99,7% → intera). Se su una pagina la somma risultasse oltre la capienza, la pagina mostra «⚠ Oltre capienza» in rosso: riduci a mano uno dei contenuti.
+
+---
+
+## 5ter. Modificare un contenuto e rinominarlo
+
+**Rinominare al volo**: sulla pagina, **doppio click sul nome** del contenuto → diventa un campo di testo. **Invio** salva, **Esc** (o cliccare altrove) annulla. Il nome è del contenuto, non della pagina: un articolo su 3 pagine cambia nome su tutte e 3, e lo vedono subito anche i colleghi collegati. Per un articolo si cambia il titolo; per una pubblicità il **cliente** (è il nome che la pagina mostra). Funziona anche su una pagina bloccata: il blocco riguarda spostamenti e spazio, non i dati del contenuto.
+
+**Modificare tutto**: icona **✏️** accanto al contenuto (sulla pagina) o sul chip in "Contenuti da assegnare" → si apre la finestra **"Modifica contenuto"** con tutti i campi della creazione: tipo (articolo/pubblicità), titolo, rubrica, campi dell'articolo o della pubblicità, **occupazione** (pagine intere + frazione) e materiale di stampa (il PDF o l'immagine allegati, che sono anche l'anteprima del contenuto nel timone). "Salva modifiche" applica tutto; "Annulla", ✕ o Esc chiudono senza salvare.
+
+- Le modifiche valgono su **tutte le pagine** dove compare il contenuto.
+- **Cambiare l'occupazione** di un contenuto già sulle pagine lo **ridistribuisce** a partire dalla sua prima pagina, con la regola solita (pagine intere poi la frazione): da 2 a 2 e 1/2 pagine → intera, intera, 1/2 sulle pagine consecutive; riducendolo, le pagine non più usate tornano libere (e il collegamento 🔗 tra le sue pagine viene sciolto). Le regolazioni fatte a mano pagina per pagina vengono sostituite dalla nuova distribuzione. Se non ci sta (numero finito, pagina successiva piena o bloccata) non cambia nulla e il messaggio spiega perché. Lasciando l'occupazione com'è, le pagine restano come sono.
+- **Pagine bloccate**: occupazione e materiale non si possono cambiare finché il contenuto è su una pagina bloccata (gli altri campi sì).
+- **Cambiare tipo** (articolo ↔ pubblicità): i campi del vecchio tipo si perdono, quelli del nuovo vanno compilati; il colore delle pagine si aggiorna.
+- **Pubblicità**: cambiando formato viene riproposto lo spazio del formato, modificabile.
+- **Materiale di stampa**: sotto "Attuale" vedi il file allegato. Scegliendo un nuovo file **sostituisci** quello vecchio (che viene eliminato); con un PDF di più pagine ogni pagina del timone riceve la pagina del PDF corrispondente. Il PDF deve attraversare lo stesso numero di pagine dell'occupazione (un PDF di 3 pagine con un contenuto di 2 pagine viene rifiutato: cambia prima l'occupazione). La scelta "usa tutte / solo da X a Y" esiste solo in creazione.
 
 ---
 
@@ -242,7 +268,7 @@ Se la generazione dell'anteprima fallisce (icona ⚠️ rossa), il file più pro
 
 Sotto le scelte una riga riassume cosa succederà («→ La pubblicità occuperà 3 pagine intere (pagine del PDF 1–3)»). Ogni pagina del timone mostra la pagina del PDF che le corrisponde: con «da 2 a 3», la prima pagina occupata mostra la pagina 2 del PDF e la successiva la pagina 3. Se il PDF ha *meno* pagine del formato (es. una doppia pagina consegnata come pagina singola) non compare nessuna scelta.
 
-**PDF con più pagine creato da "+ Nuovo contenuto"**: il contenuto conserva tutte le pagine del PDF (una miniatura per pagina). Quando lo trascini dal pannello "Contenuti da assegnare" su una pagina, occupa automaticamente le N pagine consecutive da lì in poi, ognuna con la miniatura della propria pagina del PDF — se non c'è spazio per tutte, non viene piazzato e un messaggio spiega perché ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-la-percentuale)).
+**PDF con più pagine creato da "+ Nuovo contenuto"**: il contenuto conserva tutte le pagine del PDF (una miniatura per pagina). Quando lo trascini dal pannello "Contenuti da assegnare" su una pagina, occupa automaticamente le N pagine consecutive da lì in poi, ognuna con la miniatura della propria pagina del PDF — se non c'è spazio per tutte, non viene piazzato e un messaggio spiega perché ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato)).
 
 **PDF con più pagine interne da "📎 Carica materiale"**: se il file che alleghi (dal bottone "📎 Carica materiale" di una pagina, con un titolo/tipo già compilati) ha più di una pagina interna (es. un PDF di 3 pagine per un'inserzione su tre pagine consecutive), il sistema propone di occupare automaticamente le pagine successive del timone a partire da quella da cui sei partito — **stessa identica finestra di conferma di sempre**, nessuna modifica lì:
 - se nessuna delle pagine coinvolte ha già un'anteprima, un solo bottone **"Occupa le N pagine"** conferma tutto in un colpo;
@@ -265,7 +291,7 @@ Ogni pagina timone coinvolta mostra la miniatura della propria pagina interna co
 
 Pannello sempre visibile sopra la griglia. Mostra, per il numero che stai guardando:
 
-- **Percentuale di carico pubblicitario** (numero grande) — quanta parte del numero è occupata da pubblicità, **incluse le pubblicità prenotate ma non ancora assegnate a una pagina** ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), non solo quelle già piazzate: il testo accanto al numero mostra il dettaglio "X già assegnate + Y prenotate". Diventa rossa se supera la soglia di allarme impostata. Le pagine di copertina non entrano mai in questo calcolo (né come "pagine totali" del denominatore, né un eventuale contenuto assegnato per errore su di esse) — vedi [§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella).
+- **Percentuale di carico pubblicitario** (numero grande) — quanta parte del numero è occupata da pubblicità, **incluse le pubblicità prenotate ma non ancora assegnate a una pagina** ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), non solo quelle già piazzate: il testo accanto al numero mostra il dettaglio "X già assegnate + Y prenotate". È calcolata sullo spazio realmente occupato in dodicesimi di pagina ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)), quindi è esatta: tre pubblicità da 1/3 su 3 pagine fanno 1 pagina su 3 = 33,33%. Le prenotate contano per l'occupazione indicata nel loro modulo. Diventa rossa se supera la soglia di allarme impostata. Le pagine di copertina non entrano mai in questo calcolo (né come "pagine totali" del denominatore, né un eventuale contenuto assegnato per errore su di esse) — vedi [§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella).
 - **Soglia di allarme**: il campo numerico accanto al titolo del cruscotto — impostala tu (es. `30` per il 30%); lasciala vuota per disattivare l'avviso. È un'impostazione della rivista, non del singolo numero: cambiarla qui vale per tutti i numeri di quella rivista.
 - **Inserzioni assegnate** vs **pubblicità non ancora assegnate**.
 - **Riepilogo per formato pubblicitario** (pagina intera, mezza pagina, ecc.) e **per stato commerciale** (in trattativa, confermata, annullata) — include anche le prenotazioni.
@@ -280,11 +306,11 @@ Bottone **"📌 Pubblicità prenotate"** sopra la griglia: elenca **tutte** le p
 
 | Stato | Significato |
 |---|---|
-| 🟠 **Prenotato** | Cliente, formato e note commerciali già inseriti ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-la-percentuale), "+ Nuovo contenuto" → Pubblicità), ma non ancora messo su nessuna pagina — è quello che succede automaticamente quando crei una pubblicità e non la trascini subito su una pagina. Se al momento della creazione hai indicato una **pagina preferita**, la vedi qui accanto (es. "posizione preferita: pagina 7") — è solo un promemoria per chi compone il timone, non assegna nulla da sola. |
+| 🟠 **Prenotato** | Cliente, formato e note commerciali già inseriti ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato), "+ Nuovo contenuto" → Pubblicità), ma non ancora messo su nessuna pagina — è quello che succede automaticamente quando crei una pubblicità e non la trascini subito su una pagina. Se al momento della creazione hai indicato una **pagina preferita**, la vedi qui accanto (es. "posizione preferita: pagina 7") — è solo un promemoria per chi compone il timone, non assegna nulla da sola. |
 | 🔵 **Assegnato** | È già su una pagina, ma quella pagina non ha ancora un PDF pronto (o il PDF caricato ha un formato non conforme non ancora accettato, [§7](#7-caricare-e-vedere-un-pdf)). |
 | 🟢 **Completo** | È su una pagina e il materiale è a posto — pronta per la stampa. |
 
-**Eliminare una prenotazione**: bottone "🗑 Elimina" — disponibile solo per le pubblicità ancora in stato "Prenotato" (non ancora su una pagina). Se una pubblicità è già assegnata e vuoi toglierla, usa la ✕ direttamente sulla card/riga della pagina ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-la-percentuale)).
+**Eliminare una prenotazione**: bottone "🗑 Elimina" — disponibile solo per le pubblicità ancora in stato "Prenotato" (non ancora su una pagina). Se una pubblicità è già assegnata e vuoi toglierla, usa la ✕ direttamente sulla card/riga della pagina ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato)).
 
 **Chiudere il numero**: bottone **"🔒 Chiudi numero"** in cima al pannello. Il numero **non può essere chiuso** finché esiste almeno una pubblicità non ancora "Completo" — compare un messaggio con i nomi dei clienti coinvolti. Per sbloccare: aspetta il materiale (così passa a "Completo" da sola) oppure elimina la prenotazione se non serve più. Un numero chiuso passa nell'"Archivio" della pagina della rivista ([§2](#2-scegliere-rivista-e-numero)) e il bottone si trasforma in un'etichetta "🔒 Numero chiuso" — al momento non c'è un modo per riaprirlo da qui.
 
@@ -368,7 +394,7 @@ I valori di partenza vengono dalla rivista ([§12bis](#12bis-modificare-una-rivi
 
 Bottone **"📜 Storico spostamenti"** nella barra del timone: apre un elenco degli ultimi 50 spostamenti di pagina fatti su questo numero, con chi li ha fatti, da quale posizione a quale, e quando.
 
-Bottone **"🕓 Cronologia"**, poco sotto la barra del timone: il registro di **tutto il resto** che succede su questo numero — cambi di stato pagina, contenuti creati/assegnati/rimossi/con percentuale modificata, PDF caricati, modifiche al numero di pagine totali, cambi della soglia di allarme pubblicitario. Ogni riga mostra chi ha fatto cosa e quando. Non si aggiorna da solo mentre resta aperto: chiudilo e riaprilo per vedere le voci più recenti.
+Bottone **"🕓 Cronologia"**, poco sotto la barra del timone: il registro di **tutto il resto** che succede su questo numero — cambi di stato pagina, contenuti creati/assegnati/rimossi/con spazio sulla pagina modificato, PDF caricati, modifiche al numero di pagine totali, cambi della soglia di allarme pubblicitario. Ogni riga mostra chi ha fatto cosa e quando. Non si aggiorna da solo mentre resta aperto: chiudilo e riaprilo per vedere le voci più recenti.
 
 ---
 

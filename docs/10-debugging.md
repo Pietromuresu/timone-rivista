@@ -46,6 +46,7 @@ docker compose exec app php artisan migrate:status
 docker compose exec app php artisan queue:failed
 docker compose exec app php artisan schedule:list
 docker compose exec app php artisan timone:missing-occupancy
+docker compose exec app php artisan timone:occupancy-dry-run [--issue=ID]   # occupazione: percentuali → dodicesimi, sola lettura
 docker compose exec app php -m | grep -Ei 'imagick|redis|pcntl|gd'   # estensioni effettivamente caricate
 docker compose exec app php -r 'print_r(Imagick::queryFormats("PDF"));'   # array vuoto = policy PDF di ImageMagick attiva
 docker compose exec redis redis-cli llen queues:default    # job in attesa (prefisso: REDIS_PREFIX, vedi nota sotto)
@@ -122,7 +123,26 @@ Checklist completa con comandi e righe di log: [09-deploy.md §6bis](09-deploy.m
 | Upload lento oltre 10 minuti | `max_upload_time` in `config/livewire.php:92` | Alzalo |
 | "PDF illeggibile" | Imagick o Ghostscript assenti, policy PDF attiva, PDF corrotto | `php -m`, `Imagick::queryFormats("PDF")`; prova il PDF in locale con `gs` |
 | Pubblicità con PDF di più pagine del formato | Riquadro "📄 Il PDF ha N pagine, il formato … ne occupa F" nel modulo | Non è un errore dal 2026-10-26: scegliere "usa tutte" o "solo da X a Y" (`App\Support\AdPdfPagePlan`). Un errore rosso sotto quel riquadro indica un intervallo non valido |
-| Occupazione non scelta | Errore sotto il menu "Occupazione" | È voluto: l'occupazione è obbligatoria (`MANUALE_UTENTE.md` §5bis) |
+| Occupazione non indicata | Errore sotto i campi "Pagine intere"/"Frazione" | È voluto: l'occupazione è obbligatoria, almeno uno dei due campi > 0 (`MANUALE_UTENTE.md` §5bis) |
+
+### Occupazione e riempimento delle pagine (dodicesimi, dal 2026-10-27)
+
+| Sintomo | Causa probabile | Dove guardare / come risolvere |
+|---|---|---|
+| "Spazio insufficiente sulla pagina N: … resta libero solo 1/3 di pagina" | La somma dei dodicesimi sulla pagina supererebbe 12 | È il controllo voluto (`App\Support\PageCapacity`). Ridurre un contenuto dal menu sulla card o scegliere un'altra pagina |
+| Card con «⚠ Oltre capienza (+…)» in rosso | Somma > 12 su una pagina: può nascere solo dalla conversione dei dati vecchi (percentuali arrotondate al dodicesimo) | `php artisan timone:occupancy-dry-run --issue=ID` mostra quali assegnazioni sono state arrotondate; ridurre a mano |
+| Contenuto che prende più/meno spazio del previsto dopo l'aggiornamento | Il vecchio valore era una percentuale non esatta (es. 49,8% → 1/2, 33% → 1/3) | Dry-run come sopra (riga "(arrotondato)"); i valori originali restano in `page_content.occupied_percentage` |
+| Pubblicità che occupa più pagine del formato | Scelta "usa tutte le N pagine" del PDF (bug 8): l'occupazione diventa N pagine intere, indipendentemente dai campi del modulo | `ContentCreator::resolveOccupancy()` |
+| Percentuale pubblicitaria del cruscotto diversa da prima | Ora è calcolata sui dodicesimi (esatta) e le prenotate contano la loro occupazione, non più la percentuale di listino (es. piedino 32,6% → 1/3) | `App\Support\AdLoadCalculator` |
+
+### Modifica di un contenuto (Fase 4, dal 2026-10-27)
+
+| Sintomo | Causa probabile | Dove guardare / come risolvere |
+|---|---|---|
+| "Nuova occupazione non applicabile alle pagine: …" | La ridistribuzione dalla prima pagina non ci sta (numero finito, pagina successiva piena o bloccata) | Voluto (tutto o niente, `ContentUpdater::redistribute()`): liberare spazio o spostare prima il contenuto |
+| "La pagina N è bloccata: sbloccala prima di cambiare occupazione o PDF…" | Una pagina occupata dal contenuto è bloccata | Sbloccare la pagina; gli altri campi si possono salvare comunque |
+| "Il PDF allegato ha N pagine, ma l'occupazione … ne attraversa M" sotto il file | Il nuovo PDF non coincide con l'occupazione (in modifica non c'è la scelta "usa tutte / da X a Y") | Cambiare prima l'occupazione, poi caricare il PDF |
+| Rinomina che "non salva" | Esc o clic fuori annullano; nome vuoto rifiutato (errore rosso sopra la griglia) | `Grid::renameContent()`, chiave d'errore `rename` |
 
 ### Miniature che restano "in elaborazione" o falliscono
 

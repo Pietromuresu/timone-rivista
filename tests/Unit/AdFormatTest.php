@@ -6,10 +6,10 @@ use App\Enums\AdFormat;
 // dall'utente — vedi il docblock di AdFormat::dimensionsMm() per le
 // assunzioni sui casi ambigui (Doppia pagina, 1/3 orizzontale).
 
-test('every format has a label and a default percentage', function () {
+test('every format has a label and an occupancy in twelfths', function () {
     foreach (AdFormat::cases() as $format) {
         expect($format->label())->not->toBeEmpty()
-            ->and($format->defaultPercentage())->toBeGreaterThan(0.0);
+            ->and($format->twelfths())->toBeGreaterThan(0);
     }
 });
 
@@ -35,7 +35,19 @@ test('un terzo pagina orizzontale has no dimensions because the rate card does n
     expect(AdFormat::UnTerzoPaginaOrizzontale->dimensionsMm())->toBeNull();
 });
 
-test('battente copertina and doppia pagina occupy 100% of each page they are assigned to, not 200% of one', function () {
-    expect(AdFormat::BattenteCopertina->defaultPercentage())->toBe(100.0)
-        ->and(AdFormat::DoppiaPagina->defaultPercentage())->toBe(100.0);
+// Fase 3 (2026-10-27): mappatura formato → dodicesimi richiesta dalla
+// specifica (intera 12, 2/3 8, 1/2 6, piedino 1/3 4, vetrina 1/4 3) e
+// scelte di default per i formati senza frazione esatta.
+test('ad formats map to twelfths as agreed in phase 3', function () {
+    expect(AdFormat::PaginaIntera->twelfths())->toBe(12)
+        ->and(AdFormat::DueTerziPagina->twelfths())->toBe(8)
+        ->and(AdFormat::MezzaPaginaOrizzontale->twelfths())->toBe(6)
+        ->and(AdFormat::MezzaPaginaVerticale->twelfths())->toBe(6)
+        ->and(AdFormat::Piedino->twelfths())->toBe(4)
+        ->and(AdFormat::UnTerzoPaginaVerticale->twelfths())->toBe(4)
+        ->and(AdFormat::UnTerzoPaginaOrizzontale->twelfths())->toBe(4)
+        ->and(AdFormat::UnQuartoPagina->twelfths())->toBe(3)
+        ->and(AdFormat::CopertinaSecondaTerzaQuarta->twelfths())->toBe(12)
+        ->and(AdFormat::BattenteCopertina->twelfths())->toBe(12)
+        ->and(AdFormat::DoppiaPagina->twelfths())->toBe(24);
 });

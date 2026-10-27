@@ -106,6 +106,8 @@ docker compose exec app php artisan migrate:status
 | Drag&drop morto, console "You must pass your app key" (versioni prima del 2026-10-26) o "VITE_REVERB_APP_KEY non impostata" | REVERB_APP_KEY nel .env, poi rebuild. Dal 2026-10-26 il timone funziona comunque, in polling |
 | Console: "Cannot read properties of undefined (reading 'editorFor')" | app.js non caricato o vecchio: rebuild degli asset (docker compose up -d --build); vedi docs/10-debugging.md |
 | Deploy della modifica "copertine separate" | Prima del migrate: docker compose run --rm --no-deps app php artisan timone:covers-dry-run (mostra cosa diventa cosa, non scrive nulla) |
+| Deploy della modifica "occupazione a frazioni" (2026-10-27) | Prima del migrate: docker compose run --rm --no-deps app php artisan timone:occupancy-dry-run (mostra per ogni contenuto e pagina la vecchia percentuale e la nuova frazione; le righe ⚠️ sono pagine da sistemare a mano) |
+| Pagina con «⚠ Oltre capienza» in rosso | Dato vecchio arrotondato alla frazione più vicina: ridurre a mano lo spazio di uno dei contenuti dal menu sulla pagina |
 | Non si caricano PDF/immagini | docker compose exec app php artisan timone:diagnose-upload, poi cercare upload_failed in storage/logs/laravel.log (checklist in docs/09-deploy.md §6bis). Causa più probabile: APP_URL diverso dall'indirizzo usato nel browser |
 | Miniature ferme | Container worker attivo? thumbnail_status in tabella content_files |
 | Mail non arrivate | MAIL_MAILER (log = non inviate), queue:failed, redattore di riferimento impostato sulla rivista |
@@ -130,6 +132,37 @@ docker compose exec app php artisan migrate:status
 - Bandella (battente): "+ Aggiungi bandella" nella fascia delle prime copertine. Con la bandella le pagine di copertina per il peso diventano 6.
 - Percentuale di pubblicità e conteggi riguardano solo le pagine interne; le copertine hanno il loro conteggio in cima al timone ("copertine 4, X assegnate").
 - I numeri creati prima di questa modifica sono stati convertiti in automatico: le loro copertine sono diventate I–IV con i contenuti che avevano, le pagine interne sono state rinumerate da 1.
+
+## Occupazione a frazioni e riempimento delle pagine (dal 2026-10-27)
+
+### Come si inserisce lo spazio di un contenuto
+
+Nel modulo "+ Nuovo contenuto" ci sono due campi affiancati:
+
+- Pagine intere: 0, 1, 2, 3…
+- Frazione: nessuna, 1/4, 1/3, 1/2, 2/3, 3/4 di pagina.
+
+Sotto compare il totale, per esempio «Occupa 2 e 1/2 pagine». Esempi: articolo di due pagine e mezza = 2 + 1/2; vetrina = 0 + 1/4; piedino = 0 + 1/3; servizio di 4 pagine = 4 + nessuna. Almeno uno dei due campi deve essere più di zero.
+
+Per una pubblicità, scegliendo il formato i due campi si compilano da soli (pagina intera = 1, mezza pagina = 1/2, 2/3, piedino = 1/3, vetrina = 1/4, doppia pagina = 2) e si possono correggere. Il vecchio campo "Percentuale manuale" non c'è più.
+
+Quando il contenuto viene trascinato su una pagina, occupa le pagine intere una dopo l'altra e la frazione sull'ultima: 2 e 1/2 pagine diventano pagina intera, pagina intera, mezza pagina. Poi, su ogni pagina, il menu accanto al titolo del contenuto permette di cambiare lo spazio solo su quella pagina (da 1/12 a «intera»).
+
+### Come si legge il riempimento di una pagina
+
+- Barra sul bordo sinistro della pagina: si riempie dal basso in proporzione allo spazio occupato.
+- Etichetta in basso: «○ Vuota» (tratteggiata), «◐ Libero: 1/3» (ambra, dice quanto spazio resta), «● Piena» (scura). Simbolo e testo sono diversi per ogni stato, quindi si leggono anche senza distinguere i colori. In vista Lista c'è solo l'etichetta.
+- Una pagina contiene al massimo una pagina intera di contenuti: 1/2 + 1/4 + 1/4 la riempie esattamente, 1/2 + 1/3 + 1/4 non ci sta. Se un contenuto non ci sta, il messaggio dice quanto spazio resta (es. «resta libero solo 1/3 di pagina») e non viene modificato nulla.
+- «⚠ Oltre capienza» in rosso: può comparire solo su contenuti creati prima del 2026-10-27, convertiti in automatico dalla vecchia percentuale alla frazione più vicina (50% → 1/2, 33% → 1/3). Va sistemato a mano riducendo uno dei contenuti.
+
+La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/3 su 3 pagine fanno 33,33%. Il sistema conta internamente in dodicesimi di pagina (1/4 = 3, 1/3 = 4, 1/2 = 6, 2/3 = 8, 3/4 = 9, pagina intera = 12), ma in redazione si vedono sempre e solo frazioni.
+
+## Modificare e rinominare un contenuto (dal 2026-10-27)
+
+- Rinominare: doppio click sul nome del contenuto dentro la pagina, scrivere il nuovo nome, Invio. Esc annulla. Il nome cambia su tutte le pagine del contenuto e anche per i colleghi collegati. Per una pubblicità si cambia il nome del cliente.
+- Modificare tutto: matita ✏️ accanto al contenuto (sulla pagina o nel pannello "Contenuti da assegnare"). Si apre "Modifica contenuto" con gli stessi campi della creazione. Cambiando lo spazio occupato (pagine intere + frazione) il contenuto viene ridistribuito dalla sua prima pagina; se non ci sta, non cambia nulla e un messaggio spiega perché.
+- Sostituire il PDF: nella stessa finestra si sceglie un nuovo file; quello vecchio viene eliminato. Un PDF di più pagine deve corrispondere allo spazio del contenuto (es. 3 pagine per un contenuto di 3 pagine o di 2 e 1/2).
+- L'anteprima di un contenuto nel timone è sempre quella del suo PDF (o immagine) di stampa: non c'è una miniatura da caricare a parte.
 
 ## Punti di attenzione
 

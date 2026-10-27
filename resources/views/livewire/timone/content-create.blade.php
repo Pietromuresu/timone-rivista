@@ -93,31 +93,11 @@
             </div>
 
             @if ($type === 'articolo')
-                {{-- Bug 5 (2026-10-12): occupazione obbligatoria, da una select
-                     con le sole frazioni/pagine ammesse (App\Support\PageOccupancy)
-                     e nessun valore preselezionato. Se è stato scelto un PDF,
-                     il suo numero di pagine viene proposto (updatedFile()) e
-                     dichiarato qui sotto come proposta, non applicato in silenzio. --}}
-                <div>
-                    <x-input-label for="page_occupancy" value="Occupazione di pagina (obbligatoria)" />
-                    <select id="page_occupancy" wire:model.live="page_occupancy" class="mt-1 block w-full sm:w-1/2 text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm">
-                        <option value="">— Scegli quanto spazio occupa —</option>
-                        @foreach ($occupancyOptions as $value => $label)
-                            <option value="{{ $value }}">{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @if ($pdfPageCount)
-                        <p class="mt-1 text-xs text-indigo-700 dark:text-indigo-300">
-                            📄 Il PDF allegato ha {{ $pdfPageCount }} {{ $pdfPageCount === 1 ? 'pagina' : 'pagine' }}:
-                            @if ($pdfPageCount > 1)
-                                proposta {{ $pdfPageCount }} pagine — controlla e conferma prima di creare.
-                            @else
-                                proposta 1 pagina — puoi scegliere anche una frazione (es. 1/2 pagina).
-                            @endif
-                        </p>
-                    @endif
-                    <x-input-error class="mt-1" :messages="$errors->get('page_occupancy')" />
-                </div>
+                @include('livewire.timone.partials.occupancy-fields', [
+                    'hint' => $pdfPageCount
+                        ? '📄 Il PDF allegato ha '.$pdfPageCount.' '.($pdfPageCount === 1 ? 'pagina' : 'pagine').': '.($pdfPageCount > 1 ? 'proposte '.$pdfPageCount.' pagine intere (puoi indicare anche una frazione sull\'ultima, es. 2 + 1/2) — controlla prima di creare.' : 'al massimo 1 pagina, anche una frazione (es. 1/2).')
+                        : null,
+                ])
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
@@ -149,22 +129,22 @@
                         <x-text-input id="agency" wire:model="agency" type="text" class="mt-1 block w-full text-sm" />
                     </div>
                     <div>
-                        {{-- Bug 5: per la pubblicità il formato È l'occupazione
-                             (App\Support\PageOccupancy::forAdFormat()) — obbligatorio
-                             e senza default, come l'occupazione di un articolo. --}}
-                        <x-input-label for="format" value="Formato / occupazione (obbligatorio)" />
+                        {{-- Fase 3: il formato PROPONE l'occupazione (precompila
+                             i campi sotto, AdFormat::twelfths()), che resta
+                             modificabile. Obbligatorio e senza default. --}}
+                        <x-input-label for="format" value="Formato (obbligatorio)" />
                         <select id="format" wire:model.live="format" class="mt-1 block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm">
                             <option value="">— Scegli il formato —</option>
                             @foreach ($adFormats as $adFormat)
-                                <option value="{{ $adFormat->value }}">{{ $adFormat->label() }} ({{ $adFormat->defaultPercentage() }}%)</option>
+                                <option value="{{ $adFormat->value }}">{{ $adFormat->label() }} ({{ \App\Support\Twelfths::pagesLabel($adFormat->twelfths()) }})</option>
                             @endforeach
                         </select>
                         <x-input-error class="mt-1" :messages="$errors->get('format')" />
                     </div>
-                    <div>
-                        <x-input-label for="occupied_percentage_override" value="Percentuale manuale (opzionale)" />
-                        <x-text-input id="occupied_percentage_override" wire:model="occupied_percentage_override" type="number" min="0.1" max="100" step="0.1" placeholder="usa il default del formato" class="mt-1 block w-full text-sm" />
-                        <x-input-error class="mt-1" :messages="$errors->get('occupied_percentage_override')" />
+                    <div class="sm:col-span-2">
+                        @include('livewire.timone.partials.occupancy-fields', [
+                            'hint' => $format !== '' ? 'Proposta dal formato: puoi modificarla (es. una mezza pagina che occupa 2/3).' : 'Scegli il formato: l\'occupazione viene proposta da lì.',
+                        ])
                     </div>
                     <div>
                         <x-input-label for="preferred_position" value="Pagina preferita (opzionale)" />

@@ -101,7 +101,7 @@
                         @forelse ($page->contents as $content)
                             <p class="content-line">
                                 [{{ $content->type->value === 'articolo' ? 'Art' : 'Pub' }}] {{ $content->displayLabel() }}
-                                ({{ $content->pivot->occupied_percentage }}%)
+                                ({{ \App\Support\Twelfths::pagesLabel((int) $content->pivot->occupied_twelfths) }})
                             </p>
                         @empty
                             <p class="empty">{{ $page->content_type->value === 'bianca' ? 'Pagina bianca' : 'Da assegnare' }}</p>
@@ -148,7 +148,7 @@
                         @forelse ($page->contents as $content)
                             <p class="content-line">
                                 [{{ $content->type->value === 'articolo' ? 'Art' : 'Pub' }}] {{ $content->displayLabel() }}
-                                ({{ $content->pivot->occupied_percentage }}%)
+                                ({{ \App\Support\Twelfths::pagesLabel((int) $content->pivot->occupied_twelfths) }})
                             </p>
                         @empty
                             <p class="empty">{{ $page->content_type->value === 'bianca' ? 'Pagina bianca' : 'Da assegnare' }}</p>

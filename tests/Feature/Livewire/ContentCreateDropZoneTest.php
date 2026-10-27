@@ -68,7 +68,7 @@ test('a dropped 3-page pdf creates the content with 3 pages of occupancy, one fi
 
     $content = Content::where('title', 'Trascinato')->firstOrFail();
 
-    expect($content->page_occupancy)->toBe('3.00')
+    expect($content->occupancy_twelfths)->toBe(36)
         ->and(ContentFile::where('content_id', $content->id)->orderBy('pdf_page_number')->pluck('pdf_page_number')->all())->toBe([1, 2, 3]);
 
     Queue::assertPushed(GenerateContentFileThumbnail::class, 3);

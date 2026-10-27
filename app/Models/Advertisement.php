@@ -8,6 +8,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Dati commerciali di una pubblicità. Dalla Fase 3 (2026-10-27) lo spazio
+ * occupato NON sta più qui (occupiedPercentage()/occupied_percentage_override,
+ * colonna rimasta nel database ma non più letta): è l'occupazione in
+ * dodicesimi del Content, proposta dal formato (AdFormat::twelfths()) e
+ * modificabile come per un articolo.
+ */
 class Advertisement extends Model
 {
     use HasFactory;
@@ -18,7 +25,6 @@ class Advertisement extends Model
         'agency',
         'format',
         'preferred_position',
-        'occupied_percentage_override',
         'confirmation_status',
         'commercial_notes',
     ];
@@ -28,7 +34,6 @@ class Advertisement extends Model
         return [
             'format' => AdFormat::class,
             'preferred_position' => 'integer',
-            'occupied_percentage_override' => 'decimal:2',
             'confirmation_status' => AdConfirmationStatus::class,
         ];
     }
@@ -36,16 +41,5 @@ class Advertisement extends Model
     public function content(): BelongsTo
     {
         return $this->belongsTo(Content::class);
-    }
-
-    /**
-     * Percentuale di pagina occupata: quella manuale se presente,
-     * altrimenti il default associato al formato pubblicitario.
-     */
-    public function occupiedPercentage(): float
-    {
-        return $this->occupied_percentage_override !== null
-            ? (float) $this->occupied_percentage_override
-            : $this->format->defaultPercentage();
     }
 }

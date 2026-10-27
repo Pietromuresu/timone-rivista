@@ -20,12 +20,11 @@ test('an editor can download the csv report with the correct figures', function 
     Advertisement::factory()->create([
         'content_id' => $content->id,
         'format' => AdFormat::PaginaIntera,
-        'occupied_percentage_override' => null,
         'confirmation_status' => AdConfirmationStatus::Confermata,
     ]);
     // Fase 2: tutte e 6 le pagine sono interne (le copertine sono a parte).
     $page = $issue->pages()->where('position', 2)->first();
-    $page->contents()->attach($content->id, ['occupied_percentage' => '100']);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     $response = $this->actingAs($user)->get(route('issues.export.ad-dashboard-csv', [$issue->magazine, $issue]));
 

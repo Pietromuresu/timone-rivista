@@ -6,9 +6,9 @@ use App\Models\Content;
 use App\Models\Page;
 
 /**
- * Allega un Content a una Page (calcolo percentuale, verifica spazio,
- * scrittura del pivot, sincronizzazione di Page::content_type) — estratta
- * da Grid::attachContentToPage() (Punto 4 del prompt, 2026-09-02): il
+ * Allega un Content a una Page (verifica spazio, scrittura del pivot,
+ * sincronizzazione di Page::content_type) — estratta da
+ * Grid::attachContentToPage() (Punto 4 del prompt, 2026-09-02): il
  * collegamento automatico di un contenuto PDF multi-pagina alle N pagine
  * derivate (App\Livewire\Timone\ContentCreate) deve riusare esattamente
  * questa stessa logica, non una sua copia — Grid::assignContent()/
@@ -19,32 +19,36 @@ use App\Models\Page;
 class ContentPageAttacher
 {
     /**
-     * @param  float|null  $percentage  già calcolata dal chiamante (ContentPlacer), altrimenti dedotta dal contenuto
-     * @return string|null  La percentuale attribuita (come stringa, stesso formato già passato ad attach()), o null se lo spazio sulla pagina non basta.
+     * Fase 3 (2026-10-27): lo spazio è in dodicesimi. $twelfths lo decide
+     * il chiamante quando conosce la distribuzione (ContentPlacer: 12, 12,
+     * 6…); altrimenti una pagina aggiuntiva riceve una pagina intera, o
+     * tutto il contenuto se è meno di una pagina
+     * (PageOccupancy::perExtraPage()).
+     *
+     * @return int|string i dodicesimi scritti, oppure il messaggio d'errore (spazio insufficiente o occupazione mancante)
      */
-    public static function attach(Content $content, Page $page, ?int $contentFileId = null, ?float $percentage = null): ?string
+    public static function attach(Content $content, Page $page, ?int $contentFileId = null, ?int $twelfths = null): int|string
     {
-        $occupied = $page->contents()->pluck('occupied_percentage')->all();
+        $twelfths ??= $content->occupancy()?->perExtraPage();
 
-        // Bug 5 (2026-10-12): un articolo non prende più "tutto lo spazio
-        // libero" della pagina (PagePercentageAllocator::freeSpace(), il
-        // vecchio default implicito) ma la percentuale dichiarata dalla sua
-        // occupazione. Occupazione mancante → null, come "spazio
-        // insufficiente": il chiamante rifiuta, non sceglie un default.
-        $percentage ??= $content->occupiedPercentagePerPage();
+        if ($twelfths === null) {
+            return "«{$content->displayLabel()}» non ha un'occupazione di pagina: impostala prima di posizionarlo.";
+        }
 
-        if ($percentage === null || ! PagePercentageAllocator::fits($occupied, $percentage)) {
-            return null;
+        $occupied = $page->contents()->pluck('occupied_twelfths')->all();
+
+        if (! PageCapacity::fits($occupied, $twelfths)) {
+            return PageCapacity::insufficientSpaceMessage($page->label(), $twelfths, PageCapacity::free($occupied), $content->displayLabel());
         }
 
         $page->contents()->attach($content->id, [
-            'occupied_percentage' => (string) $percentage,
+            'occupied_twelfths' => $twelfths,
             'content_file_id' => $contentFileId,
         ]);
 
         self::syncPageContentType($page);
 
-        return (string) $percentage;
+        return $twelfths;
     }
 
     /**

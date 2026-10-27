@@ -3,12 +3,17 @@
 use App\Enums\ContentType;
 use App\Enums\PageContentType;
 use App\Enums\ThumbnailStatus;
+use App\Events\ContentAssigned;
+use App\Events\ContentCreated;
+use App\Events\PageGroupsChanged;
 use App\Jobs\GenerateContentFileThumbnail;
 use App\Livewire\Timone\ContentCreate;
 use App\Models\Content;
 use App\Models\ContentFile;
+use App\Models\Page;
 use App\Models\PageFile;
 use App\Models\PageGroup;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
@@ -36,7 +41,7 @@ beforeEach(function () {
     // ogni broadcast() reale falliva con "Could not resolve host".
     // Event::fake() intercetta anche i broadcast (vedi HANDOFF.md,
     // "Decisioni architetturali"), stesso pattern degli altri test.
-    Event::fake([\App\Events\ContentCreated::class, \App\Events\ContentAssigned::class, \App\Events\PageGroupsChanged::class]);
+    Event::fake([ContentCreated::class, ContentAssigned::class, PageGroupsChanged::class]);
 });
 
 /**
@@ -45,7 +50,7 @@ beforeEach(function () {
  * solo che qui bisogna anche passare dal form (titolo/tipo) perché il PDF
  * si carica sempre su un contenuto.
  */
-function anchoredArticleUpload(\App\Models\User $user, \App\Models\Page $page, string $filename, string $pdfBytes)
+function anchoredArticleUpload(User $user, Page $page, string $filename, string $pdfBytes)
 {
     return Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $page->issue])
         ->call('openForPage', $page->id)
@@ -231,7 +236,7 @@ test('shifting conflicting pages relocates their existing content instead of los
     $conflictingPage = $issue->pages()->where('position', 3)->first();
     $existingFile = PageFile::factory()->for($conflictingPage)->create();
     $existingContent = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Articolo]);
-    $conflictingPage->contents()->attach($existingContent->id, ['occupied_percentage' => 40]);
+    $conflictingPage->contents()->attach($existingContent->id, ['occupied_twelfths' => 5]);
     $conflictingPage->update(['notes' => 'nota originale']);
 
     $component = anchoredArticleUpload($user, $page, 'multi.pdf', multiPagePdfBytes([
@@ -270,7 +275,7 @@ test('shifting conflicting pages relocates their existing content instead of los
         ->and($newPage->notes)->toBe('nota originale')
         ->and($newPage->contents()->count())->toBe(1)
         ->and($newPage->contents()->first()->id)->toBe($existingContent->id)
-        ->and($newPage->contents()->first()->pivot->occupied_percentage)->toEqualWithDelta(40, 0.01)
+        ->and($newPage->contents()->first()->pivot->occupied_twelfths)->toBe(5)
         ->and(PageFile::where('id', $existingFile->id)->first()->page_id)->toBe($newPage->id);
 });
 

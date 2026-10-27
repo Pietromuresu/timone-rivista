@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\PageContentType;
+use App\Enums\UserRole;
 use App\Events\IssuePageCountUpdated;
 use App\Livewire\Timone\Grid;
 use App\Models\Content;
+use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 
@@ -104,7 +106,7 @@ test('decreasing unassigns contents from removed pages instead of deleting them'
     $user = editorFor($issue);
     $page5 = $issue->pages()->where('position', 5)->first();
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
-    $page5->contents()->attach($content->id, ['occupied_percentage' => '100']);
+    $page5->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->set('newTotalPages', 3)
@@ -118,7 +120,7 @@ test('decreasing unassigns contents from removed pages instead of deleting them'
 
 test('a redattore without access to the magazine cannot resize pages', function () {
     $issue = reorderableIssue();
-    $outsider = \App\Models\User::factory()->create(['role' => \App\Enums\UserRole::Redattore]);
+    $outsider = User::factory()->create(['role' => UserRole::Redattore]);
 
     Livewire::actingAs($outsider)->test(Grid::class, ['issue' => $issue])
         ->set('newTotalPages', 10)
@@ -129,7 +131,7 @@ test('a redattore without access to the magazine cannot resize pages', function 
 
 test('a sola lettura user cannot resize pages', function () {
     $issue = reorderableIssue();
-    $user = \App\Models\User::factory()->create(['role' => \App\Enums\UserRole::SolaLettura]);
+    $user = User::factory()->create(['role' => UserRole::SolaLettura]);
     $user->magazines()->attach($issue->magazine);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
@@ -213,7 +215,7 @@ test('a valid total pages value still resizes correctly leaving content already 
     $user = editorFor($issue);
     $page2 = $issue->pages()->where('position', 2)->first();
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
-    $page2->contents()->attach($content->id, ['occupied_percentage' => '100']);
+    $page2->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->set('newTotalPages', '8')

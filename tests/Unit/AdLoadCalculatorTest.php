@@ -23,21 +23,19 @@ function fakePageWithContents(array $contents): Page
     return $page;
 }
 
-function fakeArticleContent(float $occupiedPercentage): Content
+// Fase 3 (2026-10-27): lo spazio sul pivot è in dodicesimi (12 = pagina intera).
+function fakeArticleContent(int $twelfths): Content
 {
     $content = new Content(['type' => ContentType::Articolo]);
-    // occupied_percentage è un cast decimal:2: passarla come stringa evita
-    // il deprecation warning di brick/math sui float, stesso accorgimento
-    // già usato in Grid::assignContent()/updateContentPercentage().
-    $content->setRelation('pivot', new PageContent(['occupied_percentage' => (string) $occupiedPercentage]));
+    $content->setRelation('pivot', new PageContent(['occupied_twelfths' => $twelfths]));
 
     return $content;
 }
 
-function fakeAdContent(float $occupiedPercentage, AdFormat $format, AdConfirmationStatus $status): Content
+function fakeAdContent(int $twelfths, AdFormat $format, AdConfirmationStatus $status): Content
 {
     $content = new Content(['type' => ContentType::Pubblicita]);
-    $content->setRelation('pivot', new PageContent(['occupied_percentage' => (string) $occupiedPercentage]));
+    $content->setRelation('pivot', new PageContent(['occupied_twelfths' => $twelfths]));
     $content->setRelation('advertisement', new Advertisement([
         'format' => $format,
         'confirmation_status' => $status,
@@ -55,8 +53,8 @@ test('an issue with no pages has zero load', function () {
 
 test('editorial-only pages contribute nothing to the ad load', function () {
     $pages = new Collection([
-        fakePageWithContents([fakeArticleContent(100)]),
-        fakePageWithContents([fakeArticleContent(100)]),
+        fakePageWithContents([fakeArticleContent(12)]),
+        fakePageWithContents([fakeArticleContent(12)]),
     ]);
 
     $summary = AdLoadCalculator::summarize($pages);
@@ -70,10 +68,10 @@ test('editorial-only pages contribute nothing to the ad load', function () {
 
 test('full page ads sum to whole equivalent pages and the correct percentage', function () {
     $pages = new Collection([
-        fakePageWithContents([fakeAdContent(100, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata)]),
-        fakePageWithContents([fakeAdContent(100, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata)]),
-        fakePageWithContents([fakeArticleContent(100)]),
-        fakePageWithContents([fakeArticleContent(100)]),
+        fakePageWithContents([fakeAdContent(12, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata)]),
+        fakePageWithContents([fakeAdContent(12, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata)]),
+        fakePageWithContents([fakeArticleContent(12)]),
+        fakePageWithContents([fakeArticleContent(12)]),
     ]);
 
     $summary = AdLoadCalculator::summarize($pages);
@@ -86,45 +84,50 @@ test('full page ads sum to whole equivalent pages and the correct percentage', f
         ->and($summary['confirmationBreakdown'])->toBe(['confermata' => 2]);
 });
 
-test('a mixed page sums ad and editorial shares independently from occupied_percentage', function () {
+test('a mixed page sums ad and editorial shares independently from the pivot twelfths', function () {
     $pages = new Collection([
         fakePageWithContents([
-            fakeAdContent(40, AdFormat::UnQuartoPagina, AdConfirmationStatus::InTrattativa),
-            fakeArticleContent(60),
+            fakeAdContent(3, AdFormat::UnQuartoPagina, AdConfirmationStatus::InTrattativa),
+            fakeArticleContent(9),
         ]),
     ]);
 
     $summary = AdLoadCalculator::summarize($pages);
 
     expect($summary['totalPages'])->toBe(1)
-        ->and($summary['adEquivalentPages'])->toBe(0.4)
-        ->and($summary['editorialEquivalentPages'])->toBe(0.6)
-        ->and($summary['adLoadPercentage'])->toBe(40.0)
+        ->and($summary['adEquivalentPages'])->toBe(0.25)
+        ->and($summary['editorialEquivalentPages'])->toBe(0.75)
+        ->and($summary['adLoadPercentage'])->toBe(25.0)
         ->and($summary['formatBreakdown'])->toBe(['un_quarto_pagina' => 1])
         ->and($summary['confirmationBreakdown'])->toBe(['in_trattativa' => 1]);
 });
 
 // Fase 3 (§3): pubblicità "prenotate" — non presenti su nessuna pagina,
 // quindi mai nel loop su $pages sopra, passate a summarize() come secondo
-// argomento. fakeReservedAdvertisement() replica solo i campi letti da
-// Advertisement::occupiedPercentage() (format + eventuale override),
-// nessuna query/DB richiesta.
+// argomento. fakeReservedAdvertisement() replica solo i campi letti dal
+// calcolatore: formato, stato e (Fase 3) l'occupazione del suo Content,
+// proposta dal formato se non indicata — nessuna query/DB richiesta.
 
-function fakeReservedAdvertisement(AdFormat $format, AdConfirmationStatus $status, ?float $percentageOverride = null): Advertisement
+function fakeReservedAdvertisement(AdFormat $format, AdConfirmationStatus $status, ?int $twelfths = null): Advertisement
 {
-    return new Advertisement([
+    $advertisement = new Advertisement([
         'format' => $format,
         'confirmation_status' => $status,
-        'occupied_percentage_override' => $percentageOverride,
     ]);
+    $advertisement->setRelation('content', new Content([
+        'type' => ContentType::Pubblicita,
+        'occupancy_twelfths' => $twelfths ?? $format->twelfths(),
+    ]));
+
+    return $advertisement;
 }
 
-test('a reservation contributes its format default percentage to the ad load even with no pages assigned', function () {
+test('a reservation contributes its occupancy to the ad load even with no pages assigned', function () {
     $reserved = new Collection([fakeReservedAdvertisement(AdFormat::PaginaIntera, AdConfirmationStatus::InTrattativa)]);
 
     $summary = AdLoadCalculator::summarize(new Collection([
-        fakePageWithContents([fakeArticleContent(100)]),
-        fakePageWithContents([fakeArticleContent(100)]),
+        fakePageWithContents([fakeArticleContent(12)]),
+        fakePageWithContents([fakeArticleContent(12)]),
     ]), $reserved);
 
     // 1 pagina intera prenotata (100%) su 2 pagine totali = 50%.
@@ -139,7 +142,7 @@ test('a reservation contributes its format default percentage to the ad load eve
 
 test('placed and reserved ad load add up together, kept separate for transparency', function () {
     $pages = new Collection([
-        fakePageWithContents([fakeAdContent(100, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata)]),
+        fakePageWithContents([fakeAdContent(12, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata)]),
     ]);
     $reserved = new Collection([fakeReservedAdvertisement(AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::InTrattativa)]);
 
@@ -154,16 +157,36 @@ test('placed and reserved ad load add up together, kept separate for transparenc
         ]);
 });
 
-test('a manual percentage override on a reservation is respected, same as for a placed ad', function () {
-    $reserved = new Collection([fakeReservedAdvertisement(AdFormat::PaginaIntera, AdConfirmationStatus::Confermata, percentageOverride: 30.0)]);
+test('a reservation whose occupancy was changed by hand counts what it says, not its format', function () {
+    // Pagina intera ridotta a 1/3 nel modulo.
+    $reserved = new Collection([fakeReservedAdvertisement(AdFormat::PaginaIntera, AdConfirmationStatus::Confermata, twelfths: 4)]);
 
     $summary = AdLoadCalculator::summarize(new Collection, $reserved);
 
-    expect($summary['reservedAdEquivalentPages'])->toBe(0.3);
+    expect($summary['reservedAdEquivalentPages'])->toBe(0.33)
+        ->and($summary['adTwelfths'])->toBe(4);
+});
+
+// Fase 3: test richiesto dalla specifica — percentuale esatta in dodicesimi.
+// Tre terzi di pagina pubblicitari su 3 pagine = 1 pagina su 3 = 33.33%,
+// mentre le vecchie percentuali (33.3 × 3 = 99.9) davano 33.3%.
+test('the ad percentage is exact when computed in twelfths', function () {
+    $pages = new Collection([
+        fakePageWithContents([fakeAdContent(4, AdFormat::UnTerzoPaginaVerticale, AdConfirmationStatus::Confermata), fakeArticleContent(8)]),
+        fakePageWithContents([fakeAdContent(4, AdFormat::UnTerzoPaginaVerticale, AdConfirmationStatus::Confermata), fakeArticleContent(8)]),
+        fakePageWithContents([fakeAdContent(4, AdFormat::Piedino, AdConfirmationStatus::Confermata), fakeArticleContent(8)]),
+    ]);
+
+    $summary = AdLoadCalculator::summarize($pages);
+
+    expect($summary['adTwelfths'])->toBe(12)
+        ->and($summary['capacityTwelfths'])->toBe(36)
+        ->and($summary['adEquivalentPages'])->toBe(1.0)
+        ->and($summary['adLoadPercentage'])->toBe(33.33);
 });
 
 test('omitting the reserved advertisements argument keeps the previous behaviour unchanged', function () {
-    $pages = new Collection([fakePageWithContents([fakeAdContent(100, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata)])]);
+    $pages = new Collection([fakePageWithContents([fakeAdContent(12, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata)])]);
 
     $summary = AdLoadCalculator::summarize($pages);
 
@@ -175,9 +198,9 @@ test('omitting the reserved advertisements argument keeps the previous behaviour
 
 test('the format and confirmation breakdowns tally multiple ads of the same kind', function () {
     $pages = new Collection([
-        fakePageWithContents([fakeAdContent(50, AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::Confermata)]),
-        fakePageWithContents([fakeAdContent(50, AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::Confermata)]),
-        fakePageWithContents([fakeAdContent(50, AdFormat::MezzaPaginaVerticale, AdConfirmationStatus::Annullata)]),
+        fakePageWithContents([fakeAdContent(6, AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::Confermata)]),
+        fakePageWithContents([fakeAdContent(6, AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::Confermata)]),
+        fakePageWithContents([fakeAdContent(6, AdFormat::MezzaPaginaVerticale, AdConfirmationStatus::Annullata)]),
     ]);
 
     $summary = AdLoadCalculator::summarize($pages);

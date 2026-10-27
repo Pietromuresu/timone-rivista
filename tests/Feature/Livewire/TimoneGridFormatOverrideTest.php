@@ -5,6 +5,7 @@ use App\Livewire\Timone\Grid;
 use App\Models\Article;
 use App\Models\Content;
 use App\Models\ContentFile;
+use App\Models\Page;
 use Livewire\Livewire;
 
 // reorderableIssue()/editorFor() sono definite in TimoneGridReorderTest.php.
@@ -15,12 +16,12 @@ use Livewire\Livewire;
 // contenuto) — stesso identico comportamento, verificato qui con
 // l'equivalente ContentFile+pivot invece del vecchio PageFile diretto.
 
-function attachedArticleWithFile(\App\Models\Page $page, string $factoryState): ContentFile
+function attachedArticleWithFile(Page $page, string $factoryState): ContentFile
 {
-    $content = Content::create(['issue_id' => $page->issue_id, 'type' => ContentType::Articolo, 'title' => 'Articolo di prova', 'page_occupancy' => 1]);
+    $content = Content::create(['issue_id' => $page->issue_id, 'type' => ContentType::Articolo, 'title' => 'Articolo di prova', 'occupancy_twelfths' => 12]);
     Article::create(['content_id' => $content->id, 'editorial_status' => 'da_scrivere']);
     $contentFile = ContentFile::factory()->for($content)->{$factoryState}()->create();
-    $page->contents()->attach($content->id, ['occupied_percentage' => 100, 'content_file_id' => $contentFile->id]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12, 'content_file_id' => $contentFile->id]);
 
     return $contentFile;
 }

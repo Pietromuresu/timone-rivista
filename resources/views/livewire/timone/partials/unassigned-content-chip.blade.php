@@ -23,8 +23,8 @@
         class="group flex items-center gap-1.5 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs cursor-grab max-w-[220px]"
         title="{{ $content->displayLabel() }}"
     >
-        @if ($latestContentFile?->thumbnail_status === \App\Enums\ThumbnailStatus::Ready)
-            <img src="{{ route('content-files.thumbnail', $latestContentFile) }}" alt="" class="w-6 h-8 object-cover rounded-sm shrink-0 border border-gray-200 dark:border-gray-700" />
+        @if ($content->previewImageUrl())
+            <img src="{{ $content->previewImageUrl() }}" alt="" class="w-6 h-8 object-cover rounded-sm shrink-0 border border-gray-200 dark:border-gray-700" />
         @elseif ($latestContentFile?->thumbnail_status === \App\Enums\ThumbnailStatus::Failed)
             <span class="shrink-0" title="Anteprima non generata">⚠️</span>
         @elseif ($latestContentFile !== null)
@@ -38,6 +38,7 @@
         @endif
         @can('update', $issue)
             <span class="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-auto">
+                <button type="button" x-on:click="$dispatch('open-content-edit', { contentId: {{ $content->id }} })" title="Modifica" class="px-1 text-gray-400 hover:text-indigo-600">✏️</button>
                 <button type="button" wire:click="archiveContent({{ $content->id }})" title="Archivia" class="px-1 text-gray-400 hover:text-amber-600">🗄️</button>
                 <button type="button" wire:click="requestDeleteContent({{ $content->id }})" title="Elimina definitivamente" class="px-1 text-gray-400 hover:text-red-600">🗑️</button>
             </span>

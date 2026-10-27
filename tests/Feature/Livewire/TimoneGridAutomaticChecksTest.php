@@ -32,8 +32,8 @@ test('a content on non-contiguous pages triggers the warnings panel', function (
     $issue = reorderableIssue();
     $user = editorFor($issue);
     $content = Content::factory()->article()->create(['issue_id' => $issue->id, 'title' => 'Articolo sparso']);
-    $issue->pages()->where('position', 1)->first()->contents()->attach($content->id, ['occupied_percentage' => 100]);
-    $issue->pages()->where('position', 4)->first()->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $issue->pages()->where('position', 1)->first()->contents()->attach($content->id, ['occupied_twelfths' => 12]);
+    $issue->pages()->where('position', 4)->first()->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->assertSee('⚠️ Avvisi')

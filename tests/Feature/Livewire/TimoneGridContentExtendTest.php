@@ -21,7 +21,7 @@ test('an editor can extend an already assigned content to a second page', functi
     $secondPage = $issue->pages()->where('position', 2)->first();
 
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
-    $firstPage->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $firstPage->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('extendToPage', $content->id, 2)
@@ -41,7 +41,7 @@ test('extending to a page that already has the content fails with an error', fun
     $user = editorFor($issue);
     $page = $issue->pages()->where('position', 1)->first();
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('extendToPage', $content->id, 1)
@@ -53,7 +53,7 @@ test('extending to a nonexistent position fails with an error', function () {
     $user = editorFor($issue);
     $page = $issue->pages()->where('position', 1)->first();
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('extendToPage', $content->id, 999)
@@ -69,10 +69,10 @@ test('extending to a page without enough free space is rejected', function () {
     $secondPage = $issue->pages()->where('position', 2)->first();
 
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
-    $firstPage->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $firstPage->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     $blocker = Content::factory()->article()->create(['issue_id' => $issue->id]);
-    $secondPage->contents()->attach($blocker->id, ['occupied_percentage' => 100]);
+    $secondPage->contents()->attach($blocker->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('extendToPage', $content->id, 2)
@@ -86,7 +86,7 @@ test('a redattore without access to the magazine cannot extend a content', funct
     $outsider = User::factory()->create(['role' => UserRole::Redattore]);
     $page = $issue->pages()->where('position', 1)->first();
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($outsider)->test(Grid::class, ['issue' => $issue])
         ->call('extendToPage', $content->id, 2);

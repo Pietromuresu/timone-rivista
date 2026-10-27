@@ -14,14 +14,14 @@ class PageContent extends Pivot
     protected $fillable = [
         'page_id',
         'content_id',
-        'occupied_percentage',
+        'occupied_twelfths',
         'content_file_id',
     ];
 
     protected function casts(): array
     {
         return [
-            'occupied_percentage' => 'decimal:2',
+            'occupied_twelfths' => 'integer',
         ];
     }
 

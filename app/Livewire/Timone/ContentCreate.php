@@ -11,6 +11,7 @@ use App\Enums\PageStatus;
 use App\Events\ContentAssigned;
 use App\Events\ContentCreated;
 use App\Events\PageGroupsChanged;
+use App\Livewire\Concerns\HasOccupancyFields;
 use App\Livewire\Concerns\NormalizesEmptyNumericInput;
 use App\Models\Content;
 use App\Models\Issue;
@@ -20,11 +21,12 @@ use App\Models\PageGroup;
 use App\Support\ActivityLogger;
 use App\Support\AdPdfPagePlan;
 use App\Support\ContentCreator;
+use App\Support\ContentFormRules;
 use App\Support\ContentPageAttacher;
 use App\Support\ContentPlacer;
 use App\Support\PageGroupLinker;
 use App\Support\PageInserter;
-use App\Support\PageOccupancy;
+use App\Support\Twelfths;
 use App\Support\Uploads\UploadEnvironmentInspector;
 use App\Support\Uploads\UploadLimits;
 use Illuminate\Contracts\View\View;
@@ -57,6 +59,7 @@ use Livewire\WithFileUploads;
  */
 class ContentCreate extends Component
 {
+    use HasOccupancyFields;
     use NormalizesEmptyNumericInput;
     use WithFileUploads {
         _uploadErrored as livewireUploadErrored;
@@ -95,13 +98,10 @@ class ContentCreate extends Component
      */
     public ?TemporaryUploadedFile $file = null;
 
-    /**
-     * Bug 5 (2026-10-12): occupazione di pagina dell'articolo, obbligatoria
-     * — valore di App\Support\PageOccupancy::options() (select, non input
-     * libero). Stringa vuota = non ancora scelta: nessun default silenzioso.
-     * Per la pubblicità non si usa: l'occupazione deriva dal formato.
-     */
-    public string $page_occupancy = '';
+    // Fase 3: occupazione come "Pagine intere" ($whole_pages) + "Frazione"
+    // ($fraction_twelfths), dal trait HasOccupancyFields (condiviso con
+    // ContentEdit). Per un articolo partono vuoti: nessun default
+    // silenzioso; per una pubblicità li precompila il formato.
 
     /**
      * Pagine del PDF appena selezionato (null se nessun PDF), mostrate nel
@@ -140,14 +140,14 @@ class ContentCreate extends Component
      * salvataggio sia alla validazione immediata del file appena scelto o
      * trascinato (updatedFile(), bug 2): un solo punto da cambiare.
      */
-    private const FILE_RULES = 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:'.self::FILE_MAX_KILOBYTES;
+    private const FILE_RULES = ContentFormRules::FILE;
 
     /**
      * Limite del modulo (20 MB) — pubblico perché lo leggono anche
      * App\Support\Uploads\UploadLimits (limite effettivo mostrato e
      * controllato nel browser) e `timone:diagnose-upload` (Fase 1, bug 9).
      */
-    public const FILE_MAX_KILOBYTES = 20480;
+    public const FILE_MAX_KILOBYTES = ContentFormRules::FILE_MAX_KILOBYTES;
 
     /**
      * Stato del riepilogo di conflitto per un caricamento PDF multipagina
@@ -199,9 +199,9 @@ class ContentCreate extends Component
     {
         $this->reset([
             'title', 'section_id', 'author', 'expected_length',
-            'client', 'agency', 'preferred_position', 'occupied_percentage_override', 'commercial_notes',
+            'client', 'agency', 'preferred_position', 'commercial_notes',
             'file', 'showSectionForm', 'editingSectionId', 'sectionName',
-            'page_occupancy', 'pdfPageCount', 'pdfPageChoice', 'pdfPageFrom', 'pdfPageTo',
+            'whole_pages', 'fraction_twelfths', 'pdfPageCount', 'pdfPageChoice', 'pdfPageFrom', 'pdfPageTo',
         ]);
         $this->type = 'articolo';
         $this->editorial_status = 'da_scrivere';
@@ -234,8 +234,6 @@ class ContentCreate extends Component
      * `?int` andrebbe in errore su "" (stringa vuota, non è `null`).
      */
     public string $preferred_position = '';
-
-    public ?string $occupied_percentage_override = null;
 
     public string $confirmation_status = 'in_trattativa';
 
@@ -275,9 +273,7 @@ class ContentCreate extends Component
         $this->pdfPageFrom = $this->pdfPageCount !== null ? 1 : null;
         $this->pdfPageTo = $this->pdfPageCount;
 
-        if ($this->pdfPageCount !== null && $this->type === ContentType::Articolo->value && $this->page_occupancy === '') {
-            $this->page_occupancy = PageOccupancy::from($this->pdfPageCount)->value;
-        }
+        $this->proposeOccupancyFromPdf();
     }
 
     /**
@@ -287,8 +283,27 @@ class ContentCreate extends Component
      */
     public function updatedType(): void
     {
-        if ($this->type === ContentType::Articolo->value && $this->pdfPageCount !== null && $this->page_occupancy === '') {
-            $this->page_occupancy = PageOccupancy::from($this->pdfPageCount)->value;
+        if ($this->type === ContentType::Pubblicita->value) {
+            $this->updatedFormat();
+
+            return;
+        }
+
+        $this->proposeOccupancyFromPdf();
+    }
+
+    /**
+     * Articolo con PDF e occupazione ancora vuota: propone tante pagine
+     * intere quante quelle del PDF (mostrato nel form come proposta).
+     */
+    private function proposeOccupancyFromPdf(): void
+    {
+        if ($this->type !== ContentType::Articolo->value || $this->pdfPageCount === null) {
+            return;
+        }
+
+        if ($this->whole_pages === null && $this->fraction_twelfths === '0') {
+            $this->whole_pages = $this->pdfPageCount;
         }
     }
 
@@ -567,7 +582,7 @@ class ContentCreate extends Component
 
         foreach ($from->contents as $content) {
             $to->contents()->attach($content->id, [
-                'occupied_percentage' => $content->pivot->occupied_percentage,
+                'occupied_twelfths' => $content->pivot->occupied_twelfths,
                 'content_file_id' => $content->pivot->content_file_id,
             ]);
         }
@@ -667,12 +682,12 @@ class ContentCreate extends Component
             return;
         }
 
-        foreach ($result['pages'] as $page) {
+        foreach ($result['pages']->values() as $index => $page) {
             broadcast(new ContentAssigned(
                 issueId: $this->issue->id,
                 pageId: $page->id,
                 contentId: $content->id,
-                percentage: (float) $result['percentage'],
+                twelfths: $result['twelfths'][$index],
                 assignedByUserId: auth()->id(),
                 assignedByUserName: auth()->user()->name,
             ))->toOthers();
@@ -701,12 +716,16 @@ class ContentCreate extends Component
         $filesInPdfOrder = $content->files()->get()->keyBy('pdf_page_number')->sortKeys()->values();
         $initiatingPosition ??= $targetPages->min('position');
         $skippedForSpace = 0;
+        // Fase 3: stessa distribuzione di ContentPlacer (12, 12, 6…), per
+        // posizione rispetto alla pagina di partenza come i file.
+        $distribution = $content->occupancy()?->distribution() ?? [];
 
         foreach ($targetPages->values() as $targetPage) {
-            $contentFile = $filesInPdfOrder->get($targetPage->position - $initiatingPosition);
-            $percentage = ContentPageAttacher::attach($content, $targetPage, $contentFile?->id);
+            $offset = $targetPage->position - $initiatingPosition;
+            $contentFile = $filesInPdfOrder->get($offset);
+            $twelfths = ContentPageAttacher::attach($content, $targetPage, $contentFile?->id, $distribution[$offset] ?? null);
 
-            if ($percentage === null) {
+            if (is_string($twelfths)) {
                 // Caso limite raro: una pagina dell'intervallo aveva già
                 // altro materiale (scelta "sovrascrivi") — l'anteprima
                 // esiste comunque, solo non collegata a quella pagina.
@@ -719,7 +738,7 @@ class ContentCreate extends Component
                 issueId: $this->issue->id,
                 pageId: $targetPage->id,
                 contentId: $content->id,
-                percentage: (float) $percentage,
+                twelfths: $twelfths,
                 assignedByUserId: auth()->id(),
                 assignedByUserName: auth()->user()->name,
             ))->toOthers();
@@ -758,36 +777,12 @@ class ContentCreate extends Component
         broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
     }
 
+    /**
+     * Regole condivise con ContentEdit (App\Support\ContentFormRules).
+     */
     private function validatedFields(): array
     {
-        if ($this->occupied_percentage_override === '') {
-            $this->occupied_percentage_override = null;
-        }
-
-        return $this->validate([
-            'type' => 'required|in:articolo,pubblicita',
-            'title' => 'required|string|max:255',
-            'section_id' => 'nullable|exists:sections,id',
-            'author' => 'nullable|string|max:180',
-            'editorial_status' => 'required|in:'.implode(',', array_column(EditorialStatus::cases(), 'value')),
-            'expected_length' => 'nullable|integer|min:1',
-            'client' => 'required_if:type,pubblicita|nullable|string|max:180',
-            'agency' => 'nullable|string|max:180',
-            'format' => 'required_if:type,pubblicita|nullable|in:'.implode(',', array_column(AdFormat::cases(), 'value')),
-            'occupied_percentage_override' => 'nullable|numeric|min:0.1|max:100',
-            'confirmation_status' => 'required_if:type,pubblicita|nullable|in:'.implode(',', array_column(AdConfirmationStatus::cases(), 'value')),
-            'commercial_notes' => 'nullable|string|max:2000',
-            // Bug 5: obbligatoria per un articolo e solo tra i valori della
-            // select (PageOccupancy::options()); per la pubblicità la deriva
-            // il formato, già obbligatorio sopra. Il secondo livello del
-            // vincolo è in ContentCreator::resolveOccupancy().
-            'page_occupancy' => ['required_if:type,articolo', 'nullable', Rule::in(array_keys(PageOccupancy::options($this->issue->total_pages)))],
-            'file' => self::FILE_RULES,
-        ], [
-            'page_occupancy.required_if' => "Scegli l'occupazione di pagina dell'articolo.",
-            'page_occupancy.in' => 'Occupazione non valida: scegline una dall\'elenco.',
-            'format.required_if' => 'Scegli il formato della pubblicità.',
-        ]);
+        return $this->validate(ContentFormRules::rules($this->issue), ContentFormRules::messages());
     }
 
     /**
@@ -954,7 +949,10 @@ class ContentCreate extends Component
             'editorialStatuses' => EditorialStatus::cases(),
             'adFormats' => AdFormat::cases(),
             'confirmationStatuses' => AdConfirmationStatus::cases(),
-            'occupancyOptions' => PageOccupancy::options($this->issue->total_pages),
+            'fractionOptions' => Twelfths::FRACTIONS,
+            // "Occupa 2 e 1/2 pagine" sotto i campi: stessa risoluzione del
+            // salvataggio (HasOccupancyFields), non un ricalcolo nel Blade.
+            'occupancyPreview' => $this->occupancyPreview(),
             // Fase 1, bug 9: limite VERO (il più stretto tra PHP, Livewire e
             // questo modulo), controllato già nel browser prima dell'invio.
             'uploadLimit' => UploadLimits::effective(self::FILE_MAX_KILOBYTES),

@@ -3,10 +3,11 @@
 use App\Enums\AdFormat;
 use App\Support\AdPdfPagePlan;
 use Illuminate\Validation\ValidationException;
+use Tests\TestCase;
 
 // Fase 1, bug 8 (2026-10-26): PDF pubblicitario più lungo del formato.
 // TestCase per ValidationException::withMessages(), che usa il validator del container.
-uses(Tests\TestCase::class);
+uses(TestCase::class);
 
 test('a choice is needed only when the pdf has more pages than the format occupies', function () {
     expect(AdPdfPagePlan::needsChoice(AdFormat::CopertinaSecondaTerzaQuarta, 3))->toBeTrue()
@@ -20,7 +21,7 @@ test('"use all pages" makes the ad occupy every pdf page as whole pages', functi
     $plan = AdPdfPagePlan::fromChoice(3, AdPdfPagePlan::ALL, null, null);
 
     expect($plan->pdfPages())->toBe([1, 2, 3])
-        ->and($plan->occupancy(AdFormat::CopertinaSecondaTerzaQuarta)->value)->toBe('3')
+        ->and($plan->occupancy(AdFormat::CopertinaSecondaTerzaQuarta)->twelfths)->toBe(36)
         ->and($plan->expandsFormat(AdFormat::CopertinaSecondaTerzaQuarta))->toBeTrue();
 });
 
@@ -29,13 +30,13 @@ test('a range keeps the original pdf page numbers', function () {
 
     expect($plan->pdfPages())->toBe([2, 3, 4])
         ->and($plan->pageCount())->toBe(3)
-        ->and($plan->occupancy(AdFormat::PaginaIntera)->value)->toBe('3');
+        ->and($plan->occupancy(AdFormat::PaginaIntera)->twelfths)->toBe(36);
 });
 
 test('a range as long as the format keeps the format occupancy, fractions included', function () {
     $plan = AdPdfPagePlan::fromChoice(3, AdPdfPagePlan::RANGE, 2, 2);
 
-    expect($plan->occupancy(AdFormat::MezzaPaginaOrizzontale)->value)->toBe('0.50')
+    expect($plan->occupancy(AdFormat::MezzaPaginaOrizzontale)->twelfths)->toBe(6)
         ->and($plan->expandsFormat(AdFormat::MezzaPaginaOrizzontale))->toBeFalse();
 });
 

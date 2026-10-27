@@ -25,7 +25,7 @@ class ContentListChanged implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
-     * @param  'archived'|'unarchived'|'deleted'  $action
+     * @param  'archived'|'unarchived'|'deleted'|'updated'|'renamed'  $action  'updated'/'renamed' dalla Fase 4 (2026-10-27): modifica e rinomina di un contenuto, anche già assegnato
      */
     public function __construct(
         public int $issueId,

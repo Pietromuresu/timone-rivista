@@ -1,16 +1,16 @@
 <?php
 
-use App\Livewire\Timone\ActivityLogPanel;
-use App\Livewire\Timone\ContentCreate;
-use App\Livewire\Timone\Grid;
-use App\Models\ActivityLog;
-use App\Models\Content;
 use App\Events\ContentAssigned;
 use App\Events\ContentCreated;
 use App\Events\ContentUnassigned;
 use App\Events\IssuePageCountUpdated;
 use App\Events\PageMoved;
 use App\Events\PageStatusUpdated;
+use App\Livewire\Timone\ActivityLogPanel;
+use App\Livewire\Timone\ContentCreate;
+use App\Livewire\Timone\Grid;
+use App\Models\ActivityLog;
+use App\Models\Content;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 
@@ -96,7 +96,7 @@ test('unassigning a content logs an activity entry', function () {
     $user = editorFor($issue);
     $page = $issue->pages()->first();
     $content = Content::factory()->article()->create(['issue_id' => $issue->id]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('unassignContent', $content->id, $page->id);
@@ -146,7 +146,7 @@ test('creating a content logs an activity entry', function () {
 
     Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
         ->call('toggleForm')
-        ->set('title', 'Nuovo articolo di prova')->set('page_occupancy', '1')
+        ->set('title', 'Nuovo articolo di prova')->set('whole_pages', 1)
         ->call('save');
 
     $log = ActivityLog::where('action', 'content.created')->first();

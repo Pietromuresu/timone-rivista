@@ -70,30 +70,22 @@ test('a content can be an article or an advertisement and links back to its issu
     expect($articleContent->article)->toBeInstanceOf(Article::class)
         ->and($articleContent->section->id)->toBe($section->id)
         ->and($adContent->advertisement)->toBeInstanceOf(Advertisement::class)
-        ->and($adContent->advertisement->occupiedPercentage())->toBe(50.0);
+        ->and($adContent->advertisement->format->twelfths())->toBe(6);
 });
 
-test('an advertisement format default percentage can be overridden manually', function () {
-    $ad = Advertisement::factory()->create([
-        'format' => AdFormat::UnQuartoPagina,
-        'occupied_percentage_override' => 40,
-    ]);
-
-    expect($ad->occupiedPercentage())->toBe(40.0);
-});
-
-test('a page can host multiple contents each with its own occupied percentage', function () {
+test('a page can host multiple contents each with its own occupied twelfths', function () {
     $issue = Issue::factory()->create();
     $page = Page::factory()->create(['issue_id' => $issue->id]);
 
     $article = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Articolo]);
     $ad = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Pubblicita]);
 
-    $page->contents()->attach($article->id, ['occupied_percentage' => 50]);
-    $page->contents()->attach($ad->id, ['occupied_percentage' => 50]);
+    $page->contents()->attach($article->id, ['occupied_twelfths' => 6]);
+    $page->contents()->attach($ad->id, ['occupied_twelfths' => 6]);
 
     expect($page->contents)->toHaveCount(2)
-        ->and($page->contents->firstWhere('id', $ad->id)->pivot->occupied_percentage)->toEqual(50)
+        ->and($page->contents->firstWhere('id', $ad->id)->pivot->occupied_twelfths)->toBe(6)
+        ->and($page->occupiedTwelfths())->toBe(12)
         ->and($ad->isAssigned())->toBeTrue();
 
     $unassigned = Content::factory()->create(['issue_id' => $issue->id]);

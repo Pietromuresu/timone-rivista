@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Livewire\Timone\Grid;
 use App\Models\Advertisement;
 use App\Models\Content;
+use App\Models\Issue;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -14,17 +15,16 @@ use Livewire\Livewire;
 // e riusate qui (vedi nota in TimoneGridReorderLockTest.php). reorderableIssue()
 // crea un'issue con total_pages = 6.
 
-function assignedAdContent(App\Models\Issue $issue, int $position, AdFormat $format, AdConfirmationStatus $status): Content
+function assignedAdContent(Issue $issue, int $position, AdFormat $format, AdConfirmationStatus $status): Content
 {
     $content = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Pubblicita]);
     Advertisement::factory()->create([
         'content_id' => $content->id,
         'format' => $format,
-        'occupied_percentage_override' => null,
         'confirmation_status' => $status,
     ]);
     $page = $issue->pages()->where('position', $position)->first();
-    $page->contents()->attach($content->id, ['occupied_percentage' => (string) $format->defaultPercentage()]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => min(12, $format->twelfths())]);
 
     return $content;
 }
@@ -49,7 +49,7 @@ test('the dashboard reports the correct equivalent pages and percentage for assi
     assignedAdContent($issue, 2, AdFormat::PaginaIntera, AdConfirmationStatus::Confermata);
     assignedAdContent($issue, 3, AdFormat::MezzaPaginaOrizzontale, AdConfirmationStatus::InTrattativa);
 
-    // 1 pagina intera (100%) + 1 mezza pagina (50%) = 1.5 pagine equivalenti
+    // 1 pagina intera (12/12) + 1 mezza pagina (6/12) = 1.5 pagine equivalenti
     // su 6 pagine interne = 25%.
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->assertSee('25%')
@@ -143,8 +143,8 @@ test('an ad on a cover does not change the internal ad load', function () {
     $issue = reorderableIssue();
     $cover = $issue->covers()->where('cover_slot', 'IV')->first();
     $content = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Pubblicita]);
-    Advertisement::factory()->create(['content_id' => $content->id, 'format' => AdFormat::PaginaIntera, 'occupied_percentage_override' => null]);
-    $cover->contents()->attach($content->id, ['occupied_percentage' => '100']);
+    Advertisement::factory()->create(['content_id' => $content->id, 'format' => AdFormat::PaginaIntera]);
+    $cover->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
         ->assertSee('0 pagine equiv. pubblicità su 6 totali');

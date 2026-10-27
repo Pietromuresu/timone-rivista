@@ -71,6 +71,17 @@ Fonte: `app/Policies/*`, `app/Enums/UserRole.php`, `MANUALE_UTENTE.md` §14.
 - **Evento**: `App\Events\CoversChanged` (scambio, bandella) ascoltato da `Grid` e `WeightPanel`.
 - **Conversione dei numeri esistenti**: migration `2026_10_26_200002_convert_cover_pages_to_slots` (piano in `App\Support\Covers\CoverConversionPlanner`, scritture e rollback in `CoverConversion`, registro `cover_conversion_logs`); anteprima con `php artisan timone:covers-dry-run`. Vedi [04-database.md](04-database.md).
 
+## Occupazione in dodicesimi (Fase 3, 2026-10-27)
+
+- **Unità**: il dodicesimo di pagina, sempre un intero. 12 = pagina intera; 1/4 = 3, 1/3 = 4, 1/2 = 6, 2/3 = 8, 3/4 = 9. Perché 12: è il minimo comune multiplo delle frazioni di redazione e listino, quindi somme e confronti sono esatti (1/3 + 1/3 + 1/3 = 12, pagina piena; con le vecchie percentuali 33,3 × 3 = 99,9). Costante e formattazione in frazioni ("1/3", "2 e 1/2 pagine"): `App\Support\Twelfths`, unico punto in cui un intero diventa testo.
+- **Occupazione totale del contenuto**: `contents.occupancy_twelfths` (30 = 2 pagine e mezza), value object `App\Support\PageOccupancy`. Nel modulo: "Pagine intere" + "Frazione" (`PageOccupancy::fromParts()`, risolto da `ContentCreator::resolveOccupancy()`/`occupancyFromFields()`); almeno uno dei due > 0. Per la pubblicità il formato la **propone** (`AdFormat::twelfths()`, `ContentCreate::updatedFormat()`), modificabile.
+- **Distribuzione**: `PageOccupancy::distribution()` — pagine intere in sequenza, la frazione sull'ultima (30 → 12, 12, 6). La usano `ContentPlacer::place()` e `ContentCreate::attachConfirmedPages()`.
+- **Spazio su una pagina**: pivot `page_content.occupied_twelfths` (1–12), modificabile per pagina con `Grid::updateContentOccupancy()` (select sulla card). Estendere a una pagina in più (`extendToPage`) assegna `PageOccupancy::perExtraPage()` (una pagina intera, o tutto il contenuto se è meno di una pagina).
+- **Capienza**: `App\Support\PageCapacity` — somma per pagina ≤ 12, altrimenti errore bloccante con quanto spazio resta (`insufficientSpaceMessage()`); stato `App\Enums\PageFillStatus` (vuota/parziale/piena/oltre capienza), mostrato sulla card da `partials/page-fill.blade.php` (barra + etichetta "Libero: 1/3"/"Piena").
+- **Mappatura formati** (`AdFormat::twelfths()`): pagina intera, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale, copertina 2ª/3ª/4ª, battente copertina → 12; doppia pagina → 24; 2/3 → 8; mezza orizzontale/verticale → 6; 1/3 orizzontale/verticale, piedino → 4; 1/4 (vetrina) → 3.
+- **Carico pubblicitario**: `AdLoadCalculator` somma i dodicesimi pubblicitari (pivot per le assegnate, `occupancy_twelfths` per le prenotate) e divide per pagine interne × 12, arrotondando solo alla fine.
+- **Conversione dei dati esistenti** (migration `2026_10_27_100000_convert_occupancy_to_twelfths`, dry-run `php artisan timone:occupancy-dry-run`): pivot = dodicesimo più vicino alla vecchia percentuale (mai 0, mai oltre 12); contenuto = vecchia occupazione dichiarata (frazioni → 3/4/6/8, N pagine → 12·N), pubblicità senza percentuale manuale → formato, con percentuale manuale → pagine × dodicesimo della percentuale. Le pagine che dopo l'arrotondamento superano 12 sono segnalate, non corrette.
+
 ## Flusso 4 — Apertura del timone
 
 `Issues\Show::mount()` (`authorize('view')`) monta:
@@ -87,10 +98,10 @@ Presence: il client si unisce a `presence-issue.{id}` via Echo. La barra "utenti
 File coinvolti, in ordine di esecuzione:
 
 1. `resources/views/livewire/timone/content-create.blade.php`: form e drop zone. Il file viene caricato da Livewire su un disco temporaneo (`livewire-tmp`; regole in `config/livewire.php:84`: pdf/jpg/jpeg/png/webp, max 100 MB).
-2. `ContentCreate::updatedFile()` (`app/Livewire/Timone/ContentCreate.php:225`): valida e conta le pagine del PDF (`ContentCreator::pdfPageCount()` → `PdfPageMeasurer::pageCount()`, che **richiede Imagick**). Propone l'occupazione uguale al numero di pagine.
+2. `ContentCreate::updatedFile()` (`app/Livewire/Timone/ContentCreate.php:225`): valida e conta le pagine del PDF (`ContentCreator::pdfPageCount()` → `PdfPageMeasurer::pageCount()`, che **richiede Imagick**). Per un articolo con i campi occupazione ancora vuoti propone tante pagine intere quante quelle del PDF.
 3. `ContentCreate::save()` (`:261`):
    - `authorize('update', issue)`;
-   - `ContentCreator::resolveOccupancy()`: l'occupazione è **obbligatoria**. Per un articolo, con un PDF multipagina deve coincidere con il numero di pagine. Per la pubblicità deriva dal formato; **dal 2026-10-26 (bug 8)** se il PDF ha più pagine di quante ne occupa il formato il modulo chiede quali usare (`App\Support\AdPdfPagePlan`): **tutte** (occupazione = N pagine intere, percentuale 100 se non indicata a mano) oppure **da X a Y** (occupazione del formato se Y−X+1 coincide con la sua, altrimenti Y−X+1 pagine). La scelta arriva a `ContentCreator` come `pdf_page_from`/`pdf_page_to`; senza scelta l'errore è sul campo `pdfPageChoice`, non più sul file. Un PDF con *meno* pagine del formato resta com'era (occupazione del formato).
+   - `ContentCreator::resolveOccupancy()`: l'occupazione (dodicesimi, dai campi `whole_pages` + `fraction_twelfths`) è **obbligatoria**. Per un articolo, con un PDF multipagina le pagine attraversate devono coincidere con le pagine del PDF. Per la pubblicità la propone il formato (modificabile); **dal 2026-10-26 (bug 8)** se il PDF ha più pagine di quante ne occupa il formato il modulo chiede quali usare (`App\Support\AdPdfPagePlan`): **tutte** (occupazione = N pagine intere) oppure **da X a Y** (occupazione del formato se Y−X+1 coincide con la sua, altrimenti Y−X+1 pagine). La scelta arriva a `ContentCreator` come `pdf_page_from`/`pdf_page_to`; senza scelta l'errore è sul campo `pdfPageChoice`, non più sul file. Un PDF con *meno* pagine del formato resta com'era (occupazione del formato).
    - Se il form è stato aperto da una pagina ("📎 Carica materiale", quindi `anchorPageId` valorizzato) e le pagine del PDF **usate** sono più di una, apre la **modale di conflitto multipagina** (`openMultipageConflict`). Le opzioni sono: sovrascrivere, saltare le pagine occupate, oppure "sposta dopo" (`confirmMultipageUploadWithShift`, che usa `App\Support\PageInserter`).
    - Altrimenti chiama `createContentAndFinish()`.
 4. `App\Support\ContentCreator::create()` (`app/Support/ContentCreator.php:135`):
@@ -109,12 +120,25 @@ File coinvolti, in ordine di esecuzione:
 2. `Grid::assignContent()` (`app/Livewire/Timone/Grid.php:1658`): `authorize('update')`, poi verifica che contenuto e pagina siano dell'issue corrente e che la pagina non sia bloccata.
 3. `App\Support\ContentPlacer::place()` (`app/Support/ContentPlacer.php:37`), **tutto o niente**:
    - `pagesSpanned()` pagine consecutive a partire da quella di drop; se il numero finisce prima, restituisce un messaggio;
-   - nessuna pagina deve essere bloccata e ognuna deve avere spazio (`PagePercentageAllocator::fits`);
-   - in transazione: `ContentPageAttacher::attach()` per ogni pagina (pivot `page_content` con `occupied_percentage` e `content_file_id` della pagina PDF corrispondente) e `syncPageContentType` (editoriale/pubblicità/mista);
+   - nessuna pagina deve essere bloccata e ognuna deve avere spazio per la sua quota della distribuzione 12, 12, …, frazione (`PageCapacity::fits`);
+   - in transazione: `ContentPageAttacher::attach()` per ogni pagina (pivot `page_content` con `occupied_twelfths` e `content_file_id` della pagina PDF corrispondente) e `syncPageContentType` (editoriale/pubblicità/mista);
    - se le pagine sono 2 o più: `PageGroupLinker::link()` crea un `PageGroup`.
 4. Activity log + broadcast `ContentAssigned` (e `PageGroupsChanged`), poi `markPagesUpdated()`.
 
-Correlati: `extendToPage` (`Grid.php:1738`), `updateContentPercentage` (`:1807`), `unassignContent` (`:1854`), `archiveContent`/`deleteUnassignedContent`.
+Correlati: `extendToPage` (`Grid.php:1738`), `updateContentOccupancy`, `unassignContent` (`:1854`), `archiveContent`/`deleteUnassignedContent`.
+
+## Flusso 6bis — Modifica e rinomina di un contenuto (Fase 4, 2026-10-27)
+
+1. **Apertura**: ✏️ sul chip dei contenuti da assegnare (`partials/unassigned-content-chip.blade.php`) o sulla riga del contenuto in pagina (`partials/page-content-entry.blade.php`) → evento browser `open-content-edit` → `App\Livewire\Timone\ContentEdit::open()` (`authorize('update')`, contenuto dello stesso numero, carica i campi; occupazione nei campi con `HasOccupancyFields::fillOccupancyFields()`).
+2. **Salvataggio** `ContentEdit::save()`: regole `App\Support\ContentFormRules` (le stesse della creazione), poi `App\Support\ContentUpdater::update()`:
+   - occupazione dai campi (obbligatoria); il PDF che resterà (nuovo o attuale) deve coincidere con le pagine attraversate (`ContentCreator::assertPdfFits()`);
+   - se cambiano occupazione o file e una pagina occupata è bloccata → errore, nulla salvato;
+   - in transazione: campi del contenuto e dell'articolo/pubblicità (cambio tipo = riga dell'altro tipo eliminata, `syncPageContentType` su ogni pagina); se l'occupazione è cambiata e il contenuto è posizionato → **ridistribuzione**: scioglie il gruppo collegato se coincide con le sue pagine, stacca il contenuto, `ContentPlacer::place()` dalla prima pagina in ordine di sfoglio (`assignedPagesInReadingOrder()`: copertine, poi interne); se non ci sta → `ValidationException`, rollback;
+   - fuori transazione (i job delle miniature devono trovare le righe): sostituzione del materiale (`replaceFiles()`: file e righe vecchie eliminati, `ContentCreator::storeFiles()`, pivot `content_file_id` per posizione);
+   - log `content.updated` con i soli campi cambiati.
+3. Broadcast `ContentListChanged` (`updated`), `markPagesUpdated()`, evento locale `content-list-changed` (Grid e AdReservations si aggiornano).
+4. **Rinomina inline**: doppio click sul nome nella riga del contenuto (Alpine, stato solo nel browser) → Invio → `Grid::renameContent()`: titolo per un articolo, cliente per una pubblicità (ciò che `displayLabel()` mostra); log `content.renamed`, broadcast `ContentListChanged` (`renamed`).
+5. **Anteprima**: il PDF/immagine di stampa è anche la miniatura del contenuto (nessuna immagine separata, decisione dell'utente). URL dell'anteprima pronta: `Content::previewImageUrl()` (chip), `Page::previewImageUrl()` (card e riga).
 
 ## Flusso 7 — Riordino delle pagine
 

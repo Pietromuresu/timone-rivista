@@ -126,7 +126,7 @@ test('a page shows the assigned content display label', function () {
         'type' => ContentType::Articolo,
         'title' => 'Articolo di prova unico',
     ]);
-    $page->contents()->attach($content->id, ['occupied_percentage' => 100]);
+    $page->contents()->attach($content->id, ['occupied_twelfths' => 12]);
 
     Livewire::test(Grid::class, ['issue' => $issue])
         ->assertSee('Articolo di prova unico');

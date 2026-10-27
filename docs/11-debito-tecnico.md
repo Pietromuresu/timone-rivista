@@ -49,13 +49,13 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 | 22 | `Grid.php` di 2151 righe con 50 metodi pubblici (SRP) | `app/Livewire/Timone/Grid.php` | Scelta consapevole e motivata (`HANDOFF.md` §Decisioni, prima voce). Da spezzare solo con un piano di refactoring dei test |
 | 23 | `ContentCreate.php` di 808 righe | `app/Livewire/Timone/ContentCreate.php` | Come sopra, in misura minore |
 | 24 | `PageCountResizer` ignora i gruppi di pagine (una riduzione può lasciare un gruppo con una sola pagina) | `app/Support/PageCountResizer.php` | `HANDOFF.md`, "Debito noto" batch 2026-08-31 |
-| 25 | Nessun "riprova" per una miniatura fallita e nessuna modifica di un contenuto esistente (incluso il suo file e l'occupazione) | `ContentCreate` | `HANDOFF.md`, sessione 2026-09-02 |
+| 25 | Nessun "riprova" per una miniatura fallita (la modifica di un contenuto esistente, file e occupazione inclusi, esiste dalla Fase 4, 2026-10-27) | `ContentCreate` | `HANDOFF.md`, sessione 2026-09-02 |
 | 26 | Stato issue `in_lavorazione` mai impostato dal codice; un numero `chiuso` resta modificabile | `app/Enums/IssueStatus.php`, `IssuePolicy::update` | Forse voluto: va chiarito con la redazione |
 | 27 | Ruolo `commerciale` identico a `sola_lettura` | `app/Policies/*`, `MANUALE_UTENTE.md` §14 | Ruolo predisposto, mai sviluppato |
 | 28 | Codice morto o residuo: `setup-old.sh`; job `GeneratePageFileThumbnail` (non più accodato); comando `inspire`; `tests/*/ExampleTest.php`; `laravel/sail` e `laravel/breeze` in require-dev; `axios` caricato ma mai chiamato; variabili `.env.example` inutilizzate (`MEMCACHED_HOST`, `AWS_*`, `VITE_APP_NAME`); rotte `verify-email` (il modello `User` non implementa `MustVerifyEmail`) | vari | Pulizia a basso rischio |
 | 29 | `TIMONE_DEADLINE_REMINDER_DAYS_BEFORE` assente da `.env.example` | `config/timone.php` | Documentarla |
-| 30 | Warning di deprecazione `brick/math` ("Passing floats to BigNumber::of()") sui cast `decimal` | `PageContent::occupied_percentage`, ecc. | Non funzionale (`HANDOFF.md` §Decisioni) |
-| 31 | Nessun vincolo DB sulla somma delle percentuali per pagina | `page_content` | Validazione solo applicativa (`PagePercentageAllocator`) |
+| 30 | Warning di deprecazione `brick/math` ("Passing floats to BigNumber::of()") sui cast `decimal` | cast `decimal` rimasti (es. parametri peso); dal 2026-10-27 non più sull'occupazione, che è intera | Non funzionale (`HANDOFF.md` §Decisioni) |
+| 31 | Nessun vincolo DB sulla somma dei dodicesimi per pagina | `page_content` | Validazione solo applicativa (`App\Support\PageCapacity`, dal 2026-10-27); un CHECK sulla somma richiederebbe un trigger |
 | 32 | `HANDOFF.md` ha la riga "Ultimo aggiornamento" ferma al 2026-09-01 e cita "Laravel 11" nello "Stato generale" | `HANDOFF.md` righe 3 e 7 | Il progetto è su Laravel 12 dal 2026-07-27 (stesso file, sezione dedicata) |
 
 ## Calcolo peso rivista — assunzioni non verificate e limiti (aggiunto il 2026-10-26)
@@ -93,6 +93,26 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 | 51 | Rollback della conversione affidabile solo subito dopo il deploy | `App\Support\Covers\CoverConversion::revertAll()` | Se nel frattempo si aggiungono pagine interne, le posizioni ripristinate possono collidere su `unique(issue_id, position)`: il rollback si ferma con un errore del database (transazione per numero, niente stati parziali) |
 | 52 | `Grid.php` cresce ancora (+ `swapCovers`, `addBandella`, `removeBandella`, guardie copertina) | `app/Livewire/Timone/Grid.php` | La logica è in `App\Support\IssueCovers`/`ContentPlacer`; in Grid solo orchestrazione. Proposta per la Fase 6: estrarre cruscotto/riepilogo in un componente dedicato |
 | 53 | In vista doppia pagina la II di copertina non è affiancata alla pagina 1 (sta nella fascia copertine sopra) | `grid.blade.php`, `cover-band.blade.php` | Scelta: la richiesta chiede una fascia visivamente separata. Se la redazione vuole vedere l'apertura II + 1, va aggiunta come anteprima nella vista doppia |
+
+## Fase 3 — occupazione in dodicesimi (aggiunto il 2026-10-27)
+
+| # | Problema | Dove | Note |
+|---|---|---|---|
+| 54 | Colonne non più usate: `contents.page_occupancy`, `page_content.occupied_percentage`, `advertisements.occupied_percentage_override` | migration `2026_10_27_100000_*` | Lasciate (nullable) per il rollback, come `pages.role` nella Fase 2. Da eliminare con una migration dedicata quando il rollback non servirà più |
+| 55 | Pubblicità con PDF più lungo del formato e scelta "usa tutte le N pagine": l'occupazione salvata è N pagine intere anche se i campi "Pagine intere"/"Frazione" dicono altro | `ContentCreator::resolveOccupancy()`, `content-create.blade.php` | Il riquadro della scelta lo dice ("la pubblicità occuperà N pagine intere"), ma l'anteprima "Occupa …" sotto i campi mostra i campi. Da allineare nella Fase 4 (modale di modifica) |
+| 56 | Occupazione totale del contenuto e somma dei suoi pivot possono divergere (modifica per pagina, "↗ Estendi", rimozione da una pagina) | `Grid::updateContentOccupancy()`, `extendToPage()` | Voluto: la specifica rende modificabile lo spazio per pagina. Il cruscotto usa i pivot per le assegnate. Dalla Fase 4 cambiare l'occupazione dalla modale ridistribuisce (e azzera le regolazioni manuali); lasciarla invariata non tocca le pagine |
+| 57 | Barra di riempimento e select dei dodicesimi sulla card verificate solo sul markup (nessun Dusk) | `partials/page-fill.blade.php`, `partials/page-content-entry.blade.php` | Vedi la checklist manuale in `HANDOFF.md` (sessione 2026-10-27) |
+| 58 | La migration della Fase 3 gira fuori transazione (`$withinTransaction = false`) | `2026_10_27_100000_*` | Necessario su SQLite (foreign key spente durante `->change()`); su MySQL il DDL non era comunque transazionale. Un errore a metà richiede di rilanciare la migration (è idempotente: ricalcola tutto dalle colonne vecchie) |
+| 59 | `ContentCreate.php` cresce ancora (+ `proposeOccupancyFromPdf`) | `app/Livewire/Timone/ContentCreate.php` | Nella Fase 4 la modifica è un componente a sé (`ContentEdit`) e ciò che è comune è condiviso (`ContentFormRules`, trait `HasOccupancyFields`, partial dei campi) invece di un form object Livewire: spostare i campi in `$form.*` avrebbe cambiato ~40 test e ogni `wire:model` del modulo di creazione senza ridurre la logica |
+
+## Fase 4 — gestione contenuti (aggiunto il 2026-10-27)
+
+| # | Problema | Dove | Note |
+|---|---|---|---|
+| 60 | La modale di modifica non ha la drop zone né il messaggio dettagliato sugli upload falliti (`_uploadErrored`) della creazione | `ContentEdit`, `content-edit.blade.php` | Input file classico; un upload rifiutato dal server mostra il messaggio generico di Livewire. Estendere se serve |
+| 61 | Cambiare l'occupazione ridistribuisce sempre dalla PRIMA pagina occupata, anche se il contenuto era stato sparso a mano su pagine non consecutive ("↗ Estendi") | `ContentUpdater::redistribute()` | Scelta di default: la distribuzione di default è sempre su pagine consecutive. Il messaggio d'errore lo dice se non ci sta |
+| 62 | ~~Miniatura separata non ridimensionata~~ — la miniatura separata è stata tolta su richiesta dell'utente (2026-10-27): il PDF è già la miniatura | — | Numero lasciato per non rinumerare |
+| 63 | Rinomina inline e modale verificate solo su markup e Livewire::test() (nessun Dusk) | `page-content-entry.blade.php`, `content-edit.blade.php` | Checklist manuale in `HANDOFF.md` (sessione Fase 4) |
 
 ## Cose che sembrano sbagliate ma hanno un motivo (non "correggerle")
 

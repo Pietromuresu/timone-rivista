@@ -24,7 +24,7 @@ test('bug 5: an article cannot be created without choosing its page occupancy', 
         ->set('type', 'articolo')
         ->set('title', 'Articolo senza occupazione')
         ->call('save')
-        ->assertHasErrors(['page_occupancy' => 'required_if']);
+        ->assertHasErrors('occupancy');
 
     expect(Content::count())->toBe(0);
 });

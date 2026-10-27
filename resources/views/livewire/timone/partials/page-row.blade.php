@@ -13,9 +13,8 @@
     $fileUrl = $previewFile
         ? ($previewIsPageFile ? route('page-files.show', $previewFile) : route('content-files.show', $previewFile)).($previewFile->pdf_page_number > 1 ? '#page='.$previewFile->pdf_page_number : '')
         : null;
-    $thumbnailRouteUrl = $previewFile
-        ? ($previewIsPageFile ? route('page-files.thumbnail', $previewFile) : route('content-files.thumbnail', $previewFile))
-        : null;
+    // URL dell'anteprima pronta (Page::previewImageUrl()), come nella card.
+    $previewImageUrl = $page->previewImageUrl();
     // Stima PER QUESTA card (2026-07-31, vedi HANDOFF.md) — dati reali
     // (tempo di orologio trascorso, media osservata su questo numero),
     // mai un placeholder. $avgThumbnailSeconds arriva da Grid::render().
@@ -151,44 +150,12 @@
         {{ $page->content_type->label() }}
     </span>
 
+    {{-- Fase 3: riempimento della pagina, stessa etichetta della card. --}}
+    @include('livewire.timone.partials.page-fill', ['variant' => 'row'])
+
     <div class="flex-1 min-w-0 flex flex-wrap items-center gap-3">
         @forelse ($page->contents as $content)
-            <span wire:key="page-{{ $page->id }}-content-{{ $content->id }}" class="inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-200">
-                <span>{{ $content->type->value === 'articolo' ? '📄' : '📢' }}</span>
-                {{ $content->displayLabel() }}
-                @if ($content->pages->count() > 1)
-                    <span class="opacity-60" title="Contenuto presente su {{ $content->pages->count() }} pagine">×{{ $content->pages->count() }}</span>
-                @endif
-                @if ($locked)
-                    <span class="text-xs opacity-60">{{ $content->pivot->occupied_percentage }}%</span>
-                @else
-                    <input
-                        type="number"
-                        min="0.1"
-                        max="100"
-                        step="0.1"
-                        value="{{ $content->pivot->occupied_percentage }}"
-                        x-on:keydown.stop
-                        x-on:click.stop
-                        x-on:focus="$store.pagePresence?.startEditing({{ $page->id }})"
-                        x-on:blur="$store.pagePresence?.stopEditing({{ $page->id }})"
-                        wire:change="updateContentPercentage({{ $page->id }}, {{ $content->id }}, $event.target.value)"
-                        class="w-14 text-xs rounded border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 px-1 py-0"
-                    />
-                    <button
-                        type="button"
-                        x-on:click.stop="const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
-                        class="text-xs opacity-60 hover:opacity-100"
-                        title="Estendi questo contenuto a un'altra pagina"
-                    >↗</button>
-                    <button
-                        type="button"
-                        x-on:click.stop="$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
-                        class="text-xs opacity-60 hover:opacity-100 hover:text-red-600"
-                        title="Rimuovi"
-                    >✕</button>
-                @endif
-            </span>
+            @include('livewire.timone.partials.page-content-entry', ['variant' => 'row'])
         @empty
             <span class="text-sm text-gray-400 italic">
                 {{ $page->content_type->value === 'bianca' ? 'Pagina bianca' : 'Da assegnare' }}
@@ -219,7 +186,7 @@
                 title="{{ $previewFile->original_name }} — apri in una nuova scheda{{ $previewFile->pdf_page_number > 1 ? ' (pagina '.$previewFile->pdf_page_number.')' : '' }}"
             >
                 <img
-                    src="{{ $thumbnailRouteUrl }}"
+                    src="{{ $previewImageUrl }}"
                     alt=""
                     class="w-5 h-6 object-cover rounded border border-gray-300 dark:border-gray-600"
                 />

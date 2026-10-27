@@ -86,6 +86,12 @@ Elenco dei task: `docker compose exec app php artisan schedule:list`. Sull'host 
 
 - **File**: `app/Console/Commands/ListMissingOccupancy.php`. **Sola lettura.**
 - Conta ed elenca i `contents` con `page_occupancy` NULL. È il prerequisito della migration NOT NULL (vedi [04-database.md](04-database.md#migration-bloccante-page_occupancy)).
+- Dal 2026-10-27, su un database già convertito in dodicesimi (colonna `contents.occupancy_twelfths` presente), risponde "Comando non più necessario" e non elenca nulla.
+
+### `timone:occupancy-dry-run {--issue=}`
+
+- **File**: `app/Console/Commands/OccupancyDryRun.php`. **Sola lettura.**
+- Mostra, numero per numero, cosa farà la migration `2026_10_27_100000_convert_occupancy_to_twelfths`: occupazione di ogni contenuto (vecchio valore → dodicesimi) e spazio di ogni assegnazione (vecchia percentuale → frazione, con "(arrotondato)" se non era esatta); segnala con ⚠️ le pagine che dopo l'arrotondamento superano 12/12. Stesso pianificatore della migration (`App\Support\Occupancy\OccupancyConversionPlanner`). Funziona prima e dopo la migration.
 
 ### `timone:migrate-legacy-page-files {--dry-run}`
 
