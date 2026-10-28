@@ -5,7 +5,7 @@ Ultimo aggiornamento: 2026-10-28. Questo file basta per riprendere il lavoro in 
 ## Come ripartire (da leggere per primo)
 
 1. Leggi `CLAUDE.md`, questo file e le ultime voci di `HANDOFF.md` ("Revisione 2", Fasi 1–5).
-2. Chiedi all'utente l'esito della prova della **Fase 5** (ultima del batch, consegnata, **non ancora approvata**). Se segnala problemi → correggi. Poi: migration `2026_10_28_100000` e `2026_10_28_200000` da applicare sul DB di sviluppo con la ricostruzione dello stack (contiene anche le nuove dipendenze composer).
+2. **Batch completato**: tutte e 5 le fasi approvate il 2026-10-28. Restano solo: commit delle Fasi 3–5 (su richiesta dell'utente) e ricostruzione dello stack per applicare le migration `2026_10_28_100000` e `2026_10_28_200000` e installare le nuove dipendenze composer. Le voci aperte di verifica manuale sono in `docs/DA-VERIFICARE.md` (DV-36…DV-45).
 3. Controlla lo stato del DB di sviluppo: `docker exec timone-rivista-app-1 php artisan migrate:status | tail -5`. L'utente ricostruisce lo stack da sé (`docker compose up -d --build` esegue `migrate` all'avvio): le migration nuove potrebbero essere già applicate.
 4. Lavora una fase alla volta: a fine fase suite completa (locale + container), consegna con il formato della sezione "Consegna di ogni fase" del prompt, poi **aspetta l'ok esplicito**.
 
@@ -17,7 +17,7 @@ Ultimo aggiornamento: 2026-10-28. Questo file basta per riprendere il lavoro in 
 | 2 — Click = pagina + occhio, fascia sticky, griglia 6×6, ritaglio anteprime, posizione in creazione/modifica | ✅ approvata (2026-10-28), committata in `47121ee` | migration `2026_10_27_600000_add_grid_cells_to_page_content_table` (con conversione), `2026_10_27_610000_add_file_fit_columns` |
 | 3 — Pubblicità segnaposto dal form + caricamento massivo | ✅ approvata (2026-10-28) | nessuna migration; `timone:placeholder-sync --dry-run` sul DB di sviluppo: 0 da riallineare |
 | 4 — Ruoli ed eliminazioni | ✅ approvata (2026-10-28) | migration `2026_10_28_100000_keep_user_work_on_user_delete` (solo vincoli FK, provata su copia MySQL, NON applicata sul DB di sviluppo) |
-| 5 — Export PDF sfogliabile della rivista | 📦 consegnata il 2026-10-28, **in attesa di ok** | `setasign/fpdi` + `tecnickcom/tcpdf`; migration `2026_10_28_200000_create_magazine_exports_table` (NON applicata sul DB di sviluppo) |
+| 5 — Export PDF sfogliabile della rivista | ✅ approvata (2026-10-28) | `setasign/fpdi` + `tecnickcom/tcpdf`; migration `2026_10_28_200000_create_magazine_exports_table` (NON applicata sul DB di sviluppo) |
 
 **Migration non ancora applicate sul DB di sviluppo** (al momento della scrittura): `500000`, `600000`, `610000`. Dry-run già mostrati e approvati come procedura: `php artisan timone:grid-dry-run` (33 identiche, 3 vetrine riposizionate, 0 a L, 0 fuori pagina). Dopo l'applicazione, facoltativo: `php artisan timone:file-ratios` (12 file da misurare).
 

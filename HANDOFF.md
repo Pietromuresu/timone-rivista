@@ -1,6 +1,6 @@
 # Handoff — Timone Elettronico
 
-> **Ripartenza (2026-10-28)**: batch "revisione con gli utenti 2": Fase 5 (ultima) consegnata, in attesa di ok. Leggere prima `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI_2.md` (stato, prossimo passo, comandi, prompt originale) e le voci "Revisione 2" in fondo a questo file.
+> **Ripartenza (2026-10-28)**: batch "revisione con gli utenti 2" **completato** (Fasi 1–5 approvate). Da fare: commit delle Fasi 3–5 (su richiesta) e ricostruzione dello stack (migration `2026_10_28_100000`, `2026_10_28_200000`, nuove dipendenze composer). Verifiche manuali aperte: `docs/DA-VERIFICARE.md` DV-36…DV-45. Leggere prima `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI_2.md` (stato, prossimo passo, comandi, prompt originale) e le voci "Revisione 2" in fondo a questo file.
 
 Ultimo aggiornamento: 2026-09-01 (due sessioni lo stesso giorno — 1: bugfix drag&drop doppia pagina, copertina separata dal conteggio pagine, toast per aggiornamenti realtime da altri utenti; 2: fallback a polling riscritto con `wire:poll`+controllo leggero al posto del vecchio `setInterval`/`pollRefresh()` — vedi "Sessione 2026-09-01" e "Sessione 2026-09-01 (continuazione)" in fondo al file per il dettaglio. **480 test verdi + 26 skipped, 0 falliti**). Il batch "Timone Elettronico: Batch modifiche" (Fase 0-6, 2026-08-31, dettaglio più sotto) **risulta ora committato** come `e64049e` (nota precedente in questo file, "nulla committato... in attesa di revisione", era vera solo fino alla fine di quella sessione — corretta qui perché un lettore futuro non trovi le due affermazioni in contraddizione). Voci precedenti sotto per la cronologia completa dall'inizio del progetto (2026-07-23) al 2026-07-28 — vedi anche più sotto per le sessioni del 2026-07-31 (drag&drop di blocco, verifica/correzione dei 3 bug, redesign avanzamento miniature) prima dell'inizio di quel batch.
 
@@ -1878,3 +1878,4 @@ Nuovo `tests/Feature/MagazinePdfExportTest.php` (12: PageBox, ordine con bandell
 ### Documentazione aggiornata
 `MANUALE_UTENTE.md` (§3, PDF sfogliabile), `README.md`, `docs/02`, `03` (Flusso 16), `04` (`magazine_exports`), `05` (`TIMONE_EXPORT_*`), `06` (nuove dipendenze, Ghostscript), `08` (job), `09-deploy`, `10-debugging` (export bloccato), `11`, `12`, `DA-VERIFICARE.md` (DV-44, DV-45), `CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`, `CLAUDE_PROMPTS/BATCH_REVISIONE_UTENTI_2.md`. `CLAUDE.md` ha già la regola dei file protetti (§4, dalla Fase 1).
 
+**Esito**: Fase 5 approvata dall'utente il 2026-10-28; batch "revisione con gli utenti 2" chiuso.
