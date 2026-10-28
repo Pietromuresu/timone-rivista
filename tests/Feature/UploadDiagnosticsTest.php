@@ -31,14 +31,26 @@ test('the upload url is signed on the real request address even when APP_URL dif
     expect(url('/riviste'))->toContain('://localhost/riviste');
 });
 
-test('the container hands Livewire the request-root signer', function () {
-    // Durante i test Livewire sostituisce l'istanza con una propria (niente
-    // URL S3 veri): la togliamo per vedere il binding di AppServiceProvider.
-    app()->forgetInstance(\Livewire\Features\SupportFileUploads\GenerateSignedUploadUrl::class);
-    (new \App\Providers\AppServiceProvider(app()))->register();
+// 2026-10-28: l'AppServiceProvider del repository è stato allineato a quello
+// di produzione (richiesta dell'utente): il binding RequestRootSignedUploadUrl
+// è commentato e la firma degli URL (upload temporanei di Livewire) si
+// verifica con le macro di UrlGenerator/Request, ricostruendo l'URL da
+// APP_URL invece che dall'host in arrivo. Il test precedente («the container
+// hands Livewire the request-root signer») verificava il binding tolto.
+test('a signed URL stays valid when the request reaches the app with an internal host (behind the proxy)', function () {
+    config(['app.url' => 'https://timone.intranet.lan']);
+    (new \App\Providers\AppServiceProvider(app()))->boot();
 
-    expect(app(\Livewire\Features\SupportFileUploads\GenerateSignedUploadUrl::class))
-        ->toBeInstanceOf(RequestRootSignedUploadUrl::class);
+    $signed = \Illuminate\Support\Facades\URL::temporarySignedRoute('profile.edit', now()->addMinutes(5));
+    $query = parse_url($signed, PHP_URL_QUERY);
+
+    // Il proxy inoltra a un host interno in http: la firma va controllata su APP_URL.
+    $internal = \Illuminate\Http\Request::create('http://app:9000/profile?'.$query);
+    $tampered = \Illuminate\Http\Request::create('http://app:9000/profile?'.str_replace('signature=', 'signature=x', $query));
+
+    expect(str_starts_with($signed, 'https://timone.intranet.lan/profile?'))->toBeTrue()
+        ->and($internal->hasValidSignature())->toBeTrue()
+        ->and($tampered->hasValidSignature())->toBeFalse();
 });
 
 test('an upload rejected before validation is logged with context and explained to the user', function () {

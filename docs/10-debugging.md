@@ -364,6 +364,12 @@ Non correggere i valori con un UPDATE alla cieca: vanno ricontrollati sulla sche
 - **Cartelle `exports/tmp-*` rimaste**: vengono rimosse a fine job anche in errore; ne resta una solo se il processo è stato ucciso. Si possono cancellare a mano.
 - **Test**: il testo del PDF si verifica con `gs -sDEVICE=txtwrite`; i test che lo usano sono saltati senza Ghostscript (in locale) e girano nel container.
 
+## Dropdown della navigazione che non si apre (2026-10-28)
+
+- Alpine (che fa funzionare il menu in alto a destra) arriva SOLO con lo script di Livewire. Livewire lo inserisce da sé solo nelle pagine con un suo componente: le viste da controller (`/profile`, `/manuale`) ne erano senza. Ora `@livewireScripts` è in `layouts/app.blade.php` (test `tests/Feature/NavigationScriptsTest.php`: una sola copia su ogni pagina).
+- **Causa reale in produzione (2026-10-28)**: script e Alpine c'erano, ma nel DOM il trigger del menu era `<div open="">` invece di `<div @click="open = ! open">` (l'HTML del server era corretto): qualcosa tra server e browser (estensione del browser — in console compariva `content.js … [Violation]` — o un proxy che riscrive l'HTML) toglieva gli attributi `@click`. Corretto usando `x-on:click`/`x-on:click.outside` in `components/dropdown.blade.php` e `layouts/navigation.blade.php`, come nel resto del progetto; un test verifica che nessuna vista usi `@click`. Per scoprire chi riscrive: confrontare «Visualizza sorgente» (HTML del server) con «Elementi» (DOM), e provare in finestra anonima senza estensioni.
+- Se il menu non si apre su NESSUNA pagina e lo script manca, lo script non arriva: in Network cercare `livewire.js`/`livewire.min.js` (404 → il web server davanti all'app deve passare a `index.php` le richieste `.js` che non sono file, come `docker/nginx/default.conf`; bloccato → http/https misti; percorso sbagliato → app sotto un sottopercorso).
+
 ## Test in locale: memoria esaurita
 
 Con oltre 850 test il PHP locale (MAMP, `memory_limit` 128M) si fermava con «Allowed memory size … exhausted» nella raccolta dei test. Dal 2026-10-27 `phpunit.xml` imposta `memory_limit` 512M per i test (`<ini>`), quindi `php artisan test` funziona di nuovo. Se ricapita: `php -d memory_limit=1G vendor/bin/pest`.

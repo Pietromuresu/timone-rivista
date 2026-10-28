@@ -211,3 +211,14 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - Migration `2026_10_28_200000_create_magazine_exports_table`; config `timone.magazine_export` (`TIMONE_EXPORT_MEMORY_LIMIT`, `TIMONE_EXPORT_TIMEOUT`, facoltative, non in `.env.example`).
 - `StoredFiles::forIssues()` include i PDF generati (eliminati con il numero).
 
+## Correzione 2026-10-28 — dropdown della navigazione
+
+- **Visibile**: il menu utente in alto a destra (Profilo, Esci) si apre anche nella pagina del profilo e nel manuale.
+- **Tecnica**: `@livewireScripts` in `resources/views/layouts/app.blade.php` (Alpine arriva con lo script di Livewire, che prima era inserito solo nelle pagine con componenti Livewire); test `tests/Feature/NavigationScriptsTest.php`. Nessun file protetto toccato.
+
+## Correzione 2026-10-28 (2) — dropdown in produzione e AppServiceProvider
+
+- **Visibile**: il menu utente in alto a destra si apre anche in produzione.
+- **Causa**: nel browser di produzione l'attributo `@click="open = ! open"` arrivava riscritto come `open=""` (il server lo mandava corretto). Le viste usano ora `x-on:click` (forma già usata ovunque nel progetto); test in `tests/Feature/NavigationScriptsTest.php`.
+- **`app/Providers/AppServiceProvider.php`**: riportata nel repository la versione di produzione (richiesta esplicita dell'utente): binding `RequestRootSignedUploadUrl` commentato, macro per la verifica delle URL firmate su `APP_URL`. Test in `UploadDiagnosticsTest` aggiornato di conseguenza.
+

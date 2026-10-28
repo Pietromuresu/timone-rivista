@@ -62,5 +62,13 @@
                 {{ $slot }}
             </main>
         </div>
+
+        {{-- 2026-10-28: Alpine arriva solo con lo script di Livewire, che
+             Livewire inserisce da sé SOLO nelle pagine con un suo
+             componente: su /profile e /manuale (viste da controller) il
+             dropdown della navigazione non si apriva. Esplicito qui, vale per
+             ogni pagina del layout; dove Livewire lo inseriva già non viene
+             duplicato. --}}
+        @livewireScripts
     </body>
 </html>
