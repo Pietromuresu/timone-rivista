@@ -36,13 +36,14 @@
         @apply text-gray-400 dark:text-gray-500;
     }
 
-    /* Revisione 2, Fase 2.2 (2026-10-27): header + fascia sticky del timone
-       coprono la parte alta della finestra. Le altezze sono misurate in JS
-       (layouts/app.blade.php, grid.blade.php); fuori dal timone
-       --timone-sticky-height non è definita e vale 0. Così il focus da
-       tastiera e scrollIntoView() fermano la pagina sotto la fascia. */
+    /* Header e fascia del timone stanno in UN contenitore sticky
+       (layouts/app.blade.php, dal 2026-10-28) che misura la propria altezza
+       in --app-sticky-height (0 quando non è sticky, sotto i 640 px col
+       timone). Così il focus da tastiera e scrollIntoView() fermano le
+       pagine sotto la fascia, qualunque sia la sua altezza (compressa,
+       con o senza riga di selezione). */
     html {
-        scroll-padding-top: calc(var(--app-header-height, 0px) + var(--timone-sticky-height, 0px) + 0.5rem);
+        scroll-padding-top: calc(var(--app-sticky-height, 0px) + 0.5rem);
     }
 }
 

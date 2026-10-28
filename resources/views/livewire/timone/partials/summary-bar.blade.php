@@ -1,9 +1,8 @@
 {{-- Fase 6 (2026-10-27): riepilogo stile dashboard, sempre visibile subito
-     sotto l'header fisso. Revisione 2, Fase 2.2: non è più sticky da solo,
-     sta nella fascia sticky unica insieme ai comandi del timone
-     (grid.blade.php, data-testid="timone-sticky-band").
+     sotto l'header fisso. Sta nella fascia del timone (grid.blade.php,
+     data-testid="timone-sticky-band"), portata con @teleport nel contenitore
+     sticky unico del layout (2026-10-28).
      Numeri da App\Support\IssueSummary ($summary), nessun calcolo qui.
-     z-30: sopra le card del timone, sotto l'header (z-40) e le modali (z-50).
      "Pagine bianche" e "Da assegnare" sono bottoni: evidenziano quelle
      pagine nel timone (Grid::toggleSummaryHighlight()); di nuovo per togliere. --}}
 @php
@@ -16,7 +15,15 @@
     class="text-xs text-gray-700 dark:text-gray-200"
     data-testid="summary-bar"
 >
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+    {{-- 2026-10-28: «Comprimi» (bottone ⌃ nella fascia, stato `collapsed`
+         della fascia in grid.blade.php) mostra solo questa riga corta. --}}
+    <div x-show="collapsed" x-cloak class="truncate" data-testid="summary-compact">
+        <strong>{{ $summary['internalPages'] }}</strong> pagine · {{ $summary['fullPages'] }} piene · {{ $summary['blankPages'] }} bianche ·
+        libero {{ $summary['freeLabel'] }} · pubblicità <strong>{{ $summary['adPercentage'] }}%</strong> ·
+        da assegnare {{ $summary['placeholderCount'] }}
+    </div>
+
+    <div x-show="! collapsed" class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
         <span class="{{ $chip }}" title="Pagine interne (le copertine sono a parte)">
             <strong class="text-sm">{{ $summary['internalPages'] }}</strong> pagine interne:
             <span>{{ $summary['fullPages'] }} piene</span> ·

@@ -222,3 +222,15 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - **Causa**: nel browser di produzione l'attributo `@click="open = ! open"` arrivava riscritto come `open=""` (il server lo mandava corretto). Le viste usano ora `x-on:click` (forma già usata ovunque nel progetto); test in `tests/Feature/NavigationScriptsTest.php`.
 - **`app/Providers/AppServiceProvider.php`**: riportata nel repository la versione di produzione (richiesta esplicita dell'utente): binding `RequestRootSignedUploadUrl` commentato, macro per la verifica delle URL firmate su `APP_URL`. Test in `UploadDiagnosticsTest` aggiornato di conseguenza.
 
+## 2026-10-28 — Azioni sulle pagine selezionate nella fascia fissa
+
+### Visibili agli utenti
+- Le azioni sulla selezione (Deseleziona, Tutte, Stato, Collega, Scollega, Blocca, Sblocca) sono una riga della fascia fissa in alto: utilizzabili anche con pagine selezionate in fondo al timone. «3 pagine selezionate: 12–14»; azioni non disponibili attenuate con il motivo nel tooltip; «Altro ⋯» su schermi stretti; il Commerciale vede solo seleziona/deseleziona.
+- Bottone ⌃ per ridurre il riepilogo a una riga (ricordato nel browser). Titolo «Timone · N pagine interne» tolto (ripeteva il riepilogo): i comandi stanno su una riga a 1366 px.
+- Esiti ed errori di blocco/collegamento compaiono nella fascia. Una pagina eliminata da un collega sparisce dalla selezione al primo aggiornamento.
+
+### Tecniche
+- Un solo contenitore sticky (`layouts/app.blade.php`, `#timone-sticky-slot`, `--app-sticky-height`); la fascia arriva con `@teleport`. Via `--app-header-height` e `--timone-sticky-height`.
+- `App\Support\PageSelectionActions` (etichetta e motivi), `partials/selection-bar.blade.php`, pulizia della selezione in `Grid::render()`. Nessun metodo delle azioni modificato.
+- Altezza misurata (Chrome): 138 px senza selezione, 169 px con la riga di selezione a 1366×768 (25% dell'area visibile, 22% della finestra), 134 px compressa.
+

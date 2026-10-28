@@ -88,6 +88,8 @@ test('summary and timone commands are in one sticky band under the header', func
         // Zoom e viste sono dentro la fascia, prima della sua chiusura.
         ->and(strpos($html, 'aria-label="Dimensione delle pagine"'))->toBeGreaterThan($toolbar)->toBeLessThan($bandEnd)
         ->and(strpos($html, "setViewMode('lista')"))->toBeLessThan($bandEnd)
-        // Una sola fascia sticky nel timone (il riepilogo non lo è più da solo).
-        ->and(substr_count($html, 'data-sticky-top'))->toBe(1);
+        // 2026-10-28: la fascia non è più sticky da sola: va con @teleport
+        // nel contenitore sticky unico del layout (che ha data-sticky-top).
+        ->and(substr_count($html, 'data-sticky-top'))->toBe(0)
+        ->and($html)->toContain('x-teleport="#timone-sticky-slot"');
 });

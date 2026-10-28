@@ -44,6 +44,7 @@ use App\Support\PageGroupLinker;
 use App\Support\PageGroupResolver;
 use App\Support\PageInserter;
 use App\Support\PageReorderer;
+use App\Support\PageSelectionActions;
 use App\Support\PageSpreadBuilder;
 use App\Support\Permissions\TimoneAbilities;
 use App\Support\ThumbnailProgressEstimator;
@@ -2450,6 +2451,14 @@ class Grid extends Component
         // farebbe una query.
         $pages->concat($covers)->each(fn (Page $page) => $page->setRelation('issue', $this->issue));
 
+        // 2026-10-28 (azioni sulla selezione nella fascia sticky): una pagina
+        // eliminata da un collega sparisce dalla selezione al primo render
+        // dopo il poll/broadcast, così il conteggio e le azioni disponibili
+        // restano veri. Solo stato dell'interfaccia: le azioni ricontrollano
+        // comunque le pagine lato server.
+        $this->selectedPageIds = array_values(array_intersect($this->selectedPageIds, $pages->pluck('id')->all()));
+        $selectedPages = $pages->whereIn('id', $this->selectedPageIds)->values();
+
         // Fase 6 (2026-10-27): caricati TUTTI e filtrati in memoria per il
         // pannello. Prima il filtro "Cerca per titolo" stava nella query, e
         // da questa stessa lista si calcolavano le prenotate del cruscotto:
@@ -2562,6 +2571,7 @@ class Grid extends Component
         return view('livewire.timone.grid', [
             'abilities' => $abilities,
             'immovablePageIds' => $abilities->immovablePageIds($pages->concat($covers)),
+            'selection' => PageSelectionActions::describe($selectedPages),
             'pages' => $pages,
             // Tutte le copertine in un'unica fascia in cima, in ordine di
             // sfoglio (I, bandella, II, III, IV) — richiesta dell'utente dopo

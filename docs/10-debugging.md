@@ -127,7 +127,15 @@ Sintomo: trascinando un contenuto o una pagina verso il bordo della finestra la 
 
 Se non scorre:
 1. gli asset sono aggiornati (`npm run build` / `docker compose up -d --build`)?
-2. Un nuovo elemento sticky in alto deve avere `data-sticky-top`, altrimenti la zona sensibile finisce sotto di lui.
+2. Un nuovo elemento sticky in alto deve avere `data-sticky-top`, altrimenti la zona sensibile finisce sotto di lui. Dal 2026-10-28 c'è un solo elemento sticky (vedi sotto): meglio aggiungere ciò che deve restare in alto DENTRO quel contenitore.
+
+### Pagine coperte dalla fascia / auto-scroll che parte troppo presto (2026-10-28)
+
+- L'altezza della parte fissa in alto si calcola in un solo punto: il contenitore `data-testid="app-sticky"` in `layouts/app.blade.php` (header + fascia del timone portata con `@teleport('#timone-sticky-slot')` da `grid.blade.php`). Un ResizeObserver scrive `--app-sticky-height` sull'`<html>`; vale `0px` se il contenitore non è sticky (sotto i 640 px col timone).
+- Pagine finite sotto la fascia dopo un focus/`scrollIntoView`: controllare in DevTools che `--app-sticky-height` corrisponda all'altezza del contenitore e che `html` abbia `scroll-padding-top: calc(var(--app-sticky-height) + .5rem)` (`resources/css/app.css`).
+- Auto-scroll del drag che parte troppo presto o troppo tardi: la zona sensibile superiore parte dal fondo dell'elemento `data-sticky-top` (`stickyTopEdge()` in `resources/js/drag-autoscroll.js`); se qualcuno aggiunge un altro sticky fuori dal contenitore, la zona finisce sotto di lui.
+- Riga della selezione che non compare: c'è solo con la modalità selezione attiva; se la fascia non compare affatto, `#timone-sticky-slot` manca nel layout o Alpine non è partito (il teleport lo fa Alpine).
+- Nei test headless su macOS: Ctrl+clic è il tasto destro (nessun `click`), usare ⌘; `Emulation.setDeviceMetricsOverride` di Chrome può far perdere gli eventi del mouse simulati: meglio `--window-size`.
 3. Se la lista delle pagine viene messa in un `div` con `overflow-y: auto`, il gestore scorre quel `div` (il primo antenato scrollabile del punto sotto il puntatore), non la finestra.
 
 Verifica rapida in console durante un drag: `document.dispatchEvent(new DragEvent('dragover', { clientY: innerHeight - 5 }))` dopo un `dragstart` deve far scorrere la pagina.

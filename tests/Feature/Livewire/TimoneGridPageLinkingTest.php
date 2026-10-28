@@ -6,6 +6,7 @@ use App\Events\PagesBlockMoved;
 use App\Livewire\Timone\Grid;
 use App\Models\PageGroup;
 use App\Models\User;
+use App\Support\PageGroupLinker;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 
@@ -301,14 +302,26 @@ test('a guest cannot unlink selected pages from a group', function () {
     expect($pages[0]->fresh()->page_group_id)->toBe($group->id);
 });
 
-test('the "scollega selezionate dal gruppo" button appears in the selection toolbar', function () {
+test('the "scollega selezionate dal gruppo" button is always in the selection bar, enabled only for grouped pages', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    $page = $issue->pages()->orderBy('pages.position')->first();
+    $pages = $issue->pages()->orderBy('pages.position')->get();
+
+    // 2026-10-28: le azioni non disponibili restano al loro posto, disattivate
+    // con il motivo (prima il bottone era sempre attivo e il server rispondeva).
+    $html = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
+        ->call('toggleSelectionMode')
+        ->call('togglePageSelection', $pages[0]->id)
+        ->html();
+
+    expect($html)->toContain('title="Nessuna pagina selezionata fa parte di un gruppo" data-action="unlink" data-disabled="1"')
+        ->not->toContain('wire:click="unlinkSelectedFromGroup"');
+
+    PageGroupLinker::link($issue, collect([$pages[0], $pages[1]]));
 
     $html = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('toggleSelectionMode')
-        ->call('togglePageSelection', $page->id)
+        ->call('togglePageSelection', $pages[0]->id)
         ->html();
 
     expect($html)->toContain('wire:click="unlinkSelectedFromGroup"');

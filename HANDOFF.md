@@ -1895,3 +1895,30 @@ Segnalazione dell'utente: «in produzione non mi fa aprire il dropdown in naviga
 - **AppServiceProvider**: su **richiesta esplicita dell'utente** («riporta nel repo la versione di produzione dell'AppServiceProvider») il file è stato sostituito con la versione di produzione incollata dall'utente (binding `RequestRootSignedUploadUrl` commentato; macro `alternateHasCorrectSignature`, `alternateHasValidSignature`, `Request::hasValidSignature` che verificano la firma su `APP_URL`; motivo dato dall'utente: «altrimenti non si possono caricare foto»). Contenuto identico, solo gli a capo ricostruiti (nell'incolla erano persi); nessun formatter eseguito sul file. Prima d'ora il repository aveva un'altra versione: ogni deploy dal repository avrebbe sovrascritto quella di produzione. Il test `the container hands Livewire the request-root signer` (verificava il binding commentato) è sostituito da `a signed URL stays valid when the request reaches the app with an internal host (behind the proxy)`. L'IDE segnala `\URL` come tipo non definito: è l'alias globale di Laravel, a runtime funziona (debito #46b in `docs/11`).
 - Suite locale 871 passati + 46 saltati (in shell pulita: con le variabili del server di prova caricate nella stessa shell 13 test falliscono per `APP_URL`/sessione — da ricordare).
 
+## Sessione 2026-10-28 (continuazione) — Azioni sulle pagine selezionate nella fascia sticky
+
+Richiesta dell'utente (prompt «pannello azioni sulle pagine nella fascia sticky», Fase 0 di analisi mostrata e approvata: teleport nel contenitore del layout, scorciatoie esistenti mantenute senza aggiungerne per «Scollega», titolo della barra solo per screen reader).
+
+### Fase 0 (misure prima)
+Header 65 px + fascia 109 px = 174 px (23% di 768) a 1366 e 1920, zoom indifferente; pannello selezione fuori fascia di 78 px (2 righe) → 34% a 1366; scorrendo in fondo non era visibile.
+
+### Cosa è stato fatto
+- **Un solo sticky**: `layouts/app.blade.php` ha il contenitore `sticky top-0 z-40` (`data-testid="app-sticky"`, `data-sticky-top`) con header e `#timone-sticky-slot` (sfondo grigio, nascosto se vuoto via `has-[]`); sotto i 640 px col timone diventa `static` (`max-sm:has-[#timone-sticky-slot>*]:static`). Misura unica `--app-sticky-height` (0 se non sticky) → `scroll-padding-top` (`resources/css/app.css`) e auto-scroll del drag. Tolti `--app-header-height` e `--timone-sticky-height`.
+- **Fascia** in `grid.blade.php` con `@teleport('#timone-sticky-slot')` (scope Alpine e `$wire` del componente invariati); toast e poll di fallback spostati fuori dalla fascia; titolo `sr-only`; spaziature ridotte; bottone ⌃ (`collapsed`, localStorage `timone.stickyCollapsed` con try/catch) e riga compatta nel riepilogo (`summary-compact`).
+- **Riga di selezione** `partials/selection-bar.blade.php`: etichetta e intervalli (`App\Support\PageSelectionActions::ranges()`), Deseleziona/Tutte, Stato, Collega, Scollega/Blocca/Sblocca (in riga da 1100 px, sotto in «Altro ⋯»); azioni non disponibili `aria-disabled` con motivo (`PageSelectionActions::describe()`); solo seleziona/deseleziona per chi non è redazione; errori `locked`/`link` e `$bulkResultMessage` spostati nella fascia. **Metodi delle azioni non modificati.**
+- **Tempo reale**: `Grid::render()` interseca `$selectedPageIds` con le pagine esistenti.
+- Scorciatoie: quelle esistenti (Esc, Ctrl/⌘+A, Ctrl/⌘+Shift+G), ora indicate nei tooltip.
+
+### Verifiche (Chrome headless, clic reali)
+- Altezza: 138 px senza selezione, **169 px con la riga di selezione** a 1366×768 (25% dell'area visibile di 681 px, 22% della finestra), 134 px compressa; uguale a 1920×1080 (17%); zoom S/M/L indifferente. A 1024 px i comandi vanno su due righe (219 px). Telefono: contenitore static, misura 0.
+- ⌘+clic su 3 pagine in fondo → «3 pagine selezionate: 62–64», Collega cliccato nella fascia senza scrollare → gruppo creato, scroll invariato, Collega poi disattivato con «Sono già collegate in un gruppo»; Esc deseleziona.
+- Pagina portata in vista con `scrollIntoView` inizia 8 px sotto la fascia (non coperta). Auto-scroll: su sotto la fascia scorre in su, al centro fermo, in fondo scorre in giù.
+- Popover «⋯» dei contenuti (z-60) sopra la fascia (z-40) anche dove si sovrappongono; Commerciale: solo «Deseleziona» e «Tutte»; «Altro ⋯» a 1024 px con i motivi; nessun errore/avviso in console.
+- Strumento di prova: su macOS Ctrl+clic = tasto destro (usare ⌘), e l'emulazione della dimensione di Chrome faceva perdere i clic simulati (usato `--window-size`): annotato in `docs/10-debugging.md`.
+
+### Test
+Nuovo `tests/Feature/Livewire/StickySelectionBarTest.php` (6). Aggiornati `ContentClickAndEyeTest` (fascia teletrasportata, nessun sticky nel componente) e `TimoneGridPageLinkingTest` («Scollega» sempre presente, disattivato con motivo senza gruppo). Suite locale 877 passati + 46 saltati. File protetti non toccati.
+
+### Documentazione
+`MANUALE_UTENTE.md` (§3), `docs/02`, `docs/10-debugging.md`, `docs/CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`, commento in `resources/js/drag-autoscroll.js`.
+

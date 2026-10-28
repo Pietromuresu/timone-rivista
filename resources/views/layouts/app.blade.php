@@ -16,24 +16,26 @@
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-            {{-- Fase 1, bug 1 (2026-10-26): header fisso in alto. `sticky`
-                 e non `fixed`: resta nel flusso, quindi il contenuto non va
-                 compensato con un padding da tenere allineato all'altezza
-                 (che cambia col menu mobile aperto). z-40: sopra le pagine
-                 del timone (badge z-10, menu export z-10), sotto modali,
-                 dropdown e toast (z-50). Il drag&drop nativo disegna il
-                 fantasma sopra tutto. data-sticky-top: l'auto-scroll
-                 durante il trascinamento parte dal fondo della fascia
-                 sticky, non dal bordo della finestra coperto dall'header
-                 (resources/js/drag-autoscroll.js, revisione 2, Fase 1, bug 4). --}}
-            {{-- Fase 6 (2026-10-27): l'altezza reale dell'header (cambia col
-                 menu mobile) va in --app-header-height, così la barra di
-                 riepilogo del timone (sticky) si ferma subito sotto. --}}
+            {{-- Fase 1, bug 1 (2026-10-26): header fisso in alto, `sticky` e non
+                 `fixed` (resta nel flusso, niente padding da allineare). --}}
+            {{-- 2026-10-28 (azioni sulla selezione nella fascia sticky): UN
+                 SOLO contenitore sticky top-0 per header + fascia del timone
+                 (riepilogo, comandi, azioni sulla selezione). La fascia sta in
+                 Timone\Grid e arriva qui con @teleport('#timone-sticky-slot'):
+                 niente più secondo sticky con un `top` calcolato. L'altezza
+                 dell'intero contenitore, misurata solo qui, va in
+                 --app-sticky-height: la usano scroll-padding-top
+                 (resources/css/app.css) e, tramite data-sticky-top, l'auto-scroll
+                 del drag (resources/js/drag-autoscroll.js). Sotto i 640 px, se
+                 c'è la fascia del timone, il contenitore smette di essere
+                 sticky (su un telefono coprirebbe mezzo schermo) e la misura
+                 vale 0. z-40: sotto modali, dropdown, popover e toast (z-50). --}}
             <div
-                class="sticky top-0 z-40 shadow-sm"
+                class="sticky top-0 z-40 shadow-sm max-sm:has-[#timone-sticky-slot>*]:static"
                 data-sticky-top
+                data-testid="app-sticky"
                 x-data
-                x-init="const set = () => document.documentElement.style.setProperty('--app-header-height', $el.offsetHeight + 'px'); set(); new ResizeObserver(set).observe($el)"
+                x-init="const set = () => document.documentElement.style.setProperty('--app-sticky-height', (getComputedStyle($el).position === 'sticky' ? $el.offsetHeight : 0) + 'px'); set(); new ResizeObserver(set).observe($el); window.addEventListener('resize', set)"
             >
                 @include('layouts.navigation')
 
@@ -45,6 +47,12 @@
                         </div>
                     </header>
                 @endisset
+
+                {{-- Destinazione della fascia del timone: vuota (e nascosta) sulle
+                     altre pagine. Lo sfondo copre ciò che scorre sotto. --}}
+                <div class="hidden has-[#timone-sticky-slot>*]:block bg-gray-100 dark:bg-gray-900 pt-1 pb-1">
+                    <div id="timone-sticky-slot" class="max-w-7xl mx-auto sm:px-6 lg:px-8"></div>
+                </div>
             </div>
 
             <!-- Page Content -->

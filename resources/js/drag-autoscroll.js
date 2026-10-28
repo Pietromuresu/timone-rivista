@@ -21,7 +21,8 @@
  * con overflow scrollabile, altrimenti la finestra) e scorre con una
  * velocità che cresce avvicinandosi al bordo. Il bordo superiore della
  * finestra è il fondo della fascia sticky: gli elementi marcati
- * `data-sticky-top` (layouts/app.blade.php, summary-bar). Sortable ha
+ * `data-sticky-top` (dal 2026-10-28 uno solo: il contenitore sticky di
+ * layouts/app.blade.php con header e fascia del timone). Sortable ha
  * `scroll: false` (timone-alpine.js) per non sommare due scroll.
  */
 

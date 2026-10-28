@@ -65,68 +65,52 @@
         "
     @endauth
 >
-    {{-- Revisione 2, Fase 2.2 (2026-10-27): un'unica fascia sticky sotto
-         l'header con il riepilogo (Fase 6) e i comandi del timone (zoom,
-         viste, pagine interne, esporta…), che prima scorrevano via con le
-         pagine. z-30: sopra le card, sotto header (z-40) e modali (z-50).
-         data-sticky-top: l'auto-scroll del drag parte dal suo fondo
-         (resources/js/drag-autoscroll.js). La sua altezza, misurata qui, va
-         in --timone-sticky-height e quindi in scroll-padding-top
-         (resources/css/app.css): una pagina portata in vista col focus o
-         con scrollIntoView non finisce sotto la fascia. Sticky da 640 px in
-         su (sm:): su un telefono la fascia va su più righe (~280 px) e
-         coprirebbe un terzo dello schermo; lì scorre con la pagina e la
-         misura vale 0. --}}
+    {{-- Fascia del timone: riepilogo (Fase 6), comandi (revisione 2, Fase
+         2.2) e, dal 2026-10-28, azioni sulla selezione. Con @teleport finisce
+         nel contenitore sticky unico del layout (#timone-sticky-slot in
+         layouts/app.blade.php), insieme all'header: un solo sticky top-0, una
+         sola altezza misurata (--app-sticky-height), niente più `top`
+         calcolato a mano. Lo scope Alpine resta quello del componente
+         (scorciatoie, $wire). «Comprimi» riduce il riepilogo a una riga ed è
+         ricordato nel browser (localStorage, con try/catch: in navigazione
+         privata può mancare). --}}
+    @teleport('#timone-sticky-slot')
     <div
-        class="sm:sticky z-30 -mx-1 px-3 py-2 space-y-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur shadow-sm"
-        style="top: var(--app-header-height, 0px);"
-        data-sticky-top
+        class="px-3 py-1 space-y-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm"
         data-testid="timone-sticky-band"
-        x-data
-        x-init="const set = () => document.documentElement.style.setProperty('--timone-sticky-height', (getComputedStyle($el).position === 'sticky' ? $el.offsetHeight : 0) + 'px'); set(); new ResizeObserver(set).observe($el); window.addEventListener('resize', set)"
-        x-on:remove="document.documentElement.style.removeProperty('--timone-sticky-height')"
+        x-data="{
+            collapsed: false,
+            init() { try { this.collapsed = window.localStorage.getItem('timone.stickyCollapsed') === '1'; } catch (e) {} },
+            toggleCollapsed() {
+                this.collapsed = ! this.collapsed;
+                try { window.localStorage.setItem('timone.stickyCollapsed', this.collapsed ? '1' : '0'); } catch (e) {}
+            },
+        }"
     >
-    @include('livewire.timone.partials.summary-bar')
+    <div class="flex items-start gap-2">
+        <div class="flex-1 min-w-0">
+            @include('livewire.timone.partials.summary-bar')
+        </div>
+        <button
+            type="button"
+            x-on:click="toggleCollapsed()"
+            :aria-expanded="(! collapsed).toString()"
+            :title="collapsed ? 'Espandi il riepilogo' : 'Comprimi il riepilogo a una riga'"
+            class="shrink-0 rounded border border-gray-200 dark:border-gray-700 px-1.5 text-xs text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"
+            data-testid="sticky-collapse"
+        ><span x-text="collapsed ? '⌄' : '⌃'">⌃</span></button>
+    </div>
 
-    {{-- Toast leggero per un cambiamento arrivato da un altro utente
-         (richiesta: "senza essere invasivo") — nessuno stato server, si
-         auto-nasconde da solo dopo 4s, alimentato dall'evento browser
-         'remote-change' dispatchato da Grid::notifyRemoteChange() da
-         ognuno dei listener broadcast già esistenti (#[On('echo-presence:...')])
-         E da checkForUpdates() (fallback a polling, vedi sotto). --}}
-    <div
-        x-show="remoteToast"
-        x-transition
-        x-text="remoteToast"
-        class="fixed bottom-4 right-4 z-50 max-w-xs rounded-lg bg-gray-900 dark:bg-gray-700 text-white text-sm px-4 py-2 shadow-lg"
-        style="display: none;"
-    ></div>
-
-    {{-- Fallback a polling (2026-09-01, sostituisce il precedente
-         setInterval JS + $wire.pollRefresh()): l'elemento con wire:poll
-         viene montato nel DOM SOLO mentre i websocket non sono connessi
-         (x-if, non x-show — un elemento con display:none avrebbe comunque
-         wire:poll attivo, x-if invece lo rimuove/reinserisce davvero dal
-         DOM, che è come Livewire capisce se un wire:poll è "presente")
-         E mentre nessun drag&drop è in corso su questo client: un poll
-         che arriva a metà di un trascinamento potrebbe far ripartire il
-         morph di Livewire sull'elemento che Sortable sta ancora
-         manipolando a mano, con risultati visivi imprevedibili — non un
-         problema di dati (nulla è ancora scritto finché il drop non
-         chiama $wire.movePage), solo di UI. `$store.pagePresence.dragging`
-         è impostato dagli stessi hook onStart/onEnd di Sortable già usati
-         per il badge "chi sta modificando cosa" (resources/js/app.js). --}}
-    <template x-if="$store.realtimeFallback && ! $store.realtimeFallback.connected && ! $store.pagePresence?.dragging">
-        <div wire:poll.1s="checkForUpdates" aria-hidden="true" style="display: none;"></div>
-    </template>
 
     {{-- Bottoni più compatti dentro la fascia sticky (selettori [&_…] di
          Tailwind 3.4): occupa meno altezza sopra le pagine senza cambiare il
          markup dei singoli bottoni. --}}
-    <div class="flex items-center justify-between gap-x-3 gap-y-1.5 flex-wrap border-t border-gray-100 dark:border-gray-700 pt-2 [&_button]:!py-1 [&_button]:!px-2 [&_button]:!text-xs" data-testid="timone-toolbar">
+    <div class="flex items-center gap-x-3 gap-y-1.5 flex-wrap border-t border-gray-100 dark:border-gray-700 pt-1 [&_button]:!py-0.5 [&_button]:!px-2 [&_button]:!text-xs" data-testid="timone-toolbar">
         {{-- Fase 2 (2026-10-26): pagine interne e copertine contate a parte,
              così nessuno deve sommare o sottrarre a mente. --}}
-        <h3 class="font-medium text-sm text-gray-700 dark:text-gray-300">
+        {{-- 2026-10-28: titolo solo per gli screen reader — ripeteva il
+             riepilogo e da solo occupava una riga della fascia. --}}
+        <h3 class="sr-only">
             Timone &middot; {{ $issue->total_pages }} pagine interne
             <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
                 &middot; copertine {{ $covers->count() }}
@@ -284,7 +268,41 @@
         </div>
     </div>
 
+    @include('livewire.timone.partials.selection-bar')
     </div>{{-- /timone-sticky-band --}}
+    @endteleport
+
+    {{-- Toast leggero per un cambiamento arrivato da un altro utente
+         (richiesta: "senza essere invasivo") — nessuno stato server, si
+         auto-nasconde da solo dopo 4s, alimentato dall'evento browser
+         'remote-change' dispatchato da Grid::notifyRemoteChange() da
+         ognuno dei listener broadcast già esistenti (#[On('echo-presence:...')])
+         E da checkForUpdates() (fallback a polling, vedi sotto). --}}
+    <div
+        x-show="remoteToast"
+        x-transition
+        x-text="remoteToast"
+        class="fixed bottom-4 right-4 z-50 max-w-xs rounded-lg bg-gray-900 dark:bg-gray-700 text-white text-sm px-4 py-2 shadow-lg"
+        style="display: none;"
+    ></div>
+
+    {{-- Fallback a polling (2026-09-01, sostituisce il precedente
+         setInterval JS + $wire.pollRefresh()): l'elemento con wire:poll
+         viene montato nel DOM SOLO mentre i websocket non sono connessi
+         (x-if, non x-show — un elemento con display:none avrebbe comunque
+         wire:poll attivo, x-if invece lo rimuove/reinserisce davvero dal
+         DOM, che è come Livewire capisce se un wire:poll è "presente")
+         E mentre nessun drag&drop è in corso su questo client: un poll
+         che arriva a metà di un trascinamento potrebbe far ripartire il
+         morph di Livewire sull'elemento che Sortable sta ancora
+         manipolando a mano, con risultati visivi imprevedibili — non un
+         problema di dati (nulla è ancora scritto finché il drop non
+         chiama $wire.movePage), solo di UI. `$store.pagePresence.dragging`
+         è impostato dagli stessi hook onStart/onEnd di Sortable già usati
+         per il badge "chi sta modificando cosa" (resources/js/app.js). --}}
+    <template x-if="$store.realtimeFallback && ! $store.realtimeFallback.connected && ! $store.pagePresence?.dragging">
+        <div wire:poll.1s="checkForUpdates" aria-hidden="true" style="display: none;"></div>
+    </template>
 
     {{-- Componente a sé (bottone + pannello insieme, non separabili come
          gli altri toggle qui sopra che sono proprietà di Grid.php) — la
@@ -578,9 +596,6 @@
         </p>
     @endif
 
-    @error('locked')
-        <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">🔒 {{ $message }}</p>
-    @enderror
 
     @error('pdfRequired')
         <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">📄 {{ $message }}</p>
@@ -592,85 +607,7 @@
         <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2" data-testid="grid-error">↔ {{ $message }}</p>
     @enderror
 
-    @error('link')
-        <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">🔗 {{ $message }}</p>
-    @enderror
 
-    @if ($selectionMode)
-        <div class="flex flex-wrap items-center gap-2 text-xs bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-2">
-            <span class="font-medium text-indigo-700 dark:text-indigo-300">
-                ☑️ {{ count($selectedPageIds) }} {{ count($selectedPageIds) === 1 ? 'pagina selezionata' : 'pagine selezionate' }}
-            </span>
-
-            <button type="button" wire:click="selectAllPages" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
-                Seleziona tutte
-            </button>
-            <button type="button" wire:click="clearSelection" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
-                Deseleziona tutte
-            </button>
-
-            @if (! empty($selectedPageIds))
-                <span class="w-px h-4 bg-indigo-300 dark:bg-indigo-700"></span>
-
-                {{-- Revisione 2, Fase 4.1: stato, blocco e gruppi solo per la redazione. --}}
-                @if ($abilities->editsTimone())
-                <label class="flex items-center gap-1">
-                    Cambia stato in:
-                    <select
-                        x-data
-                        x-on:change="if ($event.target.value) { $wire.bulkChangeStatus($event.target.value); $event.target.value = ''; }"
-                        class="rounded border-indigo-300 dark:border-indigo-700 dark:bg-gray-900 text-xs py-1"
-                    >
-                        <option value="">Scegli...</option>
-                        @foreach (\App\Enums\PageStatus::cases() as $status)
-                            <option value="{{ $status->value }}">{{ $status->label() }}</option>
-                        @endforeach
-                    </select>
-                </label>
-
-                <button type="button" wire:click="bulkToggleLock(true)" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
-                    🔒 Blocca selezionate
-                </button>
-                <button type="button" wire:click="bulkToggleLock(false)" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
-                    🔓 Sblocca selezionate
-                </button>
-
-                {{-- Fase 2.3: "catena" di pagine — collegarle qui evita di
-                     dover rifare la selezione multipla ogni volta che si
-                     vuole spostarle insieme (vedi Grid::linkSelectedPages(),
-                     movePage() le riconosce e le sposta come blocco anche
-                     trascinando una sola pagina del gruppo). --}}
-                @if (count($selectedPageIds) >= 2)
-                    <button type="button" wire:click="linkSelectedPages" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
-                        🔗 Collega selezionate
-                    </button>
-                @endif
-                @endif
-
-                {{-- Punto 4.6 del prompt (2026-09-02, deciso esplicitamente
-                     con l'utente): scollega SOLO le pagine selezionate dal
-                     proprio gruppo, lasciando le altre pagine di quel
-                     gruppo ancora collegate — a differenza del bottone 🔗
-                     sul badge del gruppo (tutto il gruppo). Riusa
-                     App\Support\PageGroupLinker::removeFromGroup(), utile
-                     per qualsiasi gruppo, non solo quelli creati da un
-                     contenuto PDF multi-pagina. Mostrato non appena c'è
-                     una selezione (come gli altri bottoni bulk sopra):
-                     se nessuna pagina selezionata è in un gruppo, il
-                     backend lo segnala senza fare nulla, stesso principio
-                     "nessun fallimento silenzioso" già in uso qui. --}}
-                <button type="button" wire:click="unlinkSelectedFromGroup" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
-                    ✂️ Scollega selezionate dal gruppo
-                </button>
-            @endif
-        </div>
-
-        @if ($bulkResultMessage)
-            <p class="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">
-                ✅ {{ $bulkResultMessage }}
-            </p>
-        @endif
-    @endif
 
     <template x-if="$store.realtimeFallback && ! $store.realtimeFallback.connected">
         <p class="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">

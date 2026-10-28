@@ -227,6 +227,14 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - Il PDF si prepara in coda: nel riquadro lo stato passa da «In coda» a «In generazione» e poi a «Pronto», con «Scarica». Intanto si può continuare a lavorare. Ogni nuova esportazione sostituisce la precedente.
 - Spuntando «Bassa risoluzione per anteprima» si ottiene un file leggero da mandare via mail (a parte, non sostituisce quello a qualità piena).
 
+## Azioni sulle pagine nella fascia fissa (2026-10-28)
+
+- Le azioni sulle pagine selezionate sono sempre in alto, nella fascia fissa del timone, insieme al riepilogo e ai comandi: si possono selezionare pagine in fondo al timone e collegarle, bloccarle o cambiarne lo stato senza tornare su.
+- La riga dice cosa è selezionato («3 pagine selezionate: 12–14»). Un'azione che non si può fare resta al suo posto ma attenuata: passandoci sopra col mouse spiega perché. Su schermi stretti alcune azioni sono nel menu «Altro ⋯».
+- Scorciatoie da tastiera (non mentre si scrive in un campo): Esc deseleziona tutto, Ctrl+A (⌘+A su Mac) seleziona tutte le pagine, Ctrl+Shift+G (⌘+Shift+G) collega o scollega le pagine selezionate. Su Mac si seleziona con ⌘+clic.
+- Comprimere la fascia: bottone ⌃ a destra del riepilogo, che lo riduce a una riga corta; ⌄ per riaprirlo. La scelta resta salvata nel browser.
+- Il Commerciale vede solo seleziona e deseleziona: le altre azioni sono della redazione.
+
 ## Punti di attenzione
 
 - Vulnerabilità note: Livewire 3.8.2 (XSS) e Laravel 12.64 vanno aggiornati (composer audit: 19 advisory).
