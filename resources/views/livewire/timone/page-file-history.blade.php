@@ -20,7 +20,7 @@
                                         @endif
                                     </p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                                        {{ $file->uploader->name }} &middot; {{ $file->created_at->format('d/m/Y H:i') }}
+                                        {{-- Fase 4.3: l'utente eliminato lascia i suoi file (uploaded_by NULL). --}}{{ $file->uploader?->name ?? 'Utente eliminato' }} &middot; {{ $file->created_at->format('d/m/Y H:i') }}
                                     </p>
                                 </div>
 

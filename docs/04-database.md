@@ -121,7 +121,7 @@ Numeri e riviste **già esistenti** al momento della migration:
 ### `contents`
 - **Scopo**: articolo o pubblicità del numero, assegnato o no.
 - **Colonne**: `type` (`articolo`/`pubblicita`), `title`, `section_id`, `occupancy_twelfths` (smallint unsigned, NOT NULL, dal 2026-10-27: occupazione totale in dodicesimi di pagina, 30 = 2 pagine e mezza; vedi `App\Support\PageOccupancy`), `archived_at`.
-- `is_placeholder` (boolean, default false, Fase 5 — migration `2026_10_27_300000_add_placeholder_ads`): pubblicità segnaposto creata dalle "pubblicità previste" di un numero.
+- `is_placeholder` (boolean, default false, Fase 5 — migration `2026_10_27_300000_add_placeholder_ads`): pubblicità segnaposto. Dalla revisione 2, Fase 3.1 (2026-10-28) è il valore memorizzato della regola «pubblicità senza cliente e senza file» (`App\Support\AdPlaceholder`, unico che la calcola); vale anche per le pubblicità create dal modulo col cliente vuoto. Riallineamento dei dati scritti con la regola precedente: `php artisan timone:placeholder-sync [--dry-run]`. Nessuna migration nella Fase 3: `advertisements.client` è nullable dalla stessa migration della Fase 5.
 - `file_fit` (string(16), nullable — revisione 2, Fase 2.4, migration `2026_10_27_610000_add_file_fit_columns`): scelta manuale del ritaglio dell'anteprima, `full_page` / `format` (`App\Enums\FileFit`); null = automatico dalle proporzioni del file.
 - **Colonna non più usata**: `page_occupancy` (decimal 5,2, il vecchio valore in pagine: `0.25/0.33/0.50/0.67` o N). Resa nullable dalla migration della Fase 3, non più letta né scritta; tiene i valori originali per il rollback.
 - **Indici**: `(issue_id, type)`.
@@ -154,14 +154,14 @@ Numeri e riviste **già esistenti** al momento della migration:
 
 ### `content_files`
 - **Scopo**: file allegati a un contenuto, **una riga per pagina del PDF**, ognuna con la propria copia del file.
-- **Colonne**: `disk` (default `local`), `path`, `thumbnail_path`, `original_name`, `mime_type`, `size`, `thumbnail_status` (`pending`/`processing`/`ready`/`failed`), `pdf_page_number`, `format_check_status`, `measured_width_mm`/`measured_height_mm`, `format_override_confirmed_by`/`_at`, `uploaded_by` (FK users, **cascadeOnDelete**).
+- **Colonne**: `disk` (default `local`), `path`, `thumbnail_path`, `original_name`, `mime_type`, `size`, `thumbnail_status` (`pending`/`processing`/`ready`/`failed`), `pdf_page_number`, `format_check_status`, `measured_width_mm`/`measured_height_mm`, `format_override_confirmed_by`/`_at`, `uploaded_by` (FK users, **nullOnDelete** dalla migration `2026_10_28_100000_keep_user_work_on_user_delete`, prima cascadeOnDelete: eliminare un utente cancellava i suoi file).
 - `aspect_ratio` (decimal 8,5, nullable — revisione 2, Fase 2.4): larghezza/altezza della pagina del file, misurata dalla miniatura quando viene generata (`App\Support\ContentFileAspectRatio`). Confrontata con il formato del numero (±5%) decide se il file è «a pagina intera» (si mostra solo la porzione del rettangolo) o «nel formato» (intero). Per i file caricati prima: `php artisan timone:file-ratios [--dry-run]`; finché è null l'anteprima resta intera, senza ritaglio.
 - **Scrive**: `ContentCreator`, job `GenerateContentFileThumbnail`, `Grid::confirmFormatOverride`.
 
 ### `page_files`
 - **LEGACY**: PDF caricati direttamente sulla pagina, prima del 2026-09-02. Nessun codice applicativo ne crea più. Restano per i dati storici e come fallback in `Page::previewFile()`. Si migrano con `timone:migrate-legacy-page-files` (vedi [08-job-e-scheduler.md](08-job-e-scheduler.md)).
 - **Colonne** come `content_files`, senza `mime_type`. `disk` ha default `public`.
-- `uploaded_by` è **cascadeOnDelete**.
+- `uploaded_by` è **nullOnDelete** (nullable) dal 2026-10-28, come in `content_files`.
 
 ### `page_groups`
 - **Scopo**: gruppo di pagine collegate.
@@ -170,8 +170,13 @@ Numeri e riviste **già esistenti** al momento della migration:
 
 ### `page_reorder_logs`
 - **Scopo**: storico degli spostamenti di pagina.
-- **Colonne**: `issue_id`, `page_id`, `user_id` (**cascade**), `from_position`, `to_position`, `created_at`.
+- **Colonne**: `issue_id`, `page_id`, `user_id` (**nullOnDelete**, nullable dal 2026-10-28; prima cascade), `from_position`, `to_position`, `created_at`.
 - **Indici**: `(issue_id, created_at)`.
+
+### `magazine_exports` (revisione 2, Fase 5, migration `2026_10_28_200000_create_magazine_exports_table`)
+- **Scopo**: stato e file del PDF sfogliabile di un numero, una riga per (numero, variante `full`/`preview`, unique): rigenerare aggiorna la riga e sostituisce il file.
+- **Colonne**: `issue_id` (cascade), `variant`, `status` (`queued`/`processing`/`ready`/`failed`, `App\Enums\MagazineExportStatus`), `disk`, `path` (`exports/issue-{id}/{variant}.pdf`), `size`, `page_count`, `missing_files` (contenuti disegnati «File mancante»), `error`, `requested_by` (nullOnDelete), `started_at`, `finished_at`.
+- **Scrive**: `App\Support\MagazineExport\MagazineExportRequester` (richiesta), `App\Jobs\GenerateMagazinePdf` (avanzamento). Eliminando un numero il file va nell'elenco di `DeleteStoredFiles` (`StoredFiles::forIssues()`).
 
 ### `activity_logs`
 - **Scopo**: cronologia generale (audit applicativo).
@@ -194,8 +199,8 @@ Numeri e riviste **già esistenti** al momento della migration:
 
 - **`activity_logs`, `page_reorder_logs`**: storico e audit della redazione. Non c'è nessuna pulizia automatica.
 - **`content_files` / `page_files` e i file fisici in `storage/app/private/`** (volume Docker `storage_data`): sono il materiale di stampa. Il DB senza i file (o viceversa) non è un backup completo.
-- **`users`**: per le cascade sopra, **eliminare un utente elimina le righe dei file che ha caricato e i suoi log di riordino**. I file fisici restano orfani su disco. Ogni utente può farlo su se stesso da `/profile` (`ProfileController::destroy`, `app/Http/Controllers/ProfileController.php:43`). Per disattivare un utente conviene togliergli l'accesso alle riviste o cambiare password, **non** cancellarlo. Vedi [11-debito-tecnico.md](11-debito-tecnico.md).
-- **`issues`**: cancellare un numero cancella a cascata pagine, contenuti, file (righe), gruppi e log di riordino. Nella UI non c'è nessun punto che cancelli un'issue o una rivista: in `app/` gli unici `->delete()` sono contenuto (`Grid.php:1626`, `AdReservations.php:68`), pagine in eccesso nel ridimensionamento (`Grid.php:309`) e utente su se stesso (`ProfileController.php:53`). Una cancellazione può quindi avvenire solo da DB o da tinker.
+- **`users`**: dal 2026-10-28 (revisione 2, Fase 4.3) eliminare un utente **non** cancella il suo lavoro: `content_files.uploaded_by`, `page_files.uploaded_by`, `page_reorder_logs.user_id` diventano NULL («Utente eliminato» in UI); spariscono solo i suoi accessi (`magazine_user`) e le sue sessioni. Lo fa solo un admin (`App\Support\Deletion\UserDeletion`, `UserPolicy::delete`: mai sé stesso, mai l'ultimo admin); l'auto-eliminazione da `/profile` è stata tolta.
+- **`issues` / `magazines`**: cancellare un numero cancella a cascata pagine, contenuti, file (righe), gruppi e log di riordino; una rivista cancella i suoi numeri, rubriche e accessi. Dal 2026-10-28 (revisione 2, Fase 4.2) un admin può farlo dall'interfaccia (`App\Support\Deletion\IssueDeletion`/`MagazineDeletion`, conferma con password + nome): voce `issue.deleted`/`magazine.deleted` in `activity_logs` (con `issue_id` NULL) e nel log applicativo, file fisici cancellati dal job `DeleteStoredFiles` dopo il commit. **Definitiva**: nessun SoftDeletes, quindi l'unico recupero è il backup.
 - **Riduzione delle pagine totali** (`Grid.php:309`): cancella le pagine oltre il nuovo totale e, a cascata, i relativi `page_content` e `page_files`. È preceduta da una conferma se ci sono contenuti.
 - **Volume `mysql_data`**: `docker compose down -v` lo distrugge. **Non usarlo mai in produzione.**
 

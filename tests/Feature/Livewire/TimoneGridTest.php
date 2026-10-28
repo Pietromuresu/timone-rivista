@@ -37,7 +37,8 @@ test('an invalid view mode is ignored', function () {
 test('the doppia view mode renders editable status selects and content drop targets, not the static read-only markup', function () {
     $issue = Issue::factory()->create(['total_pages' => 4]);
 
-    $html = Livewire::test(Grid::class, ['issue' => $issue])
+    // Revisione 2, Fase 4.1: i comandi dipendono dal ruolo — un redattore li vede.
+    $html = Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
         ->call('setViewMode', 'doppia')
         ->html();
 
@@ -48,7 +49,8 @@ test('the doppia view mode renders editable status selects and content drop targ
 test('the doppia view mode wraps every page in a single flat sortable container, not one per spread', function () {
     $issue = Issue::factory()->create(['total_pages' => 4]);
 
-    $html = Livewire::test(Grid::class, ['issue' => $issue])
+    // Revisione 2, Fase 4.1: i comandi dipendono dal ruolo — un redattore li vede.
+    $html = Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
         ->call('setViewMode', 'doppia')
         ->html();
 
@@ -84,7 +86,8 @@ test('in doppia view mode only the second page of a spread pair gets the visual 
     $issue = Issue::factory()->create(['total_pages' => 4]);
     $pages = $issue->pages()->orderBy('pages.position')->get()->values();
 
-    $html = Livewire::test(Grid::class, ['issue' => $issue])
+    // Revisione 2, Fase 4.1: i comandi dipendono dal ruolo — un redattore li vede.
+    $html = Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
         ->call('setViewMode', 'doppia')
         ->html();
 
@@ -145,7 +148,7 @@ test('internal pages are numbered from 1 and the four covers are shown apart wit
     $issue = Issue::factory()->create(['total_pages' => 4]);
     $pages = $issue->pages()->get();
 
-    $html = Livewire::test(Grid::class, ['issue' => $issue])->html();
+    $html = Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])->html();
 
     // Isola il blocco di ogni card via il suo wire:key univoco.
     $cardBlock = function (string $html, int $pageId): string {

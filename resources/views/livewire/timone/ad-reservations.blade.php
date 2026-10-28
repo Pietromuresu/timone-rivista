@@ -68,7 +68,8 @@
                                 @endif
                             </div>
 
-                            @can('update', $issue)
+                            {{-- Revisione 2, Fase 4.1: anche il Commerciale elimina una prenotazione (è una pubblicità). --}}
+                            @can('workOnAds', $issue)
                                 @if ($row['status'] === \App\Enums\AdMaterialStatus::Prenotato)
                                     <button
                                         type="button"

@@ -50,36 +50,15 @@ test('email verification status is unchanged when the email address is unchanged
     $this->assertNotNull($user->refresh()->email_verified_at);
 });
 
-test('user can delete their account', function () {
+// Revisione 2, Fase 4.3 (2026-10-28): l'auto-eliminazione dal profilo è
+// stata tolta (prima: «user can delete their account», «correct password
+// must be provided to delete account»). Eliminare un utente lo fa solo un
+// admin: tests/Feature/Livewire/DeletionTest.php.
+test('the profile no longer offers account self-deletion', function () {
     $user = User::factory()->create();
 
-    $response = $this
-        ->actingAs($user)
-        ->delete('/profile', [
-            'password' => 'password',
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/');
-
-    $this->assertGuest();
-    $this->assertNull($user->fresh());
-});
-
-test('correct password must be provided to delete account', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->from('/profile')
-        ->delete('/profile', [
-            'password' => 'wrong-password',
-        ]);
-
-    $response
-        ->assertSessionHasErrorsIn('userDeletion', 'password')
-        ->assertRedirect('/profile');
+    $this->actingAs($user)->get('/profile')->assertOk()->assertDontSee('Elimina account')->assertDontSee('Delete Account');
+    $this->actingAs($user)->delete('/profile', ['password' => 'password'])->assertStatus(405);
 
     $this->assertNotNull($user->fresh());
 });

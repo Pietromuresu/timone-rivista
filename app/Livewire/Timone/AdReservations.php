@@ -67,7 +67,9 @@ class AdReservations extends Component
      */
     public function deleteReservation(int $contentId): void
     {
-        $this->authorize('update', $this->issue);
+        // Revisione 2, Fase 4.1: una prenotazione è sempre una pubblicità,
+        // quindi basta il permesso sulle pubblicità (anche il Commerciale).
+        $this->authorize('workOnAds', $this->issue);
 
         $advertisement = Advertisement::with('content')->whereHas(
             'content', fn ($query) => $query->whereKey($contentId)->where('issue_id', $this->issue->id)

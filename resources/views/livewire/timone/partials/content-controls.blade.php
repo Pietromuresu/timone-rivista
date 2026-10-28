@@ -9,8 +9,14 @@
        orizzontale) venivano tagliati e la select dello spazio non era
        raggiungibile. Nel popover ogni comando ha anche il testo e la
        scelta chiude il menu ($closeMenu).
-     Richiede $page, $content, $variant. --}}
+     Richiede $page, $content, $variant.
+     Revisione 2, Fase 4.1 (2026-10-28): chi non può cambiare questo
+     contenuto (il Commerciale su un articolo) vede i comandi disattivati
+     con il motivo nel tooltip; il server lo rifiuta comunque (ContentPolicy).
+     L'occhio resta: aprire il file è consultazione. --}}
 @php
+    $denied = isset($abilities) && ! $abilities->canChangeContent($content);
+    $deniedTitle = \App\Support\Permissions\TimoneAbilities::EDITORIAL_ONLY;
     $twelfths = (int) $content->pivot->occupied_twelfths;
     $isRow = $variant === 'row';
     $isMenu = $variant === 'popover';
@@ -23,6 +29,7 @@
     $buttonClasses = $isMenu
         ? 'flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700'
         : 'shrink-0 '.($isRow ? 'text-xs' : 'text-[10px]').' '.$muted;
+    $buttonClasses .= ' disabled:opacity-30 disabled:cursor-not-allowed';
     $selectClasses = match (true) {
         $isMenu => 'text-xs py-0.5 pl-1 pr-6',
         $isRow => 'text-xs py-0 pl-1 pr-6',
@@ -40,7 +47,8 @@
     x-on:blur="$store.pagePresence?.stopEditing({{ $page->id }})"
     wire:change="updateContentOccupancy({{ $page->id }}, {{ $content->id }}, parseInt($event.target.value))"
     @if ($isMenu) x-on:change="menuOpen = false" @endif
-    title="Spazio occupato su questa pagina"
+    @disabled($denied)
+    title="{{ $denied ? $deniedTitle : 'Spazio occupato su questa pagina' }}"
     aria-label="Spazio di {{ $content->displayLabel() }} su questa pagina"
     class="shrink-0 rounded border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 {{ $selectClasses }}"
 >
@@ -66,6 +74,9 @@
         'right' => ['→', 'Sposta a destra'],
     ];
 @endphp
+@if ($denied && $isMenu)
+    <p class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400" data-testid="editorial-only-note">🔒 {{ $deniedTitle }}.</p>
+@endif
 @if ($gridBlock && $gridBlock['kind'] === 'rect')
     <span class="{{ $isMenu ? 'flex items-center gap-1 px-2 py-1 text-xs' : 'contents' }}" data-testid="grid-arrows">
         @if ($isMenu)
@@ -75,9 +86,9 @@
             <button
                 type="button"
                 x-on:click.stop="$wire.moveContentOnGrid({{ $page->id }}, {{ $content->id }}, '{{ $direction }}')"
-                @disabled(! $gridBlock['moves'][$direction])
+                @disabled($denied || ! $gridBlock['moves'][$direction])
                 class="{{ $isMenu ? 'h-6 w-6 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700' : 'shrink-0 '.($isRow ? 'text-xs' : 'text-[10px]').' '.$muted }} disabled:opacity-30 disabled:cursor-not-allowed"
-                title="{{ $label }}{{ $gridBlock['moves'][$direction] ? '' : ' (non possibile: fuori pagina o posto occupato)' }}"
+                title="{{ $denied ? $deniedTitle : $label.($gridBlock['moves'][$direction] ? '' : ' (non possibile: fuori pagina o posto occupato)') }}"
                 aria-label="{{ $label }} {{ $content->displayLabel() }}"
                 data-testid="move-content-{{ $direction }}"
             >{{ $symbol }}</button>
@@ -86,9 +97,9 @@
     <button
         type="button"
         x-on:click.stop="{{ $closeMenu }}$wire.rotateContentOnGrid({{ $page->id }}, {{ $content->id }})"
-        @disabled(! $gridBlock['canRotate'])
-        class="{{ $buttonClasses }} disabled:opacity-30 disabled:cursor-not-allowed"
-        title="{{ $gridBlock['canRotate'] ? 'Ruota (verticale ↔ orizzontale)' : 'Non si può ruotare: è quadrato o ruotato non ci sta' }}"
+        @disabled($denied || ! $gridBlock['canRotate'])
+        class="{{ $buttonClasses }}"
+        title="{{ $denied ? $deniedTitle : ($gridBlock['canRotate'] ? 'Ruota (verticale ↔ orizzontale)' : 'Non si può ruotare: è quadrato o ruotato non ci sta') }}"
         aria-label="Ruota {{ $content->displayLabel() }}"
         data-testid="rotate-content"
     >⟳@if ($isMenu) <span>Ruota (verticale ↔ orizzontale)</span>@endif</button>
@@ -129,19 +140,22 @@
 <button
     type="button"
     x-on:click.stop="{{ $closeMenu }}$dispatch('open-content-edit', { contentId: {{ $content->id }} })"
+    @disabled($denied)
     class="{{ $buttonClasses }}"
-    title="Modifica il contenuto (rinomina: doppio click sul nome)"
+    title="{{ $denied ? 'Solo la redazione può modificare questo contenuto' : 'Modifica il contenuto (rinomina: doppio click sul nome)' }}"
     aria-label="Modifica {{ $content->displayLabel() }}"
 >✏️@if ($isMenu) <span>Modifica</span>@endif</button>
 <button
     type="button"
     x-on:click.stop="{{ $closeMenu }}const pos = prompt('Estendi anche alla pagina numero:'); if (pos) $wire.extendToPage({{ $content->id }}, parseInt(pos))"
+    @disabled($denied)
     class="{{ $buttonClasses }}"
-    title="Estendi questo contenuto a un'altra pagina"
+    title="{{ $denied ? $deniedTitle : 'Estendi questo contenuto a un\'altra pagina' }}"
 >↗@if ($isMenu) <span>Estendi a un'altra pagina</span>@endif</button>
 <button
     type="button"
     x-on:click.stop="{{ $closeMenu }}$wire.unassignContent({{ $content->id }}, {{ $page->id }})"
     class="{{ $buttonClasses }} {{ match ($variant) { 'overlay' => 'hover:text-red-400', 'popover' => 'text-red-700 dark:text-red-400', default => 'hover:text-red-600' } }}"
-    title="Rimuovi"
+    @disabled($denied)
+    title="{{ $denied ? $deniedTitle : 'Rimuovi' }}"
 >✕@if ($isMenu) <span>Rimuovi dalla pagina</span>@endif</button>

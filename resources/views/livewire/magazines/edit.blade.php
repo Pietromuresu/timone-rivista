@@ -86,6 +86,15 @@
                     </div>
                 </form>
             </div>
+
+            {{-- Revisione 2, Fase 4.2: eliminazione della rivista (solo admin, conferma in due passaggi). --}}
+            @can('delete', $magazine)
+                <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg border border-red-200 dark:border-red-900">
+                    <h3 class="text-base font-medium text-red-700 dark:text-red-400">Elimina la rivista</h3>
+                    <p class="mt-1 mb-3 text-sm text-gray-600 dark:text-gray-400">Elimina la rivista con tutti i suoi numeri, pagine, contenuti e file. Non si può annullare.</p>
+                    <livewire:admin.confirm-deletion kind="magazine" :target-id="$magazine->id" />
+                </div>
+            @endcan
         </div>
     </div>
 </div>

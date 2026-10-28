@@ -23,7 +23,13 @@
 | **Pagina bianca** | Pagina interna senza alcun contenuto (occupazione 0); sulla card «○ Vuota» | `PageFillStatus::Empty`, `PageContentType::Bianca` |
 | **Anteprima (di un contenuto)** | Immagine del PDF o dell'immagine di stampa allegati, generata in automatico: è la miniatura del contenuto nel timone (non esiste un'immagine separata) | `content_files.thumbnail_path`, `GenerateContentFileThumbnail` |
 | **Pubblicità prevista** | Pubblicità indicata per numero e formato creando un numero: diventa un segnaposto già posizionato (le prime 4 su tutte le copertine, le altre a pagine interne alterne) | `Issues\Create::$plannedAds`, `App\Enums\PlannedAdKind` |
-| **Segnaposto (pubblicità)** | Pubblicità senza inserzionista né PDF, titolo «Pubblicità 1/2 — da assegnare», tratteggiata nel timone; diventa vera quando riceve cliente, titolo proprio o PDF | `contents.is_placeholder`, `App\Support\AdPlacement\PlaceholderAdCreator` |
+| **Segnaposto (pubblicità)** | Pubblicità senza cliente e senza file (dalle pubblicità previste o dal modulo col cliente vuoto), titolo automatico «Pubblicità 1/2 — da assegnare» se il titolo è vuoto, tratteggiata nel timone; diventa vera quando riceve un cliente o un file (il titolo non conta, dal 2026-10-28) | `App\Support\AdPlaceholder`, `contents.is_placeholder`, `App\Support\AdPlacement\PlaceholderAdCreator` |
+| **Caricamento multiplo** | Riquadro «⇪ Carica più file» sotto «Nuovo contenuto»: un contenuto da assegnare per ogni file, caricati uno alla volta | `App\Livewire\Timone\BulkUpload`, `App\Support\BulkContentImporter` |
+| **Commerciale (ruolo)** | Dal 2026-10-28 crea, modifica e sposta solo le pubblicità (e pagine senza articoli) | `UserRole::handlesAds()`, `App\Support\Permissions\TimoneAbilities`, `ContentPolicy` |
+| **Eliminazione in due passaggi** | Riepilogo di cosa sparisce, poi password + nome digitato; definitiva, solo admin | `App\Livewire\Admin\ConfirmDeletion`, `App\Support\Deletion\*` |
+| **Utente eliminato** | Testo mostrato al posto del nome per file, spostamenti e cronologia di un utente eliminato | FK `nullOnDelete` (migration `2026_10_28_100000`) |
+| **PDF sfogliabile** | Export della rivista finita: una pagina A4 per pagina, in ordine di stampa, con i PDF dei contenuti al loro posto; generato in coda, qualità piena o leggera | `App\Support\MagazineExport\MagazinePdfComposer`, `App\Jobs\GenerateMagazinePdf`, tabella `magazine_exports` |
+| **File mancante** | Riquadro tratteggiato nel PDF sfogliabile per un contenuto senza file (o con il file assente/illeggibile) | `MagazinePdfComposer::drawMissing()` |
 | **Vetrina** | Pubblicità da ¼ di pagina (formato «Un quarto pagina») | `AdFormat::UnQuartoPagina` (3/12) |
 | **Piedino** | Pubblicità a fascia in basso, ⅓ di pagina | `AdFormat::Piedino` (4/12) |
 | **Pagina mista** | Pagina con contenuti editoriali e pubblicitari insieme | `PageContentType::Mista` |

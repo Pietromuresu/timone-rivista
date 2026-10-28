@@ -10,7 +10,7 @@ Da `Dockerfile`, stage `app` (`php:8.2-fpm-alpine`):
 
 | Pacchetto (apk) | Perché |
 |---|---|
-| `ghostscript` | Delegate PDF di ImageMagick: senza, nessuna miniatura né conteggio pagine |
+| `ghostscript` | Delegate PDF di ImageMagick: senza, nessuna miniatura né conteggio pagine. Dalla revisione 2, Fase 5 usato anche dall'export sfogliabile: riscrive in PDF 1.4 i sorgenti che FPDI non apre e crea la variante a bassa risoluzione (`App\Support\MagazineExport\Ghostscript`) |
 | `imagemagick` (+ `imagemagick-dev` in build) | Libreria usata da `ext-imagick` |
 | `libpng`, `libjpeg-turbo`, `freetype` (+ `-dev` in build) | Formati immagine per GD e Imagick |
 | `mysql-client` | Disponibile nel container `app` (es. `mysql`/`mysqldump` manuali) |
@@ -43,6 +43,8 @@ Altri componenti runtime: MySQL 8.4, Redis 7, Nginx (immagini Docker ufficiali, 
 | `livewire/livewire` | 3.8.2 (vincolo `^3.6`; v4 disponibile ma esclusa) | Tutte le schermate | `app/Livewire/*`, `config/livewire.php` |
 | `laravel/reverb` | 1.11.0 (ultima 1.12.0) | Server WebSocket self-hosted | servizio compose `reverb`, `config/reverb.php`, `config/broadcasting.php` |
 | `barryvdh/laravel-dompdf` | 3.1.2 | Export PDF del timone e del carico pubblicitario | `TimoneExportController.php:84`, `AdDashboardExportController.php:67` (`Pdf::loadView`) |
+| `setasign/fpdi` | 2.6.9 (revisione 2, Fase 5, scelta dell'utente) | Importa le pagine dei PDF caricati come oggetti vettoriali nel PDF sfogliabile. Versione gratuita: non legge i PDF con xref compresse, che vengono prima riscritti in 1.4 con Ghostscript | `app/Support/MagazineExport/MagazinePdfComposer.php` |
+| `tecnickcom/tcpdf` | 6.11.4 (revisione 2, Fase 5) | Composizione del PDF sfogliabile: ritaglio, layout `TwoPageRight`, segnalibri, font `dejavusans`. LGPL-3.0, ~25 MB (font) | `MagazinePdfComposer` (via `setasign\Fpdi\Tcpdf\Fpdi`) |
 | `spatie/pdf-to-image` | 3.3.0 (ultima 3.5.0) | Rendering PNG di una pagina PDF (wrapper su Imagick) | `app/Jobs/GenerateContentFileThumbnail.php:68`, `GeneratePageFileThumbnail.php:46` |
 | `laravel/tinker` | 2.11.1 (v3 disponibile) | REPL; **usato da `setup.sh`** per contare gli utenti | `setup.sh` passo 5 |
 | `fakerphp/faker` | 1.24.1 | Dati demo del seeder. È in `require` di proposito: deve funzionare anche nell'immagine `--no-dev` | `database/factories/*`, `DatabaseSeeder` |

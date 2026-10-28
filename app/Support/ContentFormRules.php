@@ -37,21 +37,24 @@ final class ContentFormRules
     }
 
     /**
-     * $placeholder (Fase 5): modificando una pubblicità segnaposto il
-     * cliente può restare vuoto — finché manca, resta un segnaposto.
+     * Revisione 2, Fase 3.1 (2026-10-28): per una pubblicità cliente e
+     * titolo sono facoltativi, in creazione come in modifica. Senza cliente
+     * (e senza file) è un segnaposto, col titolo vuoto riceve quello
+     * automatico — entrambe le cose le decide App\Support\AdPlaceholder,
+     * non la validazione. Il titolo resta obbligatorio per un articolo.
      *
      * @return array<string, mixed>
      */
-    public static function rules(Issue $issue, bool $placeholder = false): array
+    public static function rules(Issue $issue): array
     {
         return [
             'type' => 'required|in:articolo,pubblicita',
-            'title' => 'required|string|max:255',
+            'title' => 'required_if:type,articolo|nullable|string|max:255',
             'section_id' => 'nullable|exists:sections,id',
             'author' => 'nullable|string|max:180',
             'editorial_status' => 'required|in:'.implode(',', array_column(EditorialStatus::cases(), 'value')),
             'expected_length' => 'nullable|integer|min:1',
-            'client' => ($placeholder ? '' : 'required_if:type,pubblicita|').'nullable|string|max:180',
+            'client' => 'nullable|string|max:180',
             'agency' => 'nullable|string|max:180',
             'format' => 'required_if:type,pubblicita|nullable|in:'.implode(',', array_column(AdFormat::cases(), 'value')),
             'confirmation_status' => 'required_if:type,pubblicita|nullable|in:'.implode(',', array_column(AdConfirmationStatus::cases(), 'value')),
@@ -84,6 +87,7 @@ final class ContentFormRules
     public static function messages(): array
     {
         return [
+            'title.required_if' => 'Il titolo è obbligatorio per un articolo.',
             'whole_pages.integer' => 'Le pagine intere devono essere un numero intero.',
             'whole_pages.min' => 'Le pagine intere non possono essere negative.',
             'whole_pages.max' => 'Il numero ha solo :max pagine interne.',

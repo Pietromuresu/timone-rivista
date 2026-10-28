@@ -145,19 +145,18 @@ final class ContentUpdater
 
     private static function updateFields(Content $content, array $data, PageOccupancy $occupancy, bool $newFile = false): void
     {
-        // Fase 5: un segnaposto diventa una pubblicità vera appena riceve un
-        // inserzionista, un titolo diverso da quello automatico o un PDF
-        // (oppure diventa un articolo).
-        $stillPlaceholder = $content->isPlaceholder()
-            && $data['type'] === ContentType::Pubblicita->value
-            && trim((string) ($data['client'] ?? '')) === ''
-            && $data['title'] === $content->title
-            && ! $newFile;
+        // Revisione 2, Fase 3.1: segnaposto = pubblicità senza cliente e
+        // senza file (AdPlaceholder, unico punto della regola): un titolo
+        // proprio non basta più a renderla vera, e togliere il cliente a
+        // una pubblicità senza file la riporta segnaposto.
+        $client = trim((string) ($data['client'] ?? ''));
+        $hasFile = $newFile || $content->files->isNotEmpty();
 
         $content->update([
-            'is_placeholder' => $stillPlaceholder,
+            'is_placeholder' => AdPlaceholder::applies($data['type'], $client, $hasFile),
             'type' => $data['type'],
-            'title' => $data['title'],
+            // Titolo vuoto (o automatico con l'occupazione cambiata) → automatico.
+            'title' => AdPlaceholder::resolveTitle($data['type'], $data['title'] ?? null, $occupancy->twelfths),
             'section_id' => $data['section_id'] ?? null,
             'occupancy_twelfths' => $occupancy->twelfths,
             // Revisione 2, Fase 2.4: override del ritaglio (solo dalla modale).
@@ -176,7 +175,7 @@ final class ContentUpdater
         } else {
             $content->article?->delete();
             Advertisement::updateOrCreate(['content_id' => $content->id], [
-                'client' => trim((string) ($data['client'] ?? '')) !== '' ? $data['client'] : null,
+                'client' => $client !== '' ? $client : null,
                 'agency' => $data['agency'] ?? null,
                 'format' => $data['format'],
                 'preferred_position' => $data['preferred_position'] ?? null,

@@ -340,6 +340,30 @@ Non correggere i valori con un UPDATE alla cieca: vanno ricontrollati sulla sche
 11. **Copie del PDF per ogni pagina**: consumo di disco proporzionale a dimensione × pagine.
 12. **Nessun test browser** (niente Dusk): drag&drop, auto-scroll, menu «⋯» dei blocchi, focus/anelli di selezione e drop zone sono verificati solo a mano (dal 2026-10-27 con uno script CDP su Chrome headless, non nel repo: vedi HANDOFF.md, revisione 2 Fase 1). Dal 2026-10-26 anche l'animazione dei gruppi (MultiDrag di SortableJS, FLIP con la Web Animations API) e lo zoom S/M/L (`resources/js/timone-alpine.js`): i test PHP verificano solo markup e logica server (`nudgePage`, `PageReorderer::nudgeTarget()`).
 
+## Caricamento multiplo e segnaposto (revisione 2, Fase 3, 2026-10-28)
+
+- **Un file del lotto resta «✕ errore» con «Il file non è arrivato al server»**: l'upload temporaneo è stato rifiutato prima dell'applicazione. Cercare nel log la voce `upload_failed` con `component` = `App\Livewire\Timone\BulkUpload` (errori di validazione di Livewire o richiesta respinta) e controllare i limiti con `php artisan timone:diagnose-upload`.
+- **«Impossibile leggere il numero di pagine di questo PDF»**: stesso controllo del modulo singolo (`PdfPageMeasurer::pageCount()`: Ghostscript, poi Imagick). In locale senza Ghostscript/Imagick OGNI PDF finisce così: provare con immagini o in Docker.
+- **Contatore «Da assegnare» che non torna**: `php artisan timone:placeholder-sync --dry-run` elenca le pubblicità il cui `is_placeholder` non rispetta la regola (senza cliente e senza file); senza `--dry-run` le riallinea.
+- **Toast «aggiornato da un altro utente» per una modifica propria** (solo col polling, senza Reverb): `Grid::checkForUpdates()` lo sopprime solo se in `activity_logs` ci sono voci dell'utente corrente e nessuna di altri dal poll precedente; un'azione che non scrive in cronologia lo mostra ancora.
+
+## Permessi ed eliminazioni (revisione 2, Fase 4, 2026-10-28)
+
+- **Un Commerciale riceve 403 spostando qualcosa**: è voluto se il contenuto è un articolo o se la pagina (o il suo gruppo collegato) contiene un articolo. Le regole sono in `App\Support\Permissions\TimoneAbilities`; `Grid::authorizeContent()`/`authorizePageMove()` dicono quale controllo scatta.
+- **Nei test Livewire, dopo un `assertForbidden()` la chiamata successiva sullo stesso componente fallisce** («Invalid Livewire snapshot structure»): un 403 non restituisce lo stato. Usare un `Livewire::test()` nuovo per ogni chiamata rifiutata (vedi `CommercialeAdsOnlyTest.php`).
+- **«Troppi tentativi con la password sbagliata»** nella conferma di eliminazione: rate limiter `dangerous-delete:{id admin}` sulla cache; si sblocca da solo dopo un minuto (o `php artisan tinker --execute "RateLimiter::clear('dangerous-delete:ID')"`).
+- **File rimasti su disco dopo un'eliminazione**: cercare `stored_files_deleted` nel log del worker; se il job `DeleteStoredFiles` è in `failed_jobs`, `php artisan queue:retry <id>`.
+- **Un utente con il numero aperto non viene riportato all'elenco**: con Reverb serve l'evento `IssueDeleted` (eliminazione dall'interfaccia, non da tinker); senza Reverb il poll. Il redirect lo fa `resources/js/deleted-issue-redirect.js` (asset da ricompilare: `npm run build`).
+
+## Export PDF sfogliabile (revisione 2, Fase 5, 2026-10-28)
+
+- **Fermo su «In coda»**: il worker non gira o è occupato (`docker compose logs worker`, `php artisan queue:work`). Dopo `TIMONE_EXPORT_TIMEOUT` + 5 minuti un nuovo click accoda di nuovo.
+- **Fermo su «In generazione»**: il job è stato ucciso (memoria o timeout) senza passare da `failed()`; cercare `GenerateMagazinePdf` in `failed_jobs` e nel log del worker; alzare `TIMONE_EXPORT_MEMORY_LIMIT` o usare la bassa risoluzione. Dopo timeout + 5 min si può rilanciare dal pannello.
+- **«Errore» con «Ghostscript non è riuscito…»**: solo la variante leggera; verificare `gs --version` nel container worker.
+- **Molti «File mancante» inattesi**: il file del contenuto non è sul disco (`content_files.path` sul disco indicato) o è vuoto, oppure FPDI non lo apre neanche dopo la riscrittura con Ghostscript (PDF protetti/danneggiati). Il numero si esporta comunque; contarli in `magazine_exports.missing_files`.
+- **Cartelle `exports/tmp-*` rimaste**: vengono rimosse a fine job anche in errore; ne resta una solo se il processo è stato ucciso. Si possono cancellare a mano.
+- **Test**: il testo del PDF si verifica con `gs -sDEVICE=txtwrite`; i test che lo usano sono saltati senza Ghostscript (in locale) e girano nel container.
+
 ## Test in locale: memoria esaurita
 
 Con oltre 850 test il PHP locale (MAMP, `memory_limit` 128M) si fermava con «Allowed memory size … exhausted» nella raccolta dei test. Dal 2026-10-27 `phpunit.xml` imposta `memory_limit` 512M per i test (`<ini>`), quindi `php artisan test` funziona di nuovo. Se ricapita: `php -d memory_limit=1G vendor/bin/pest`.

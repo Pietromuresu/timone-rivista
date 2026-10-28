@@ -26,6 +26,7 @@ use App\Support\ContentPageAttacher;
 use App\Support\ContentPlacer;
 use App\Support\PageGroupLinker;
 use App\Support\PageInserter;
+use App\Support\Permissions\TimoneAbilities;
 use App\Support\PlacementChoice;
 use App\Support\Twelfths;
 use App\Support\Uploads\UploadEnvironmentInspector;
@@ -208,7 +209,8 @@ class ContentCreate extends Component
             'file', 'showSectionForm', 'editingSectionId', 'sectionName',
             'whole_pages', 'fraction_twelfths', 'pdfPageCount', 'pdfPageChoice', 'pdfPageFrom', 'pdfPageTo',
         ]);
-        $this->type = 'articolo';
+        // Revisione 2, Fase 4.1: chi lavora solo sulle pubblicità parte da lì.
+        $this->type = $this->abilities()->editsTimone() ? 'articolo' : 'pubblicita';
         $this->editorial_status = 'da_scrivere';
         // Bug 5: nessun formato preselezionato — il formato È l'occupazione
         // di una pubblicità, quindi va scelto esplicitamente come quella di
@@ -314,7 +316,8 @@ class ContentCreate extends Component
 
     public function save(): void
     {
-        $this->authorize('update', $this->issue);
+        // Revisione 2, Fase 4.1: il Commerciale crea solo pubblicità.
+        $this->authorize('create', [Content::class, $this->issue, $this->type]);
 
         $validated = $this->validatedFields();
         $validated['preferred_position'] = $this->parsedPreferredPosition();
@@ -463,7 +466,7 @@ class ContentCreate extends Component
      */
     public function confirmMultipageUpload(bool $overwriteConflicts): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorize('create', [Content::class, $this->issue, $this->multipageUploadConflict['validated']['type'] ?? $this->type]);
 
         $conflict = $this->multipageUploadConflict;
 
@@ -981,6 +984,12 @@ class ContentCreate extends Component
         ];
     }
 
+    /** Revisione 2, Fase 4.1: stesse regole delle policy, per la vista. */
+    private function abilities(): TimoneAbilities
+    {
+        return TimoneAbilities::for(auth()->user(), $this->issue);
+    }
+
     #[On('echo-presence:issue.{issue.id},.ContentCreated')]
     public function onContentCreated(): void
     {
@@ -992,6 +1001,7 @@ class ContentCreate extends Component
     public function render(): View
     {
         return view('livewire.timone.content-create', [
+            'editsTimone' => $this->abilities()->editsTimone(),
             // Fase 2.5: solo a modulo aperto (sono una query per le pagine).
             'placementOptions' => $this->showForm ? PlacementChoice::options($this->issue) : [],
             'sections' => $this->issue->magazine->sections()->orderBy('name')->get(),

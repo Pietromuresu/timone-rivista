@@ -170,3 +170,44 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - `Grid::moveContentOnGrid()/rotateContentOnGrid()` al posto di `moveContentInPage()`; rimossi `App\Support\PageContentOrder` e i suoi test; `AdFormat::rotated()`; `ContentPlacer::check()` e messaggio con gli occupanti; `ContentUpdater::update(..., moveTo)`; `App\Support\PlacementChoice`; `Issue::pageAspectRatio()`; `ContentFileAspectRatio` nel job delle miniature; `ContentFileController::show` con `inline` esplicito.
 - `phpunit.xml`: `memory_limit` 512M per i test.
 
+## Revisione 2, Fase 3 — Pubblicità segnaposto dal modulo e caricamento multiplo (2026-10-28)
+
+### Visibili agli utenti
+- **Pubblicità senza cliente dal modulo «+ Nuovo contenuto»**: cliente e titolo facoltativi. Senza cliente e senza file è un segnaposto «Da assegnare» come quelli previsti alla creazione del numero (contato nel riepilogo); titolo vuoto → «Pubblicità 1/2 — da assegnare».
+- **Regola del segnaposto cambiata**: diventa una pubblicità vera solo con un cliente o un file (prima bastava anche un titolo proprio); togliendo il cliente a una pubblicità senza file torna segnaposto.
+- **Caricamento multiplo** («⇪ Carica più file»): trascina o scegli tanti PDF/immagini, tipo del lotto Articoli/Pubblicità; un contenuto da assegnare per file (titolo dal nome del file, pagine = pagine del PDF), caricati uno alla volta con stato e percentuale per file, riepilogo finale, «Riprova i falliti», duplicati creati come «… (2)» con avviso.
+- Niente più toast «aggiornato da un altro utente» per le proprie modifiche quando il timone si aggiorna col polling.
+
+### Tecniche
+- `App\Support\AdPlaceholder` (regola e titolo automatico, unico punto); `PlannedAdKind::placeholderTitle()` delega; `ContentFormRules::rules()` senza il parametro `$placeholder`.
+- `App\Livewire\Timone\BulkUpload`, `App\Support\BulkContentImporter`, `App\Support\BulkImportResult`, `Alpine.data('bulkUpload')`.
+- Comando `php artisan timone:placeholder-sync [--issue=] [--dry-run]` per i dati esistenti.
+- `Grid::onlyOwnChangesSince()` nel polling.
+- Nessuna migration, nessuna dipendenza nuova, nessuna variabile d'ambiente nuova.
+
+## Revisione 2, Fase 4 — Ruoli ed eliminazioni (2026-10-28)
+
+### Visibili agli utenti
+- **Commerciale**: crea, modifica e sposta le pubblicità (trascinamento, frecce, rotazione, pagina dalla modale, caricamento multiplo come Pubblicità) e le pagine senza articoli. Sugli articoli: niente maniglia, cursore 🚫, comandi disattivati con «Solo la redazione può spostare questo contenuto». Stati, blocchi, gruppi, pagine totali e scadenza restano della redazione.
+- **Eliminazione di numeri e riviste** (solo admin): «🗑️ Elimina» accanto al numero e in «Modifica rivista»; riepilogo (pagine, contenuti, file, MB, elenco dei numeri) poi password + nome digitato; definitiva. Chi ha il numero aperto torna all'elenco con un avviso.
+- **Eliminazione di utenti** (solo admin, da «Modifica utente»): stessa conferma con l'email; file, spostamenti e cronologia restano con «Utente eliminato»; sessioni chiuse. Mai sé stessi né l'ultimo admin. Tolta l'auto-eliminazione dal profilo.
+
+### Tecniche
+- `UserRole::editsTimone()/handlesAds()`, `App\Support\Permissions\TimoneAbilities`, `App\Policies\ContentPolicy`, `IssuePolicy::workOnAds/movePages`, `UserPolicy::delete`; `Grid::authorizeContent()/authorizePageMove()`.
+- `App\Support\Deletion\` (`DeletionTarget`, `IssueDeletion`, `MagazineDeletion`, `UserDeletion`, `DeletionConfirmation`, `DeletionSummary`, `StoredFiles`, `DeletionTargets`), `App\Livewire\Admin\ConfirmDeletion`, job `App\Jobs\DeleteStoredFiles` (afterCommit), evento `App\Events\IssueDeleted`, `resources/js/deleted-issue-redirect.js`.
+- Migration `2026_10_28_100000_keep_user_work_on_user_delete` (tre FK utente → nullOnDelete, solo vincoli; provata up/down/up su copia MySQL).
+- Rimossi `ProfileController::destroy`, la rotta `profile.destroy` e `profile/partials/delete-user-form.blade.php`.
+- Nessuna dipendenza nuova, nessuna variabile d'ambiente nuova.
+
+## Revisione 2, Fase 5 — PDF sfogliabile della rivista (2026-10-28)
+
+### Visibili agli utenti
+- **«📖 PDF sfogliabile della rivista»** sopra il timone: un PDF con tutte le pagine nell'ordine di stampa (I, II, 1…N, III, IV), A4 verticale con la pagina in scala, i PDF/immagini dei contenuti nel loro riquadro (stesso ritaglio delle anteprime), «File mancante» dove manca il materiale, «Pagina bianca», numero di pagina sotto. Si apre a coppie come una rivista, con segnalibri.
+- Generato in coda con stato visibile (In coda / In generazione / Pronto / Errore) e «⬇ Scarica»; opzione «Bassa risoluzione per anteprima» (file leggero, separato).
+
+### Tecniche
+- Dipendenze nuove (approvate): `setasign/fpdi` 2.6.9, `tecnickcom/tcpdf` 6.11.4. Ghostscript già presente.
+- `App\Support\MagazineExport\` (`MagazinePdfComposer`, `MagazinePageSequence`, `PageBox`, `SourceFiles`, `Ghostscript`, `MagazineExportRequester`, `ComposeResult`), job `App\Jobs\GenerateMagazinePdf`, model `MagazineExport`, enum `MagazineExportStatus`/`MagazineExportVariant`, `MagazineExportController`, `App\Livewire\Timone\MagazineExportPanel`.
+- Migration `2026_10_28_200000_create_magazine_exports_table`; config `timone.magazine_export` (`TIMONE_EXPORT_MEMORY_LIMIT`, `TIMONE_EXPORT_TIMEOUT`, facoltative, non in `.env.example`).
+- `StoredFiles::forIssues()` include i PDF generati (eliminati con il numero).
+

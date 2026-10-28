@@ -206,13 +206,20 @@ final class ContentCreator
         $occupancy = self::resolveOccupancy($data, $pdfPageCount);
         $plan = self::pagePlan($data, $pdfPageCount);
 
-        $content = DB::transaction(function () use ($issue, $data, $occupancy) {
+        // Revisione 2, Fase 3.1: pubblicità senza titolo → titolo
+        // automatico; senza cliente e senza file → segnaposto. Entrambe le
+        // regole stanno in AdPlaceholder, come per le pubblicità previste.
+        $client = trim((string) ($data['client'] ?? ''));
+        $title = AdPlaceholder::resolveTitle($data['type'], $data['title'] ?? null, $occupancy->twelfths);
+
+        $content = DB::transaction(function () use ($issue, $data, $occupancy, $client, $title, $file) {
             $content = Content::create([
                 'issue_id' => $issue->id,
                 'section_id' => $data['section_id'] ?? null,
                 'type' => $data['type'],
-                'title' => $data['title'],
+                'title' => $title,
                 'occupancy_twelfths' => $occupancy->twelfths,
+                'is_placeholder' => AdPlaceholder::applies($data['type'], $client, $file !== null),
             ]);
 
             if ($data['type'] === ContentType::Articolo->value) {
@@ -225,7 +232,7 @@ final class ContentCreator
             } else {
                 Advertisement::create([
                     'content_id' => $content->id,
-                    'client' => $data['client'],
+                    'client' => $client !== '' ? $client : null,
                     'agency' => $data['agency'] ?? null,
                     'format' => $data['format'],
                     'preferred_position' => $data['preferred_position'] ?? null,

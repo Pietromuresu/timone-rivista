@@ -16,7 +16,7 @@
                 $fill = $block['isAd'] ? $adFill : $articleFill;
                 // Segnaposto: il titolo automatico ripeterebbe l'etichetta
                 // "Da assegnare" («Pubblicità 1/2 — da assegnare»).
-                $label = $block['placeholder'] ? \Illuminate\Support\Str::before($block['label'], ' — ') : $block['label'];
+                $label = $block['placeholder'] ? \Illuminate\Support\Str::before($block['label'], \App\Support\AdPlaceholder::TITLE_SUFFIX) : $block['label'];
                 $border = $block['placeholder'] ? 'border: 0.7pt dashed #d97706;' : 'border: 0.4pt solid #ffffff;';
             @endphp
             @foreach ($block['extra'] as $piece)

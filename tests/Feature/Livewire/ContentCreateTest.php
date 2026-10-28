@@ -157,7 +157,7 @@ test('a content can be linked to a magazine section', function () {
     expect($content->section_id)->toBe($section->id);
 });
 
-test('the title is required', function () {
+test('the title is required for an article', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
 
@@ -165,21 +165,12 @@ test('the title is required', function () {
         ->call('toggleForm')
         ->set('title', '')->set('whole_pages', 1)
         ->call('save')
-        ->assertHasErrors(['title' => 'required']);
+        ->assertHasErrors(['title' => 'required_if']);
 });
 
-test('the client is required for an advertisement', function () {
-    $issue = reorderableIssue();
-    $user = editorFor($issue);
-
-    Livewire::actingAs($user)->test(ContentCreate::class, ['issue' => $issue])
-        ->call('toggleForm')
-        ->set('type', 'pubblicita')
-        ->set('title', 'Pubblicità senza cliente')->set('whole_pages', 1)
-        ->set('client', '')
-        ->call('save')
-        ->assertHasErrors(['client' => 'required_if']);
-});
+// Revisione 2, Fase 3.1: il cliente non è più obbligatorio per una
+// pubblicità (prima: "the client is required for an advertisement"); i
+// casi del segnaposto creato dal modulo sono in PlaceholderAdFormTest.php.
 
 test('a redattore without access to the magazine cannot create a content', function () {
     $issue = reorderableIssue();

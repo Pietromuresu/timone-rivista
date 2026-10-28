@@ -49,6 +49,16 @@
 
             <!-- Page Content -->
             <main>
+                {{-- Revisione 2, Fase 4.2–4.3: esito di un'eliminazione (flash da
+                     ConfirmDeletion) e avviso per chi aveva aperto un numero
+                     eliminato da un admin (?eliminato=1, vedi timone-alpine.js). --}}
+                @if (session('deleted') || request()->query('eliminato'))
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+                        <p class="text-sm rounded-lg border px-3 py-2 {{ session('deleted') ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200' }}" data-testid="deletion-notice" role="status">
+                            {{ session('deleted') ?? 'Il numero che avevi aperto è stato eliminato da un amministratore.' }}
+                        </p>
+                    </div>
+                @endif
                 {{ $slot }}
             </main>
         </div>

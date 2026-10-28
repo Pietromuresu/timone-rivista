@@ -298,6 +298,193 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
+    /**
+     * Caricamento massivo (revisione 2, Fase 3.2, 2026-10-28), usato da
+     * livewire/timone/bulk-upload.blade.php. La coda vive qui e i file
+     * partono UNO ALLA VOLTA: $wire.upload('upload') e poi
+     * $wire.importUploaded(tipo), che crea il contenuto e risponde con
+     * l'esito; solo allora si passa al file successivo. Un lotto in una
+     * sola richiesta supererebbe i limiti del server con pochi PDF di
+     * stampa, e un file scartato non deve fermare gli altri.
+     *
+     * Gli oggetti File restano FUORI dallo stato reattivo (mappa `files`):
+     * Alpine li avvolgerebbe in un Proxy, che FormData (usato da
+     * $wire.upload) non accetta come Blob.
+     */
+    Alpine.data('bulkUpload', ({ maxBytes = null, maxLabel = null, type = 'articolo' } = {}) => {
+        const files = new Map();
+        const accepted = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
+
+        return {
+            open: false,
+            // Tipo iniziale dal server: 'pubblicita' per chi carica solo pubblicità (Fase 4.1).
+            type,
+            dragging: false,
+            busy: false,
+            items: [],
+            nextId: 1,
+
+            add(fileList) {
+                this.dragging = false;
+
+                for (const file of Array.from(fileList || [])) {
+                    const id = this.nextId++;
+
+                    files.set(id, file);
+                    // Il tipo è quello scelto quando il file entra in coda:
+                    // cambiarlo dopo vale per i file aggiunti dopo.
+                    this.items.push({ id, name: file.name, type: this.type, status: 'queued', progress: 0, message: null });
+                }
+
+                this.run();
+            },
+
+            pick(event) {
+                this.add(event.target.files);
+                event.target.value = '';
+            },
+
+            /** Controlli prima dell'invio: estensione e dimensione (il server ricontrolla tutto). */
+            clientProblem(file) {
+                const extension = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+
+                if (! accepted.includes(extension)) {
+                    return 'Formato non accettato: carica un PDF o un\'immagine JPG, PNG o WebP.';
+                }
+
+                if (maxBytes && file.size > maxBytes) {
+                    return `Il file pesa ${(file.size / 1024 / 1024).toFixed(1).replace('.', ',')} MB: il massimo accettato è ${maxLabel}.`;
+                }
+
+                return null;
+            },
+
+            async run() {
+                if (this.busy) return;
+
+                this.busy = true;
+
+                try {
+                    let item;
+
+                    while ((item = this.items.find((candidate) => candidate.status === 'queued'))) {
+                        await this.process(item);
+                    }
+                } finally {
+                    this.busy = false;
+                }
+            },
+
+            async process(item) {
+                const file = files.get(item.id);
+                const problem = this.clientProblem(file);
+
+                if (problem) {
+                    item.status = 'error';
+                    item.message = problem;
+
+                    return;
+                }
+
+                item.status = 'uploading';
+                item.progress = 0;
+
+                const uploaded = await new Promise((resolve) => {
+                    this.$wire.upload('upload', file,
+                        () => resolve(true),
+                        () => resolve(false),
+                        (event) => { item.progress = event.detail.progress; },
+                        () => resolve(false),
+                    );
+                });
+
+                if (! uploaded) {
+                    item.status = 'error';
+                    item.message = this.$wire.uploadError || 'Caricamento non riuscito: riprova.';
+
+                    return;
+                }
+
+                item.status = 'importing';
+
+                try {
+                    const result = await this.$wire.importUploaded(item.type);
+
+                    if (result && result.ok) {
+                        item.status = 'ok';
+                        item.message = result.duplicateOf
+                            ? `Esisteva già «${result.duplicateOf}»: creato come «${result.title}».`
+                            : null;
+                        item.createdTitle = result.title;
+                        item.occupancy = result.occupancy;
+                        files.delete(item.id);
+                    } else {
+                        item.status = 'error';
+                        item.message = result?.message || 'File non accettato.';
+                    }
+                } catch (error) {
+                    item.status = 'error';
+                    item.message = 'Errore del server durante la creazione: riprova.';
+                }
+            },
+
+            retryFailed() {
+                for (const item of this.items) {
+                    if (item.status === 'error') {
+                        item.status = 'queued';
+                        item.message = null;
+                        item.progress = 0;
+                    }
+                }
+
+                this.run();
+            },
+
+            clear() {
+                this.items = [];
+                files.clear();
+            },
+
+            get failedCount() {
+                return this.items.filter((item) => item.status === 'error').length;
+            },
+
+            /** «12 caricati, 1 scartato: motivo». */
+            get summary() {
+                const done = this.items.filter((item) => item.status === 'ok').length;
+                const failed = this.items.filter((item) => item.status === 'error');
+                let text = `${done} ${done === 1 ? 'caricato' : 'caricati'}`;
+
+                if (failed.length > 0) {
+                    text += `, ${failed.length} ${failed.length === 1 ? 'scartato' : 'scartati'}: `
+                        + failed.map((item) => `${item.name} (${item.message})`).join('; ');
+                }
+
+                return text;
+            },
+
+            statusLabel(item) {
+                return {
+                    queued: 'in coda',
+                    uploading: `caricamento ${item.progress}%`,
+                    importing: 'creazione…',
+                    ok: `✓ creato${item.occupancy ? ' — ' + item.occupancy : ''}`,
+                    error: '✕ errore',
+                }[item.status];
+            },
+
+            statusClass(item) {
+                return {
+                    queued: 'text-gray-400',
+                    uploading: 'text-indigo-600 dark:text-indigo-400',
+                    importing: 'text-indigo-600 dark:text-indigo-400',
+                    ok: 'text-emerald-700 dark:text-emerald-400',
+                    error: 'text-red-600 dark:text-red-400',
+                }[item.status];
+            },
+        };
+    });
+
     Alpine.store('timoneZoom', {
         levels: ZOOM_LEVELS,
         level: 'm',

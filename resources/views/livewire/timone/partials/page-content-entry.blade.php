@@ -30,7 +30,9 @@
         class="{{ $isRow ? '' : 'break-words min-w-0 flex-1' }}"
         x-data="{ editing: false, name: @js($content->displayLabel()) }"
     >
-        <span x-show="! editing" @unless ($locked) x-on:dblclick.stop="editing = true; $nextTick(() => $refs.input.select())" title="Doppio click per rinominare" @endunless data-testid="content-label">
+        {{-- Fase 4.1: niente rinomina per chi non può cambiare il contenuto. --}}
+        @php($canRename = ! $locked && (! isset($abilities) || $abilities->canChangeContent($content)))
+        <span x-show="! editing" @if ($canRename) x-on:dblclick.stop="editing = true; $nextTick(() => $refs.input.select())" title="Doppio click per rinominare" @endif data-testid="content-label">
             {{ $content->type->value === 'articolo' ? '📄' : '📢' }} {{ $content->displayLabel() }}
             @if ($isPlaceholder)
                 <span class="ml-0.5 inline-block rounded border border-dashed border-amber-600 bg-amber-50 text-amber-900 px-1 text-[9px] font-semibold uppercase tracking-wide" title="Pubblicità prevista, ancora senza inserzionista né PDF">Da assegnare</span>

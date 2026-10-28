@@ -8,6 +8,11 @@
     $dropEnabled = $dropEnabled ?? false;
     $locked = $page->isLocked();
     $interactive = $dropEnabled && ! $locked;
+    // Revisione 2, Fase 4.1: permessi calcolati una volta in Grid::render()
+    // (TimoneAbilities, stesse regole del server). Fuori dal timone (nessun
+    // $abilities) la vista resta com'era: il server controlla comunque.
+    $canMovePage = ! isset(($immovablePageIds ?? [])[$page->id]);
+    $editsTimone = isset($abilities) ? $abilities->editsTimone() : true;
     // §2.2: stesso frammento #page=N di page-card.blade.php — vedi lì per
     // il perché (nessun pdf.js in questo progetto).
     $fileUrl = $previewFile
@@ -67,7 +72,7 @@
     @if ($page->page_group_id) data-group-id="{{ $page->page_group_id }}" @endif
     @if ($isCover) data-cover-slot="{{ $page->cover_slot->value }}" @endif
     tabindex="0"
-    @unless ($locked || $isCover)
+    @unless ($locked || $isCover || ! $canMovePage)
         @keydown.arrow-up.prevent="$animatedMove('nudgePage', {{ $page->id }}, -1)"
         @keydown.arrow-down.prevent="$animatedMove('nudgePage', {{ $page->id }}, 1)"
     @endunless
@@ -115,6 +120,9 @@
         <span class="w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200" title="{{ $page->lockedBy ? 'Bloccata da '.$page->lockedBy->name : 'Pagina bloccata' }}">
             🔒 {{ $pageNumber }}
         </span>
+    @elseif (! $canMovePage)
+        {{-- Fase 4.1: vedi page-card. --}}
+        <span class="w-8 shrink-0 text-right font-semibold text-gray-700 dark:text-gray-200 cursor-not-allowed opacity-70" title="{{ \App\Support\Permissions\TimoneAbilities::EDITORIAL_PAGES_ONLY }}" data-testid="page-not-movable">{{ $pageNumber }}</span>
     @elseif ($isCover)
         {{-- Trascinabile solo su un'altra copertina (scambio di slot):
              drag nativo, non Sortable — le copertine non sono nel
@@ -153,7 +161,7 @@
             x-on:click.stop
             @unless ($locked) title="Pagina collegata — clic per scollegare l'intero gruppo" @else title="Pagina collegata (bloccata)" @endif
             class="shrink-0 text-[10px] font-semibold rounded px-1 py-0.5 border {{ $group->badgeClasses() }}"
-            @if ($locked) disabled @endif
+            @if ($locked || ! $editsTimone) disabled @endif
         >🔗</button>
     @endif
 
@@ -243,7 +251,7 @@
         @endif
     </span>
 
-    @if ($locked)
+    @if ($locked || ! $editsTimone)
         <span class="rounded text-xs font-medium shrink-0 py-0.5 pl-2 pr-2 {{ $page->status->colorClasses() }}">
             {{ $page->status->label() }}
         </span>
@@ -262,11 +270,13 @@
         </select>
     @endif
 
-    <button
-        type="button"
-        wire:click="togglePageLock({{ $page->id }})"
-        x-on:click.stop
-        class="shrink-0 text-xs opacity-60 hover:opacity-100"
-        title="{{ $locked ? 'Sblocca pagina' : 'Blocca pagina (impedisce spostamento, eliminazione e modifiche)' }}"
-    >{{ $locked ? '🔒' : '🔓' }}</button>
+    @if ($editsTimone)
+        <button
+            type="button"
+            wire:click="togglePageLock({{ $page->id }})"
+            x-on:click.stop
+            class="shrink-0 text-xs opacity-60 hover:opacity-100"
+            title="{{ $locked ? 'Sblocca pagina' : 'Blocca pagina (impedisce spostamento, eliminazione e modifiche)' }}"
+        >{{ $locked ? '🔒' : '🔓' }}</button>
+    @endif
 </li>

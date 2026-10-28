@@ -166,6 +166,32 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 - **Fascia sticky non sticky sotto i 640 px**: su un telefono occuperebbe un terzo dello schermo.
 - **`placement` controllato prima di creare, scritto dopo**: tra il controllo e la scrittura un collega può occupare la pagina; in quel caso il contenuto viene creato e resta da assegnare con un errore (stesso comportamento del vecchio percorso «📎 Carica materiale»). Una transazione unica non era possibile: `ContentCreator` salva i file e accoda i job delle miniature.
 
+## Revisione 2, Fase 3 — segnaposto dal modulo e caricamento multiplo (aggiunto il 2026-10-28)
+
+- **`is_placeholder` è un valore memorizzato**: ogni nuovo percorso che cambia cliente o file di una pubblicità deve chiamare `AdPlaceholder::sync()` (oggi lo fanno creazione, modifica e rinomina). Un percorso dimenticato lascia un contatore «Da assegnare» sbagliato finché `timone:placeholder-sync` non lo riallinea.
+- **Caricamento multiplo: la coda vive nella pagina**: chiudendo o ricaricando la scheda i file non ancora partiti si perdono (quelli già creati restano). Una coda lato server (job) servirebbe solo per lotti molto grandi.
+- **Pubblicità del caricamento multiplo come «Pagina intera»**: formato da correggere a mano; nessuna deduzione del formato dalle misure del PDF.
+- **Duplicati confrontati in PHP** su tutti i titoli del numero (una query per file): trascurabile con centinaia di contenuti, da rivedere se un numero ne avesse decine di migliaia.
+- **Toast del polling e cronologia**: `Grid::onlyOwnChangesSince()` si fida di `activity_logs`; un'azione che chiama `markPagesUpdated()` senza scrivere in cronologia continua a mostrare il toast anche quando è dell'utente stesso (comportamento di prima).
+
+## Revisione 2, Fase 4 — ruoli ed eliminazioni (aggiunto il 2026-10-28)
+
+- **`movePage` controlla le pagine che si spostano, non quelle che scorrono**: spostando una pagina di sole pubblicità, le pagine intermedie (anche con articoli) cambiano numero. Interpretazione della specifica («spostamenti di pagine … che contengono contenuti editoriali»); se la redazione la vuole più stretta, il punto è `TimoneAbilities::canMovePages()`.
+- **Commerciale e PDF multipagina ancorato a una pagina**: «sovrascrivi le pagine in conflitto» può collegare in un gruppo pagine che contengono anche articoli (non li sposta né li toglie). «Sposta le pagine dopo» è invece riservato alla redazione.
+- **«Ultimo admin» in `UserPolicy::delete`**: con dati coerenti è già escluso da «mai sé stessi»; resta come difesa per richieste partite prima di un cambio di ruolo.
+- **Sessioni dell'utente eliminato**: cancellate subito solo con `SESSION_DRIVER=database`; con altri driver l'utente è comunque fuori alla richiesta successiva (non esiste più).
+- **Nessun cestino**: un numero o una rivista eliminati si recuperano solo dal backup (DB + volume dei file).
+- **Comandi della barra ancora visibili al Commerciale**: «Selezione multipla» e «Modalità scambio» restano (servono a spostare pagine di sole pubblicità); le azioni di massa su stato, blocco e gruppi compaiono solo alla redazione, «Scollega selezionate» resta visibile e risponde 403.
+
+## Revisione 2, Fase 5 — PDF sfogliabile (aggiunto il 2026-10-28)
+
+- **FPDI gratuito e PDF compressi**: i sorgenti 1.5+ con xref compresse vengono riscritti in 1.4 con Ghostscript (`-dPDFSETTINGS=/prepress`) prima dell'import: tempo in più e una possibile, piccola differenza rispetto al file originale. L'alternativa senza riscrittura è il parser commerciale di Setasign.
+- **TCPDF tiene il PDF in RAM**: con numeri di molti GB di sorgenti serve più memoria del default (1024M); il job ha un solo tentativo.
+- **Disco `local` obbligatorio per i sorgenti**: `SourceFiles::path()` usa `Storage::disk()->path()`, che c'è solo per i dischi locali (oggi tutti). Un disco S3 richiederebbe di scaricare i file in una cartella temporanea.
+- **Variante leggera lenta**: Ghostscript ricomprime tutto (80 s per 68 pagine da 72 MB nella prova).
+- **Ordine della bandella**: dopo la I di copertina (ordine di sfoglio di `CoverSlot`); la specifica non la cita.
+- **Nessuna notifica a fine export**: lo stato si vede nel pannello (che si aggiorna da solo mentre è aperto), non arriva un avviso altrove.
+
 ## Cose che sembrano sbagliate ma hanno un motivo (non "correggerle")
 
 | Cosa | Perché è così |

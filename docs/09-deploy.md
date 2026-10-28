@@ -277,6 +277,22 @@ docker compose up -d
 docker compose exec app php artisan timone:file-ratios --dry-run
 docker compose exec app php artisan timone:file-ratios
 
+# 7ter. (una tantum, revisione 2, Fase 3.1, 2026-10-28) pubblicità senza cliente né
+# file che la regola precedente considerava "vere" per il solo titolo: tornano
+# segnaposto. Prima il dry-run (elenca numero e titolo), poi l'applicazione.
+docker compose exec app php artisan timone:placeholder-sync --dry-run
+docker compose exec app php artisan timone:placeholder-sync
+
+# (revisione 2, Fase 5, 2026-10-28) nuove dipendenze composer (setasign/fpdi,
+# tecnickcom/tcpdf): entrano con la ricostruzione dell'immagine (composer install
+# dal composer.lock). Migration 2026_10_28_200000 = solo una tabella nuova.
+# Il worker deve poter usare fino a TIMONE_EXPORT_MEMORY_LIMIT (default 1024M)
+# di RAM durante un export: misurati 156 MB per 68 pagine da 72 MB di PDF.
+
+# (revisione 2, Fase 4, 2026-10-28) la migration 2026_10_28_100000 cambia solo
+# tre vincoli (uploaded_by/user_id → nullOnDelete), nessun dato: passa con il
+# migrate del punto 6. Provata up/down/up su una copia del DB di sviluppo.
+
 # 8. Verifica
 docker compose ps
 docker compose logs --tail=50 app worker reverb scheduler

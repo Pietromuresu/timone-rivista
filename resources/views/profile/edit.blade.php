@@ -19,11 +19,9 @@
                 </div>
             </div>
 
-            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.delete-user-form')
-                </div>
-            </div>
+            {{-- Revisione 2, Fase 4.3 (2026-10-28): niente più «Elimina account»
+                 qui (scelta dell'utente). Solo un admin elimina utenti, dalla
+                 gestione utenti, con le regole di UserPolicy::delete(). --}}
         </div>
     </div>
 </x-app-layout>

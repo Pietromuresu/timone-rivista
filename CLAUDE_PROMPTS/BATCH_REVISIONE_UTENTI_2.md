@@ -1,11 +1,11 @@
 # Batch "revisione con gli utenti 2" — file di ripartenza
 
-Ultimo aggiornamento: 2026-10-27 sera. Questo file basta per riprendere il lavoro in una sessione nuova: stato, cose da sapere, comandi, prossimo passo e, in fondo, **il prompt originale invariato**. La cronologia dettagliata (cosa, perché, file, test) è in `HANDOFF.md`, voci "Revisione 2"; le regole permanenti in `CLAUDE.md` (§4 = file protetti, nuova con questo batch).
+Ultimo aggiornamento: 2026-10-28. Questo file basta per riprendere il lavoro in una sessione nuova: stato, cose da sapere, comandi, prossimo passo e, in fondo, **il prompt originale invariato**. La cronologia dettagliata (cosa, perché, file, test) è in `HANDOFF.md`, voci "Revisione 2"; le regole permanenti in `CLAUDE.md` (§4 = file protetti, nuova con questo batch).
 
 ## Come ripartire (da leggere per primo)
 
-1. Leggi `CLAUDE.md`, questo file e le ultime due voci di `HANDOFF.md` ("Revisione 2, Fase 1" e "Fase 2").
-2. Chiedi all'utente l'esito della prova della **Fase 2** (è consegnata, **non ancora approvata**). Se dà l'ok → Fase 3. Se segnala problemi → correggi prima.
+1. Leggi `CLAUDE.md`, questo file e le ultime voci di `HANDOFF.md` ("Revisione 2", Fasi 1–5).
+2. Chiedi all'utente l'esito della prova della **Fase 5** (ultima del batch, consegnata, **non ancora approvata**). Se segnala problemi → correggi. Poi: migration `2026_10_28_100000` e `2026_10_28_200000` da applicare sul DB di sviluppo con la ricostruzione dello stack (contiene anche le nuove dipendenze composer).
 3. Controlla lo stato del DB di sviluppo: `docker exec timone-rivista-app-1 php artisan migrate:status | tail -5`. L'utente ricostruisce lo stack da sé (`docker compose up -d --build` esegue `migrate` all'avvio): le migration nuove potrebbero essere già applicate.
 4. Lavora una fase alla volta: a fine fase suite completa (locale + container), consegna con il formato della sezione "Consegna di ogni fase" del prompt, poi **aspetta l'ok esplicito**.
 
@@ -14,16 +14,20 @@ Ultimo aggiornamento: 2026-10-27 sera. Questo file basta per riprendere il lavor
 | Fase | Stato | Note |
 |---|---|---|
 | 1 — Bug (focus/cifre perse, "Text too long", barra irraggiungibile, auto-scroll, upload 100 MB) | ✅ approvata | migration `2026_10_27_500000_change_activity_logs_description_to_text` |
-| 2 — Click = pagina + occhio, fascia sticky, griglia 6×6, ritaglio anteprime, posizione in creazione/modifica | 📦 consegnata, **in attesa di ok** | migration `2026_10_27_600000_add_grid_cells_to_page_content_table` (con conversione), `2026_10_27_610000_add_file_fit_columns` |
-| 3 — Pubblicità segnaposto dal form + caricamento massivo | ⏳ da fare | vedi "Prossimo passo" |
-| 4 — Ruoli ed eliminazioni | ⏳ da fare | PRIMA mostrare all'utente ruoli e permessi attuali |
-| 5 — Export PDF sfogliabile della rivista | ⏳ da fare | PRIMA proporre le librerie (pro/contro), nessuna dipendenza senza ok |
+| 2 — Click = pagina + occhio, fascia sticky, griglia 6×6, ritaglio anteprime, posizione in creazione/modifica | ✅ approvata (2026-10-28), committata in `47121ee` | migration `2026_10_27_600000_add_grid_cells_to_page_content_table` (con conversione), `2026_10_27_610000_add_file_fit_columns` |
+| 3 — Pubblicità segnaposto dal form + caricamento massivo | ✅ approvata (2026-10-28) | nessuna migration; `timone:placeholder-sync --dry-run` sul DB di sviluppo: 0 da riallineare |
+| 4 — Ruoli ed eliminazioni | ✅ approvata (2026-10-28) | migration `2026_10_28_100000_keep_user_work_on_user_delete` (solo vincoli FK, provata su copia MySQL, NON applicata sul DB di sviluppo) |
+| 5 — Export PDF sfogliabile della rivista | 📦 consegnata il 2026-10-28, **in attesa di ok** | `setasign/fpdi` + `tecnickcom/tcpdf`; migration `2026_10_28_200000_create_magazine_exports_table` (NON applicata sul DB di sviluppo) |
 
 **Migration non ancora applicate sul DB di sviluppo** (al momento della scrittura): `500000`, `600000`, `610000`. Dry-run già mostrati e approvati come procedura: `php artisan timone:grid-dry-run` (33 identiche, 3 vetrine riposizionate, 0 a L, 0 fuori pagina). Dopo l'applicazione, facoltativo: `php artisan timone:file-ratios` (12 file da misurare).
 
-**Nulla è committato** dalla fase "fase 7 e fine" (`eef47ce`) in poi: lavoro della revisione 2 tutto nel working tree. Commit e push solo su richiesta esplicita (CLAUDE.md).
+Fasi 1–2 committate dall'utente in `47121ee`; Fasi 3, 4 e 5 nel working tree, non committate. Commit e push solo su richiesta esplicita (CLAUDE.md). Il 2026-10-28 Docker era spento: stato delle migration `500000`/`600000`/`610000` sul DB di sviluppo non verificato e suite nel container della Fase 3 non eseguita (da fare appena Docker è su).
 
 ## Decisioni dell'utente già prese (non richiederle)
+
+- **Fase 5 (2026-10-28)**: proposte A (fpdi+tcpdf), A-light (fpdi+fpdf), B (nessuna dipendenza, rasterizzato), C (solo Ghostscript/qpdf). Scelta **A: `setasign/fpdi` + `tecnickcom/tcpdf`**, Ghostscript (già nell'immagine) per riscrivere in PDF 1.4 i sorgenti che FPDI gratuito non apre e per la bassa risoluzione. Memoria: **limite alzato solo dentro il job** (valore da config, default 1024M), nessuna modifica a php.ini/worker.
+
+- **Fase 4 (2026-10-28)**: il Commerciale (oggi in sola lettura) **sposta, crea e modifica solo le pubblicità** (anche segnaposto e caricamento multiplo come Pubblicità); niente articoli, rubriche, stati pagina, gruppi, pagine totali. Eliminazione di riviste e numeri **definitiva** (nessun SoftDeletes nei model: confermato). **Auto-eliminazione dal profilo tolta**: solo un admin elimina utenti. Le FK utente in `cascadeOnDelete` (`content_files.uploaded_by`, `page_files.uploaded_by`, `page_reorder_logs.user_id`) vanno portate a `nullOnDelete`.
 
 - Fase 2.3 griglia 6×6: **3/4, 7/12, 11/12 = forma a L** (riempie le celle libere, niente frecce); **ruotare una pubblicità cambia il formato** (`AdFormat::rotated()`); freccia su un posto occupato da un contenuto di misura diversa = **scambio nel rettangolo comune**, altrimenti freccia disattivata.
 - Dal batch precedente: le prime 4 pubblicità previste vanno su tutte le copertine (II, III, IV, I, qualsiasi formato, avviso sulla I), poi pagine interne una sì e una no; niente miniatura separata dal PDF (il PDF è la miniatura); approccio "B" per la vecchia disposizione (ora sostituita dalla griglia).
@@ -47,7 +51,24 @@ Ultimo aggiornamento: 2026-10-27 sera. Questo file basta per riprendere il lavor
 - **Fascia sticky**: `grid.blade.php` (`data-testid="timone-sticky-band"`), `--timone-sticky-height` → `scroll-padding-top` in `resources/css/app.css`.
 - **Input numerici live**: proprietà `string` + parsing (mai `?int` con `wire:model.live`), `<x-live-field>` per gli avvisi al blur.
 
-## Prossimo passo: Fase 3 (appunti già raccolti)
+## Fase 3: cosa è stato fatto (dettagli in HANDOFF.md)
+
+- 3.1: `App\Support\AdPlaceholder` (regola + titolo automatico, unico punto); cliente e titolo facoltativi per una pubblicità; regola cambiata (il titolo non rende più "vera" una pubblicità; togliere il cliente senza file la riporta segnaposto) — detto all'utente prima di iniziare. Comando `timone:placeholder-sync`.
+- 3.2: `App\Livewire\Timone\BulkUpload` + `App\Support\BulkContentImporter` + `Alpine.data('bulkUpload')`; verificato in Chrome headless. Corretto un toast falso del polling (`Grid::onlyOwnChangesSince()`).
+- Scelte di default: DV-41 in `docs/DA-VERIFICARE.md`.
+
+## Fase 5: cosa è stato fatto (dettagli in HANDOFF.md)
+
+- `App\Support\MagazineExport\*` (composer TCPDF+FPDI, ordine pagine, geometria A4, sorgenti, Ghostscript), job `GenerateMagazinePdf`, tabella `magazine_exports`, pannello `MagazineExportPanel`, download `issues.export.magazine-pdf`.
+- Scelte di default: DV-45 in `docs/DA-VERIFICARE.md`.
+
+## Fase 4: cosa è stato fatto (dettagli in HANDOFF.md)
+
+- 4.1: `App\Support\Permissions\TimoneAbilities` + `ContentPolicy` + `IssuePolicy::workOnAds/movePages`; `Grid::authorizeContent()/authorizePageMove()`; interfaccia per il Commerciale.
+- 4.2–4.3: `App\Support\Deletion\*`, `App\Livewire\Admin\ConfirmDeletion`, job `DeleteStoredFiles`, evento `IssueDeleted`, `resources/js/deleted-issue-redirect.js`, `UserPolicy::delete`; tolta l'auto-eliminazione dal profilo.
+- Scelte di default: DV-43 in `docs/DA-VERIFICARE.md`.
+
+## Appunti raccolti prima della Fase 3 (storici)
 
 - `advertisements.client` è **già nullable** (migration Fase 5 `2026_10_27_300000`): per 3.1 probabilmente nessuna migration, solo validazione (`ContentFormRules::rules()`, oggi `required_if:type,pubblicita` tranne che per i segnaposto) — verificare e dirlo nella consegna.
 - Testo segnaposto oggi in `App\Enums\PlannedAdKind::placeholderTitle()` («Pubblicità 1/2 — da assegnare»): estrarre un metodo unico usabile anche dal form (che parte da un `AdFormat`, non da un `PlannedAdKind`).

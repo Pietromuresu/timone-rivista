@@ -75,4 +75,19 @@ return [
         'step' => (int) env('TIMONE_AD_PLACEMENT_STEP', 2),
     ],
 
+    /*
+    | Export PDF sfogliabile della rivista (revisione 2, Fase 5, 2026-10-28).
+    | memory_limit: alzato SOLO dentro il job (TCPDF costruisce il PDF in RAM,
+    | ~2 volte il file finale); timeout: secondi prima che il worker lo
+    | interrompa; disk/directory: dove si salva il file (sostituito a ogni
+    | generazione); preview_settings: profilo Ghostscript della bassa
+    | risoluzione (/ebook = immagini ~150 dpi).
+    */
+    'magazine_export' => [
+        'memory_limit' => env('TIMONE_EXPORT_MEMORY_LIMIT', '1024M'),
+        'timeout' => (int) env('TIMONE_EXPORT_TIMEOUT', 1800),
+        'disk' => 'local',
+        'directory' => 'exports',
+        'preview_settings' => '/ebook',
+    ],
 ];

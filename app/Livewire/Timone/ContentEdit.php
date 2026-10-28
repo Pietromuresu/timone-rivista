@@ -16,6 +16,7 @@ use App\Support\ContentFormRules;
 use App\Support\ContentUpdater;
 use App\Support\PageGrid\ThumbnailFit;
 use App\Support\PageOccupancy;
+use App\Support\Permissions\TimoneAbilities;
 use App\Support\PlacementChoice;
 use App\Support\Twelfths;
 use App\Support\Uploads\UploadLimits;
@@ -107,7 +108,9 @@ class ContentEdit extends Component
     #[On('open-content-edit')]
     public function open(int $contentId): void
     {
-        $this->authorize('update', $this->issue);
+        // Revisione 2, Fase 4.1: permesso sul contenuto (il Commerciale apre
+        // solo le pubblicità), non più `update` sul numero.
+        $this->authorize('update', $this->findContent($contentId));
 
         $content = $this->findContent($contentId);
         $this->resetErrorBag();
@@ -143,11 +146,14 @@ class ContentEdit extends Component
 
     public function save(): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorize('update', $this->findContent((int) $this->contentId));
 
         $content = $this->findContent((int) $this->contentId);
 
-        $validated = $this->validate(ContentFormRules::rules($this->issue, placeholder: $content->isPlaceholder()), ContentFormRules::messages());
+        $validated = $this->validate(ContentFormRules::rules($this->issue), ContentFormRules::messages());
+        // Revisione 2, Fase 4.1: cambiando tipo serve il permesso sul tipo
+        // nuovo (il Commerciale non può trasformare una pubblicità in articolo).
+        $this->authorize('create', [Content::class, $this->issue, $validated['type']]);
         $trimmed = trim($this->preferred_position);
         $validated['preferred_position'] = $trimmed !== '' && ctype_digit($trimmed) ? (int) $trimmed : null;
         $validated['file_fit'] = FileFit::tryFrom($this->file_fit)?->value;
@@ -216,6 +222,8 @@ class ContentEdit extends Component
             : null;
 
         return view('livewire.timone.content-edit', [
+            // Revisione 2, Fase 4.1: il Commerciale non sceglie «Articolo».
+            'editsTimone' => TimoneAbilities::for(auth()->user(), $this->issue)->editsTimone(),
             'content' => $content,
             'sections' => $this->issue->magazine->sections()->orderBy('name')->get(),
             'editorialStatuses' => EditorialStatus::cases(),

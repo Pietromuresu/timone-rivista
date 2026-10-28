@@ -4,6 +4,10 @@
     // mostrata" già usato per page_files (Punto 1bis), nessuna UI per
     // sfogliare allegati precedenti dello stesso contenuto.
     $latestContentFile = $content->files->first();
+    // Revisione 2, Fase 4.1: il Commerciale non trascina né modifica gli
+    // articoli (cursore not-allowed e motivo nel tooltip; il server rifiuta
+    // comunque con ContentPolicy).
+    $canChange = ! isset($abilities) || $abilities->canChangeContent($content);
 @endphp
 @if ($confirmDeleteContentId === $content->id)
     {{-- Fase 4.3: secondo passaggio della conferma eliminazione, sostituisce
@@ -18,10 +22,14 @@
 @else
     <div
         wire:key="content-{{ $content->id }}"
-        draggable="true"
-        x-on:dragstart="$event.dataTransfer.setData('text/content-id', '{{ $content->id }}')"
-        class="group flex items-center gap-1.5 px-2 py-1.5 rounded border {{ $content->isPlaceholder() ? 'border-dashed border-amber-500' : 'border-gray-200 dark:border-gray-700' }} bg-white dark:bg-gray-800 text-xs cursor-grab max-w-[220px]"
-        title="{{ $content->displayLabel() }}"
+        @if ($canChange)
+            draggable="true"
+            x-on:dragstart="$event.dataTransfer.setData('text/content-id', '{{ $content->id }}')"
+        @else
+            data-not-movable="1"
+        @endif
+        class="group flex items-center gap-1.5 px-2 py-1.5 rounded border {{ $content->isPlaceholder() ? 'border-dashed border-amber-500' : 'border-gray-200 dark:border-gray-700' }} bg-white dark:bg-gray-800 text-xs {{ $canChange ? 'cursor-grab' : 'cursor-not-allowed opacity-70' }} max-w-[220px]"
+        title="{{ $content->displayLabel() }}{{ $canChange ? '' : ' — '.\App\Support\Permissions\TimoneAbilities::EDITORIAL_ONLY }}"
     >
         @if ($content->previewImageUrl())
             <img src="{{ $content->previewImageUrl() }}" alt="" class="w-6 h-8 object-cover rounded-sm shrink-0 border border-gray-200 dark:border-gray-700" />
@@ -40,12 +48,12 @@
         @if ($content->type->value === 'pubblicita' && $content->advertisement)
             <span class="text-[10px] opacity-60 shrink-0">{{ $content->advertisement->format->label() }}</span>
         @endif
-        @can('update', $issue)
+        @if ($canChange)
             <span class="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-auto">
                 <button type="button" x-on:click="$dispatch('open-content-edit', { contentId: {{ $content->id }} })" title="Modifica" class="px-1 text-gray-400 hover:text-indigo-600">✏️</button>
                 <button type="button" wire:click="archiveContent({{ $content->id }})" title="Archivia" class="px-1 text-gray-400 hover:text-amber-600">🗄️</button>
                 <button type="button" wire:click="requestDeleteContent({{ $content->id }})" title="Elimina definitivamente" class="px-1 text-gray-400 hover:text-red-600">🗑️</button>
             </span>
-        @endcan
+        @endif
     </div>
 @endif

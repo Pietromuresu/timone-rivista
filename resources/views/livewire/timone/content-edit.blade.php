@@ -21,17 +21,18 @@
 
                     @if ($content->isPlaceholder())
                         <p class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 border border-dashed border-amber-400 rounded px-2 py-1" data-testid="placeholder-note">
-                            Pubblicità <strong>da assegnare</strong> (segnaposto): indicando il cliente, un titolo proprio o caricando il PDF diventa una pubblicità vera.
+                            Pubblicità <strong>da assegnare</strong> (segnaposto): indicando il cliente o caricando il file diventa una pubblicità vera (il titolo da solo non basta).
                         </p>
                     @endif
 
                     <div class="flex gap-4 text-sm">
-                        <label class="inline-flex items-center gap-1"><input type="radio" wire:model.live="type" value="articolo" /> Articolo</label>
+                        {{-- Revisione 2, Fase 4.1: il Commerciale non trasforma una pubblicità in articolo. --}}
+                        <label class="inline-flex items-center gap-1 {{ $editsTimone ? '' : 'opacity-50 cursor-not-allowed' }}" @unless ($editsTimone) title="Solo la redazione può creare articoli" @endunless><input type="radio" wire:model.live="type" value="articolo" @disabled(! $editsTimone) /> Articolo</label>
                         <label class="inline-flex items-center gap-1"><input type="radio" wire:model.live="type" value="pubblicita" /> Pubblicità</label>
                     </div>
 
                     <div>
-                        <x-input-label for="edit_title" :value="$isAd ? 'Titolo/descrizione inserzione' : 'Titolo articolo'" />
+                        <x-input-label for="edit_title" :value="$isAd ? 'Titolo/descrizione inserzione (opzionale)' : 'Titolo articolo'" />
                         <x-text-input id="edit_title" wire:model="title" type="text" class="mt-1 block w-full text-sm" />
                         <x-input-error class="mt-1" :messages="$errors->get('title')" />
                     </div>
@@ -49,7 +50,7 @@
                     @if ($isAd)
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <x-input-label for="edit_client" value="Cliente" />
+                                <x-input-label for="edit_client" value="Cliente (opzionale)" />
                                 <x-text-input id="edit_client" wire:model="client" type="text" class="mt-1 block w-full text-sm" />
                                 <x-input-error class="mt-1" :messages="$errors->get('client')" />
                             </div>

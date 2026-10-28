@@ -59,8 +59,9 @@
                 @else
                     <ul class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($activeIssues as $issue)
-                            <li>
-                                <a href="{{ route('issues.show', [$magazine, $issue]) }}" class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            {{-- Revisione 2, Fase 4.2: «Elimina» accanto al link, solo per gli admin. --}}
+                            <li class="flex items-center">
+                                <a href="{{ route('issues.show', [$magazine, $issue]) }}" class="flex flex-1 items-center justify-between px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <div>
                                         <p class="font-medium text-gray-800 dark:text-gray-100">{{ $issue->title }}</p>
                                         <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -76,6 +77,9 @@
                                         {{ $issue->status->label() }}
                                     </span>
                                 </a>
+                                @can('delete', $issue)
+                                    <span class="pr-4"><livewire:admin.confirm-deletion kind="issue" :target-id="$issue->id" :key="'delete-issue-'.$issue->id" /></span>
+                                @endcan
                             </li>
                         @endforeach
                     </ul>
@@ -94,8 +98,9 @@
                 @else
                     <ul class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($closedIssues as $issue)
-                            <li>
-                                <a href="{{ route('issues.show', [$magazine, $issue]) }}" class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            {{-- Revisione 2, Fase 4.2: «Elimina» accanto al link, solo per gli admin. --}}
+                            <li class="flex items-center">
+                                <a href="{{ route('issues.show', [$magazine, $issue]) }}" class="flex flex-1 items-center justify-between px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <div>
                                         <p class="font-medium text-gray-800 dark:text-gray-100">{{ $issue->title }}</p>
                                         <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -107,6 +112,9 @@
                                         {{ $issue->status->label() }}
                                     </span>
                                 </a>
+                                @can('delete', $issue)
+                                    <span class="pr-4"><livewire:admin.confirm-deletion kind="issue" :target-id="$issue->id" :key="'delete-issue-'.$issue->id" /></span>
+                                @endcan
                             </li>
                         @endforeach
                     </ul>

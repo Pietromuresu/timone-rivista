@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Timone\Grid;
+use App\Models\ActivityLog;
+use App\Support\ActivityLogger;
 use Livewire\Livewire;
 
 // reorderableIssue()/editorFor() sono definite in TimoneGridReorderTest.php.
@@ -65,4 +67,30 @@ test('a checkForUpdates poll tick DOES dispatch a toast event once a real change
 
     $component->call('checkForUpdates')
         ->assertDispatched('remote-change');
+});
+
+// Revisione 2, Fase 3.2 (2026-10-28): regressione del toast falso visto nel
+// browser durante un caricamento multiplo — il poll arrivava prima
+// dell'evento locale content-created.
+test('a poll tick that only finds changes made by the same user refreshes without a toast', function () {
+    $issue = reorderableIssue();
+    $user = editorFor($issue);
+    $component = Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue]);
+
+    $this->travel(2)->seconds();
+    ActivityLogger::log(issue: $issue, entityType: 'Content', entityId: 1, action: 'content.created', description: 'Contenuto creato');
+    $issue->markPagesUpdated();
+
+    $component->call('checkForUpdates')->assertNotDispatched('remote-change');
+});
+
+test('a poll tick that finds a change logged by another user still shows the toast', function () {
+    $issue = reorderableIssue();
+    $component = Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue]);
+
+    $this->travel(2)->seconds();
+    ActivityLog::create(['issue_id' => $issue->id, 'user_id' => editorFor($issue)->id, 'entity_type' => 'Content', 'entity_id' => 1, 'action' => 'content.created', 'description' => 'Creato da un collega']);
+    $issue->markPagesUpdated();
+
+    $component->call('checkForUpdates')->assertDispatched('remote-change');
 });

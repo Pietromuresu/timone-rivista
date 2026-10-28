@@ -20,6 +20,7 @@ use App\Events\PagesBlockMoved;
 use App\Events\PagesSwapped;
 use App\Events\PageStatusUpdated;
 use App\Events\PageUnlocked;
+use App\Models\ActivityLog;
 use App\Models\Content;
 use App\Models\ContentFile;
 use App\Models\Issue;
@@ -28,20 +29,23 @@ use App\Models\PageFile;
 use App\Models\PageReorderLog;
 use App\Support\ActivityLogger;
 use App\Support\AdLoadCalculator;
+use App\Support\AdPlaceholder;
 use App\Support\AutomaticChecks;
 use App\Support\ContentPageAttacher;
 use App\Support\ContentPlacer;
 use App\Support\IssueCovers;
 use App\Support\IssueSummary;
 use App\Support\PageCapacity;
+use App\Support\PageCountResizer;
+use App\Support\PageGrid\GridRect;
 use App\Support\PageGrid\PageGridPlanner;
 use App\Support\PageGrid\PageGridPositions;
-use App\Support\PageCountResizer;
 use App\Support\PageGroupLinker;
 use App\Support\PageGroupResolver;
 use App\Support\PageInserter;
 use App\Support\PageReorderer;
 use App\Support\PageSpreadBuilder;
+use App\Support\Permissions\TimoneAbilities;
 use App\Support\ThumbnailProgressEstimator;
 use App\Support\Twelfths;
 use App\Support\Weight\MagazineWeightCalculator;
@@ -453,7 +457,9 @@ class Grid extends Component
 
     public function movePage(int $pageId, int $toPosition): void
     {
-        $this->authorize('update', $this->issue);
+        // Revisione 2, Fase 4.1: qui solo il permesso minimo; quali pagine
+        // si spostano davvero (la pagina o il suo gruppo) si sa più sotto.
+        $this->authorize('workOnAds', $this->issue);
 
         $page = Page::find($pageId);
 
@@ -485,6 +491,8 @@ class Grid extends Component
                 ->get();
 
             if ($groupPages->count() > 1) {
+                $this->authorizePageMove($groupPages);
+
                 if ($groupPages->contains(fn (Page $p) => $p->isLocked())) {
                     $this->addError('locked', 'Una pagina del gruppo collegato è bloccata: sbloccala prima di spostare il gruppo.');
 
@@ -501,6 +509,8 @@ class Grid extends Component
                 return;
             }
         }
+
+        $this->authorizePageMove([$page]);
 
         if ($this->blockIfLocked($page, 'spostata')) {
             return;
@@ -630,7 +640,7 @@ class Grid extends Component
      */
     public function swapCovers(int $coverIdA, int $coverIdB): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorize('workOnAds', $this->issue);
 
         $a = $this->issue->covers()->find($coverIdA);
         $b = $this->issue->covers()->find($coverIdB);
@@ -638,6 +648,8 @@ class Grid extends Component
         if ($a === null || $b === null) {
             return;
         }
+
+        $this->authorizePageMove([$a, $b]);
 
         $labels = [$a->label(), $b->label()];
         $error = IssueCovers::swap($a, $b);
@@ -742,7 +754,7 @@ class Grid extends Component
      */
     public function selectForSwap(int $pageId): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorize('workOnAds', $this->issue);
 
         if (! $this->swapMode || $this->isCoverPage($pageId)) {
             return;
@@ -766,6 +778,8 @@ class Grid extends Component
 
         $firstPageId = $this->swapSelectedPageId;
         $this->swapSelectedPageId = null;
+
+        $this->authorizePageMove(Page::where('issue_id', $this->issue->id)->whereIn('id', [$firstPageId, $pageId])->get());
 
         $this->swapPages($firstPageId, $pageId);
     }
@@ -884,7 +898,7 @@ class Grid extends Component
      */
     public function moveSelectedBlock(int $anchorPageId, int $toPosition): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorize('workOnAds', $this->issue);
 
         $selected = Page::whereIn('id', $this->selectedPageIds)
             ->where('issue_id', $this->issue->id)
@@ -912,6 +926,8 @@ class Grid extends Component
         $blockPages = $groupExpanded
             ? Page::whereIn('id', $expandedIds)->where('issue_id', $this->issue->id)->get()
             : $selected;
+
+        $this->authorizePageMove($blockPages);
 
         $lockedSelected = $blockPages->filter(fn (Page $page) => $page->isLocked());
 
@@ -1245,6 +1261,7 @@ class Grid extends Component
             return;
         }
 
+        $previous = $this->lastKnownPagesUpdatedAt;
         $this->lastKnownPagesUpdatedAt = $latest;
         // Fallback senza Reverb: il pannello Peso non ha un proprio polling.
         $this->dispatch('issue-page-count-changed');
@@ -1253,7 +1270,35 @@ class Grid extends Component
         // il lock ottimistico va riallineato o un successivo movePage() di
         // questo client verrebbe rifiutato come conflitto inesistente.
         $this->reorderVersion = $this->issue->fresh()->reorder_version;
-        $this->notifyRemoteChange('Il timone è stato aggiornato da un altro utente.');
+
+        if (! $this->onlyOwnChangesSince($previous)) {
+            $this->notifyRemoteChange('Il timone è stato aggiornato da un altro utente.');
+        }
+    }
+
+    /**
+     * Revisione 2, Fase 3.2 (2026-10-28): un poll può cadere tra la
+     * modifica fatta da QUESTO utente in un altro componente (es. il
+     * caricamento multiplo, un file al secondo) e l'evento locale
+     * content-created che riallinea lastKnownPagesUpdatedAt: il cambiamento
+     * risultava "di un altro utente" (toast falso visto nel browser con un
+     * lotto di file). Se dal valore precedente la cronologia registra solo
+     * azioni di questo utente, si aggiorna senza toast. Nessuna voce in
+     * cronologia = autore sconosciuto → toast come prima (prudenza).
+     */
+    private function onlyOwnChangesSince(?string $previous): bool
+    {
+        if (auth()->id() === null) {
+            return false;
+        }
+
+        // $previous null = numero mai modificato prima del mount: conta tutta la cronologia.
+        $authors = ActivityLog::where('issue_id', $this->issue->id)
+            ->when($previous !== null, fn ($query) => $query->where('created_at', '>=', $previous))
+            ->distinct()
+            ->pluck('user_id');
+
+        return $authors->isNotEmpty() && $authors->every(fn ($userId) => $userId !== null && (int) $userId === (int) auth()->id());
     }
 
     public function changePageStatus(int $pageId, string $status): void
@@ -1645,7 +1690,7 @@ class Grid extends Component
      */
     public function archiveContent(int $contentId): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('update', $contentId);
 
         $content = $this->issue->unassignedContents()->find($contentId);
 
@@ -1668,7 +1713,7 @@ class Grid extends Component
 
     public function unarchiveContent(int $contentId): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('update', $contentId);
 
         $content = $this->issue->contents()->whereDoesntHave('pages')->whereNotNull('archived_at')->find($contentId);
 
@@ -1719,7 +1764,7 @@ class Grid extends Component
      */
     public function deleteUnassignedContent(int $contentId, bool $confirmed = false): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('update', $contentId);
 
         if (! $confirmed) {
             return;
@@ -1769,7 +1814,7 @@ class Grid extends Component
      */
     public function renameContent(int $contentId, string $name): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('update', $contentId);
 
         $content = Content::with('advertisement')->findOrFail($contentId);
 
@@ -1795,10 +1840,9 @@ class Grid extends Component
 
         $isAd ? $content->advertisement->update(['client' => $name]) : $content->update(['title' => $name]);
 
-        // Fase 5: dare un nome a un segnaposto lo rende una pubblicità vera.
-        if ($content->isPlaceholder()) {
-            $content->update(['is_placeholder' => false]);
-        }
+        // Dare un cliente a un segnaposto lo rende una pubblicità vera
+        // (regola unica in AdPlaceholder, revisione 2, Fase 3.1).
+        AdPlaceholder::sync($content);
 
         ActivityLogger::log(
             issue: $this->issue,
@@ -1841,7 +1885,7 @@ class Grid extends Component
 
     public function assignContent(int $contentId, int $pageId): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('move', $contentId);
 
         $content = Content::with('advertisement')->findOrFail($contentId);
         $page = Page::findOrFail($pageId);
@@ -1923,7 +1967,7 @@ class Grid extends Component
      */
     public function extendToPage(int $contentId, int $targetPosition): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('move', $contentId);
 
         $content = Content::with('advertisement')->findOrFail($contentId);
 
@@ -2000,7 +2044,7 @@ class Grid extends Component
      */
     public function updateContentOccupancy(int $pageId, int $contentId, int $twelfths): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('update', $contentId);
 
         $page = Page::findOrFail($pageId);
 
@@ -2072,7 +2116,7 @@ class Grid extends Component
      */
     public function moveContentOnGrid(int $pageId, int $contentId, string $direction): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('move', $contentId);
 
         $page = Page::findOrFail($pageId);
 
@@ -2106,7 +2150,7 @@ class Grid extends Component
      */
     public function rotateContentOnGrid(int $pageId, int $contentId): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('move', $contentId);
 
         $page = Page::findOrFail($pageId);
 
@@ -2151,7 +2195,7 @@ class Grid extends Component
      * Cronologia + propagazione agli altri utenti (broadcast e
      * pages_updated_at per il polling), comune a frecce e rotazione.
      *
-     * @param  array<int, \App\Support\PageGrid\GridRect>  $changes
+     * @param  array<int, GridRect>  $changes
      */
     private function logGridChange(Page $page, Content $content, string $action, string $description, array $changes): void
     {
@@ -2178,7 +2222,7 @@ class Grid extends Component
 
     public function unassignContent(int $contentId, int $pageId): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('move', $contentId);
 
         $page = Page::findOrFail($pageId);
 
@@ -2244,6 +2288,15 @@ class Grid extends Component
     {
         $this->lastKnownPagesUpdatedAt = $this->issue->fresh()->getRawOriginal('pages_updated_at');
     }
+
+    /**
+     * Revisione 2, Fase 4.2: il numero è stato eliminato. Il corpo non viene
+     * mai eseguito: ricostruendo il componente il numero non c'è più (404) e
+     * il browser riporta all'elenco (resources/js/deleted-issue-redirect.js).
+     * Il listener serve solo a far partire subito quella richiesta con Reverb.
+     */
+    #[On('echo-presence:issue.{issue.id},.IssueDeleted')]
+    public function onIssueDeleted(): void {}
 
     #[On('echo-presence:issue.{issue.id},.ContentListChanged')]
     public function onContentListChanged(): void
@@ -2311,7 +2364,7 @@ class Grid extends Component
      */
     public function confirmFormatOverride(int $contentFileId): void
     {
-        $this->authorize('update', $this->issue);
+        $this->authorizeContent('update', (int) ContentFile::whereKey($contentFileId)->value('content_id'));
 
         $contentFile = ContentFile::with('content.issue', 'content.pages')->findOrFail($contentFileId);
 
@@ -2502,7 +2555,13 @@ class Grid extends Component
             MagazineWeightCalculator::calculate($this->issue->weightInput(), config('peso_rivista.scaglioni'), WeightLimits::fromConfig()),
         );
 
+        // Revisione 2, Fase 4.1: cosa può toccare questo utente (maniglie,
+        // frecce, tooltip). Stesse regole delle policy lato server.
+        $abilities = TimoneAbilities::for(auth()->user(), $this->issue);
+
         return view('livewire.timone.grid', [
+            'abilities' => $abilities,
+            'immovablePageIds' => $abilities->immovablePageIds($pages->concat($covers)),
             'pages' => $pages,
             // Tutte le copertine in un'unica fascia in cima, in ordine di
             // sfoglio (I, bandella, II, III, IV) — richiesta dell'utente dopo
@@ -2546,6 +2605,33 @@ class Grid extends Component
      * solo (nessuno stato server-side, effimero come il badge "chi sta
      * modificando cosa" già esistente).
      */
+    /**
+     * Revisione 2, Fase 4.1 (2026-10-28): le azioni su un contenuto
+     * controllano ContentPolicy sul contenuto (il Commerciale lavora solo
+     * sulle pubblicità), non più `update` sul numero. Un id che non è di
+     * questo numero ricade sul permesso minimo (`workOnAds`): il metodo poi
+     * lo ignora come prima.
+     */
+    private function authorizeContent(string $ability, int $contentId): void
+    {
+        $content = Content::where('issue_id', $this->issue->id)->find($contentId);
+
+        $content === null
+            ? $this->authorize('workOnAds', $this->issue)
+            : $this->authorize($ability, $content);
+    }
+
+    /**
+     * Revisione 2, Fase 4.1: pagine che stanno per spostarsi insieme. Al
+     * Commerciale solo se nessuna contiene articoli (IssuePolicy::movePages).
+     *
+     * @param  iterable<Page>  $pages
+     */
+    private function authorizePageMove(iterable $pages): void
+    {
+        $this->authorize('movePages', [$this->issue, $pages]);
+    }
+
     private function notifyRemoteChange(string $message): void
     {
         $this->dispatch('remote-change', message: $message);

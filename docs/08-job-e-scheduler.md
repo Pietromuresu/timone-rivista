@@ -36,6 +36,19 @@ Nessun job definisce `$tries`, `$timeout`, `$backoff` o `failed()`: valgono i pa
   ```
   In UI non esiste un bottone "riprova" (`HANDOFF.md`, "Debito noto": l'unico modo lato utente è creare un nuovo contenuto con un nuovo file).
 
+### `App\Jobs\GenerateMagazinePdf` (revisione 2, Fase 5, 2026-10-28)
+
+- **Cosa fa**: compone il PDF sfogliabile di un numero (`MagazinePdfComposer`) in una cartella temporanea `exports/tmp-…`, per la variante `preview` lo ricomprime con Ghostscript, poi sostituisce `exports/issue-{id}/{variant}.pdf` e aggiorna `magazine_exports` (`ready`, pagine, peso, contenuti senza file). Log `magazine_export.ready`.
+- **Quando parte**: `MagazineExportRequester::request()` dal pannello del numero; non ne accoda un secondo per la stessa variante finché uno è in coda/in generazione (salvo che sia fermo da più di timeout + 5 min).
+- **Memoria e tempo**: `ini_set('memory_limit')` al valore di `timone.magazine_export.memory_limit` solo dentro il job; `$timeout` da `timone.magazine_export.timeout`; `$tries = 1`.
+- **Se fallisce**: stato `failed` con il motivo (visibile nel pannello), cartella temporanea rimossa, il file precedente resta. Timeout o memoria esaurita: il worker chiama `failed()` che segna lo stesso stato. Un file sorgente mancante NON è un errore (riquadro «File mancante»).
+
+### `App\Jobs\DeleteStoredFiles` (revisione 2, Fase 4.2, 2026-10-28)
+
+- **Cosa fa**: cancella da disco i file (e le miniature) di un numero o di una rivista appena eliminati; un file già assente non è un errore. Log `stored_files_deleted` con il numero di file.
+- **Quando parte**: accodato da `IssueDeletion::deleteIssues()` DENTRO la transazione con `afterCommit()`: parte solo se l'eliminazione è andata a buon fine, quindi mai record senza file né file cancellati per record ancora vivi.
+- **Se fallisce**: 3 tentativi, poi `failed_jobs`. I record sono già spariti: i file restano orfani su disco finché non si rilancia (`php artisan queue:retry <id>`).
+
 ### `App\Jobs\GeneratePageFileThumbnail` (legacy)
 
 Stessa logica, per i `PageFile` caricati direttamente su una pagina prima del 2026-09-02. **Nessun punto di `app/` lo accoda più**: resta per i test (`tests/Feature/Jobs/GeneratePageFileThumbnailTest.php`) e per un eventuale rilancio manuale sui dati storici.

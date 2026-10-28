@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdDashboardExportController;
 use App\Http\Controllers\ContentFileController;
 use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\MagazineExportController;
 use App\Http\Controllers\PageFileController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TimoneExportController;
@@ -52,6 +53,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->scopeBindings()
         ->name('issues.export.ad-dashboard-pdf');
 
+    // Revisione 2, Fase 5: PDF sfogliabile della rivista (generato in coda, qui solo il download).
+    Route::get('/riviste/{magazine:slug}/numeri/{issue}/export/rivista-{variant}.pdf', [MagazineExportController::class, 'download'])
+        ->scopeBindings()
+        ->whereIn('variant', ['full', 'preview'])
+        ->name('issues.export.magazine-pdf');
+
     Route::get('/riviste/{magazine:slug}/numeri/{issue}/export/timone.pdf', [TimoneExportController::class, 'pdf'])
         ->scopeBindings()
         ->name('issues.export.timone-pdf');
@@ -80,7 +87,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Revisione 2, Fase 4.3: rotta profile.destroy (auto-eliminazione) tolta, vedi UserPolicy::delete().
 });
 
 require __DIR__.'/auth.php';

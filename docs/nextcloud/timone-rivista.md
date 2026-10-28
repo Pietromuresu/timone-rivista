@@ -170,7 +170,7 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - Creando un numero, nella sezione «📢 Pubblicità previste» si indica quante pubblicità sono previste: pagina intera, 2/3, 1/2, piedino (1/3), vetrina (1/4). Mentre si scrive, il modulo mostra quante pagine di pubblicità sono in tutto, la percentuale sulle pagine interne e dove andranno. Se non ci stanno compare un errore rosso e il numero non viene creato finché non si correggono i valori.
 - Dove vanno: le prime 4 pubblicità occupano tutte le copertine, di fila, nell'ordine II, III, IV e I (prima le pagine intere; se sono meno di 4, anche le frazioni più grandi). Quando viene usata la I compare un avviso. Le altre vanno nelle pagine interne una sì e una no da pagina 2 (2, 4, 6…), prima le pagine intere e poi le frazioni, una per pagina, lasciando il resto della pagina all'editoriale.
 - Nel timone sono «segnaposto»: bordo tratteggiato ed etichetta «Da assegnare». Contano nella percentuale di pubblicità e nel contatore «Pubblicità da assegnare» del cruscotto.
-- Per trasformarlo in una pubblicità vera: doppio click sul nome e scrivere il cliente, oppure ✏️ e compilare cliente, titolo o PDF. Si sposta e si modifica come ogni altro contenuto.
+- Per trasformarlo in una pubblicità vera: doppio click sul nome e scrivere il cliente, oppure ✏️ e indicare il cliente o caricare il PDF (dal 2026-10-28 il titolo da solo non basta). Si sposta e si modifica come ogni altro contenuto.
 - Le posizioni vengono decise solo quando si crea il numero: dopo non cambiano mai da sole.
 
 ## Riepilogo in cima al timone (dal 2026-10-27)
@@ -205,6 +205,27 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - Anteprime: se il PDF di un annuncio è impaginato su una pagina intera, nel riquadro si vede solo la parte che corrisponde alla sua posizione (una mezza verticale a sinistra mostra la metà sinistra del PDF). Se il file è già della misura dell'annuncio si vede intero. Se il sistema sbaglia: ✏️ Modifica → «Anteprima nel riquadro».
 - Posizione già dalla creazione: nel modulo «+ Nuovo contenuto» e nella finestra «Modifica contenuto» c'è «Posizione nel timone»: si sceglie la pagina (o la copertina) e il contenuto va lì subito. Se non c'è posto il contenuto non viene creato (o spostato) e il messaggio dice cosa occupa la pagina e quanto spazio manca. «Da assegnare» lo lascia tra i contenuti da assegnare.
 - Prima dell'aggiornamento sul server: docker compose run --rm --no-deps app php artisan timone:grid-dry-run (mostra dove finisce ogni contenuto sulla griglia, senza scrivere nulla). Dopo, facoltativo: php artisan timone:file-ratios per ritagliare anche le anteprime dei file già caricati.
+
+## Novità per la redazione (revisione 2, Fase 3, 2026-10-28)
+
+- Pubblicità senza cliente: in «+ Nuovo contenuto» → Pubblicità, cliente e titolo sono facoltativi. Se manca il cliente e non c'è un file, la pubblicità è un segnaposto «Da assegnare», come quelle previste alla creazione del numero, e conta nel riepilogo. Titolo vuoto → «Pubblicità 1/2 — da assegnare» (con la misura).
+- Regola unica del segnaposto: è una pubblicità senza cliente e senza file. Diventa vera appena riceve il cliente o il file; il titolo non conta più. Se si toglie il cliente a una pubblicità senza file, torna segnaposto.
+- Caricamento multiplo: riquadro «⇪ Carica più file» sotto «Nuovo contenuto». Si sceglie in alto Articoli o Pubblicità e si trascinano (o si scelgono) tanti PDF/immagini. Ogni file diventa un contenuto tra i «Contenuti da assegnare»: titolo = nome del file (trattini e underscore diventano spazi), pagine = pagine del PDF (1 per un'immagine); le pubblicità nascono «Pagina intera» senza cliente. Spazio, formato, cliente e posizione si correggono a mano dopo.
+- I file partono uno alla volta: per ciascuno si vede «in coda», la percentuale, «creato» o l'errore con il motivo; un file sbagliato non ferma gli altri. Alla fine c'è il riepilogo e «Riprova i falliti». Un titolo già presente nel numero viene creato come «… (2)» con un avviso. Non chiudere la pagina finché l'elenco non è finito.
+- Dopo l'aggiornamento sul server: docker compose exec app php artisan timone:placeholder-sync --dry-run (elenca le pubblicità senza cliente né file che tornano segnaposto), poi lo stesso comando senza --dry-run.
+
+## Novità per la redazione (revisione 2, Fase 4, 2026-10-28)
+
+- Ruolo Commerciale: ora lavora sulle pubblicità. Le crea (anche più file insieme), le modifica e le sposta: trascinamento, frecce, rotazione, pagina scelta nella finestra di modifica. Può spostare anche pagine intere, ma solo se non contengono articoli. Sugli articoli vede i comandi disattivati con il messaggio «Solo la redazione può spostare questo contenuto». Stati delle pagine, blocchi, gruppi, pagine totali e scadenza restano della redazione.
+- Eliminare un numero o una rivista (solo amministratori): bottone «🗑️ Elimina» accanto al numero nella pagina della rivista, oppure in fondo a «Modifica rivista». Prima un riepilogo di cosa sparirà (pagine, contenuti, file e spazio occupato), poi si scrive il nome esatto e la propria password. L'eliminazione è definitiva. Chi aveva il numero aperto torna all'elenco con un avviso.
+- Eliminare un utente (solo amministratori): in fondo a «Modifica utente», stessa conferma scrivendo la sua email. I file che aveva caricato e la cronologia restano, con «Utente eliminato». Non si può eliminare sé stessi né l'ultimo amministratore. Dal profilo non si può più eliminare il proprio account.
+
+## Novità per la redazione (revisione 2, Fase 5, 2026-10-28)
+
+- PDF sfogliabile della rivista: nella pagina del numero, riquadro «📖 PDF sfogliabile della rivista» sopra il timone, bottone «Esporta PDF rivista». Crea un PDF con tutte le pagine nell'ordine di stampa: I e II di copertina, pagine interne, III e IV di copertina. Ogni pagina è un A4 con dentro la pagina della rivista in scala, i PDF dei contenuti al loro posto e il numero di pagina sotto. Si sfoglia a coppie come una rivista.
+- Dove manca il materiale (segnaposto, articoli senza PDF, file non trovato) c'è un riquadro tratteggiato con titolo e «File mancante»: si vede subito cosa manca prima della stampa. Una pagina vuota mostra «Pagina bianca».
+- Il PDF si prepara in coda: nel riquadro lo stato passa da «In coda» a «In generazione» e poi a «Pronto», con «Scarica». Intanto si può continuare a lavorare. Ogni nuova esportazione sostituisce la precedente.
+- Spuntando «Bassa risoluzione per anteprima» si ottiene un file leggero da mandare via mail (a parte, non sostituisce quello a qualità piena).
 
 ## Punti di attenzione
 

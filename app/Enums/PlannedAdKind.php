@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-use App\Support\Twelfths;
+use App\Support\AdPlaceholder;
 
 /**
  * Tipi di pubblicità "previste" che si indicano creando un numero (Fase 5,
@@ -51,11 +51,13 @@ enum PlannedAdKind: string
         return $this->format()->twelfths();
     }
 
-    /** Titolo automatico del segnaposto: «Pubblicità 1/2 — da assegnare». */
+    /**
+     * Titolo automatico del segnaposto: «Pubblicità 1/2 — da assegnare».
+     * Il testo nasce in AdPlaceholder::title(), lo stesso usato dal modulo
+     * quando il titolo di una pubblicità resta vuoto (revisione 2, Fase 3.1).
+     */
     public function placeholderTitle(): string
     {
-        $size = $this === self::Full ? 'pagina intera' : Twelfths::fractionLabel($this->twelfths());
-
-        return "Pubblicità {$size} — da assegnare";
+        return AdPlaceholder::title($this->twelfths());
     }
 }

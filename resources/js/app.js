@@ -16,6 +16,7 @@
  */
 import './timone-alpine';
 import { installDragAutoScroll } from './drag-autoscroll';
+import './deleted-issue-redirect';
 import './bootstrap';
 
 // Revisione 2, Fase 1, bug 4: auto-scroll durante ogni trascinamento

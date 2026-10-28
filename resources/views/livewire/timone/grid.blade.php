@@ -1,5 +1,7 @@
 <div
     class="space-y-4"
+    {{-- Revisione 2, Fase 4.2: dove andare se il numero viene eliminato mentre è aperto (resources/js/deleted-issue-redirect.js). --}}
+    data-deleted-redirect="{{ route('magazines.index', ['eliminato' => 1]) }}"
     x-data="{
         remoteToast: null, remoteToastTimeout: null,
         // Shortcut da tastiera (2026-09-02, punto 2 del prompt), identiche
@@ -140,13 +142,16 @@
                     type="date"
                     value="{{ $issue->print_deadline_at?->toDateString() }}"
                     wire:change="updatePrintDeadline($event.target.value)"
-                    class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-1 py-0.5"
+                    {{-- Revisione 2, Fase 4.1: impostazione del numero, solo redazione. --}}
+                    @disabled(! $abilities->editsTimone())
+                    class="text-xs rounded disabled:opacity-60 border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-1 py-0.5"
                 />
                 @if ($issue->print_deadline_at && $issue->deadline_reminder_sent_at)
                     <span class="text-emerald-600 dark:text-emerald-400" title="Sollecito già inviato al redattore per questa scadenza">✉️</span>
                 @endif
             </div>
 
+            @if ($abilities->editsTimone())
             <button
                 type="button"
                 wire:click="togglePageCountEditor"
@@ -158,6 +163,7 @@
             >
                 ⚙️ Pagine interne
             </button>
+            @endif
 
             <button
                 type="button"
@@ -478,7 +484,7 @@
                     @foreach ($reorderLogs as $log)
                         <li class="py-1.5 flex items-center justify-between gap-3">
                             <span class="text-gray-700 dark:text-gray-200">
-                                <strong>{{ $log->user->name }}</strong>
+                                <strong>{{ $log->user?->name ?? 'Utente eliminato' }}</strong>
                                 ha spostato la pagina (ora in posizione {{ $log->page->position }})
                                 dalla posizione {{ $log->from_position }} alla {{ $log->to_position }}
                             </span>
@@ -606,6 +612,8 @@
             @if (! empty($selectedPageIds))
                 <span class="w-px h-4 bg-indigo-300 dark:bg-indigo-700"></span>
 
+                {{-- Revisione 2, Fase 4.1: stato, blocco e gruppi solo per la redazione. --}}
+                @if ($abilities->editsTimone())
                 <label class="flex items-center gap-1">
                     Cambia stato in:
                     <select
@@ -636,6 +644,7 @@
                     <button type="button" wire:click="linkSelectedPages" class="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50">
                         🔗 Collega selezionate
                     </button>
+                @endif
                 @endif
 
                 {{-- Punto 4.6 del prompt (2026-09-02, deciso esplicitamente
@@ -669,8 +678,12 @@
         </p>
     </template>
 
-    @can('update', $issue)
+    {{-- Revisione 2, Fase 4.1: anche il Commerciale (solo pubblicità: ogni
+         componente controlla poi il tipo con ContentPolicy). --}}
+    @can('workOnAds', $issue)
         <livewire:timone.content-create :issue="$issue" :key="'content-create-'.$issue->id" />
+        {{-- Revisione 2, Fase 3.2: più file in una volta, un contenuto per file. --}}
+        <livewire:timone.bulk-upload :issue="$issue" :key="'bulk-upload-'.$issue->id" />
         {{-- Fase 4: modale di modifica, aperta da ✏️ (evento open-content-edit). --}}
         <livewire:timone.content-edit :issue="$issue" :key="'content-edit-'.$issue->id" />
     @endcan
@@ -731,9 +744,9 @@
                         @foreach ($archivedContents as $content)
                             <div wire:key="archived-content-{{ $content->id }}" class="flex items-center gap-1.5 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 text-xs max-w-[220px] opacity-75">
                                 <span class="truncate" title="{{ $content->displayLabel() }}">{{ $content->displayLabel() }}</span>
-                                @can('update', $issue)
+                                @if ($abilities->canChangeContent($content))
                                     <button type="button" wire:click="unarchiveContent({{ $content->id }})" title="Ripristina" class="shrink-0 ml-auto text-gray-400 hover:text-emerald-600">↩️</button>
-                                @endcan
+                                @endif
                             </div>
                         @endforeach
                     </div>

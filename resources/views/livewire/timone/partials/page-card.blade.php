@@ -36,6 +36,11 @@
     // blocco pagina (§6.6), ortogonale alla modalità di vista.
     // Solo la combinazione delle due decide se la pagina è davvero editabile.
     $interactive = $dropEnabled && ! $locked;
+    // Revisione 2, Fase 4.1: permessi calcolati una volta in Grid::render()
+    // (TimoneAbilities, stesse regole del server). Fuori dal timone (nessun
+    // $abilities) la vista resta com'era: il server controlla comunque.
+    $canMovePage = ! isset(($immovablePageIds ?? [])[$page->id]);
+    $editsTimone = isset($abilities) ? $abilities->editsTimone() : true;
     // §2.2: apre il PDF alla pagina interna corretta con il frammento
     // nativo del browser #page=N (nessun pdf.js in questo progetto, vedi
     // HANDOFF.md) — solo se non è la prima pagina del file sorgente.
@@ -101,7 +106,7 @@
          che si spostano (resources/js/timone-alpine.js). --}}
     @if ($page->page_group_id) data-group-id="{{ $page->page_group_id }}" @endif
     @if ($isCover) data-cover-slot="{{ $page->cover_slot->value }}" @endif
-    @unless ($locked || $isCover)
+    @unless ($locked || $isCover || ! $canMovePage)
         @keydown.arrow-left.prevent="$animatedMove('nudgePage', {{ $page->id }}, -1)"
         @keydown.arrow-right.prevent="$animatedMove('nudgePage', {{ $page->id }}, 1)"
     @endunless
@@ -168,6 +173,13 @@
                 <span class="font-semibold text-sm select-none" title="{{ $page->lockedBy ? 'Bloccata da '.$page->lockedBy->name : 'Pagina bloccata' }}">
                     🔒 {{ $pageNumber }}
                 </span>
+            @elseif (! $canMovePage)
+                {{-- Fase 4.1: pagina con articoli e utente che sposta solo
+                     pubblicità — niente maniglia (senza .drag-handle Sortable
+                     non parte), cursore e motivo nel tooltip. --}}
+                <span class="cursor-not-allowed font-semibold text-sm select-none opacity-70" title="{{ \App\Support\Permissions\TimoneAbilities::EDITORIAL_PAGES_ONLY }}" data-testid="page-not-movable">
+                    {{ $isCover ? '📘 ' : '' }}{{ $pageNumber }}
+                </span>
             @elseif ($isCover)
                 {{-- Drag nativo (non Sortable): le copertine non stanno nel
                      contenitore delle pagine interne, si scambiano solo tra
@@ -187,7 +199,7 @@
         </div>
 
         <div class="flex items-center gap-1">
-            @if ($interactive)
+            @if ($interactive && $editsTimone)
                 <select
                     x-on:click.stop
                     x-on:keydown.stop
@@ -206,13 +218,15 @@
                 </span>
             @endif
 
-            <button
-                type="button"
-                wire:click="togglePageLock({{ $page->id }})"
-                x-on:click.stop
-                class="shrink-0 text-[10px] opacity-60 hover:opacity-100"
-                title="{{ $locked ? 'Sblocca pagina' : 'Blocca pagina (impedisce spostamento, eliminazione e modifiche)' }}"
-            >{{ $locked ? '🔒' : '🔓' }}</button>
+            @if ($editsTimone)
+                <button
+                    type="button"
+                    wire:click="togglePageLock({{ $page->id }})"
+                    x-on:click.stop
+                    class="shrink-0 text-[10px] opacity-60 hover:opacity-100"
+                    title="{{ $locked ? 'Sblocca pagina' : 'Blocca pagina (impedisce spostamento, eliminazione e modifiche)' }}"
+                >{{ $locked ? '🔒' : '🔓' }}</button>
+            @endif
 
             @if ($group)
                 <button
@@ -221,7 +235,7 @@
                     x-on:click.stop
                     @unless ($locked) title="Pagina collegata — clic per scollegare l'intero gruppo" @else title="Pagina collegata (bloccata)" @endif
                     class="shrink-0 text-[9px] font-semibold rounded px-1 border {{ $group->badgeClasses() }}"
-                    @if ($locked) disabled @endif
+                    @if ($locked || ! $editsTimone) disabled @endif
                 >🔗</button>
             @endif
         </div>

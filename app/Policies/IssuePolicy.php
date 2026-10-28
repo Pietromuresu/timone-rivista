@@ -2,10 +2,10 @@
 
 namespace App\Policies;
 
-use App\Enums\UserRole;
 use App\Models\Issue;
+use App\Models\Page;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
+use App\Support\Permissions\TimoneAbilities;
 
 class IssuePolicy
 {
@@ -30,16 +30,39 @@ class IssuePolicy
      */
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->role === UserRole::Redattore;
+        return $user->role->editsTimone();
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Tutto il timone del numero (pagine, stati, gruppi, articoli,
+     * impostazioni): Admin e Redattore con accesso alla rivista. Regola in
+     * TimoneAbilities (revisione 2, Fase 4.1), come le due sotto.
      */
     public function update(User $user, Issue $issue): bool
     {
-        return $user->canAccessMagazine($issue->magazine)
-            && ($user->isAdmin() || $user->role === UserRole::Redattore);
+        return TimoneAbilities::for($user, $issue)->editsTimone();
+    }
+
+    /**
+     * Lavorare almeno sulle pubblicità del numero (revisione 2, Fase 4.1):
+     * vale anche per il Commerciale. Apre modulo, caricamento multiplo e
+     * modale di modifica; ogni azione su un contenuto controlla poi
+     * ContentPolicy sul contenuto stesso.
+     */
+    public function workOnAds(User $user, Issue $issue): bool
+    {
+        return TimoneAbilities::for($user, $issue)->handlesAds();
+    }
+
+    /**
+     * Spostare queste pagine (una, un gruppo, una selezione, uno scambio):
+     * al Commerciale solo se nessuna contiene articoli.
+     *
+     * @param  iterable<Page>  $pages
+     */
+    public function movePages(User $user, Issue $issue, iterable $pages): bool
+    {
+        return TimoneAbilities::for($user, $issue)->canMovePages($pages);
     }
 
     /**

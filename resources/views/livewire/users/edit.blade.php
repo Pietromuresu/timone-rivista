@@ -63,6 +63,13 @@
                     </div>
                 </form>
             </div>
+
+            {{-- Revisione 2, Fase 4.3: eliminazione dell'utente (solo admin; mai sé stessi né l'ultimo admin). --}}
+            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg border border-red-200 dark:border-red-900">
+                <h3 class="text-base font-medium text-red-700 dark:text-red-400">Elimina l'utente</h3>
+                <p class="mt-1 mb-3 text-sm text-gray-600 dark:text-gray-400">L'account viene eliminato e le sue sessioni chiuse. File caricati e cronologia restano, con «Utente eliminato».</p>
+                <livewire:admin.confirm-deletion kind="user" :target-id="$user->id" />
+            </div>
         </div>
     </div>
 </div>

@@ -50,7 +50,10 @@
                 <div>
                     <x-input-label for="type" value="Tipo" />
                     <select id="type" wire:model.live="type" class="mt-1 block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm">
-                        <option value="articolo">Articolo</option>
+                        {{-- Revisione 2, Fase 4.1: il Commerciale crea solo pubblicità. --}}
+                        @if ($editsTimone)
+                            <option value="articolo">Articolo</option>
+                        @endif
                         <option value="pubblicita">Pubblicità</option>
                     </select>
                     <x-input-error class="mt-1" :messages="$errors->get('type')" />
@@ -65,10 +68,12 @@
                                 <option value="{{ $section->id }}">{{ $section->name }}</option>
                             @endforeach
                         </select>
-                        @if ($section_id)
+                        @if ($section_id && $editsTimone)
                             <button type="button" wire:click="startEditSection({{ $section_id }})" title="Rinomina rubrica selezionata" class="shrink-0 px-2 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">✏️</button>
                         @endif
-                        <button type="button" wire:click="startCreateSection" title="Nuova rubrica" class="shrink-0 px-2 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">➕</button>
+                        @if ($editsTimone)
+                            <button type="button" wire:click="startCreateSection" title="Nuova rubrica" class="shrink-0 px-2 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">➕</button>
+                        @endif
                     </div>
                     <x-input-error class="mt-1" :messages="$errors->get('section_id')" />
                 </div>
@@ -87,8 +92,11 @@
             @endif
 
             <div>
-                <x-input-label for="title" :value="$type === 'articolo' ? 'Titolo articolo' : 'Titolo/descrizione inserzione'" />
-                <x-text-input id="title" wire:model="title" type="text" class="mt-1 block w-full text-sm" required />
+                <x-input-label for="title" :value="$type === 'articolo' ? 'Titolo articolo' : 'Titolo/descrizione inserzione (opzionale)'" />
+                {{-- Revisione 2, Fase 3.1: per una pubblicità il titolo può
+                     restare vuoto → «Pubblicità 1/2 — da assegnare»
+                     (App\Support\AdPlaceholder). --}}
+                <x-text-input id="title" wire:model="title" type="text" class="mt-1 block w-full text-sm" :required="$type === 'articolo'" :placeholder="$type === 'articolo' ? '' : 'Vuoto: «Pubblicità … — da assegnare»'" />
                 <x-input-error class="mt-1" :messages="$errors->get('title')" />
             </div>
 
@@ -120,8 +128,9 @@
             @else
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <x-input-label for="client" value="Cliente" />
-                        <x-text-input id="client" wire:model="client" type="text" class="mt-1 block w-full text-sm" required />
+                        <x-input-label for="client" value="Cliente (opzionale)" />
+                        <x-text-input id="client" wire:model="client" type="text" class="mt-1 block w-full text-sm" />
+                        <p class="mt-1 text-xs text-gray-400" data-testid="client-placeholder-hint">Senza cliente e senza file la pubblicità resta un segnaposto «da assegnare».</p>
                         <x-input-error class="mt-1" :messages="$errors->get('client')" />
                     </div>
                     <div>
@@ -341,6 +350,8 @@
                         >
                             Sovrascrivi le pagine in conflitto
                         </button>
+                        {{-- Inserire pagine cambia la struttura del numero: solo la redazione (Fase 4.1). --}}
+                        @if ($editsTimone)
                         <button
                             type="button"
                             wire:click="confirmMultipageUploadWithShift"
@@ -349,6 +360,7 @@
                         >
                             ↪️ Sposta le pagine esistenti dopo
                         </button>
+                        @endif
                     </div>
                 @endif
 

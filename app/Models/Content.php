@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ContentType;
+use App\Enums\FileFit;
 use App\Enums\ThumbnailStatus;
 use App\Support\PageOccupancy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -35,7 +36,7 @@ class Content extends Model
             'archived_at' => 'datetime',
             'occupancy_twelfths' => 'integer',
             'is_placeholder' => 'boolean',
-            'file_fit' => \App\Enums\FileFit::class,
+            'file_fit' => FileFit::class,
         ];
     }
 
@@ -66,10 +67,11 @@ class Content extends Model
     }
 
     /**
-     * Pubblicità segnaposto (Fase 5, 2026-10-27): creata dalle "pubblicità
-     * previste" di un numero, senza inserzionista né PDF. Conta nel carico
-     * pubblicitario come ogni pubblicità e nel contatore "da assegnare";
-     * smette di esserlo quando riceve inserzionista, titolo proprio o PDF.
+     * Pubblicità segnaposto (Fase 5, 2026-10-27): senza inserzionista né
+     * file — dalle "pubblicità previste" di un numero o dal modulo col
+     * cliente vuoto. Conta nel carico pubblicitario come ogni pubblicità e
+     * nel contatore "da assegnare". Legge il valore memorizzato: la regola
+     * (e chi la scrive) è App\Support\AdPlaceholder (revisione 2, Fase 3.1).
      */
     public function isPlaceholder(): bool
     {

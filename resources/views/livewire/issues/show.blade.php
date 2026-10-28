@@ -80,6 +80,9 @@
             {{-- Peso teorico della rivista, vicino al conteggio pagine dell'intestazione. --}}
             <livewire:timone.weight-panel :issue="$issue" :key="'weight-panel-'.$issue->id" />
 
+            {{-- Revisione 2, Fase 5: PDF sfogliabile della rivista, generato in coda. --}}
+            <livewire:timone.magazine-export-panel :issue="$issue" :key="'magazine-export-'.$issue->id" />
+
             <livewire:timone.grid :issue="$issue" :key="'timone-grid-'.$issue->id" />
         </div>
     </div>

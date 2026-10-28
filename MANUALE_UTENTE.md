@@ -81,6 +81,13 @@ Tutto si aggiorna da solo in tempo reale se un collega è collegato sullo stesso
 
 **Per stampare o condividere il timone**: bottone **"📄 Esporta PDF"** nella barra in alto — un foglio A4 orizzontale pensato per essere appeso in redazione, come il timone cartaceo. In testa: rivista, numero, data di uscita e gli stessi numeri del riepilogo (pagine piene/parziali/bianche, spazio libero, % pubblicità, pubblicità da assegnare, copertine, peso copia). Poi le **copertine** e le **pagine interne**, tutte della stessa misura con le proporzioni del formato, **affiancate in doppie pagine** come sfogliando la rivista (la pagina 1 da sola a destra). Dentro ogni pagina la **disposizione dei contenuti** come nel timone (colonne per le pubblicità verticali, righe per gli altri, piedino in fondo, spazio libero tratteggiato) con il nome di ciascuno; accanto al numero un pallino colorato indica lo stato. In fondo una legenda e, a piè di pagina, «Foglio N di M». Prima di scaricare puoi scegliere di includere le **miniature** (ogni blocco mostra l'anteprima del suo contenuto, copertine comprese; senza miniature i blocchi sono azzurri per gli articoli e ambra per le pubblicità; le immagini WEBP potrebbero non comparire), mostrare solo le pagine con pubblicità, o solo quelle non ancora approvate (non in stato "Revisionata"/"Ok stampa"): con un filtro le pagine non sono più consecutive e vengono mostrate una per una, non in doppie pagine.
 
+**PDF sfogliabile della rivista (dal 2026-10-28)**: riquadro **«📖 PDF sfogliabile della rivista»** sopra il timone → **«Esporta PDF rivista»**. A differenza dell'export del timone (un foglio riassuntivo), questo simula la **rivista finita**: una pagina del PDF per ogni pagina della rivista, nell'ordine di stampa — I di copertina, II di copertina, pagine interne 1…N, III e IV di copertina (la bandella, se c'è, dopo la I). Ogni pagina è un **A4 verticale** con dentro la pagina della rivista in scala, centrata e non deformata, e il numero di pagina in piccolo sotto. In ogni pagina:
+- i contenuti con un file mostrano **il loro PDF (o la loro immagine) nel loro riquadro**, con la stessa regola delle anteprime del timone ([§5ter](#5ter-modificare-un-contenuto-e-rinominarlo), «Anteprima nel riquadro»): un file a pagina intera mostra solo la sua parte, un file già nel formato si vede intero. Un contenuto su più pagine usa, su ogni pagina, la pagina corrispondente del suo PDF;
+- i contenuti **senza file** (segnaposto, articoli ancora senza PDF) **non spariscono**: riquadro tratteggiato con titolo, tipo e «File mancante». Lo stesso se il file non si trova più sul server;
+- lo spazio libero resta bianco; una pagina vuota mostra «Pagina bianca».
+
+Il PDF si apre **a coppie affiancate** come una rivista (la I di copertina da sola) e ha un segnalibro per ogni pagina. Si genera **in coda**: lo stato compare nel riquadro (**In coda → In generazione → Pronto**, oppure **Errore** con il motivo) e si aggiorna da solo; quando è pronto compare **«⬇ Scarica»** con il numero di pagine, il peso del file e quanti contenuti sono senza file. Puoi intanto continuare a lavorare. Con **«Bassa risoluzione per anteprima»** spuntato ottieni una versione leggera (immagini ricompresse) da mandare via mail: è un file a parte, che non sostituisce quello a qualità piena. Ogni nuova esportazione sostituisce la precedente dello stesso tipo. Può esportare chiunque veda il numero.
+
 ---
 
 ## 4. Spostare le pagine
@@ -120,13 +127,13 @@ Per sbloccarla, clic sulla stessa icona (ora 🔒): torna 🔓 e la pagina è di
 **Per creare un nuovo articolo o una nuova pubblicità:** bottone **"+ Nuovo contenuto"** sopra la griglia. Scegli il tipo (Articolo o Pubblicità): i campi del form cambiano di conseguenza.
 
 - **Articolo**: titolo, rubrica (opzionale), **occupazione di pagina (obbligatoria, vedi [§5bis](#5bis-occupazione-di-pagina-obbligatoria))**, autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
-- **Pubblicità**: titolo, rubrica, cliente, agenzia (opzionale), **formato (obbligatorio, nessun valore già scelto)** (l'intero listino ufficiale: pagina intera, mezza pagina orizzontale/verticale, 1/3, 1/4 (vetrina), 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale — accanto a ciascuno è indicato lo spazio che occupa, es. «(1/2 di pagina)»). Scelto il formato, i campi **"Pagine intere" + "Frazione"** ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)) si compilano da soli con lo spazio del formato, e puoi **correggerli** (es. una mezza pagina che in questo numero occupa 2/3). Poi **pagina preferita (opzionale)** — solo un promemoria di dove piazzarla, non assegna nulla da sola, visibile nel pannello "Pubblicità prenotate" ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), stato commerciale, note commerciali. Per la **doppia pagina** (2 pagine intere affiancate): trascinala sulla prima delle due pagine — occupa da sola anche la successiva, ciascuna per intero, e le due pagine vengono collegate tra loro. La **battente copertina** occupa la bandella, che nel timone è un solo riquadro ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)).
+- **Pubblicità**: titolo (opzionale: se lo lasci vuoto diventa «Pubblicità 1/2 — da assegnare», con la misura dello spazio occupato), rubrica, cliente (opzionale: **senza cliente e senza file la pubblicità è un segnaposto «da assegnare»**, come quelle previste alla creazione del numero, [§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)), agenzia (opzionale), **formato (obbligatorio, nessun valore già scelto)** (l'intero listino ufficiale: pagina intera, mezza pagina orizzontale/verticale, 1/3, 1/4 (vetrina), 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale — accanto a ciascuno è indicato lo spazio che occupa, es. «(1/2 di pagina)»). Scelto il formato, i campi **"Pagine intere" + "Frazione"** ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)) si compilano da soli con lo spazio del formato, e puoi **correggerli** (es. una mezza pagina che in questo numero occupa 2/3). Poi **pagina preferita (opzionale)** — solo un promemoria di dove piazzarla, non assegna nulla da sola, visibile nel pannello "Pubblicità prenotate" ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), stato commerciale, note commerciali. Per la **doppia pagina** (2 pagine intere affiancate): trascinala sulla prima delle due pagine — occupa da sola anche la successiva, ciascuna per intero, e le due pagine vengono collegate tra loro. La **battente copertina** occupa la bandella, che nel timone è un solo riquadro ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)).
 
 **Rubrica**: accanto al menu a tendina ci sono due bottoni — **➕** crea una nuova rubrica (nome, poi "Crea": viene selezionata subito), **✏️** rinomina quella attualmente selezionata. Il nome deve essere unico all'interno della rivista.
 
 **Posizione nel timone (opzionale, dal 2026-10-27)**: nel modulo «+ Nuovo contenuto» puoi scegliere subito la pagina (1…N) o la copertina (I–IV) da cui il contenuto parte: viene messo lì appena creato, sulle pagine successive se ne occupa più d'una, nel primo posto libero della pagina. Se non c'è spazio il contenuto **non viene creato** e un messaggio dice cosa occupa già la pagina e quanto manca (es. «Sulla pagina ci sono già «Acme» (1/2) e «Beta» (1/4): manca 1/4 di pagina.»). Lasciato su «Da assegnare» il contenuto va tra i «Contenuti da assegnare», come sempre.
 
-**Allegare un file (opzionale)**: nel form di creazione, riquadro tratteggiato "Allega PDF/immagine" — **trascinaci sopra il file** dal tuo computer, oppure cliccaci per sceglierlo come sempre (vedi [§7](#7-caricare-e-vedere-un-pdf) per i dettagli). Un PDF o un'immagine (JPG/PNG/WEBP, fino a 20MB). L'anteprima si genera da sola in pochi secondi (stessa elaborazione in coda già usata per i PDF di pagina) e compare al posto dell'iconcina 📄/📢 sul chip del contenuto nel pannello "Contenuti da assegnare", senza bisogno di ricaricare la pagina. A differenza del PDF caricato su una pagina ([§7](#7-caricare-e-vedere-un-pdf)), questo file è legato al singolo contenuto: su una pagina con più contenuti (es. metà pubblicità + metà articolo), ciascuno ha il proprio allegato distinto.
+**Allegare un file (opzionale)**: nel form di creazione, riquadro tratteggiato "Allega PDF/immagine" — **trascinaci sopra il file** dal tuo computer, oppure cliccaci per sceglierlo come sempre (vedi [§7](#7-caricare-e-vedere-un-pdf) per i dettagli). Un PDF o un'immagine (JPG/PNG/WEBP, fino a 100 MB). L'anteprima si genera da sola in pochi secondi (stessa elaborazione in coda già usata per i PDF di pagina) e compare al posto dell'iconcina 📄/📢 sul chip del contenuto nel pannello "Contenuti da assegnare", senza bisogno di ricaricare la pagina. A differenza del PDF caricato su una pagina ([§7](#7-caricare-e-vedere-un-pdf)), questo file è legato al singolo contenuto: su una pagina con più contenuti (es. metà pubblicità + metà articolo), ciascuno ha il proprio allegato distinto.
 
 Una pubblicità creata ma non ancora assegnata a nessuna pagina è considerata **"prenotata"**: resta comunque conteggiata nel carico pubblicitario del cruscotto ([§8](#8-leggere-il-cruscotto-pubblicitario)) e gestibile dal pannello dedicato ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)).
 
@@ -259,6 +266,14 @@ Le pagine selezionate con Ctrl+click hanno un contorno verde acceso, ben distint
 
 - **Dal bottone "📎 Carica materiale"** in basso su una card/riga ancora vuota — il modo più rapido: si apre il modulo "Nuovo contenuto" già pronto a collegare quello che crei alla pagina da cui sei partito (compare un promemoria "📌" in cima al modulo). Se il modulo non è visibile subito, la pagina scorre automaticamente per mostrartelo.
 - **Dal bottone "+ Nuovo contenuto"** in cima alla griglia — crea un contenuto "libero", non ancora assegnato a nessuna pagina: lo trovi poi nel pannello "Contenuti da assegnare", da lì lo trascini dove vuoi come sempre.
+- **Da «⇪ Carica più file»** (riquadro «Caricamento multiplo», sotto «Nuovo contenuto») — per caricare tanti file in una volta, vedi sotto.
+
+**Caricare più file insieme (dal 2026-10-28)**: apri «⇪ Carica più file», scegli in alto se creare **Articoli** o **Pubblicità** (vale per i file che aggiungi da quel momento), poi trascina i file nel riquadro tratteggiato o cliccalo per sceglierli (PDF, JPG, PNG, WebP, fino a 100 MB ciascuno). Ogni file diventa un contenuto tra i «Contenuti da assegnare»:
+- **titolo** = nome del file senza estensione, con trattini e underscore trasformati in spazi («servizio_moto-elettrica.pdf» → «servizio moto elettrica»);
+- **spazio occupato** = tante pagine intere quante le pagine del PDF (1 pagina per un'immagine); le pubblicità nascono come «Pagina intera», senza cliente;
+- correggi poi a mano con ✏️ spazio, formato, cliente e posizione dove serve, e trascinali nel timone come sempre.
+
+I file partono **uno alla volta**: nell'elenco vedi per ciascuno «in coda», la percentuale di caricamento, «✓ creato» o «✕ errore» con il motivo (formato non accettato, file troppo grande, PDF illeggibile). Un file scartato non ferma gli altri; alla fine compare il riepilogo («12 caricati, 1 scartato: …») con **«↻ Riprova i falliti»**. Se nel numero esiste già un contenuto con lo stesso titolo, il file viene caricato lo stesso come «… (2)» e la riga lo segnala. Non chiudere né ricaricare la pagina finché l'elenco non è finito: i file ancora in coda andrebbero persi (quelli già «creati» restano).
 
 In entrambi i casi, compila titolo/tipo (articolo o pubblicità) e l'occupazione ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)), poi allega il file nel riquadro tratteggiato "Allega PDF/immagine" — PDF o immagine (jpg/png/webp), fino a **20MB**:
 - **trascina il file** dal computer sopra il riquadro: mentre ci passi sopra il riquadro diventa blu ("Rilascia per caricare"); rilascialo e parte il caricamento, con una **barra di avanzamento** in percentuale;
@@ -361,7 +376,7 @@ Solo dopo aver visto questo riepilogo puoi cliccare **"Conferma rimozione defini
 
 **Conteggi**: in cima al timone «N pagine interne · copertine 4 (X assegnate)». Il cruscotto pubblicitario ([§8](#8-leggere-il-cruscotto-pubblicitario)) e gli avvisi contano solo le pagine interne; una pubblicità sulla IV di copertina non cambia la percentuale delle pagine interne.
 
-**Nell'esportazione PDF** (bottone "📄 Esporta PDF", [§3](#3-leggere-la-griglia-del-timone)): le copertine compaiono in una sezione «Copertine» a sé, prima delle pagine interne.
+**Nell'esportazione PDF del timone** (bottone "📄 Esporta PDF", [§3](#3-leggere-la-griglia-del-timone)): le copertine compaiono in una sezione «Copertine» a sé, prima delle pagine interne.
 
 **Numeri creati prima del 2026-10-26**: sono stati convertiti automaticamente — le pagine che erano copertina sono diventate le copertine I–IV (con i loro contenuti), le pagine interne sono state rinumerate da 1, e le copertine che mancavano (spesso la II e la III) sono state create vuote.
 
@@ -443,7 +458,7 @@ Alla creazione diventano pubblicità **segnaposto** già messe nel timone, con q
 
 Le posizioni si decidono **solo adesso**: dopo puoi spostare, togliere e modificare tutto a mano, e nulla viene mai ricalcolato da solo.
 
-**I segnaposto nel timone**: bordo tratteggiato ed etichetta **«Da assegnare»**, titolo automatico (es. «Pubblicità 1/2 — da assegnare»), nessun cliente né PDF. Contano nella percentuale pubblicitaria e nel contatore «Pubblicità da assegnare (segnaposto)» del cruscotto ([§8](#8-leggere-il-cruscotto-pubblicitario)). Per trasformarne uno in una **pubblicità vera**: doppio click sul nome e scrivi il cliente, oppure ✏️ e compila cliente, titolo o PDF ([§5ter](#5ter-modificare-un-contenuto-e-rinominarlo)). Cambiare solo formato, stato o spazio non basta: resta «da assegnare». La mezza pagina nasce orizzontale: se è verticale, cambia il formato dalla ✏️.
+**I segnaposto nel timone**: bordo tratteggiato ed etichetta **«Da assegnare»**, titolo automatico (es. «Pubblicità 1/2 — da assegnare»), nessun cliente né PDF. Contano nella percentuale pubblicitaria e nel contatore «Pubblicità da assegnare (segnaposto)» del cruscotto ([§8](#8-leggere-il-cruscotto-pubblicitario)). Per trasformarne uno in una **pubblicità vera**: doppio click sul nome e scrivi il cliente, oppure ✏️ e indica il cliente o carica il PDF ([§5ter](#5ter-modificare-un-contenuto-e-rinominarlo)). Cambiare solo titolo, formato, stato o spazio non basta: resta «da assegnare» (dal 2026-10-28 anche il titolo da solo non basta più). Al contrario, se togli il cliente a una pubblicità che non ha file, torna segnaposto. Un segnaposto si può creare anche a mano: «+ Nuovo contenuto» → Pubblicità, lasciando vuoto il cliente ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato)). La mezza pagina nasce orizzontale: se è verticale, cambia il formato dalla ✏️.
 
 **Carta e peso**: nel form di creazione del numero, la sezione richiudibile "⚖️ Carta e peso" è già compilata con i valori di default della rivista: formato in mm, grammature, pagine di copertina, poi n. copie e n. bancali, e sotto "Avanzate" maggiorazione e tolleranze. Puoi cambiarli solo per questo numero; i campi diversi dalla rivista mostrano il badge "modificato" e "Ripristina default rivista" li riporta ai valori della rivista. Sotto ogni grammatura compare il peso a pagina e sotto la sezione un'anteprima del peso che si aggiorna mentre scrivi. Dettagli in [§9ter](#9ter-peso-della-rivista).
 
@@ -471,19 +486,36 @@ Voce **"Utenti"** in alto nel menu (visibile solo se sei Admin).
 - **Nuovo utente**: nome, email, password, ruolo, e le riviste a cui dargli accesso (checkbox — irrilevante se il ruolo è Admin, che vede sempre tutto).
 - **Modifica utente**: stessi campi; la password si può lasciare vuota per non cambiarla.
 
-Non è ancora possibile eliminare un utente da qui.
+- **Eliminare un utente** (dal 2026-10-28): in fondo alla pagina «Modifica utente», riquadro rosso **«Elimina l'utente»** → stessa conferma in due passaggi delle riviste e dei numeri ([§13bis](#13bis-eliminare-una-rivista-un-numero-o-un-utente-solo-admin)), scrivendo la sua **email**. Il suo lavoro resta: i file che ha caricato, gli spostamenti e la cronologia rimangono, con **«Utente eliminato»** al posto del nome. Gli vengono tolti gli accessi alle riviste e le sessioni aperte si chiudono subito. Non puoi eliminare te stesso né l'ultimo amministratore (il bottone è disattivato e il tooltip dice perché).
+
+Nessun utente può più eliminare il proprio account dalla pagina del profilo: lo fa solo un amministratore, da qui.
+
+---
+
+## 13bis. Eliminare una rivista, un numero o un utente (solo Admin)
+
+Dal 2026-10-28 un **amministratore** può eliminare:
+- un **numero**: bottone **«🗑️ Elimina»** accanto al numero, nella pagina della rivista;
+- una **rivista** con tutti i suoi numeri: pagina «Modifica rivista», riquadro rosso **«Elimina la rivista»** in fondo;
+- un **utente**: vedi [§13](#13-gestire-gli-utenti-solo-admin).
+
+L'eliminazione è **definitiva** (non c'è un cestino), per questo si conferma in due passaggi:
+1. un riepilogo di cosa sparirà: pagine, contenuti, file caricati e quanto spazio occupano (MB/GB); per una rivista anche l'elenco dei suoi numeri. «Continua» per andare avanti, «Annulla» (o Esc) per tornare indietro;
+2. scrivi il **nome esatto** del numero o della rivista (l'email per un utente) e la **tua password**, poi «Elimina definitivamente». Dopo 5 password sbagliate in un minuto bisogna aspettare un minuto.
+
+Chi ha in quel momento il numero aperto viene riportato all'elenco delle riviste con l'avviso «Il numero che avevi aperto è stato eliminato da un amministratore». Ogni eliminazione resta registrata (chi, cosa, quando) nel registro dell'applicazione.
 
 ---
 
 ## 14. Cosa può fare ciascun ruolo
 
-| Ruolo | Vede le riviste a cui ha accesso | Sposta pagine, assegna contenuti, cambia stati, carica PDF, modifica pagine totali | Crea numeri | Crea riviste | Gestisce utenti |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **Admin** | Tutte, sempre | ✅ (su tutte) | ✅ | ✅ | ✅ |
-| **Redattore** | Solo quelle a cui è stato dato accesso | ✅ (solo sulle sue riviste) | ✅ (solo sulle sue riviste) | ❌ | ❌ |
-| **Commerciale** | Solo quelle a cui è stato dato accesso | ❌ (sola lettura) | ❌ | ❌ | ❌ |
-| **Sola lettura** | Solo quelle a cui è stato dato accesso | ❌ (sola lettura) | ❌ | ❌ | ❌ |
+| Ruolo | Vede le riviste a cui ha accesso | Pubblicità: crea, modifica, sposta (anche segnaposto) | Articoli; pagine con articoli; stati, blocchi, gruppi, pagine totali, scadenza | Crea numeri | Crea riviste | Gestisce ed elimina utenti; elimina riviste e numeri |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Admin** | Tutte, sempre | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Redattore** | Solo quelle a cui è stato dato accesso | ✅ | ✅ (solo sulle sue riviste) | ✅ (solo sulle sue riviste) | ❌ | ❌ |
+| **Commerciale** | Solo quelle a cui è stato dato accesso | ✅ (dal 2026-10-28) | ❌ | ❌ | ❌ | ❌ |
+| **Sola lettura** | Solo quelle a cui è stato dato accesso | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-> **Nota**: al momento **Commerciale** e **Sola lettura** si comportano esattamente allo stesso modo — entrambi possono solo consultare (griglia, cruscotto pubblicitario, export CSV/PDF) senza modificare nulla. Il ruolo Commerciale non ha ancora funzioni dedicate alla gestione della pubblicità: quando (e se) verranno aggiunte, questa tabella verrà aggiornata.
+> **Commerciale (dal 2026-10-28)**: lavora **solo sulle pubblicità**. Le crea («+ Nuovo contenuto», dove il tipo è già Pubblicità, e il caricamento multiplo), le modifica (✏️, doppio click sul nome) e le sposta: trascinamento, frecce e rotazione nel menu «⋯», «Posizione nel timone» nella modale, togliere dalla pagina. Può spostare anche **pagine intere** (o gruppi di pagine), ma solo se **non contengono articoli**. Sugli articoli vede i comandi disattivati con il tooltip **«Solo la redazione può spostare questo contenuto»**; il chip dell'articolo ha il cursore 🚫 e non si trascina; una pagina con articoli non ha la maniglia ⠿. Stato e blocco delle pagine, gruppi, pagine totali e scadenza stampa restano della redazione. I controlli valgono anche lato server: un tentativo diretto viene rifiutato.
 
 Chi può solo consultare può comunque esportare il report del cruscotto pubblicitario in CSV/PDF ([§8](#8-leggere-il-cruscotto-pubblicitario)) e il PDF completo del timone ([§3](#3-leggere-la-griglia-del-timone)) — l'esportazione non richiede permessi di modifica.
