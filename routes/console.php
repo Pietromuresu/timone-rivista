@@ -14,3 +14,6 @@ Artisan::command('inspire', function () {
 // docker-compose.yml (php artisan schedule:work) per ticchettare davvero in
 // produzione: senza, questo resta codice morto, mai eseguito.
 Schedule::command('timone:send-deadline-reminders')->dailyAt('07:30');
+
+// Annulla/ripeti (2026-10-28): cronologia oltre 24 ore e contenuti nel cestino.
+Schedule::command('timone:history-prune')->hourly();

@@ -83,6 +83,12 @@ Elenco dei task: `docker compose exec app php artisan schedule:list`. Sull'host 
 
 ## Comandi artisan custom
 
+### `timone:history-prune` (annulla/ripeti, 2026-10-28)
+
+- **Quando**: ogni ora (`routes/console.php`). Opzione `--dry-run`.
+- **Cosa fa**: toglie da `timone_azioni` i passi più vecchi di 24 ore e quelli oltre i 50 per utente e numero; elimina davvero i contenuti nel cestino da più di 24 ore (righe figlie con le cascate) e i loro file (anche le miniature) dal disco.
+- **Se non gira**: la cronologia cresce (max 50 passi per utente e numero comunque) e i contenuti eliminati restano nel cestino con i loro file.
+
 ### `timone:send-deadline-reminders`
 
 - **File**: `app/Console/Commands/SendDeadlineReminders.php`.

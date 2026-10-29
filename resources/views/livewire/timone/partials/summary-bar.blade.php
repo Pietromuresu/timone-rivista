@@ -20,7 +20,7 @@
     <div x-show="collapsed" x-cloak class="truncate" data-testid="summary-compact">
         <strong>{{ $summary['internalPages'] }}</strong> pagine · {{ $summary['fullPages'] }} piene · {{ $summary['blankPages'] }} bianche ·
         libero {{ $summary['freeLabel'] }} · pubblicità <strong>{{ $summary['adPercentage'] }}%</strong> ·
-        da assegnare {{ $summary['placeholderCount'] }}
+        segnaposto {{ $summary['placeholderCount'] }}
     </div>
 
     <div x-show="! collapsed" class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -55,7 +55,10 @@
             aria-pressed="{{ $summaryHighlight === 'placeholders' ? 'true' : 'false' }}"
             data-testid="summary-placeholders"
         >
-            Da assegnare: <strong>{{ $summary['placeholderCount'] }}</strong>
+            {{-- 2026-10-28: «Segnaposto», non più «Da assegnare» (scelta dell'utente):
+                 «da assegnare» è ora il contatore dei contenuti senza pagina
+                 nel bottone «Contenuti» della barra comandi. --}}
+            Segnaposto: <strong>{{ $summary['placeholderCount'] }}</strong>
             @if ($summary['placeholderCount'] > 0)
                 <span class="opacity-75">({{ collect($summary['placeholderByFormat'])->map(fn ($n, $format) => \App\Enums\AdFormat::from($format)->label().' '.$n)->implode(', ') }})</span>
             @endif

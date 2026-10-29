@@ -378,6 +378,25 @@ Non correggere i valori con un UPDATE alla cieca: vanno ricontrollati sulla sche
 - **Causa reale in produzione (2026-10-28)**: script e Alpine c'erano, ma nel DOM il trigger del menu era `<div open="">` invece di `<div @click="open = ! open">` (l'HTML del server era corretto): qualcosa tra server e browser (estensione del browser — in console compariva `content.js … [Violation]` — o un proxy che riscrive l'HTML) toglieva gli attributi `@click`. Corretto usando `x-on:click`/`x-on:click.outside` in `components/dropdown.blade.php` e `layouts/navigation.blade.php`, come nel resto del progetto; un test verifica che nessuna vista usi `@click`. Per scoprire chi riscrive: confrontare «Visualizza sorgente» (HTML del server) con «Elementi» (DOM), e provare in finestra anonima senza estensioni.
 - Se il menu non si apre su NESSUNA pagina e lo script manca, lo script non arriva: in Network cercare `livewire.js`/`livewire.min.js` (404 → il web server davanti all'app deve passare a `index.php` le richieste `.js` che non sono file, come `docker/nginx/default.conf`; bloccato → http/https misti; percorso sbagliato → app sotto un sottopercorso).
 
+## Ctrl+Z non fa nulla (annulla/ripeti, 2026-10-28)
+
+- **Focus in un campo** (input, textarea, select, contenteditable): lì resta l'annulla del browser (`isTimoneShortcutTarget()` in `grid.blade.php`). Cliccare fuori dal campo.
+- **Modale aperta** (`[aria-modal=true]`, la modale «Modifica contenuto», o una modale di Breeze che mette `overflow-y-hidden` sul body): Ctrl+Z ignorato (`isModalOpen()`).
+- **Pila vuota**: ↶ disattivato, tooltip «Niente da annullare». Si annullano solo le PROPRIE azioni su QUEL numero, delle ultime 24 ore (max 50).
+- **Passo non annullabile**: tooltip «Non annullabile: …». Motivi: PDF sostituito in una modifica, oppure un conflitto trovato a un tentativo precedente (un collega ha cambiato le stesse righe dopo; oppure lo spazio è stato occupato). La pila si ferma lì apposta.
+- **Raffica di tasti**: mentre un annulla è in corso gli altri Ctrl+Z vengono ignorati (flag `timelineBusy` nel browser + `Cache::lock("timeline:{issue}:{user}")` sul server).
+- **«Ho annullato e si è disfatto il lavoro di un collega»**: non deve succedere. L'annulla sceglie solo i passi dell'utente collegato (`where user_id`, nessun id dal browser); i passi senza transazione (creazione/modifica/caricamento multiplo) tengono solo le righe del proprio contenuto (`TimelineDiff::onlyContents()`); se un collega ha cambiato dopo le stesse righe, l'annulla è rifiutato (conflitto). Test: `TimelineUndoRedoTest` («…does not undo what B did meanwhile», «…never pick another user's step»).
+- **Azione che non compare in cronologia**: o non ha cambiato nulla (non si registra), o non passa da `Grid::recordStep()`/`TimelineActionService::run()` (vedi l'elenco in `MANUALE_UTENTE.md` §6quinquies). Dati: tabella `timone_azioni`.
+- **Test**: un componente Livewire creato con un `Issue` già caricato ha una `reorder_version` vecchia dopo uno spostamento: usare `$issue->fresh()`.
+
+## Contenuto non trascinabile dal pannello (2026-10-28)
+
+- Si trascinano solo i contenuti **non ancora in pagina** e che l'utente può spostare: nella scheda «Tutti» quelli già in pagina non hanno `draggable`; per il Commerciale gli articoli hanno `data-not-movable` (cursore 🚫, tooltip). Markup: `partials/content-panel-item.blade.php`.
+- Il rilascio su una pagina non fa nulla: la pagina è bloccata (nessun gestore di drop), oppure il contenuto è stato assegnato nel frattempo da un collega → errore «è già stato assegnato» nella fascia (`Grid::placeUnassignedContent()`).
+- Errori di spazio/assegnazione: compaiono nella fascia in alto (`sticky-error-percentage`), anche a pannello chiuso.
+- Pannello che copre l'inizio della pagina o colonna spostata di 16 px: il pannello è `fixed` con `top: var(--app-sticky-height)`; un margine ereditato (`space-y-*` del genitore) lo sposta — per questo ha `!mt-0`.
+- Stato strano del pannello (aperto/larghezza): `localStorage.removeItem('timone.contentPanel')` nella console.
+
 ## Test in locale: memoria esaurita
 
 Con oltre 850 test il PHP locale (MAMP, `memory_limit` 128M) si fermava con «Allowed memory size … exhausted» nella raccolta dei test. Dal 2026-10-27 `phpunit.xml` imposta `memory_limit` 512M per i test (`<ini>`), quindi `php artisan test` funziona di nuovo. Se ricapita: `php -d memory_limit=1G vendor/bin/pest`.

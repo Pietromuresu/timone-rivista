@@ -80,8 +80,11 @@ test('deleting an unassigned content with confirmation removes it permanently, i
     Livewire::actingAs($user)->test(Grid::class, ['issue' => $issue])
         ->call('deleteUnassignedContent', $content->id, true);
 
+    // 2026-10-28 (annulla/ripeti): soft delete — sparisce dall'app ma resta
+    // recuperabile (con il suo articolo) per 24 ore.
     expect(Content::find($content->id))->toBeNull()
-        ->and(Article::find($articleId))->toBeNull();
+        ->and(Content::withTrashed()->find($content->id)?->trashed())->toBeTrue()
+        ->and(Article::find($articleId))->not->toBeNull();
 });
 
 test('a content already assigned to a page cannot be deleted through this method', function () {

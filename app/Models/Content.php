@@ -12,10 +12,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Content extends Model
 {
     use HasFactory;
+
+    // Annulla/ripeti (2026-10-28): eliminare un contenuto lo nasconde per 24
+    // ore (un Ctrl+Z lo ripristina), poi `timone:history-prune` lo toglie
+    // davvero con i suoi file.
+    use SoftDeletes;
 
     protected $fillable = [
         'issue_id',

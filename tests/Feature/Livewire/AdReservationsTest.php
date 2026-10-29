@@ -5,15 +5,16 @@ use App\Enums\AdFormat;
 use App\Enums\ContentType;
 use App\Enums\IssueStatus;
 use App\Enums\UserRole;
+use App\Events\ContentListChanged;
 use App\Livewire\Timone\AdReservations;
-use App\Models\Advertisement;
 use App\Models\ActivityLog;
+use App\Models\Advertisement;
 use App\Models\Content;
+use App\Models\Issue;
 use App\Models\PageFile;
 use App\Models\User;
-use Livewire\Livewire;
-use App\Events\ContentListChanged;
 use Illuminate\Support\Facades\Event;
+use Livewire\Livewire;
 
 // Fase 1, bug 3: archivia/ripristina/elimina ora trasmettono
 // ContentListChanged — finto qui come ogni altro broadcast nei test (vedi
@@ -23,7 +24,7 @@ beforeEach(fn () => Event::fake([ContentListChanged::class]));
 // reorderableIssue()/editorFor() sono definite in TimoneGridReorderTest.php,
 // assignedAdContent() in TimoneGridAdDashboardTest.php — riusate qui.
 
-function reservedAdContent(App\Models\Issue $issue, string $client = 'Cliente prenotato', ?int $preferredPosition = null): Content
+function reservedAdContent(Issue $issue, string $client = 'Cliente prenotato', ?int $preferredPosition = null): Content
 {
     $content = Content::factory()->create(['issue_id' => $issue->id, 'type' => ContentType::Pubblicita, 'title' => $client]);
     Advertisement::factory()->create([
@@ -79,8 +80,11 @@ test('an editor can delete an unassigned reservation', function () {
     Livewire::actingAs($user)->test(AdReservations::class, ['issue' => $issue])
         ->call('deleteReservation', $content->id);
 
+    // 2026-10-28 (annulla/ripeti): soft delete — sparisce, ma resta recuperabile
+    // con Ctrl+Z per 24 ore (poi timone:history-prune lo toglie davvero).
     expect(Content::whereKey($content->id)->exists())->toBeFalse()
-        ->and(Advertisement::where('content_id', $content->id)->exists())->toBeFalse();
+        ->and(Content::withTrashed()->whereKey($content->id)->exists())->toBeTrue()
+        ->and(Advertisement::where('content_id', $content->id)->exists())->toBeTrue();
 });
 
 test('deleting a reservation that is already assigned to a page does nothing', function () {

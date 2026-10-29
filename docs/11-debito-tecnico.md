@@ -193,6 +193,16 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 - **Ordine della bandella**: dopo la I di copertina (ordine di sfoglio di `CoverSlot`); la specifica non la cita.
 - **Nessuna notifica a fine export**: lo stato si vede nel pannello (che si aggiorna da solo mentre è aperto), non arriva un avviso altrove.
 
+## Annulla/ripeti (aggiunto il 2026-10-28)
+
+- **Fotografia di tutto il timone del numero a ogni azione** (due volte): poche centinaia di righe, ma rende la suite di test più lenta e ogni azione un po' più pesante; con numeri molto grandi andrebbe ristretta alle righe coinvolte.
+- **Lock della riga del numero** durante ogni azione annullabile: le scritture sullo stesso numero passano una alla volta (con MySQL; SQLite lo ignora).
+- **Creazione/modifica con file senza transazione**: tra le due fotografie un collega può scrivere sullo stesso numero. Il conflitto all'annulla NON lo fermerebbe (il valore attuale è proprio il «dopo» del passo), quindi dal 2026-10-29 il passo tiene solo le righe del contenuto creato/modificato, delle pagine su cui sta e dei loro gruppi (`TimelineDiff::onlyContents()`, parametro `$scope` di `run()`). Resta un caso limite: un collega che cambia proprio una di quelle pagine nello stesso istante finisce nel passo.
+- **Azioni in transazione**: la fotografia «dopo» non vede le scritture dei colleghi perché MySQL usa REPEATABLE READ (stessa vista per tutta la transazione). Con un database in READ COMMITTED (es. PostgreSQL di default) servirebbe lo stesso filtro anche lì.
+- **Un passo non annullabile blocca la pila**: scelta prudente (annullare i passi più vecchi saltandolo produrrebbe stati mai visti).
+- **Sostituzione del PDF non annullabile** (scelta dell'utente): il file vecchio si cancella subito.
+- **Autore del conflitto dal registro attività**: è l'ultima voce di un altro utente sul numero dopo la mia azione, non necessariamente quella sulla stessa riga.
+
 ## Cose che sembrano sbagliate ma hanno un motivo (non "correggerle")
 
 | Cosa | Perché è così |

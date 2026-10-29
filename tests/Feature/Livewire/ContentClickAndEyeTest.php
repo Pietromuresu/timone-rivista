@@ -79,8 +79,9 @@ test('summary and timone commands are in one sticky band under the header', func
     $band = strpos($html, 'data-testid="timone-sticky-band"');
     $summary = strpos($html, 'data-testid="summary-bar"');
     $toolbar = strpos($html, 'data-testid="timone-toolbar"');
-    // Subito dopo la fascia c'è il pannello Cronologia (componente a sé).
-    $bandEnd = strpos($html, 'Cronologia', (int) $toolbar);
+    // Subito dopo la fascia c'è il toast di annulla/ripeti (2026-10-28; prima
+    // si usava «Cronologia», che ora compare anche nel tooltip di 🕘).
+    $bandEnd = strpos($html, 'data-testid="timeline-toast"', (int) $toolbar);
 
     expect($band)->not->toBeFalse()
         ->and($summary)->toBeGreaterThan($band)
@@ -90,6 +91,7 @@ test('summary and timone commands are in one sticky band under the header', func
         ->and(strpos($html, "setViewMode('lista')"))->toBeLessThan($bandEnd)
         // 2026-10-28: la fascia non è più sticky da sola: va con @teleport
         // nel contenitore sticky unico del layout (che ha data-sticky-top).
-        ->and(substr_count($html, 'data-sticky-top'))->toBe(0)
+        // (il `:data-sticky-top` legato del pannello contenuti non conta: è Alpine, solo in tendina)
+        ->and(preg_match_all('/(?<!:)data-sticky-top/', $html))->toBe(0)
         ->and($html)->toContain('x-teleport="#timone-sticky-slot"');
 });

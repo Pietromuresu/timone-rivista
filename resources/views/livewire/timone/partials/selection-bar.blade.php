@@ -94,9 +94,10 @@
     </div>
 @endif
 
-{{-- Errori di blocco e di collegamento (anche da un trascinamento): qui
-     nella fascia restano visibili ovunque si sia nel timone. --}}
-@foreach (['locked' => '🔒', 'link' => '🔗'] as $errorKey => $icon)
+{{-- Errori di blocco, collegamento, assegnazione/spazio (anche dal pannello
+     contenuti), estensione e rinomina: qui nella fascia restano visibili
+     ovunque si sia nel timone e anche a pannello chiuso. --}}
+@foreach (['locked' => '🔒', 'link' => '🔗', 'percentage' => '📐', 'extend' => '↗', 'rename' => '✏️'] as $errorKey => $icon)
     @error($errorKey)
         <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded px-2 py-1 truncate" title="{{ $message }}" data-testid="sticky-error-{{ $errorKey }}">{{ $icon }} {{ $message }}</p>
     @enderror

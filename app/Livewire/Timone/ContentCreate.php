@@ -28,6 +28,7 @@ use App\Support\PageGroupLinker;
 use App\Support\PageInserter;
 use App\Support\Permissions\TimoneAbilities;
 use App\Support\PlacementChoice;
+use App\Support\Timeline\TimelineActionService;
 use App\Support\Twelfths;
 use App\Support\Uploads\UploadEnvironmentInspector;
 use App\Support\Uploads\UploadLimits;
@@ -134,6 +135,15 @@ class ContentCreate extends Component
      * significato della pagina "cliccata" nel vecchio Grid::uploadPageFile()).
      */
     public ?int $anchorPageId = null;
+
+    /**
+     * Annulla/ripeti (2026-10-28): id del contenuto appena creato, letto da
+     * TimelineActionService::run($scope) per tenere nel passo solo le
+     * righe di questo contenuto (creazione senza transazione: le scritture
+     * dei colleghi nel frattempo non devono finire nel mio Ctrl+Z).
+     * Privata: vale solo dentro la richiesta, non va al browser.
+     */
+    private ?int $createdContentId = null;
 
     /**
      * Revisione 2, Fase 2.5 (2026-10-27): «Posizione nel timone» scelta già
@@ -316,59 +326,64 @@ class ContentCreate extends Component
 
     public function save(): void
     {
-        // Revisione 2, Fase 4.1: il Commerciale crea solo pubblicità.
-        $this->authorize('create', [Content::class, $this->issue, $this->type]);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->createdContentId = null;
 
-        $validated = $this->validatedFields();
-        $validated['preferred_position'] = $this->parsedPreferredPosition();
+        app(TimelineActionService::class)->run($this->issue, auth()->user(), 'content.create', function () {
+            // Revisione 2, Fase 4.1: il Commerciale crea solo pubblicità.
+            $this->authorize('create', [Content::class, $this->issue, $this->type]);
 
-        // Stesso servizio per entrambi i percorsi (bug 1): misura del PDF e
-        // vincoli occupazione/PDF verificati PRIMA di qualunque scrittura o
-        // modale di conflitto. Un ValidationException qui finisce nel form.
-        $pdfPageCount = $this->file !== null ? ContentCreator::pdfPageCount($this->file) : null;
-        $validated += $this->chosenPdfPages($validated, $pdfPageCount);
-        $occupancy = ContentCreator::resolveOccupancy($validated, $pdfPageCount);
+            $validated = $this->validatedFields();
+            $validated['preferred_position'] = $this->parsedPreferredPosition();
 
-        // Fase 2.5: posizione scelta nel modulo → verificata PRIMA di creare
-        // qualunque cosa (stesso controllo dell'assegnazione manuale,
-        // ContentPlacer); se non ci sta, errore e nessun salvataggio.
-        $placementPage = null;
+            // Stesso servizio per entrambi i percorsi (bug 1): misura del PDF e
+            // vincoli occupazione/PDF verificati PRIMA di qualunque scrittura o
+            // modale di conflitto. Un ValidationException qui finisce nel form.
+            $pdfPageCount = $this->file !== null ? ContentCreator::pdfPageCount($this->file) : null;
+            $validated += $this->chosenPdfPages($validated, $pdfPageCount);
+            $occupancy = ContentCreator::resolveOccupancy($validated, $pdfPageCount);
 
-        if ($this->anchorPageId === null && $this->placement !== '') {
-            $placementPage = PlacementChoice::page($this->issue, $this->placement);
+            // Fase 2.5: posizione scelta nel modulo → verificata PRIMA di creare
+            // qualunque cosa (stesso controllo dell'assegnazione manuale,
+            // ContentPlacer); se non ci sta, errore e nessun salvataggio.
+            $placementPage = null;
 
-            if ($placementPage === null) {
-                $this->addError('placement', 'Posizione non valida: scegli una pagina o una copertina dall\'elenco.');
+            if ($this->anchorPageId === null && $this->placement !== '') {
+                $placementPage = PlacementChoice::page($this->issue, $this->placement);
+
+                if ($placementPage === null) {
+                    $this->addError('placement', 'Posizione non valida: scegli una pagina o una copertina dall\'elenco.');
+
+                    return;
+                }
+
+                $label = trim((string) ($validated['client'] ?? '')) !== '' ? trim($validated['client']) : $validated['title'];
+
+                if (($problem = ContentPlacer::check($occupancy, $placementPage, $label)) !== null) {
+                    $this->addError('placement', $problem);
+
+                    return;
+                }
+            }
+
+            // Bug 8: le pagine del timone da occupare sono quelle SCELTE del PDF
+            // (es. 2 su 3), non sempre tutte quelle del file.
+            $usedPdfPages = ContentCreator::pagePlan($validated, $pdfPageCount)?->pageCount();
+
+            $anchorPage = $this->anchorPageId !== null ? Page::find($this->anchorPageId) : null;
+
+            // Fase 2: ancorato a una COPERTINA niente modale di conflitto (che
+            // ragiona per posizioni interne consecutive): le regole copertina +
+            // pagine accanto sono in ContentPlacer::place(), usato da
+            // placeOnAnchorPage().
+            if ($anchorPage !== null && $anchorPage->issue_id === $this->issue->id && ! $anchorPage->isCover() && ($usedPdfPages ?? 0) > 1) {
+                $this->openMultipageConflict($anchorPage, $usedPdfPages, $validated, $pdfPageCount);
 
                 return;
             }
 
-            $label = trim((string) ($validated['client'] ?? '')) !== '' ? trim($validated['client']) : $validated['title'];
-
-            if (($problem = ContentPlacer::check($occupancy, $placementPage, $label)) !== null) {
-                $this->addError('placement', $problem);
-
-                return;
-            }
-        }
-
-        // Bug 8: le pagine del timone da occupare sono quelle SCELTE del PDF
-        // (es. 2 su 3), non sempre tutte quelle del file.
-        $usedPdfPages = ContentCreator::pagePlan($validated, $pdfPageCount)?->pageCount();
-
-        $anchorPage = $this->anchorPageId !== null ? Page::find($this->anchorPageId) : null;
-
-        // Fase 2: ancorato a una COPERTINA niente modale di conflitto (che
-        // ragiona per posizioni interne consecutive): le regole copertina +
-        // pagine accanto sono in ContentPlacer::place(), usato da
-        // placeOnAnchorPage().
-        if ($anchorPage !== null && $anchorPage->issue_id === $this->issue->id && ! $anchorPage->isCover() && ($usedPdfPages ?? 0) > 1) {
-            $this->openMultipageConflict($anchorPage, $usedPdfPages, $validated, $pdfPageCount);
-
-            return;
-        }
-
-        $this->createContentAndFinish($validated, $pdfPageCount, targetPages: null, placementPage: $placementPage);
+            $this->createContentAndFinish($validated, $pdfPageCount, targetPages: null, placementPage: $placementPage);
+        }, transactional: false, scope: fn () => array_filter([$this->createdContentId]));
     }
 
     /**
@@ -466,50 +481,55 @@ class ContentCreate extends Component
      */
     public function confirmMultipageUpload(bool $overwriteConflicts): void
     {
-        $this->authorize('create', [Content::class, $this->issue, $this->multipageUploadConflict['validated']['type'] ?? $this->type]);
+        $this->createdContentId = null;
 
-        $conflict = $this->multipageUploadConflict;
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        app(TimelineActionService::class)->run($this->issue, auth()->user(), 'content.create', function () use ($overwriteConflicts) {
+            $this->authorize('create', [Content::class, $this->issue, $this->multipageUploadConflict['validated']['type'] ?? $this->type]);
 
-        if ($conflict === null) {
-            return;
-        }
+            $conflict = $this->multipageUploadConflict;
 
-        $file = $this->file;
-        $this->multipageUploadConflict = null;
-        $this->dispatch('close-modal', 'multipage-upload-conflict');
-
-        if (! $file instanceof TemporaryUploadedFile) {
-            return;
-        }
-
-        $targetPages = $this->issue->pages()
-            ->whereIn('position', $conflict['targetPositions'])
-            ->orderBy('position')
-            ->get();
-
-        $selectedPages = collect();
-
-        foreach ($targetPages as $targetPage) {
-            $isConflicting = in_array($targetPage->position, $conflict['conflictingPositions'], true);
-
-            if ($isConflicting && ! $overwriteConflicts) {
-                continue;
+            if ($conflict === null) {
+                return;
             }
 
-            if ($this->blockIfLocked($targetPage)) {
-                continue;
+            $file = $this->file;
+            $this->multipageUploadConflict = null;
+            $this->dispatch('close-modal', 'multipage-upload-conflict');
+
+            if (! $file instanceof TemporaryUploadedFile) {
+                return;
             }
 
-            $selectedPages->push($targetPage);
-        }
+            $targetPages = $this->issue->pages()
+                ->whereIn('position', $conflict['targetPositions'])
+                ->orderBy('position')
+                ->get();
 
-        if ($selectedPages->isEmpty()) {
-            $this->reset('file');
+            $selectedPages = collect();
 
-            return;
-        }
+            foreach ($targetPages as $targetPage) {
+                $isConflicting = in_array($targetPage->position, $conflict['conflictingPositions'], true);
 
-        $this->createContentAndFinish($conflict['validated'], $conflict['sourcePdfPageCount'] ?? $conflict['totalPdfPages'], $selectedPages, $file, $conflict['initiatingPosition']);
+                if ($isConflicting && ! $overwriteConflicts) {
+                    continue;
+                }
+
+                if ($this->blockIfLocked($targetPage)) {
+                    continue;
+                }
+
+                $selectedPages->push($targetPage);
+            }
+
+            if ($selectedPages->isEmpty()) {
+                $this->reset('file');
+
+                return;
+            }
+
+            $this->createContentAndFinish($conflict['validated'], $conflict['sourcePdfPageCount'] ?? $conflict['totalPdfPages'], $selectedPages, $file, $conflict['initiatingPosition']);
+        }, transactional: false, scope: fn () => array_filter([$this->createdContentId]));
     }
 
     /**
@@ -656,6 +676,7 @@ class ContentCreate extends Component
         $file ??= $this->file;
 
         $content = ContentCreator::create($this->issue, $validated, $file, auth()->id(), $pdfPageCount);
+        $this->createdContentId = $content->id;
 
         if ($targetPages !== null) {
             $this->attachConfirmedPages($content, $targetPages, $initiatingPosition);

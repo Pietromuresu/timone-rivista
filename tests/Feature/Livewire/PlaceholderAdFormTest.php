@@ -81,7 +81,8 @@ test('the dashboard "da assegnare" count includes placeholders created from the 
     createAdFromForm($issue, ['client' => 'Acme', 'title' => ''])->assertHasNoErrors();
 
     Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
-        ->assertSeeHtml('Da assegnare: <strong>1</strong>');
+        // 2026-10-28: la voce della dashboard si chiama «Segnaposto».
+        ->assertSeeHtml('Segnaposto: <strong>1</strong>');
 });
 
 test('an ad with a client but no title is a real ad with the automatic title', function () {

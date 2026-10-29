@@ -18,6 +18,7 @@ use App\Support\PageGrid\ThumbnailFit;
 use App\Support\PageOccupancy;
 use App\Support\Permissions\TimoneAbilities;
 use App\Support\PlacementChoice;
+use App\Support\Timeline\TimelineActionService;
 use App\Support\Twelfths;
 use App\Support\Uploads\UploadLimits;
 use Illuminate\Contracts\View\View;
@@ -146,47 +147,58 @@ class ContentEdit extends Component
 
     public function save(): void
     {
-        $this->authorize('update', $this->findContent((int) $this->contentId));
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        // Con un PDF nuovo il file vecchio viene cancellato subito: il passo
+        // resta in cronologia ma non si annulla (scelta dell'utente).
+        $notUndoable = $this->file !== null ? 'è stato sostituito il PDF e il file precedente non c\'è più' : null;
 
-        $content = $this->findContent((int) $this->contentId);
+        // Id letto adesso: close() alla fine dell'azione lo azzera, e $scope
+        // (solo le righe di questo contenuto nel passo) gira dopo.
+        $editedContentId = (int) $this->contentId;
 
-        $validated = $this->validate(ContentFormRules::rules($this->issue), ContentFormRules::messages());
-        // Revisione 2, Fase 4.1: cambiando tipo serve il permesso sul tipo
-        // nuovo (il Commerciale non può trasformare una pubblicità in articolo).
-        $this->authorize('create', [Content::class, $this->issue, $validated['type']]);
-        $trimmed = trim($this->preferred_position);
-        $validated['preferred_position'] = $trimmed !== '' && ctype_digit($trimmed) ? (int) $trimmed : null;
-        $validated['file_fit'] = FileFit::tryFrom($this->file_fit)?->value;
+        app(TimelineActionService::class)->run($this->issue, auth()->user(), 'content.update', function () {
+            $this->authorize('update', $this->findContent((int) $this->contentId));
 
-        // Fase 2.5: posizione cambiata rispetto a quella attuale?
-        $moveTo = null;
+            $content = $this->findContent((int) $this->contentId);
 
-        if ($this->placement !== PlacementChoice::valueFor($content)) {
-            $moveTo = $this->placement === '' ? false : PlacementChoice::page($this->issue, $this->placement);
+            $validated = $this->validate(ContentFormRules::rules($this->issue), ContentFormRules::messages());
+            // Revisione 2, Fase 4.1: cambiando tipo serve il permesso sul tipo
+            // nuovo (il Commerciale non può trasformare una pubblicità in articolo).
+            $this->authorize('create', [Content::class, $this->issue, $validated['type']]);
+            $trimmed = trim($this->preferred_position);
+            $validated['preferred_position'] = $trimmed !== '' && ctype_digit($trimmed) ? (int) $trimmed : null;
+            $validated['file_fit'] = FileFit::tryFrom($this->file_fit)?->value;
 
-            if ($moveTo === null) {
-                $this->addError('placement', 'Posizione non valida: scegli una pagina o una copertina dall\'elenco.');
+            // Fase 2.5: posizione cambiata rispetto a quella attuale?
+            $moveTo = null;
 
-                return;
+            if ($this->placement !== PlacementChoice::valueFor($content)) {
+                $moveTo = $this->placement === '' ? false : PlacementChoice::page($this->issue, $this->placement);
+
+                if ($moveTo === null) {
+                    $this->addError('placement', 'Posizione non valida: scegli una pagina o una copertina dall\'elenco.');
+
+                    return;
+                }
             }
-        }
 
-        ContentUpdater::update(
-            $content,
-            $validated,
-            $this->file instanceof TemporaryUploadedFile ? $this->file : null,
-            auth()->id(),
-            $moveTo,
-        );
+            ContentUpdater::update(
+                $content,
+                $validated,
+                $this->file instanceof TemporaryUploadedFile ? $this->file : null,
+                auth()->id(),
+                $moveTo,
+            );
 
-        // Gli altri utenti ripescano dal database (Reverb, o il polling via
-        // pages_updated_at); questa pagina lo fa con l'evento locale, come
-        // per la creazione (Fase 1, bug 3).
-        broadcast(new ContentListChanged(issueId: $this->issue->id, contentId: $content->id, action: 'updated'))->toOthers();
-        $this->issue->markPagesUpdated();
-        $this->dispatch('content-list-changed');
+            // Gli altri utenti ripescano dal database (Reverb, o il polling via
+            // pages_updated_at); questa pagina lo fa con l'evento locale, come
+            // per la creazione (Fase 1, bug 3).
+            broadcast(new ContentListChanged(issueId: $this->issue->id, contentId: $content->id, action: 'updated'))->toOthers();
+            $this->issue->markPagesUpdated();
+            $this->dispatch('content-list-changed');
 
-        $this->close();
+            $this->close();
+        }, notUndoable: $notUndoable, transactional: false, scope: fn () => [$editedContentId]);
     }
 
     private function findContent(int $contentId): Content

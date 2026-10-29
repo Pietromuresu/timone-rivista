@@ -98,7 +98,7 @@ test('the summary bar shows the counts, the ad percentage and the cover status',
         ->assertSeeHtml('Spazio libero: <strong>2 e 5/6 pagine</strong>')
         // pubblicità sulle interne: 3 (vetrina) + 6 (segnaposto) + 3 prenotata = 12 su 72 = 16.67%
         ->assertSee('16.67%')
-        ->assertSeeHtml('Da assegnare: <strong>3</strong>')
+        ->assertSeeHtml('Segnaposto: <strong>3</strong>')
         ->assertSeeHtml('Copertine: <strong>1</strong>/4 assegnate')
         ->assertSee('(3 libere)');
 });
@@ -149,5 +149,7 @@ test('searching the unassigned panel does not change the ad percentage', functio
         ->assertSee('16.67%')
         ->set('contentSearch', 'nessun titolo corrisponde')
         ->assertSee('16.67%')
-        ->assertSee('Contenuti da assegnare (0)');
+        // 2026-10-28: pannello contenuti — la ricerca filtra l'elenco, non il contatore.
+        ->assertSee('Nessun contenuto trovato per «nessun titolo corrisponde»', false)
+        ->assertSee('Contenuti · 1 da assegnare');
 });

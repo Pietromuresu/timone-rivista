@@ -485,6 +485,70 @@ document.addEventListener('alpine:init', () => {
         };
     });
 
+    /**
+     * Pannello contenuti del timone (2026-10-28, «contenuti sempre
+     * raggiungibili»): aperto/chiuso e larghezza sono preferenze del singolo
+     * browser (localStorage, con try/catch: in navigazione privata può
+     * mancare), nessuno stato Livewire. Da 1440 px il pannello è una colonna
+     * a destra e il contenuto della pagina si restringe (CSS su
+     * html[data-content-panel="docked"], resources/css/app.css); sotto è una
+     * tendina sotto la fascia sticky. Il markup è in grid.blade.php
+     * (`data-testid="content-panel"`): una sola istanza.
+     */
+    const CONTENT_PANEL_KEY = 'timone.contentPanel';
+    const CONTENT_PANEL_MIN = 280;
+    const CONTENT_PANEL_MAX = 520;
+
+    Alpine.store('contentPanel', {
+        open: false,
+        width: 360,
+        docked: false,
+
+        init() {
+            try {
+                const saved = JSON.parse(window.localStorage.getItem(CONTENT_PANEL_KEY) || '{}');
+
+                this.open = saved.open === true;
+                if (Number.isFinite(saved.width)) this.width = saved.width;
+            } catch (error) {
+                // Preferenze non leggibili: pannello chiuso, larghezza predefinita.
+            }
+
+            const media = window.matchMedia('(min-width: 1440px)');
+            this.docked = media.matches;
+            media.addEventListener('change', (event) => { this.docked = event.matches; this.apply(); });
+            this.apply();
+        },
+
+        toggle(force = null) {
+            this.open = force === null ? ! this.open : force;
+            this.save();
+            this.apply();
+        },
+
+        setWidth(width) {
+            this.width = Math.round(Math.min(CONTENT_PANEL_MAX, Math.max(CONTENT_PANEL_MIN, width)));
+            this.save();
+            this.apply();
+        },
+
+        save() {
+            try {
+                window.localStorage.setItem(CONTENT_PANEL_KEY, JSON.stringify({ open: this.open, width: this.width }));
+            } catch (error) {
+                // Non ricordato, ma applicato per questa sessione.
+            }
+        },
+
+        /** Su <html>, fuori dall'albero di Livewire: un morph non lo cancella. */
+        apply() {
+            const html = document.documentElement;
+
+            html.dataset.contentPanel = this.open ? (this.docked ? 'docked' : 'dropdown') : 'closed';
+            html.style.setProperty('--content-panel-width', `${this.width}px`);
+        },
+    });
+
     Alpine.store('timoneZoom', {
         levels: ZOOM_LEVELS,
         level: 'm',

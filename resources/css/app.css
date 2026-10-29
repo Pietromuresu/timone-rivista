@@ -45,6 +45,16 @@
     html {
         scroll-padding-top: calc(var(--app-sticky-height, 0px) + 0.5rem);
     }
+
+    /* Pannello contenuti (2026-10-28) in colonna a destra da 1440 px: il
+       contenuto della pagina lascia lo spazio alla colonna (stato dallo store
+       Alpine contentPanel, resources/js/timone-alpine.js). La fascia sticky
+       resta larga: la colonna parte sotto di lei. */
+    @media (min-width: 1440px) {
+        html[data-content-panel="docked"] main {
+            padding-right: calc(var(--content-panel-width, 360px) + 0.5rem);
+        }
+    }
 }
 
 /*

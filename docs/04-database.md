@@ -178,6 +178,14 @@ Numeri e riviste **già esistenti** al momento della migration:
 - **Colonne**: `issue_id` (cascade), `variant`, `status` (`queued`/`processing`/`ready`/`failed`, `App\Enums\MagazineExportStatus`), `disk`, `path` (`exports/issue-{id}/{variant}.pdf`), `size`, `page_count`, `missing_files` (contenuti disegnati «File mancante»), `error`, `requested_by` (nullOnDelete), `started_at`, `finished_at`.
 - **Scrive**: `App\Support\MagazineExport\MagazineExportRequester` (richiesta), `App\Jobs\GenerateMagazinePdf` (avanzamento). Eliminando un numero il file va nell'elenco di `DeleteStoredFiles` (`StoredFiles::forIssues()`).
 
+### `timone_azioni` (annulla/ripeti, 2026-10-28, migration `2026_10_28_310000_create_timone_azioni_table`)
+- **Scopo**: cronologia annulla/ripeti per utente e per numero (`App\Models\TimelineAction`, scritta solo da `App\Support\Timeline\TimelineActionService`).
+- **Colonne**: `issue_id`, `user_id` (cascade), `sequence` (progressivo per utente e numero), `type` (es. `page.move`, `content.assign`), `label` (testo leggibile), `changes` (JSON: righe e campi cambiati, `{t, id, b, a}`), `status` (`eseguita`/`annullata`), `blocked_reason` (non annullabile: PDF sostituito, conflitto), `batch_key` (caricamento multiplo), `undone_at`, timestamp.
+- **Retention**: massimo 50 passi per utente e numero (il servizio toglie i più vecchi); `php artisan timone:history-prune` (ogni ora) toglie i passi più vecchi di 24 ore.
+
+### `contents.deleted_at` (soft delete, 2026-10-28, migration `2026_10_28_300000_add_soft_deletes_to_contents`)
+- Eliminare un contenuto (o annullarne la creazione) lo mette nel cestino: sparisce dall'app (scope di `SoftDeletes`), righe figlie e file restano. Dopo 24 ore `timone:history-prune` lo elimina davvero (cascate) e cancella i file da disco. `StoredFiles` (eliminazione di numeri) conta anche i contenuti nel cestino.
+
 ### `activity_logs`
 - **Scopo**: cronologia generale (audit applicativo).
 - **Colonne**: `issue_id` (nullOnDelete), `user_id` (nullOnDelete), `entity_type`, `entity_id`, `action` (es. `page.moved`, `content.assigned`), `description` (**TEXT** dal 2026-10-27, migration `2026_10_27_500000_change_activity_logs_description_to_text`; prima VARCHAR(255): la creazione di un numero con decine di pubblicità previste falliva con «Text too long»), `old_values`/`new_values` (JSON: qui vanno i dati strutturati, es. l'elenco delle posizioni dei segnaposto), `ip_address`, `created_at`.

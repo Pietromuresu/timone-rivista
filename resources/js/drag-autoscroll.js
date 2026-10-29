@@ -63,7 +63,9 @@ export function stickyTopEdge() {
         const rect = el.getBoundingClientRect();
 
         // Solo se è davvero in cima (sticky agganciato), non più giù nel flusso.
-        if (rect.height > 0 && rect.top <= edge + 1 && rect.bottom < window.innerHeight / 2) {
+        // 0.75 e non 0.5 (2026-10-28): la tendina del pannello contenuti sotto
+        // la fascia arriva al 40% della finestra e conta come bordo alto.
+        if (rect.height > 0 && rect.top <= edge + 1 && rect.bottom < window.innerHeight * 0.75) {
             edge = Math.max(edge, rect.bottom);
         }
     });

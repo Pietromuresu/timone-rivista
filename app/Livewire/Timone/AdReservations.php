@@ -9,6 +9,7 @@ use App\Models\Advertisement;
 use App\Models\Issue;
 use App\Support\ActivityLogger;
 use App\Support\AdMaterialStatusResolver;
+use App\Support\Timeline\TimelineActionService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\On;
@@ -67,37 +68,40 @@ class AdReservations extends Component
      */
     public function deleteReservation(int $contentId): void
     {
-        // Revisione 2, Fase 4.1: una prenotazione è sempre una pubblicità,
-        // quindi basta il permesso sulle pubblicità (anche il Commerciale).
-        $this->authorize('workOnAds', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        app(TimelineActionService::class)->run($this->issue, auth()->user(), 'content.delete', function () use ($contentId) {
+            // Revisione 2, Fase 4.1: una prenotazione è sempre una pubblicità,
+            // quindi basta il permesso sulle pubblicità (anche il Commerciale).
+            $this->authorize('workOnAds', $this->issue);
 
-        $advertisement = Advertisement::with('content')->whereHas(
-            'content', fn ($query) => $query->whereKey($contentId)->where('issue_id', $this->issue->id)
-        )->first();
+            $advertisement = Advertisement::with('content')->whereHas(
+                'content', fn ($query) => $query->whereKey($contentId)->where('issue_id', $this->issue->id)
+            )->first();
 
-        if ($advertisement === null || $advertisement->content->pages()->exists()) {
-            return;
-        }
+            if ($advertisement === null || $advertisement->content->pages()->exists()) {
+                return;
+            }
 
-        $client = $advertisement->client ?? $advertisement->content->title; // Fase 5: un segnaposto non ha cliente
-        $advertisement->content->delete(); // cascata su advertisements (content_id, cascadeOnDelete)
+            $client = $advertisement->client ?? $advertisement->content->title; // Fase 5: un segnaposto non ha cliente
+            $advertisement->content->delete(); // cascata su advertisements (content_id, cascadeOnDelete)
 
-        // Fase 1, bug 3: la prenotazione eliminata compariva ancora tra i
-        // "Contenuti da assegnare" di Grid (componente diverso) finché non
-        // si ricaricava la pagina — evento locale per questo utente,
-        // broadcast + pages_updated_at per gli altri (Reverb o polling).
-        broadcast(new ContentListChanged(issueId: $this->issue->id, contentId: $contentId, action: 'deleted'))->toOthers();
-        $this->issue->markPagesUpdated();
-        $this->dispatch('content-list-changed');
+            // Fase 1, bug 3: la prenotazione eliminata compariva ancora tra i
+            // "Contenuti da assegnare" di Grid (componente diverso) finché non
+            // si ricaricava la pagina — evento locale per questo utente,
+            // broadcast + pages_updated_at per gli altri (Reverb o polling).
+            broadcast(new ContentListChanged(issueId: $this->issue->id, contentId: $contentId, action: 'deleted'))->toOthers();
+            $this->issue->markPagesUpdated();
+            $this->dispatch('content-list-changed');
 
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Content',
-            entityId: $contentId,
-            action: 'content.reservation_deleted',
-            description: "Prenotazione pubblicitaria «{$client}» eliminata",
-            old: ['client' => $client],
-        );
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Content',
+                entityId: $contentId,
+                action: 'content.reservation_deleted',
+                description: "Prenotazione pubblicitaria «{$client}» eliminata",
+                old: ['client' => $client],
+            );
+        });
     }
 
     /**

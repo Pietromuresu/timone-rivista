@@ -20,6 +20,7 @@ use App\Events\PagesBlockMoved;
 use App\Events\PagesSwapped;
 use App\Events\PageStatusUpdated;
 use App\Events\PageUnlocked;
+use App\Events\TimelineApplied;
 use App\Models\ActivityLog;
 use App\Models\Content;
 use App\Models\ContentFile;
@@ -32,6 +33,7 @@ use App\Support\AdLoadCalculator;
 use App\Support\AdPlaceholder;
 use App\Support\AutomaticChecks;
 use App\Support\ContentPageAttacher;
+use App\Support\ContentPanelFilter;
 use App\Support\ContentPlacer;
 use App\Support\IssueCovers;
 use App\Support\IssueSummary;
@@ -48,9 +50,11 @@ use App\Support\PageSelectionActions;
 use App\Support\PageSpreadBuilder;
 use App\Support\Permissions\TimoneAbilities;
 use App\Support\ThumbnailProgressEstimator;
+use App\Support\Timeline\TimelineActionService;
 use App\Support\Twelfths;
 use App\Support\Weight\MagazineWeightCalculator;
 use App\Support\Weight\WeightLimits;
+use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -147,6 +151,17 @@ class Grid extends Component
      * numero e aveva bisogno di un modo per restringerla.
      */
     public string $contentSearch = '';
+
+    /**
+     * Pannello contenuti (2026-10-28): scheda (Da assegnare / Tutti /
+     * Segnaposto), filtro per tipo e ordinamento. Valori fuori elenco
+     * tornano ai predefiniti in render() (ContentPanelFilter::TABS/SORTS).
+     */
+    public string $contentTab = 'unassigned';
+
+    public string $contentType = '';
+
+    public string $contentSort = 'recent';
 
     /**
      * Fase 6 (2026-10-27): clic su "pagine bianche" o "da assegnare" nella
@@ -458,148 +473,151 @@ class Grid extends Component
 
     public function movePage(int $pageId, int $toPosition): void
     {
-        // Revisione 2, Fase 4.1: qui solo il permesso minimo; quali pagine
-        // si spostano davvero (la pagina o il suo gruppo) si sa più sotto.
-        $this->authorize('workOnAds', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('page.move', function () use ($pageId, $toPosition) {
+            // Revisione 2, Fase 4.1: qui solo il permesso minimo; quali pagine
+            // si spostano davvero (la pagina o il suo gruppo) si sa più sotto.
+            $this->authorize('workOnAds', $this->issue);
 
-        $page = Page::find($pageId);
+            $page = Page::find($pageId);
 
-        if ($page === null || $page->issue_id !== $this->issue->id) {
-            return;
-        }
+            if ($page === null || $page->issue_id !== $this->issue->id) {
+                return;
+            }
 
-        // Fase 2 (2026-10-26): una copertina non entra nella sequenza delle
-        // pagine interne (e una pagina interna non può diventare
-        // copertina: il drag&drop di Sortable vive solo nel contenitore
-        // delle interne). Tra copertine si scambia con swapCovers().
-        if ($page->isCover()) {
-            $this->addError('reorder', 'Le copertine non si spostano tra le pagine interne: trascina una copertina su un\'altra copertina per scambiarle.');
+            // Fase 2 (2026-10-26): una copertina non entra nella sequenza delle
+            // pagine interne (e una pagina interna non può diventare
+            // copertina: il drag&drop di Sortable vive solo nel contenitore
+            // delle interne). Tra copertine si scambia con swapCovers().
+            if ($page->isCover()) {
+                $this->addError('reorder', 'Le copertine non si spostano tra le pagine interne: trascina una copertina su un\'altra copertina per scambiarle.');
 
-            return;
-        }
+                return;
+            }
 
-        // Fase 2.3: se la pagina trascinata fa parte di un gruppo
-        // collegato, l'intero gruppo si sposta insieme come blocco unico —
-        // stesso identico meccanismo di moveSelectedBlock() (riusato via
-        // moveBlockOfPages(), mai duplicato), senza che l'utente debba
-        // rifare la selezione multipla ogni volta. Guardia sulle pagine
-        // bloccate diversa da blockIfLocked() sotto: qui, come in
-        // moveSelectedBlock(), una sola pagina bloccata nel gruppo rifiuta
-        // l'intero spostamento.
-        if ($page->page_group_id !== null) {
-            $groupPages = Page::where('issue_id', $this->issue->id)
-                ->where('page_group_id', $page->page_group_id)
-                ->get();
+            // Fase 2.3: se la pagina trascinata fa parte di un gruppo
+            // collegato, l'intero gruppo si sposta insieme come blocco unico —
+            // stesso identico meccanismo di moveSelectedBlock() (riusato via
+            // moveBlockOfPages(), mai duplicato), senza che l'utente debba
+            // rifare la selezione multipla ogni volta. Guardia sulle pagine
+            // bloccate diversa da blockIfLocked() sotto: qui, come in
+            // moveSelectedBlock(), una sola pagina bloccata nel gruppo rifiuta
+            // l'intero spostamento.
+            if ($page->page_group_id !== null) {
+                $groupPages = Page::where('issue_id', $this->issue->id)
+                    ->where('page_group_id', $page->page_group_id)
+                    ->get();
 
-            if ($groupPages->count() > 1) {
-                $this->authorizePageMove($groupPages);
+                if ($groupPages->count() > 1) {
+                    $this->authorizePageMove($groupPages);
 
-                if ($groupPages->contains(fn (Page $p) => $p->isLocked())) {
-                    $this->addError('locked', 'Una pagina del gruppo collegato è bloccata: sbloccala prima di spostare il gruppo.');
+                    if ($groupPages->contains(fn (Page $p) => $p->isLocked())) {
+                        $this->addError('locked', 'Una pagina del gruppo collegato è bloccata: sbloccala prima di spostare il gruppo.');
+
+                        return;
+                    }
+
+                    $this->moveBlockOfPages(
+                        $groupPages->pluck('id')->all(),
+                        $pageId,
+                        $toPosition,
+                        $groupPages->count().' pagine spostate insieme (gruppo collegato)',
+                    );
+
+                    return;
+                }
+            }
+
+            $this->authorizePageMove([$page]);
+
+            if ($this->blockIfLocked($page, 'spostata')) {
+                return;
+            }
+
+            $conflict = false;
+            $applied = null;
+
+            DB::transaction(function () use ($pageId, $toPosition, &$conflict, &$applied) {
+                // lockForUpdate() sulla riga issue serializza anche il caso in
+                // cui due movePage() concorrenti su questa stessa issue
+                // arrivino a ridosso l'uno dell'altro: il secondo aspetta che
+                // il primo rilasci il lock (commit) prima di rileggere
+                // posizioni/versione, quindi non può mai calcolare gli
+                // spostamenti su dati già superati.
+                $issue = Issue::whereKey($this->issue->id)->lockForUpdate()->first();
+
+                if ($issue->reorder_version !== $this->reorderVersion) {
+                    $conflict = true;
+                    // Riallinea subito il client alla versione vera: la
+                    // pagina non deve restare bloccata in un ciclo di
+                    // conflitti dovuti a una versione ormai vecchia.
+                    $this->reorderVersion = $issue->reorder_version;
 
                     return;
                 }
 
-                $this->moveBlockOfPages(
-                    $groupPages->pluck('id')->all(),
-                    $pageId,
-                    $toPosition,
-                    $groupPages->count().' pagine spostate insieme (gruppo collegato)',
-                );
+                $positions = $issue->pages()->pluck('position', 'id')->all();
+                $changes = PageReorderer::move($positions, $pageId, $toPosition);
 
-                return;
-            }
-        }
+                if ($changes === []) {
+                    return;
+                }
 
-        $this->authorizePageMove([$page]);
+                $fromPosition = $positions[$pageId];
+                $finalToPosition = $changes[$pageId];
+                $offset = count($positions);
 
-        if ($this->blockIfLocked($page, 'spostata')) {
-            return;
-        }
+                foreach ($changes as $id => $newPosition) {
+                    Page::whereKey($id)->update(['position' => $newPosition + $offset]);
+                }
+                foreach ($changes as $id => $newPosition) {
+                    Page::whereKey($id)->update(['position' => $newPosition]);
+                }
 
-        $conflict = false;
-        $applied = null;
+                PageReorderLog::create([
+                    'issue_id' => $this->issue->id,
+                    'page_id' => $pageId,
+                    'user_id' => auth()->id(),
+                    'from_position' => $fromPosition,
+                    'to_position' => $finalToPosition,
+                ]);
 
-        DB::transaction(function () use ($pageId, $toPosition, &$conflict, &$applied) {
-            // lockForUpdate() sulla riga issue serializza anche il caso in
-            // cui due movePage() concorrenti su questa stessa issue
-            // arrivino a ridosso l'uno dell'altro: il secondo aspetta che
-            // il primo rilasci il lock (commit) prima di rileggere
-            // posizioni/versione, quindi non può mai calcolare gli
-            // spostamenti su dati già superati.
-            $issue = Issue::whereKey($this->issue->id)->lockForUpdate()->first();
-
-            if ($issue->reorder_version !== $this->reorderVersion) {
-                $conflict = true;
-                // Riallinea subito il client alla versione vera: la
-                // pagina non deve restare bloccata in un ciclo di
-                // conflitti dovuti a una versione ormai vecchia.
+                $issue->increment('reorder_version');
                 $this->reorderVersion = $issue->reorder_version;
 
+                $applied = ['fromPosition' => $fromPosition, 'toPosition' => $finalToPosition];
+            });
+
+            if ($conflict) {
+                $this->addError('reorder', 'Il timone è stato aggiornato da un altro utente nel frattempo: la modifica non è stata applicata, la vista è ora aggiornata.');
+
                 return;
             }
 
-            $positions = $issue->pages()->pluck('position', 'id')->all();
-            $changes = PageReorderer::move($positions, $pageId, $toPosition);
-
-            if ($changes === []) {
+            if ($applied === null) {
                 return;
             }
 
-            $fromPosition = $positions[$pageId];
-            $finalToPosition = $changes[$pageId];
-            $offset = count($positions);
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Page',
+                entityId: $pageId,
+                action: 'page.moved',
+                description: "Pagina spostata dalla posizione {$applied['fromPosition']} alla {$applied['toPosition']}",
+                old: ['position' => $applied['fromPosition']],
+                new: ['position' => $applied['toPosition']],
+            );
 
-            foreach ($changes as $id => $newPosition) {
-                Page::whereKey($id)->update(['position' => $newPosition + $offset]);
-            }
-            foreach ($changes as $id => $newPosition) {
-                Page::whereKey($id)->update(['position' => $newPosition]);
-            }
-
-            PageReorderLog::create([
-                'issue_id' => $this->issue->id,
-                'page_id' => $pageId,
-                'user_id' => auth()->id(),
-                'from_position' => $fromPosition,
-                'to_position' => $finalToPosition,
-            ]);
-
-            $issue->increment('reorder_version');
-            $this->reorderVersion = $issue->reorder_version;
-
-            $applied = ['fromPosition' => $fromPosition, 'toPosition' => $finalToPosition];
+            broadcast(new PageMoved(
+                issueId: $this->issue->id,
+                pageId: $pageId,
+                fromPosition: $applied['fromPosition'],
+                toPosition: $applied['toPosition'],
+                movedByUserId: auth()->id(),
+                movedByUserName: auth()->user()->name,
+            ))->toOthers();
+            $this->issue->markPagesUpdated();
         });
-
-        if ($conflict) {
-            $this->addError('reorder', 'Il timone è stato aggiornato da un altro utente nel frattempo: la modifica non è stata applicata, la vista è ora aggiornata.');
-
-            return;
-        }
-
-        if ($applied === null) {
-            return;
-        }
-
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Page',
-            entityId: $pageId,
-            action: 'page.moved',
-            description: "Pagina spostata dalla posizione {$applied['fromPosition']} alla {$applied['toPosition']}",
-            old: ['position' => $applied['fromPosition']],
-            new: ['position' => $applied['toPosition']],
-        );
-
-        broadcast(new PageMoved(
-            issueId: $this->issue->id,
-            pageId: $pageId,
-            fromPosition: $applied['fromPosition'],
-            toPosition: $applied['toPosition'],
-            movedByUserId: auth()->id(),
-            movedByUserName: auth()->user()->name,
-        ))->toOthers();
-        $this->issue->markPagesUpdated();
     }
 
     /**
@@ -611,22 +629,25 @@ class Grid extends Component
      */
     public function nudgePage(int $pageId, int $delta): void
     {
-        $page = Page::where('issue_id', $this->issue->id)->find($pageId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('page.move', function () use ($pageId, $delta) {
+            $page = Page::where('issue_id', $this->issue->id)->find($pageId);
 
-        if ($page === null || $delta === 0 || $page->isCover()) {
-            return;
-        }
+            if ($page === null || $delta === 0 || $page->isCover()) {
+                return;
+            }
 
-        $positions = $this->issue->pages()->pluck('position', 'id')->all();
-        $blockPageIds = $page->page_group_id !== null
-            ? Page::where('issue_id', $this->issue->id)->where('page_group_id', $page->page_group_id)->pluck('id')->all()
-            : [$page->id];
+            $positions = $this->issue->pages()->pluck('position', 'id')->all();
+            $blockPageIds = $page->page_group_id !== null
+                ? Page::where('issue_id', $this->issue->id)->where('page_group_id', $page->page_group_id)->pluck('id')->all()
+                : [$page->id];
 
-        $target = PageReorderer::nudgeTarget($positions, $blockPageIds, $delta);
+            $target = PageReorderer::nudgeTarget($positions, $blockPageIds, $delta);
 
-        if ($target !== null) {
-            $this->movePage($pageId, $target);
-        }
+            if ($target !== null) {
+                $this->movePage($pageId, $target);
+            }
+        });
     }
 
     private function isCoverPage(int $pageId): bool
@@ -641,40 +662,43 @@ class Grid extends Component
      */
     public function swapCovers(int $coverIdA, int $coverIdB): void
     {
-        $this->authorize('workOnAds', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('cover.swap', function () use ($coverIdA, $coverIdB) {
+            $this->authorize('workOnAds', $this->issue);
 
-        $a = $this->issue->covers()->find($coverIdA);
-        $b = $this->issue->covers()->find($coverIdB);
+            $a = $this->issue->covers()->find($coverIdA);
+            $b = $this->issue->covers()->find($coverIdB);
 
-        if ($a === null || $b === null) {
-            return;
-        }
+            if ($a === null || $b === null) {
+                return;
+            }
 
-        $this->authorizePageMove([$a, $b]);
+            $this->authorizePageMove([$a, $b]);
 
-        $labels = [$a->label(), $b->label()];
-        $error = IssueCovers::swap($a, $b);
+            $labels = [$a->label(), $b->label()];
+            $error = IssueCovers::swap($a, $b);
 
-        if ($error !== null) {
-            $this->addError('covers', $error);
+            if ($error !== null) {
+                $this->addError('covers', $error);
 
-            return;
-        }
+                return;
+            }
 
-        if ($coverIdA === $coverIdB) {
-            return;
-        }
+            if ($coverIdA === $coverIdB) {
+                return;
+            }
 
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Page',
-            entityId: $a->id,
-            action: 'cover.swapped',
-            description: "Copertine scambiate: {$labels[0]} ↔ {$labels[1]}",
-            new: ['pageIds' => [$a->id, $b->id]],
-        );
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Page',
+                entityId: $a->id,
+                action: 'cover.swapped',
+                description: "Copertine scambiate: {$labels[0]} ↔ {$labels[1]}",
+                new: ['pageIds' => [$a->id, $b->id]],
+            );
 
-        $this->broadcastCoversChanged('swapped');
+            $this->broadcastCoversChanged('swapped');
+        });
     }
 
     /** Fase 2: bandella (6 pagine di copertina invece di 4). */
@@ -755,34 +779,37 @@ class Grid extends Component
      */
     public function selectForSwap(int $pageId): void
     {
-        $this->authorize('workOnAds', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('page.swap', function () use ($pageId) {
+            $this->authorize('workOnAds', $this->issue);
 
-        if (! $this->swapMode || $this->isCoverPage($pageId)) {
-            return;
-        }
+            if (! $this->swapMode || $this->isCoverPage($pageId)) {
+                return;
+            }
 
-        if ($this->blockIfLocked(Page::find($pageId), 'scambiata')) {
-            return;
-        }
+            if ($this->blockIfLocked(Page::find($pageId), 'scambiata')) {
+                return;
+            }
 
-        if ($this->swapSelectedPageId === null) {
-            $this->swapSelectedPageId = $pageId;
+            if ($this->swapSelectedPageId === null) {
+                $this->swapSelectedPageId = $pageId;
 
-            return;
-        }
+                return;
+            }
 
-        if ($this->swapSelectedPageId === $pageId) {
+            if ($this->swapSelectedPageId === $pageId) {
+                $this->swapSelectedPageId = null;
+
+                return;
+            }
+
+            $firstPageId = $this->swapSelectedPageId;
             $this->swapSelectedPageId = null;
 
-            return;
-        }
+            $this->authorizePageMove(Page::where('issue_id', $this->issue->id)->whereIn('id', [$firstPageId, $pageId])->get());
 
-        $firstPageId = $this->swapSelectedPageId;
-        $this->swapSelectedPageId = null;
-
-        $this->authorizePageMove(Page::where('issue_id', $this->issue->id)->whereIn('id', [$firstPageId, $pageId])->get());
-
-        $this->swapPages($firstPageId, $pageId);
+            $this->swapPages($firstPageId, $pageId);
+        });
     }
 
     /**
@@ -899,57 +926,60 @@ class Grid extends Component
      */
     public function moveSelectedBlock(int $anchorPageId, int $toPosition): void
     {
-        $this->authorize('workOnAds', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('page.move', function () use ($anchorPageId, $toPosition) {
+            $this->authorize('workOnAds', $this->issue);
 
-        $selected = Page::whereIn('id', $this->selectedPageIds)
-            ->where('issue_id', $this->issue->id)
-            ->get();
+            $selected = Page::whereIn('id', $this->selectedPageIds)
+                ->where('issue_id', $this->issue->id)
+                ->get();
 
-        // Stato client non valido/selezione non davvero pertinente a questo
-        // drag: degrada al comportamento di una singola pagina invece di
-        // ignorare silenziosamente il gesto dell'utente.
-        if (! $this->selectionMode || $selected->count() < 2 || ! $selected->contains('id', $anchorPageId)) {
-            $this->movePage($anchorPageId, $toPosition);
+            // Stato client non valido/selezione non davvero pertinente a questo
+            // drag: degrada al comportamento di una singola pagina invece di
+            // ignorare silenziosamente il gesto dell'utente.
+            if (! $this->selectionMode || $selected->count() < 2 || ! $selected->contains('id', $anchorPageId)) {
+                $this->movePage($anchorPageId, $toPosition);
 
-            return;
-        }
+                return;
+            }
 
-        // Fase 2.3: se una pagina selezionata fa parte di un gruppo
-        // collegato ma il resto del gruppo non è stato incluso nella
-        // selezione esplicita, il gruppo si estende automaticamente —
-        // scelta presa esplicitamente (vedi HANDOFF.md, "Decisioni
-        // architetturali da ricordare"): mai un'operazione bloccata o
-        // silenziosamente parziale che spaccherebbe un gruppo.
-        $groupIdByPageId = Page::where('issue_id', $this->issue->id)->pluck('page_group_id', 'id')->all();
-        $expandedIds = PageGroupResolver::expand($groupIdByPageId, $selected->pluck('id')->all());
-        $groupExpanded = count($expandedIds) !== $selected->count();
+            // Fase 2.3: se una pagina selezionata fa parte di un gruppo
+            // collegato ma il resto del gruppo non è stato incluso nella
+            // selezione esplicita, il gruppo si estende automaticamente —
+            // scelta presa esplicitamente (vedi HANDOFF.md, "Decisioni
+            // architetturali da ricordare"): mai un'operazione bloccata o
+            // silenziosamente parziale che spaccherebbe un gruppo.
+            $groupIdByPageId = Page::where('issue_id', $this->issue->id)->pluck('page_group_id', 'id')->all();
+            $expandedIds = PageGroupResolver::expand($groupIdByPageId, $selected->pluck('id')->all());
+            $groupExpanded = count($expandedIds) !== $selected->count();
 
-        $blockPages = $groupExpanded
-            ? Page::whereIn('id', $expandedIds)->where('issue_id', $this->issue->id)->get()
-            : $selected;
+            $blockPages = $groupExpanded
+                ? Page::whereIn('id', $expandedIds)->where('issue_id', $this->issue->id)->get()
+                : $selected;
 
-        $this->authorizePageMove($blockPages);
+            $this->authorizePageMove($blockPages);
 
-        $lockedSelected = $blockPages->filter(fn (Page $page) => $page->isLocked());
+            $lockedSelected = $blockPages->filter(fn (Page $page) => $page->isLocked());
 
-        if ($lockedSelected->isNotEmpty()) {
-            $positions = $lockedSelected->pluck('position')->sort()->values()->implode(', ');
-            $this->addError('locked', $lockedSelected->count() === 1
-                ? "La pagina {$positions} è bloccata: sbloccala prima di spostare l'intera selezione."
-                : "Le pagine {$positions} sono bloccate: sbloccale prima di spostare l'intera selezione.");
+            if ($lockedSelected->isNotEmpty()) {
+                $positions = $lockedSelected->pluck('position')->sort()->values()->implode(', ');
+                $this->addError('locked', $lockedSelected->count() === 1
+                    ? "La pagina {$positions} è bloccata: sbloccala prima di spostare l'intera selezione."
+                    : "Le pagine {$positions} sono bloccate: sbloccale prima di spostare l'intera selezione.");
 
-            return;
-        }
+                return;
+            }
 
-        $blockPageIds = $blockPages->pluck('id')->all();
+            $blockPageIds = $blockPages->pluck('id')->all();
 
-        $this->moveBlockOfPages(
-            $blockPageIds,
-            $anchorPageId,
-            $toPosition,
-            count($blockPageIds).' pagine spostate insieme come blocco unico'
-                .($groupExpanded ? ' (selezione estesa automaticamente a un gruppo collegato)' : ''),
-        );
+            $this->moveBlockOfPages(
+                $blockPageIds,
+                $anchorPageId,
+                $toPosition,
+                count($blockPageIds).' pagine spostate insieme come blocco unico'
+                    .($groupExpanded ? ' (selezione estesa automaticamente a un gruppo collegato)' : ''),
+            );
+        });
     }
 
     /**
@@ -1043,50 +1073,53 @@ class Grid extends Component
      */
     public function linkSelectedPages(): void
     {
-        $this->authorize('update', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('group.link', function () {
+            $this->authorize('update', $this->issue);
 
-        if (! $this->selectionMode || count($this->selectedPageIds) < 2) {
-            return;
-        }
+            if (! $this->selectionMode || count($this->selectedPageIds) < 2) {
+                return;
+            }
 
-        $pages = Page::whereIn('id', $this->selectedPageIds)
-            ->where('issue_id', $this->issue->id)
-            ->get();
+            $pages = Page::whereIn('id', $this->selectedPageIds)
+                ->where('issue_id', $this->issue->id)
+                ->get();
 
-        if ($pages->count() < 2) {
-            return;
-        }
+            if ($pages->count() < 2) {
+                return;
+            }
 
-        $result = PageGroupLinker::link($this->issue, $pages);
+            $result = PageGroupLinker::link($this->issue, $pages);
 
-        if ($result === PageGroupLinker::ERROR_LOCKED) {
-            $this->addError('locked', 'Una o più pagine selezionate sono bloccate: sbloccale prima di collegarle in un gruppo.');
+            if ($result === PageGroupLinker::ERROR_LOCKED) {
+                $this->addError('locked', 'Una o più pagine selezionate sono bloccate: sbloccale prima di collegarle in un gruppo.');
 
-            return;
-        }
+                return;
+            }
 
-        // Scelta pragmatica: fondere un gruppo esistente con un altro
-        // aggiungerebbe una casistica ("unione di due gruppi") non richiesta
-        // dalla fase — va scollegato esplicitamente prima con unlinkGroup().
-        if ($result === PageGroupLinker::ERROR_ALREADY_GROUPED) {
-            $this->addError('link', 'Una o più pagine selezionate fanno già parte di un altro gruppo: scollegale prima di crearne uno nuovo.');
+            // Scelta pragmatica: fondere un gruppo esistente con un altro
+            // aggiungerebbe una casistica ("unione di due gruppi") non richiesta
+            // dalla fase — va scollegato esplicitamente prima con unlinkGroup().
+            if ($result === PageGroupLinker::ERROR_ALREADY_GROUPED) {
+                $this->addError('link', 'Una o più pagine selezionate fanno già parte di un altro gruppo: scollegale prima di crearne uno nuovo.');
 
-            return;
-        }
+                return;
+            }
 
-        $group = $result;
+            $group = $result;
 
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'PageGroup',
-            entityId: $group->id,
-            action: 'page_group.linked',
-            description: $pages->count().' pagine collegate in un gruppo',
-            new: ['pageIds' => $pages->pluck('id')->all()],
-        );
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'PageGroup',
+                entityId: $group->id,
+                action: 'page_group.linked',
+                description: $pages->count().' pagine collegate in un gruppo',
+                new: ['pageIds' => $pages->pluck('id')->all()],
+            );
 
-        broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
-        $this->issue->markPagesUpdated();
+            broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
+            $this->issue->markPagesUpdated();
+        });
     }
 
     /**
@@ -1099,36 +1132,39 @@ class Grid extends Component
      */
     public function unlinkGroup(int $pageId): void
     {
-        $this->authorize('update', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('group.unlink', function () use ($pageId) {
+            $this->authorize('update', $this->issue);
 
-        $page = Page::find($pageId);
+            $page = Page::find($pageId);
 
-        if ($page === null || $page->issue_id !== $this->issue->id || $page->page_group_id === null) {
-            return;
-        }
+            if ($page === null || $page->issue_id !== $this->issue->id || $page->page_group_id === null) {
+                return;
+            }
 
-        $groupId = $page->page_group_id;
-        $result = PageGroupLinker::unlink($groupId);
+            $groupId = $page->page_group_id;
+            $result = PageGroupLinker::unlink($groupId);
 
-        if ($result === PageGroupLinker::ERROR_LOCKED) {
-            $this->addError('locked', 'Una pagina del gruppo è bloccata: sbloccala prima di scollegare il gruppo.');
+            if ($result === PageGroupLinker::ERROR_LOCKED) {
+                $this->addError('locked', 'Una pagina del gruppo è bloccata: sbloccala prima di scollegare il gruppo.');
 
-            return;
-        }
+                return;
+            }
 
-        $groupPages = $result;
+            $groupPages = $result;
 
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'PageGroup',
-            entityId: $groupId,
-            action: 'page_group.unlinked',
-            description: $groupPages->count().' pagine scollegate dal gruppo',
-            old: ['pageIds' => $groupPages->pluck('id')->all()],
-        );
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'PageGroup',
+                entityId: $groupId,
+                action: 'page_group.unlinked',
+                description: $groupPages->count().' pagine scollegate dal gruppo',
+                old: ['pageIds' => $groupPages->pluck('id')->all()],
+            );
 
-        broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
-        $this->issue->markPagesUpdated();
+            broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
+            $this->issue->markPagesUpdated();
+        });
     }
 
     /**
@@ -1144,43 +1180,46 @@ class Grid extends Component
      */
     public function unlinkSelectedFromGroup(): void
     {
-        $this->authorize('update', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('group.unlink', function () {
+            $this->authorize('update', $this->issue);
 
-        if (! $this->selectionMode || $this->selectedPageIds === []) {
-            return;
-        }
+            if (! $this->selectionMode || $this->selectedPageIds === []) {
+                return;
+            }
 
-        $pages = Page::whereIn('id', $this->selectedPageIds)
-            ->where('issue_id', $this->issue->id)
-            ->get();
+            $pages = Page::whereIn('id', $this->selectedPageIds)
+                ->where('issue_id', $this->issue->id)
+                ->get();
 
-        $result = PageGroupLinker::removeFromGroup($pages);
+            $result = PageGroupLinker::removeFromGroup($pages);
 
-        if ($result === PageGroupLinker::ERROR_LOCKED) {
-            $this->addError('locked', 'Una o più pagine selezionate sono bloccate: sbloccale prima di scollegarle dal gruppo.');
+            if ($result === PageGroupLinker::ERROR_LOCKED) {
+                $this->addError('locked', 'Una o più pagine selezionate sono bloccate: sbloccale prima di scollegarle dal gruppo.');
 
-            return;
-        }
+                return;
+            }
 
-        $removed = $result;
+            $removed = $result;
 
-        if ($removed->isEmpty()) {
-            $this->addError('link', 'Nessuna delle pagine selezionate fa parte di un gruppo.');
+            if ($removed->isEmpty()) {
+                $this->addError('link', 'Nessuna delle pagine selezionate fa parte di un gruppo.');
 
-            return;
-        }
+                return;
+            }
 
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'PageGroup',
-            entityId: null,
-            action: 'page_group.pages_removed',
-            description: $removed->count().' pagine scollegate individualmente dal proprio gruppo, il resto di ciascun gruppo resta collegato',
-            old: ['pageIds' => $removed->pluck('id')->all()],
-        );
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'PageGroup',
+                entityId: null,
+                action: 'page_group.pages_removed',
+                description: $removed->count().' pagine scollegate individualmente dal proprio gruppo, il resto di ciascun gruppo resta collegato',
+                old: ['pageIds' => $removed->pluck('id')->all()],
+            );
 
-        broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
-        $this->issue->markPagesUpdated();
+            broadcast(new PageGroupsChanged(issueId: $this->issue->id))->toOthers();
+            $this->issue->markPagesUpdated();
+        });
     }
 
     /**
@@ -1202,25 +1241,28 @@ class Grid extends Component
      */
     public function toggleLinkForSelection(): void
     {
-        if (! $this->selectionMode || count($this->selectedPageIds) < 2) {
-            $this->addError('link', 'Seleziona almeno 2 pagine per collegarle o scollegarle.');
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('group.link', function () {
+            if (! $this->selectionMode || count($this->selectedPageIds) < 2) {
+                $this->addError('link', 'Seleziona almeno 2 pagine per collegarle o scollegarle.');
 
-            return;
-        }
+                return;
+            }
 
-        $pages = Page::whereIn('id', $this->selectedPageIds)
-            ->where('issue_id', $this->issue->id)
-            ->get();
+            $pages = Page::whereIn('id', $this->selectedPageIds)
+                ->where('issue_id', $this->issue->id)
+                ->get();
 
-        $groupIds = $pages->pluck('page_group_id')->unique();
+            $groupIds = $pages->pluck('page_group_id')->unique();
 
-        if ($pages->count() === count($this->selectedPageIds) && $groupIds->count() === 1 && $groupIds->first() !== null) {
-            $this->unlinkGroup($this->selectedPageIds[0]);
+            if ($pages->count() === count($this->selectedPageIds) && $groupIds->count() === 1 && $groupIds->first() !== null) {
+                $this->unlinkGroup($this->selectedPageIds[0]);
 
-            return;
-        }
+                return;
+            }
 
-        $this->linkSelectedPages();
+            $this->linkSelectedPages();
+        });
     }
 
     #[On('echo-presence:issue.{issue.id},.PageGroupsChanged')]
@@ -1304,31 +1346,34 @@ class Grid extends Component
 
     public function changePageStatus(int $pageId, string $status): void
     {
-        $this->authorize('update', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('page.status', function () use ($pageId, $status) {
+            $this->authorize('update', $this->issue);
 
-        $page = Page::findOrFail($pageId);
+            $page = Page::findOrFail($pageId);
 
-        if ($page->issue_id !== $this->issue->id) {
-            return;
-        }
+            if ($page->issue_id !== $this->issue->id) {
+                return;
+            }
 
-        if ($this->blockIfLocked($page)) {
-            return;
-        }
+            if ($this->blockIfLocked($page)) {
+                return;
+            }
 
-        $newStatus = PageStatus::tryFrom($status);
+            $newStatus = PageStatus::tryFrom($status);
 
-        if ($newStatus === null || $newStatus === $page->status) {
-            return;
-        }
+            if ($newStatus === null || $newStatus === $page->status) {
+                return;
+            }
 
-        if ($newStatus === PageStatus::OkStampa && ! $this->pageHasFile($page)) {
-            $this->addError('pdfRequired', 'La '.$page->label().' non ha ancora un PDF caricato: non può essere segnata «Ok stampa».');
+            if ($newStatus === PageStatus::OkStampa && ! $this->pageHasFile($page)) {
+                $this->addError('pdfRequired', 'La '.$page->label().' non ha ancora un PDF caricato: non può essere segnata «Ok stampa».');
 
-            return;
-        }
+                return;
+            }
 
-        $this->applyStatusChange($page, $newStatus);
+            $this->applyStatusChange($page, $newStatus);
+        });
     }
 
     /**
@@ -1405,15 +1450,18 @@ class Grid extends Component
      */
     public function togglePageLock(int $pageId): void
     {
-        $this->authorize('update', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('page.lock', function () use ($pageId) {
+            $this->authorize('update', $this->issue);
 
-        $page = Page::findOrFail($pageId);
+            $page = Page::findOrFail($pageId);
 
-        if ($page->issue_id !== $this->issue->id) {
-            return;
-        }
+            if ($page->issue_id !== $this->issue->id) {
+                return;
+            }
 
-        $this->applyLockToggle($page, ! $page->isLocked());
+            $this->applyLockToggle($page, ! $page->isLocked());
+        });
     }
 
     /**
@@ -1576,52 +1624,55 @@ class Grid extends Component
      */
     public function bulkChangeStatus(string $status): void
     {
-        $this->authorize('update', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('page.status', function () use ($status) {
+            $this->authorize('update', $this->issue);
 
-        $newStatus = PageStatus::tryFrom($status);
+            $newStatus = PageStatus::tryFrom($status);
 
-        if ($newStatus === null || $this->selectedPageIds === []) {
-            return;
-        }
-
-        $pages = Page::whereIn('id', $this->selectedPageIds)->where('issue_id', $this->issue->id)->get();
-
-        $applied = 0;
-        $skippedLocked = 0;
-        $skippedNoPdf = 0;
-
-        foreach ($pages as $page) {
-            if ($page->isLocked()) {
-                $skippedLocked++;
-
-                continue;
+            if ($newStatus === null || $this->selectedPageIds === []) {
+                return;
             }
 
-            if ($page->status === $newStatus) {
-                continue;
+            $pages = Page::whereIn('id', $this->selectedPageIds)->where('issue_id', $this->issue->id)->get();
+
+            $applied = 0;
+            $skippedLocked = 0;
+            $skippedNoPdf = 0;
+
+            foreach ($pages as $page) {
+                if ($page->isLocked()) {
+                    $skippedLocked++;
+
+                    continue;
+                }
+
+                if ($page->status === $newStatus) {
+                    continue;
+                }
+
+                // Stessa regola di changePageStatus() (§2.1): mai approvare per
+                // la stampa in massa una pagina senza PDF — ignorata, non
+                // blocca il resto della selezione (stesso principio già in uso
+                // per le pagine bloccate).
+                if ($newStatus === PageStatus::OkStampa && ! $this->pageHasFile($page)) {
+                    $skippedNoPdf++;
+
+                    continue;
+                }
+
+                $this->applyStatusChange($page, $newStatus);
+                $applied++;
             }
 
-            // Stessa regola di changePageStatus() (§2.1): mai approvare per
-            // la stampa in massa una pagina senza PDF — ignorata, non
-            // blocca il resto della selezione (stesso principio già in uso
-            // per le pagine bloccate).
-            if ($newStatus === PageStatus::OkStampa && ! $this->pageHasFile($page)) {
-                $skippedNoPdf++;
-
-                continue;
-            }
-
-            $this->applyStatusChange($page, $newStatus);
-            $applied++;
-        }
-
-        $this->reportBulkResult(
-            $applied,
-            $skippedLocked,
-            'aggiornata a «'.$newStatus->label().'»',
-            'aggiornate a «'.$newStatus->label().'»',
-            $skippedNoPdf,
-        );
+            $this->reportBulkResult(
+                $applied,
+                $skippedLocked,
+                'aggiornata a «'.$newStatus->label().'»',
+                'aggiornate a «'.$newStatus->label().'»',
+                $skippedNoPdf,
+            );
+        });
     }
 
     /**
@@ -1632,31 +1683,34 @@ class Grid extends Component
      */
     public function bulkToggleLock(bool $lock): void
     {
-        $this->authorize('update', $this->issue);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('page.lock', function () use ($lock) {
+            $this->authorize('update', $this->issue);
 
-        if ($this->selectedPageIds === []) {
-            return;
-        }
-
-        $pages = Page::whereIn('id', $this->selectedPageIds)->where('issue_id', $this->issue->id)->get();
-
-        $applied = 0;
-
-        foreach ($pages as $page) {
-            if ($page->isLocked() === $lock) {
-                continue;
+            if ($this->selectedPageIds === []) {
+                return;
             }
 
-            $this->applyLockToggle($page, $lock);
-            $applied++;
-        }
+            $pages = Page::whereIn('id', $this->selectedPageIds)->where('issue_id', $this->issue->id)->get();
 
-        $this->reportBulkResult(
-            $applied,
-            0,
-            $lock ? 'bloccata' : 'sbloccata',
-            $lock ? 'bloccate' : 'sbloccate',
-        );
+            $applied = 0;
+
+            foreach ($pages as $page) {
+                if ($page->isLocked() === $lock) {
+                    continue;
+                }
+
+                $this->applyLockToggle($page, $lock);
+                $applied++;
+            }
+
+            $this->reportBulkResult(
+                $applied,
+                0,
+                $lock ? 'bloccata' : 'sbloccata',
+                $lock ? 'bloccate' : 'sbloccate',
+            );
+        });
     }
 
     /**
@@ -1691,48 +1745,54 @@ class Grid extends Component
      */
     public function archiveContent(int $contentId): void
     {
-        $this->authorizeContent('update', $contentId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.archive', function () use ($contentId) {
+            $this->authorizeContent('update', $contentId);
 
-        $content = $this->issue->unassignedContents()->find($contentId);
+            $content = $this->issue->unassignedContents()->find($contentId);
 
-        if ($content === null) {
-            return;
-        }
+            if ($content === null) {
+                return;
+            }
 
-        $content->update(['archived_at' => now()]);
+            $content->update(['archived_at' => now()]);
 
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Content',
-            entityId: $content->id,
-            action: 'content.archived',
-            description: "Contenuto «{$content->title}» archiviato",
-        );
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Content',
+                entityId: $content->id,
+                action: 'content.archived',
+                description: "Contenuto «{$content->title}» archiviato",
+            );
 
-        $this->broadcastContentListChanged($content->id, 'archived');
+            $this->broadcastContentListChanged($content->id, 'archived');
+        });
     }
 
     public function unarchiveContent(int $contentId): void
     {
-        $this->authorizeContent('update', $contentId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.unarchive', function () use ($contentId) {
+            $this->authorizeContent('update', $contentId);
 
-        $content = $this->issue->contents()->whereDoesntHave('pages')->whereNotNull('archived_at')->find($contentId);
+            $content = $this->issue->contents()->whereDoesntHave('pages')->whereNotNull('archived_at')->find($contentId);
 
-        if ($content === null) {
-            return;
-        }
+            if ($content === null) {
+                return;
+            }
 
-        $content->update(['archived_at' => null]);
+            $content->update(['archived_at' => null]);
 
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Content',
-            entityId: $content->id,
-            action: 'content.unarchived',
-            description: "Contenuto «{$content->title}» ripristinato dall'archivio",
-        );
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Content',
+                entityId: $content->id,
+                action: 'content.unarchived',
+                description: "Contenuto «{$content->title}» ripristinato dall'archivio",
+            );
 
-        $this->broadcastContentListChanged($content->id, 'unarchived');
+            $this->broadcastContentListChanged($content->id, 'unarchived');
+        });
     }
 
     /**
@@ -1765,33 +1825,36 @@ class Grid extends Component
      */
     public function deleteUnassignedContent(int $contentId, bool $confirmed = false): void
     {
-        $this->authorizeContent('update', $contentId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.delete', function () use ($contentId, $confirmed) {
+            $this->authorizeContent('update', $contentId);
 
-        if (! $confirmed) {
-            return;
-        }
+            if (! $confirmed) {
+                return;
+            }
 
-        $content = $this->issue->unassignedContents()->find($contentId);
+            $content = $this->issue->unassignedContents()->find($contentId);
 
-        if ($content === null) {
+            if ($content === null) {
+                $this->confirmDeleteContentId = null;
+
+                return;
+            }
+
+            $title = $content->title;
+            $content->delete();
+
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Content',
+                entityId: $contentId,
+                action: 'content.deleted',
+                description: "Contenuto «{$title}» eliminato definitivamente",
+            );
+
+            $this->broadcastContentListChanged($contentId, 'deleted');
             $this->confirmDeleteContentId = null;
-
-            return;
-        }
-
-        $title = $content->title;
-        $content->delete();
-
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Content',
-            entityId: $contentId,
-            action: 'content.deleted',
-            description: "Contenuto «{$title}» eliminato definitivamente",
-        );
-
-        $this->broadcastContentListChanged($contentId, 'deleted');
-        $this->confirmDeleteContentId = null;
+        });
     }
 
     /**
@@ -1815,47 +1878,50 @@ class Grid extends Component
      */
     public function renameContent(int $contentId, string $name): void
     {
-        $this->authorizeContent('update', $contentId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.rename', function () use ($contentId, $name) {
+            $this->authorizeContent('update', $contentId);
 
-        $content = Content::with('advertisement')->findOrFail($contentId);
+            $content = Content::with('advertisement')->findOrFail($contentId);
 
-        if ($content->issue_id !== $this->issue->id) {
-            return;
-        }
+            if ($content->issue_id !== $this->issue->id) {
+                return;
+            }
 
-        $name = trim($name);
-        $isAd = $content->type === ContentType::Pubblicita && $content->advertisement !== null;
-        $max = $isAd ? 180 : 255;
+            $name = trim($name);
+            $isAd = $content->type === ContentType::Pubblicita && $content->advertisement !== null;
+            $max = $isAd ? 180 : 255;
 
-        if ($name === '' || mb_strlen($name) > $max) {
-            $this->addError('rename', $name === '' ? 'Il nome non può essere vuoto.' : "Il nome può avere al massimo {$max} caratteri.");
+            if ($name === '' || mb_strlen($name) > $max) {
+                $this->addError('rename', $name === '' ? 'Il nome non può essere vuoto.' : "Il nome può avere al massimo {$max} caratteri.");
 
-            return;
-        }
+                return;
+            }
 
-        $oldName = $content->displayLabel();
+            $oldName = $content->displayLabel();
 
-        if ($name === $oldName) {
-            return;
-        }
+            if ($name === $oldName) {
+                return;
+            }
 
-        $isAd ? $content->advertisement->update(['client' => $name]) : $content->update(['title' => $name]);
+            $isAd ? $content->advertisement->update(['client' => $name]) : $content->update(['title' => $name]);
 
-        // Dare un cliente a un segnaposto lo rende una pubblicità vera
-        // (regola unica in AdPlaceholder, revisione 2, Fase 3.1).
-        AdPlaceholder::sync($content);
+            // Dare un cliente a un segnaposto lo rende una pubblicità vera
+            // (regola unica in AdPlaceholder, revisione 2, Fase 3.1).
+            AdPlaceholder::sync($content);
 
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Content',
-            entityId: $content->id,
-            action: 'content.renamed',
-            description: "Contenuto «{$oldName}» rinominato in «{$name}»",
-            old: [$isAd ? 'client' : 'title' => $oldName],
-            new: [$isAd ? 'client' : 'title' => $name],
-        );
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Content',
+                entityId: $content->id,
+                action: 'content.renamed',
+                description: "Contenuto «{$oldName}» rinominato in «{$name}»",
+                old: [$isAd ? 'client' : 'title' => $oldName],
+                new: [$isAd ? 'client' : 'title' => $name],
+            );
 
-        $this->broadcastContentListChanged($content->id, 'renamed');
+            $this->broadcastContentListChanged($content->id, 'renamed');
+        });
     }
 
     private function broadcastContentListChanged(int $contentId, string $action): void
@@ -1886,12 +1952,98 @@ class Grid extends Component
 
     public function assignContent(int $contentId, int $pageId): void
     {
-        $this->authorizeContent('move', $contentId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.assign', function () use ($contentId, $pageId) {
+            $this->authorizeContent('move', $contentId);
 
-        $content = Content::with('advertisement')->findOrFail($contentId);
-        $page = Page::findOrFail($pageId);
+            $content = Content::with('advertisement')->findOrFail($contentId);
+            $page = Page::findOrFail($pageId);
 
-        if ($content->issue_id !== $this->issue->id || $page->issue_id !== $this->issue->id) {
+            if ($content->issue_id !== $this->issue->id || $page->issue_id !== $this->issue->id) {
+                return;
+            }
+
+            $this->placeUnassignedContent($content, $page);
+        });
+    }
+
+    /**
+     * Pannello contenuti (2026-10-28): «Assegna alla selezione» — parte
+     * dalla prima pagina selezionata in ordine di sfoglio (scelta
+     * dell'utente: con una selezione non contigua si parte comunque dalla
+     * prima). Stessa strada del drag: placeUnassignedContent().
+     */
+    public function assignContentToSelection(int $contentId): void
+    {
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.assign', function () use ($contentId) {
+            $this->authorizeContent('move', $contentId);
+
+            $content = Content::with('advertisement')->where('issue_id', $this->issue->id)->find($contentId);
+            $start = $this->issue->pages()->whereIn('id', $this->selectedPageIds)->orderBy('position')->first();
+
+            if ($content === null) {
+                return;
+            }
+
+            if ($start === null) {
+                $this->addError('percentage', 'Seleziona almeno una pagina prima di usare «Assegna alla selezione».');
+
+                return;
+            }
+
+            $this->placeUnassignedContent($content, $start);
+        });
+    }
+
+    /**
+     * Pannello contenuti (2026-10-28): «Vai a pag.» — numero di pagina
+     * interna (es. «12») o copertina («I», «II», «III», «IV», «bandella»),
+     * poi la stessa strada del drag.
+     */
+    public function assignContentToTarget(int $contentId, string $target): void
+    {
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.assign', function () use ($contentId, $target) {
+            $this->authorizeContent('move', $contentId);
+
+            $content = Content::with('advertisement')->where('issue_id', $this->issue->id)->find($contentId);
+
+            if ($content === null) {
+                return;
+            }
+
+            $target = trim($target);
+            $slot = CoverSlot::tryFrom(strtoupper($target)) ?? CoverSlot::tryFrom(strtolower($target));
+            $page = match (true) {
+                ctype_digit($target) => $this->issue->pages()->where('position', (int) $target)->first(),
+                $slot !== null => $this->issue->covers()->where('cover_slot', $slot->value)->first(),
+                default => null,
+            };
+
+            if ($page === null) {
+                $this->addError('percentage', "Pagina «{$target}» non trovata: scrivi un numero da 1 a {$this->issue->total_pages}, oppure I, II, III, IV per le copertine.");
+
+                return;
+            }
+
+            $this->placeUnassignedContent($content, $page);
+        });
+    }
+
+    /**
+     * Unico punto di assegnazione di un contenuto libero a partire da una
+     * pagina (drag, «Assegna alla selezione», «Vai a pag.»): ContentPlacer
+     * (tutto o niente, spazio e griglia), log, broadcast, pages_updated_at.
+     * Dal 2026-10-28 rifiuta un contenuto già in pagina: con il pannello
+     * aperto a lungo un collega può averlo assegnato nel frattempo, e un
+     * drop «vecchio» lo avrebbe messo su altre pagine in più.
+     */
+    private function placeUnassignedContent(Content $content, Page $page): void
+    {
+        if (($already = $content->pages()->get())->isNotEmpty()) {
+            $this->addError('percentage', "«{$content->displayLabel()}» è già stato assegnato (".$already->map->label()->implode(', ').'), forse da un collega: l\'elenco si è aggiornato.');
+
             return;
         }
 
@@ -1968,29 +2120,32 @@ class Grid extends Component
      */
     public function extendToPage(int $contentId, int $targetPosition): void
     {
-        $this->authorizeContent('move', $contentId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.extend', function () use ($contentId, $targetPosition) {
+            $this->authorizeContent('move', $contentId);
 
-        $content = Content::with('advertisement')->findOrFail($contentId);
+            $content = Content::with('advertisement')->findOrFail($contentId);
 
-        if ($content->issue_id !== $this->issue->id) {
-            return;
-        }
+            if ($content->issue_id !== $this->issue->id) {
+                return;
+            }
 
-        $targetPage = $this->issue->pages()->where('position', $targetPosition)->first();
+            $targetPage = $this->issue->pages()->where('position', $targetPosition)->first();
 
-        if ($targetPage === null) {
-            $this->addError('extend', "Non esiste nessuna pagina in posizione {$targetPosition}.");
+            if ($targetPage === null) {
+                $this->addError('extend', "Non esiste nessuna pagina in posizione {$targetPosition}.");
 
-            return;
-        }
+                return;
+            }
 
-        if ($targetPage->contents()->where('content_id', $contentId)->exists()) {
-            $this->addError('extend', 'Il contenuto è già assegnato a quella pagina.');
+            if ($targetPage->contents()->where('content_id', $contentId)->exists()) {
+                $this->addError('extend', 'Il contenuto è già assegnato a quella pagina.');
 
-            return;
-        }
+                return;
+            }
 
-        $this->attachContentToPage($content, $targetPage, 'extend');
+            $this->attachContentToPage($content, $targetPage, 'extend');
+        });
     }
 
     /**
@@ -2045,64 +2200,67 @@ class Grid extends Component
      */
     public function updateContentOccupancy(int $pageId, int $contentId, int $twelfths): void
     {
-        $this->authorizeContent('update', $contentId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.occupancy', function () use ($pageId, $contentId, $twelfths) {
+            $this->authorizeContent('update', $contentId);
 
-        $page = Page::findOrFail($pageId);
+            $page = Page::findOrFail($pageId);
 
-        if ($page->issue_id !== $this->issue->id) {
-            return;
-        }
+            if ($page->issue_id !== $this->issue->id) {
+                return;
+            }
 
-        if ($this->blockIfLocked($page)) {
-            return;
-        }
+            if ($this->blockIfLocked($page)) {
+                return;
+            }
 
-        $current = $page->contents()->where('content_id', $contentId)->first();
+            $current = $page->contents()->where('content_id', $contentId)->first();
 
-        if ($current === null) {
-            return;
-        }
+            if ($current === null) {
+                return;
+            }
 
-        if ($twelfths < 1 || $twelfths > Twelfths::PER_PAGE) {
-            $this->addError('percentage', 'Lo spazio su una pagina va da 1/12 a una pagina intera.');
+            if ($twelfths < 1 || $twelfths > Twelfths::PER_PAGE) {
+                $this->addError('percentage', 'Lo spazio su una pagina va da 1/12 a una pagina intera.');
 
-            return;
-        }
+                return;
+            }
 
-        $others = $page->contents()->where('content_id', '!=', $contentId)->pluck('occupied_twelfths')->all();
+            $others = $page->contents()->where('content_id', '!=', $contentId)->pluck('occupied_twelfths')->all();
 
-        if (! PageCapacity::fits($others, $twelfths)) {
-            $this->addError('percentage', PageCapacity::insufficientSpaceMessage($page->label(), $twelfths, PageCapacity::free($others), $current->displayLabel()));
+            if (! PageCapacity::fits($others, $twelfths)) {
+                $this->addError('percentage', PageCapacity::insufficientSpaceMessage($page->label(), $twelfths, PageCapacity::free($others), $current->displayLabel()));
 
-            return;
-        }
+                return;
+            }
 
-        $oldTwelfths = (int) $current->pivot->occupied_twelfths;
+            $oldTwelfths = (int) $current->pivot->occupied_twelfths;
 
-        $page->contents()->updateExistingPivot($contentId, ['occupied_twelfths' => $twelfths]);
-        // Revisione 2, Fase 2.3: nuova misura → nuovo rettangolo, nello stesso
-        // angolo se ci sta, altrimenti nel primo posto libero.
-        PageGridPositions::persist($page);
+            $page->contents()->updateExistingPivot($contentId, ['occupied_twelfths' => $twelfths]);
+            // Revisione 2, Fase 2.3: nuova misura → nuovo rettangolo, nello stesso
+            // angolo se ci sta, altrimenti nel primo posto libero.
+            PageGridPositions::persist($page);
 
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Content',
-            entityId: $contentId,
-            action: 'content.occupancy_changed',
-            description: "Spazio di «{$current->displayLabel()}» sulla {$page->label()} cambiato da ".Twelfths::pagesLabel($oldTwelfths).' a '.Twelfths::pagesLabel($twelfths),
-            old: ['occupied_twelfths' => $oldTwelfths],
-            new: ['occupied_twelfths' => $twelfths],
-        );
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Content',
+                entityId: $contentId,
+                action: 'content.occupancy_changed',
+                description: "Spazio di «{$current->displayLabel()}» sulla {$page->label()} cambiato da ".Twelfths::pagesLabel($oldTwelfths).' a '.Twelfths::pagesLabel($twelfths),
+                old: ['occupied_twelfths' => $oldTwelfths],
+                new: ['occupied_twelfths' => $twelfths],
+            );
 
-        broadcast(new ContentAssigned(
-            issueId: $this->issue->id,
-            pageId: $page->id,
-            contentId: $contentId,
-            twelfths: $twelfths,
-            assignedByUserId: auth()->id(),
-            assignedByUserName: auth()->user()->name,
-        ))->toOthers();
-        $this->issue->markPagesUpdated();
+            broadcast(new ContentAssigned(
+                issueId: $this->issue->id,
+                pageId: $page->id,
+                contentId: $contentId,
+                twelfths: $twelfths,
+                assignedByUserId: auth()->id(),
+                assignedByUserName: auth()->user()->name,
+            ))->toOthers();
+            $this->issue->markPagesUpdated();
+        });
     }
 
     /**
@@ -2117,29 +2275,32 @@ class Grid extends Component
      */
     public function moveContentOnGrid(int $pageId, int $contentId, string $direction): void
     {
-        $this->authorizeContent('move', $contentId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.grid', function () use ($pageId, $contentId, $direction) {
+            $this->authorizeContent('move', $contentId);
 
-        $page = Page::findOrFail($pageId);
+            $page = Page::findOrFail($pageId);
 
-        if ($page->issue_id !== $this->issue->id || $this->blockIfLocked($page)) {
-            return;
-        }
+            if ($page->issue_id !== $this->issue->id || $this->blockIfLocked($page)) {
+                return;
+            }
 
-        $content = $page->contents()->where('content_id', $contentId)->first();
+            $content = $page->contents()->where('content_id', $contentId)->first();
 
-        if ($content === null || ! in_array($direction, PageGridPlanner::DIRECTIONS, true)) {
-            return;
-        }
+            if ($content === null || ! in_array($direction, PageGridPlanner::DIRECTIONS, true)) {
+                return;
+            }
 
-        $changes = PageGridPositions::move($page, $contentId, $direction);
+            $changes = PageGridPositions::move($page, $contentId, $direction);
 
-        if ($changes === null) {
-            $this->addError('grid', "«{$content->displayLabel()}» non può andare ".self::DIRECTION_LABELS[$direction].': uscirebbe dalla pagina o si sovrapporrebbe a un altro contenuto.');
+            if ($changes === null) {
+                $this->addError('grid', "«{$content->displayLabel()}» non può andare ".self::DIRECTION_LABELS[$direction].': uscirebbe dalla pagina o si sovrapporrebbe a un altro contenuto.');
 
-            return;
-        }
+                return;
+            }
 
-        $this->logGridChange($page, $content, 'page.content_moved', "«{$content->displayLabel()}» spostato ".self::DIRECTION_LABELS[$direction]." sulla {$page->label()}".(count($changes) > 1 ? ' (scambiato con un altro contenuto)' : ''), $changes);
+            $this->logGridChange($page, $content, 'page.content_moved', "«{$content->displayLabel()}» spostato ".self::DIRECTION_LABELS[$direction]." sulla {$page->label()}".(count($changes) > 1 ? ' (scambiato con un altro contenuto)' : ''), $changes);
+        });
     }
 
     /**
@@ -2151,38 +2312,41 @@ class Grid extends Component
      */
     public function rotateContentOnGrid(int $pageId, int $contentId): void
     {
-        $this->authorizeContent('move', $contentId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.rotate', function () use ($pageId, $contentId) {
+            $this->authorizeContent('move', $contentId);
 
-        $page = Page::findOrFail($pageId);
+            $page = Page::findOrFail($pageId);
 
-        if ($page->issue_id !== $this->issue->id || $this->blockIfLocked($page)) {
-            return;
-        }
+            if ($page->issue_id !== $this->issue->id || $this->blockIfLocked($page)) {
+                return;
+            }
 
-        $content = $page->contents()->with('advertisement')->where('content_id', $contentId)->first();
+            $content = $page->contents()->with('advertisement')->where('content_id', $contentId)->first();
 
-        if ($content === null) {
-            return;
-        }
+            if ($content === null) {
+                return;
+            }
 
-        $rect = PageGridPositions::rotate($page, $contentId);
+            $rect = PageGridPositions::rotate($page, $contentId);
 
-        if ($rect === null) {
-            $this->addError('grid', "«{$content->displayLabel()}» non si può ruotare qui: è quadrato o ruotato non ci sta sulla pagina.");
+            if ($rect === null) {
+                $this->addError('grid', "«{$content->displayLabel()}» non si può ruotare qui: è quadrato o ruotato non ci sta sulla pagina.");
 
-            return;
-        }
+                return;
+            }
 
-        $formatNote = '';
-        $format = $content->advertisement?->format;
-        $wantsVertical = $rect->h > $rect->w;
+            $formatNote = '';
+            $format = $content->advertisement?->format;
+            $wantsVertical = $rect->h > $rect->w;
 
-        if ($format !== null && $format->rotated() !== null && ($format->orientation() === ContentOrientation::Vertical) !== $wantsVertical) {
-            $content->advertisement->update(['format' => $format->rotated()]);
-            $formatNote = ' (formato: '.$format->label().' → '.$format->rotated()->label().')';
-        }
+            if ($format !== null && $format->rotated() !== null && ($format->orientation() === ContentOrientation::Vertical) !== $wantsVertical) {
+                $content->advertisement->update(['format' => $format->rotated()]);
+                $formatNote = ' (formato: '.$format->label().' → '.$format->rotated()->label().')';
+            }
 
-        $this->logGridChange($page, $content, 'page.content_rotated', "«{$content->displayLabel()}» ruotato sulla {$page->label()}{$formatNote}", [$contentId => $rect]);
+            $this->logGridChange($page, $content, 'page.content_rotated', "«{$content->displayLabel()}» ruotato sulla {$page->label()}{$formatNote}", [$contentId => $rect]);
+        });
     }
 
     private const DIRECTION_LABELS = [
@@ -2223,38 +2387,41 @@ class Grid extends Component
 
     public function unassignContent(int $contentId, int $pageId): void
     {
-        $this->authorizeContent('move', $contentId);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        $this->recordStep('content.unassign', function () use ($contentId, $pageId) {
+            $this->authorizeContent('move', $contentId);
 
-        $page = Page::findOrFail($pageId);
+            $page = Page::findOrFail($pageId);
 
-        if ($page->issue_id !== $this->issue->id) {
-            return;
-        }
+            if ($page->issue_id !== $this->issue->id) {
+                return;
+            }
 
-        if ($this->blockIfLocked($page)) {
-            return;
-        }
+            if ($this->blockIfLocked($page)) {
+                return;
+            }
 
-        $page->contents()->detach($contentId);
-        ContentPageAttacher::syncPageContentType($page);
+            $page->contents()->detach($contentId);
+            ContentPageAttacher::syncPageContentType($page);
 
-        ActivityLogger::log(
-            issue: $this->issue,
-            entityType: 'Content',
-            entityId: $contentId,
-            action: 'content.unassigned',
-            description: "Contenuto rimosso dalla {$page->label()}",
-            old: ['page_id' => $page->id],
-        );
+            ActivityLogger::log(
+                issue: $this->issue,
+                entityType: 'Content',
+                entityId: $contentId,
+                action: 'content.unassigned',
+                description: "Contenuto rimosso dalla {$page->label()}",
+                old: ['page_id' => $page->id],
+            );
 
-        broadcast(new ContentUnassigned(
-            issueId: $this->issue->id,
-            pageId: $page->id,
-            contentId: $contentId,
-            unassignedByUserId: auth()->id(),
-            unassignedByUserName: auth()->user()->name,
-        ))->toOthers();
-        $this->issue->markPagesUpdated();
+            broadcast(new ContentUnassigned(
+                issueId: $this->issue->id,
+                pageId: $page->id,
+                contentId: $contentId,
+                unassignedByUserId: auth()->id(),
+                unassignedByUserName: auth()->user()->name,
+            ))->toOthers();
+            $this->issue->markPagesUpdated();
+        });
     }
 
     #[On('echo-presence:issue.{issue.id},.ContentAssigned')]
@@ -2468,9 +2635,28 @@ class Grid extends Component
             ->orderBy('created_at')
             ->get();
 
-        $unassignedContents = $this->contentSearch === ''
-            ? $allUnassignedContents
-            : $allUnassignedContents->filter(fn (Content $content) => mb_stripos($content->title, $this->contentSearch) !== false)->values();
+        // Pannello contenuti (2026-10-28): «Da assegnare» riusa la lista già
+        // caricata (stessa fonte del contatore nel bottone); «Tutti» e
+        // «Segnaposto» fanno la loro query solo quando sono la scheda scelta.
+        if (! in_array($this->contentTab, ContentPanelFilter::TABS, true)) {
+            $this->contentTab = 'unassigned';
+        }
+
+        $panelBase = match ($this->contentTab) {
+            'unassigned' => $allUnassignedContents,
+            default => $this->issue->contents()
+                ->whereNull('archived_at')
+                ->when($this->contentTab === 'placeholders', fn ($query) => $query->where('is_placeholder', true))
+                ->with(['article', 'advertisement', 'files' => fn ($query) => $query->limit(1), 'pages:id,issue_id,position,cover_slot'])
+                ->get(),
+        };
+
+        $unassignedContents = ContentPanelFilter::apply(
+            $panelBase,
+            $this->contentType,
+            $this->contentSearch,
+            in_array($this->contentSort, ContentPanelFilter::SORTS, true) ? $this->contentSort : 'recent',
+        );
 
         $reorderLogs = $this->showReorderLog
             ? $this->issue->reorderLogs()->with(['page', 'user'])->latest()->limit(50)->get()
@@ -2570,6 +2756,9 @@ class Grid extends Component
 
         return view('livewire.timone.grid', [
             'abilities' => $abilities,
+            // Annulla/ripeti (2026-10-28): stato dei bottoni ↶ ↷ e menu Cronologia (solo se aperto).
+            'timeline' => auth()->user() ? app(TimelineActionService::class)->state($this->issue, auth()->user()) : null,
+            'timelineHistory' => $this->showTimelineMenu && auth()->user() ? app(TimelineActionService::class)->history($this->issue, auth()->user()) : collect(),
             'immovablePageIds' => $abilities->immovablePageIds($pages->concat($covers)),
             'selection' => PageSelectionActions::describe($selectedPages),
             'pages' => $pages,
@@ -2582,6 +2771,9 @@ class Grid extends Component
             'pageAspectRatio' => $pageAspectRatio,
             'spreads' => $this->viewMode === 'doppia' ? PageSpreadBuilder::build($pages) : null,
             'unassignedContents' => $unassignedContents,
+            // Contatore del bottone «Contenuti · N da assegnare»: la stessa
+            // lista della scheda «Da assegnare», prima di filtri e ricerca.
+            'unassignedCount' => $allUnassignedContents->count(),
             'archivedContents' => $archivedContents,
             'reorderLogs' => $reorderLogs,
             // Solo pagine interne: le copertine hanno un conteggio a parte.
@@ -2641,6 +2833,64 @@ class Grid extends Component
     {
         $this->authorize('movePages', [$this->issue, $pages]);
     }
+
+    /**
+     * Annulla/ripeti (2026-10-28): esegue un'azione del timone come un passo
+     * annullabile (App\Support\Timeline\TimelineActionService). La logica
+     * dell'azione non cambia: il servizio la esegue tra due fotografie del
+     * timone e ne registra le differenze. Le azioni annidate (nudgePage →
+     * movePage) contano una volta sola.
+     */
+    private function recordStep(string $type, Closure $action): void
+    {
+        app(TimelineActionService::class)->run($this->issue, auth()->user(), $type, $action);
+    }
+
+    /** Ctrl+Z / ↶ (2026-10-28): annulla il mio ultimo passo su questo numero. */
+    public function undo(): void
+    {
+        $this->authorize('workOnAds', $this->issue);
+        $this->afterTimelineReplay(app(TimelineActionService::class)->undo($this->issue, auth()->user()), true);
+    }
+
+    /** Ctrl+Shift+Z / Ctrl+Y / ↷ (2026-10-28): ripete il mio ultimo passo annullato. */
+    public function redo(): void
+    {
+        $this->authorize('workOnAds', $this->issue);
+        $this->afterTimelineReplay(app(TimelineActionService::class)->redo($this->issue, auth()->user()), false);
+    }
+
+    /**
+     * Toast nel browser (evento `timeline-result`, 4 secondi, con «Ripeti»
+     * dopo un annulla riuscito) e avviso agli altri utenti (broadcast +
+     * pages_updated_at, già toccato dal servizio, per il polling).
+     *
+     * @param  array{ok: bool, message: string, label?: string, busy?: bool}  $result
+     */
+    private function afterTimelineReplay(array $result, bool $undo): void
+    {
+        if ($result['busy'] ?? false) {
+            return;
+        }
+
+        $this->dispatch('timeline-result', ok: $result['ok'], message: $result['message'], canRedo: $result['ok'] && $undo);
+
+        if ($result['ok']) {
+            broadcast(new TimelineApplied(issueId: $this->issue->id, userName: auth()->user()->name, message: $result['message']))->toOthers();
+            $this->lastKnownPagesUpdatedAt = $this->issue->fresh()->getRawOriginal('pages_updated_at');
+            $this->reorderVersion = $this->issue->fresh()->reorder_version;
+            $this->dispatch('content-list-changed');
+        }
+    }
+
+    #[On('echo-presence:issue.{issue.id},.TimelineApplied')]
+    public function onTimelineApplied(array $payload = []): void
+    {
+        $this->notifyRemoteChange(($payload['userName'] ?? 'Un collega').' — '.($payload['message'] ?? 'annulla/ripeti'));
+    }
+
+    /** Menu «Cronologia» nella fascia (2026-10-28): ultimi passi dell'utente, caricati solo se aperto. */
+    public bool $showTimelineMenu = false;
 
     private function notifyRemoteChange(string $message): void
     {

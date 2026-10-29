@@ -30,7 +30,7 @@ final class StoredFiles
         }
 
         $contentFiles = ContentFile::query()
-            ->whereHas('content', fn ($query) => $query->whereIn('issue_id', $issueIds))
+            ->whereHas('content', fn ($query) => $query->withTrashed()->whereIn('issue_id', $issueIds)) // anche i contenuti eliminati da poco (annulla/ripeti)
             ->get(['disk', 'path', 'thumbnail_path', 'size']);
 
         $pageFiles = PageFile::query()

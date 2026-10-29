@@ -4,6 +4,20 @@
     data-deleted-redirect="{{ route('magazines.index', ['eliminato' => 1]) }}"
     x-data="{
         remoteToast: null, remoteToastTimeout: null,
+        // Annulla/ripeti (2026-10-28): una richiesta alla volta (le raffiche
+        // di Ctrl+Z si ignorano mentre una è in corso) e toast di 4 secondi.
+        timelineBusy: false, timelineToast: null, timelineToastTimeout: null,
+        async timeline(action) {
+            if (this.timelineBusy) return;
+            this.timelineBusy = true;
+            try { await $wire.call(action); } finally { this.timelineBusy = false; }
+        },
+        // Una modale aperta (modifica contenuto, conferme, x-modal di Breeze):
+        // lì Ctrl+Z non deve toccare il timone.
+        isModalOpen() {
+            return document.body.classList.contains('overflow-y-hidden')
+                || [...document.querySelectorAll('[aria-modal=true], [data-testid=content-edit-modal]')].some((el) => el.getClientRects().length > 0);
+        },
         // Shortcut da tastiera (2026-09-02, punto 2 del prompt), identiche
         // in griglia/doppia/lista perché vivono qui sul componente Grid,
         // non per-vista: Esc deseleziona tutto (Grid::clearSelection()),
@@ -23,6 +37,21 @@
         },
         handleTimoneShortcut(event) {
             if (! this.isTimoneShortcutTarget(event.target)) return;
+
+            // Annulla/ripeti (2026-10-28): Ctrl/⌘+Z, Ctrl/⌘+Shift+Z, Ctrl+Y.
+            // Mai in un campo di testo (lì resta l'annulla del browser) né
+            // con una modale aperta; non collide con Esc, Ctrl/⌘+A,
+            // Ctrl/⌘+Shift+G e le frecce.
+            const mod = event.ctrlKey || event.metaKey;
+            const key = event.key.toLowerCase();
+
+            if (mod && (key === 'z' || (key === 'y' && event.ctrlKey && ! event.metaKey))) {
+                if (this.isModalOpen()) return;
+                event.preventDefault();
+                this.timeline(key === 'y' || event.shiftKey ? 'redo' : 'undo');
+
+                return;
+            }
 
             if (event.key === 'Escape') {
                 $wire.clearSelection();
@@ -46,6 +75,11 @@
         },
     }"
     x-on:keydown.window="handleTimoneShortcut($event)"
+    x-on:timeline-result.window="
+        clearTimeout(timelineToastTimeout);
+        timelineToast = $event.detail;
+        timelineToastTimeout = setTimeout(() => timelineToast = null, 4000);
+    "
     x-on:remote-change.window="
         clearTimeout(remoteToastTimeout);
         remoteToast = $event.detail.message;
@@ -57,7 +91,7 @@
          rispetto alla pagina cliccata più in basso. Un piccolo ritardo
          (non un vero hook "dopo il render Livewire", per restare semplice
          qui) basta perché lo scroll parta a form già aperto, non prima. --}}
-    x-on:open-content-create-for-page.window="setTimeout(() => document.getElementById('content-create-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150)"
+    x-on:open-content-create-for-page.window="$store.contentPanel.toggle(true); setTimeout(() => document.getElementById('content-create-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150)"
     @auth
         x-init="
             $store.pagePresence?.join({{ $issue->id }}, { id: {{ auth()->id() }}, name: @js(auth()->user()->name) });
@@ -119,8 +153,34 @@
         </h3>
 
         <div class="flex flex-wrap items-center gap-1.5">
+            {{-- Annulla/ripeti (2026-10-28): disattivati con la pila vuota; il
+                 tooltip dice quale azione (TimelineActionService::state()). --}}
+            @if ($timeline)
+                <div class="inline-flex items-center gap-0.5" data-testid="timeline-controls">
+                    <button type="button" x-on:click="timeline('undo')" @disabled(! $timeline['undo']) title="{{ $timeline['undo'] ? ($timeline['undoBlocked'] ? 'Non annullabile: '.$timeline['undo'].' — '.$timeline['undoBlocked'] : 'Annulla: '.$timeline['undo'].' (Ctrl/⌘+Z)') : 'Niente da annullare' }}" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 disabled:opacity-40" data-testid="timeline-undo">↶</button>
+                    <button type="button" x-on:click="timeline('redo')" @disabled(! $timeline['redo']) title="{{ $timeline['redo'] ? 'Ripeti: '.$timeline['redo'].' (Ctrl/⌘+Shift+Z, Ctrl+Y)' : 'Niente da ripetere' }}" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 disabled:opacity-40" data-testid="timeline-redo">↷</button>
+                    <div class="relative">
+                        <button type="button" wire:click="$toggle('showTimelineMenu')" class="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300" title="Cronologia delle mie azioni su questo numero" data-testid="timeline-menu-toggle">🕘</button>
+                        @if ($showTimelineMenu)
+                            <div class="absolute left-0 z-50 mt-1 w-80 max-h-80 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2 text-xs space-y-1" x-on:click.outside="$wire.set('showTimelineMenu', false)" data-testid="timeline-menu">
+                                <p class="font-medium text-gray-600 dark:text-gray-300">Le mie ultime azioni (24 ore, max {{ \App\Support\Timeline\TimelineActionService::MAX_STEPS }})</p>
+                                @forelse ($timelineHistory as $step)
+                                    <div class="flex items-start gap-2">
+                                        <span class="shrink-0 text-gray-400">{{ $step->created_at->format('H:i') }}</span>
+                                        <span class="flex-1 {{ $step->status === \App\Models\TimelineAction::UNDONE ? 'line-through text-gray-400' : '' }}" title="{{ $step->blocked_reason }}">{{ $step->label }}</span>
+                                        <span class="shrink-0 {{ $step->blocked_reason ? 'text-red-600' : 'text-gray-400' }}">{{ $step->blocked_reason ? 'non annullabile' : ($step->status === \App\Models\TimelineAction::UNDONE ? 'annullata' : 'eseguita') }}</span>
+                                    </div>
+                                @empty
+                                    <p class="text-gray-400 italic">Nessuna azione.</p>
+                                @endforelse
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             <div class="flex items-center gap-1.5 text-xs" title="{{ $issue->deadline_reminder_sent_at ? 'Sollecito già inviato per questa scadenza' : '' }}">
-                <label for="print-deadline-{{ $issue->id }}" class="text-gray-500 dark:text-gray-400">📅 Scadenza stampa</label>
+                <label for="print-deadline-{{ $issue->id }}" class="text-gray-500 dark:text-gray-400" title="Scadenza stampa">📅<span class="sr-only"> Scadenza stampa</span></label>
                 <input
                     id="print-deadline-{{ $issue->id }}"
                     type="date"
@@ -149,16 +209,33 @@
             </button>
             @endif
 
+            {{-- Pannello contenuti (2026-10-28): il contatore è la stessa lista
+                 della scheda «Da assegnare» (Grid::render(), unassignedCount). --}}
+            <button
+                type="button"
+                x-on:click="$store.contentPanel.toggle()"
+                :class="$store.contentPanel.open ? '!bg-indigo-600 !text-white !border-indigo-600' : ''"
+                class="px-3 py-1.5 rounded-lg border text-sm transition-colors bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                title="Apri o chiudi il pannello dei contenuti (assegna senza risalire)"
+                data-testid="content-panel-toggle"
+            >
+                📚 Contenuti · {{ $unassignedCount }} da assegnare
+            </button>
+
             <button
                 type="button"
                 wire:click="toggleReorderLog"
+                title="Storico spostamenti"
                 @class([
                     'px-3 py-1.5 rounded-lg border text-sm transition-colors',
                     'bg-indigo-600 text-white border-indigo-600' => $showReorderLog,
                     'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700' => ! $showReorderLog,
                 ])
             >
-                📜 Storico spostamenti
+                {{-- Etichette brevi (2026-10-28): con il bottone «Contenuti» la barra
+                     deve restare su una riga a 1366 px; il nome completo resta per
+                     screen reader e tooltip. --}}
+                📜 Storico<span class="sr-only"> spostamenti</span>
             </button>
 
             <button
@@ -171,7 +248,7 @@
                     'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700' => ! $swapMode,
                 ])
             >
-                🔀 Modalità scambio
+                🔀<span class="sr-only"> Modalità</span> Scambio
             </button>
 
             <button
@@ -184,7 +261,7 @@
                     'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700' => ! $selectionMode,
                 ])
             >
-                ☑️ Selezione multipla
+                ☑️ Selezione<span class="sr-only"> multipla</span>
             </button>
 
             {{-- Nessuna proprietà Livewire per questo pannello: è un form GET
@@ -278,6 +355,20 @@
          'remote-change' dispatchato da Grid::notifyRemoteChange() da
          ognuno dei listener broadcast già esistenti (#[On('echo-presence:...')])
          E da checkForUpdates() (fallback a polling, vedi sotto). --}}
+    {{-- Toast di annulla/ripeti (2026-10-28): «Annullato: …» con «Ripeti», oppure il motivo del rifiuto. --}}
+    <div
+        x-show="timelineToast"
+        x-transition
+        x-cloak
+        :class="timelineToast?.ok ? 'bg-gray-900 dark:bg-gray-700' : 'bg-red-700'"
+        class="fixed bottom-16 right-4 z-50 max-w-sm rounded-lg text-white text-sm px-4 py-2 shadow-lg flex items-center gap-3"
+        role="status"
+        data-testid="timeline-toast"
+    >
+        <span x-text="timelineToast?.message"></span>
+        <button type="button" x-show="timelineToast?.canRedo" x-on:click="timelineToast = null; timeline('redo')" class="shrink-0 underline font-medium">Ripeti</button>
+    </div>
+
     <div
         x-show="remoteToast"
         x-transition
@@ -618,56 +709,104 @@
     {{-- Revisione 2, Fase 4.1: anche il Commerciale (solo pubblicità: ogni
          componente controlla poi il tipo con ContentPolicy). --}}
     @can('workOnAds', $issue)
-        <livewire:timone.content-create :issue="$issue" :key="'content-create-'.$issue->id" />
-        {{-- Revisione 2, Fase 3.2: più file in una volta, un contenuto per file. --}}
-        <livewire:timone.bulk-upload :issue="$issue" :key="'bulk-upload-'.$issue->id" />
-        {{-- Fase 4: modale di modifica, aperta da ✏️ (evento open-content-edit). --}}
+        {{-- Fase 4: modale di modifica, aperta da ✏️ (evento open-content-edit).
+             «Nuovo contenuto» e «Caricamento multiplo» sono nel pannello
+             contenuti dal 2026-10-28. --}}
         <livewire:timone.content-edit :issue="$issue" :key="'content-edit-'.$issue->id" />
     @endcan
 
     <livewire:timone.page-file-history :issue="$issue" :key="'page-file-history-'.$issue->id" />
 
-    <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-        <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
-            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Contenuti da assegnare ({{ $unassignedContents->count() }})
-            </h4>
+    {{-- Pannello contenuti (2026-10-28, «contenuti sempre raggiungibili»):
+         prima era una sezione nel flusso, sopra le pagine, e lavorando sulle
+         ultime pagine bisognava risalire. Ora si apre dal bottone «Contenuti»
+         della fascia sticky (store Alpine contentPanel,
+         resources/js/timone-alpine.js): da 1440 px colonna fissa a destra,
+         sotto la fascia, con il contenuto della pagina che si restringe
+         (resources/css/app.css); sotto, tendina sotto la fascia, al massimo
+         40% della finestra. Una sola istanza: è markup di questo componente,
+         come prima. z-30: sopra le pagine, sotto fascia (40), modali (50) e
+         popover dei contenuti (60). In tendina è anche il «bordo alto»
+         dell'auto-scroll del drag (data-sticky-top). !mt-0: il genitore è
+         space-y-4, il cui margin-top spostava di 16 px un elemento fixed. --}}
+    <aside
+        x-data
+        x-show="$store.contentPanel.open"
+        x-cloak
+        :data-sticky-top="$store.contentPanel.docked ? null : ''"
+        :style="$store.contentPanel.docked
+            ? `top: var(--app-sticky-height, 0px); width: ${$store.contentPanel.width}px;`
+            : `top: var(--app-sticky-height, 0px);`"
+        :class="$store.contentPanel.docked
+            ? 'right-0 bottom-0 border-l rounded-none'
+            : 'inset-x-0 mx-auto max-w-7xl max-h-[40vh] sm:mx-6 lg:mx-auto border rounded-b-lg'"
+        class="fixed z-30 !mt-0 flex flex-col bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg"
+        data-testid="content-panel"
+        aria-label="Contenuti"
+    >
+        {{-- Bordo trascinabile per la larghezza della colonna (solo in colonna). --}}
+        <div
+            x-show="$store.contentPanel.docked"
+            x-on:mousedown.prevent="
+                const move = (e) => $store.contentPanel.setWidth(window.innerWidth - e.clientX);
+                const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+                window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+            "
+            class="absolute left-0 top-0 bottom-0 w-1.5 -ml-0.5 cursor-col-resize hover:bg-indigo-300/60"
+            title="Trascina per cambiare la larghezza"
+        ></div>
 
-            <input
-                type="search"
-                wire:model.live.debounce.300ms="contentSearch"
-                placeholder="Cerca per titolo..."
-                class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-2 py-1 w-48"
-            />
+        <div class="shrink-0 p-2 space-y-1.5 border-b border-gray-100 dark:border-gray-700 text-xs">
+            <div class="flex items-center gap-1.5">
+                <div class="inline-flex rounded border border-gray-200 dark:border-gray-700 overflow-hidden" role="tablist">
+                    @foreach (['unassigned' => 'Da assegnare', 'all' => 'Tutti', 'placeholders' => 'Segnaposto'] as $tab => $tabLabel)
+                        <button type="button" role="tab" wire:click="$set('contentTab', '{{ $tab }}')" aria-selected="{{ $contentTab === $tab ? 'true' : 'false' }}" @class(['px-2 py-0.5', 'bg-indigo-600 text-white' => $contentTab === $tab, 'hover:bg-gray-50 dark:hover:bg-gray-700' => $contentTab !== $tab]) data-testid="content-tab-{{ $tab }}">
+                            {{ $tabLabel }}{{ $tab === 'unassigned' ? " ({$unassignedCount})" : '' }}
+                        </button>
+                    @endforeach
+                </div>
+                <button type="button" x-on:click="$store.contentPanel.toggle(false)" class="ml-auto px-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" title="Chiudi il pannello">✕</button>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <input type="search" wire:model.live.debounce.300ms="contentSearch" placeholder="Cerca per titolo…" class="flex-1 min-w-0 text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 px-2 py-0.5" data-testid="content-search" />
+                <select wire:model.live="contentType" class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 py-0.5 pl-1 pr-6" aria-label="Tipo">
+                    <option value="">Tutti i tipi</option>
+                    <option value="articolo">Articoli</option>
+                    <option value="pubblicita">Pubblicità</option>
+                </select>
+                <select wire:model.live="contentSort" class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900 py-0.5 pl-1 pr-6" aria-label="Ordine">
+                    <option value="recent">Ultimi creati</option>
+                    <option value="alpha">A–Z</option>
+                </select>
+            </div>
         </div>
 
-        @error('percentage')
-            <p class="text-xs text-red-600 dark:text-red-400 mb-2">{{ $message }}</p>
-        @enderror
+        <div class="flex-1 min-h-0 overflow-y-auto p-2 space-y-2">
+            {{-- Nuovo contenuto e caricamento multiplo: spostati qui (scelta
+                 dell'utente), una sola istanza ciascuno. --}}
+            @can('workOnAds', $issue)
+                {{-- Affiancati quando c'è posto (tendina larga), uno sotto l'altro in colonna. --}}
+                <div class="flex flex-wrap gap-2 [&>div]:!p-2 [&>div]:!shadow-none [&>div]:flex-1 [&>div]:min-w-[16rem]">
+                    <livewire:timone.content-create :issue="$issue" :key="'content-create-'.$issue->id" />
+                    <livewire:timone.bulk-upload :issue="$issue" :key="'bulk-upload-'.$issue->id" />
+                </div>
+            @endcan
 
-        @error('rename')
-            <p class="text-xs text-red-600 dark:text-red-400 mb-2">{{ $message }}</p>
-        @enderror
+            @if ($unassignedContents->isEmpty() && $contentSearch !== '')
+                <p class="text-xs italic text-gray-400">Nessun contenuto trovato per «{{ $contentSearch }}».</p>
+            @elseif ($unassignedContents->isEmpty())
+                <p class="text-xs italic text-gray-400">{{ $contentTab === 'unassigned' ? 'Tutti i contenuti sono stati assegnati.' : 'Nessun contenuto.' }}</p>
+            @else
+                <div class="space-y-1.5" data-testid="content-panel-list">
+                    @foreach ($unassignedContents as $content)
+                        @include('livewire.timone.partials.content-panel-item', ['content' => $content])
+                    @endforeach
+                </div>
+            @endif
 
-        @error('extend')
-            <p class="text-xs text-red-600 dark:text-red-400 mb-2">{{ $message }}</p>
-        @enderror
-
-        @if ($unassignedContents->isEmpty() && $contentSearch !== '')
-            <p class="text-xs italic text-gray-400">Nessun contenuto trovato per «{{ $contentSearch }}».</p>
-        @elseif ($unassignedContents->isEmpty())
-            <p class="text-xs italic text-gray-400">Tutti i contenuti sono stati assegnati.</p>
-        @else
-            <div class="flex flex-wrap gap-2">
-                @foreach ($unassignedContents as $content)
-                    @include('livewire.timone.partials.unassigned-content-chip', ['content' => $content])
-                @endforeach
-            </div>
-        @endif
-
-        {{-- Fase 4.3: passa il mouse su un chip per archiviarlo (🗄️) o
+        {{-- Fase 4.3: passa il mouse su una voce per archiviarlo (🗄️) o
              eliminarlo (🗑️, doppia conferma) — gli archiviati riappaiono
-             solo qui, mai nel pannello sopra usato per il drag&drop. --}}
+             solo qui, mai nell'elenco sopra. --}}
         <button type="button" wire:click="$toggle('showArchivedContents')" class="mt-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
             {{ $showArchivedContents ? '▾' : '▸' }} Contenuti archiviati
         </button>
@@ -690,7 +829,9 @@
                 @endif
             </div>
         @endif
-    </div>
+
+        </div>
+    </aside>
 
     {{-- Fase 2: tutte le copertine (I, bandella, II, III, IV) in una sola fascia
          prima della pagina 1, in tutte e tre le viste. --}}

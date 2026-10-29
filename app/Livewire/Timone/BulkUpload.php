@@ -9,6 +9,7 @@ use App\Models\Issue;
 use App\Support\BulkContentImporter;
 use App\Support\ContentFormRules;
 use App\Support\Permissions\TimoneAbilities;
+use App\Support\Timeline\TimelineActionService;
 use App\Support\Uploads\UploadLimits;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
@@ -57,58 +58,71 @@ class BulkUpload extends Component
      * browser invece di aggiungere errori al componente: ogni file ha la
      * sua riga e il suo motivo, e un file scartato non ferma la coda.
      *
+     * $batch (2026-10-28): stesso valore per tutti i file di un lotto, così
+     * annulla/ripeti lo tratta come un passo solo.
+     *
      * @return array{ok: bool, message?: string, title?: string, duplicateOf?: string|null}
      */
-    public function importUploaded(string $type): array
+    public function importUploaded(string $type, ?string $batch = null): array
     {
-        // Revisione 2, Fase 4.1: il Commerciale carica solo pubblicità.
-        $this->authorize('create', [Content::class, $this->issue, ContentType::tryFrom($type) ?? $type]);
+        // Annulla/ripeti (2026-10-28): passo registrato da TimelineActionService.
+        // $contentId: solo le righe del contenuto importato finiscono nel passo
+        // (vedi TimelineDiff::onlyContents(): niente scritture dei colleghi).
+        $contentId = null;
 
-        $file = $this->upload;
-        $this->reset('upload', 'uploadError');
-        $contentType = ContentType::tryFrom($type);
+        return app(TimelineActionService::class)->run($this->issue, auth()->user(), 'content.create', function () use ($type, &$contentId) {
+            // Revisione 2, Fase 4.1: il Commerciale carica solo pubblicità.
+            $this->authorize('create', [Content::class, $this->issue, ContentType::tryFrom($type) ?? $type]);
 
-        if ($contentType === null) {
-            return ['ok' => false, 'message' => 'Tipo non valido: scegli Articoli o Pubblicità.'];
-        }
+            $file = $this->upload;
+            $this->reset('upload', 'uploadError');
+            $contentType = ContentType::tryFrom($type);
 
-        if (! $file instanceof TemporaryUploadedFile) {
-            return ['ok' => false, 'message' => 'Il file non è arrivato al server: riprova.'];
-        }
+            if ($contentType === null) {
+                return ['ok' => false, 'message' => 'Tipo non valido: scegli Articoli o Pubblicità.'];
+            }
 
-        try {
-            $result = BulkContentImporter::import($this->issue, $contentType, $file, auth()->id());
-        } catch (ValidationException $e) {
-            return ['ok' => false, 'message' => collect($e->errors())->flatten()->first() ?? 'File non accettato.'];
-        } finally {
-            // Il file è già stato copiato (o scartato): la copia temporanea
-            // di Livewire resterebbe fino a 24 ore, e un lotto di PDF da
-            // 100 MB riempirebbe livewire-tmp.
-            $file->delete();
-        }
+            if (! $file instanceof TemporaryUploadedFile) {
+                return ['ok' => false, 'message' => 'Il file non è arrivato al server: riprova.'];
+            }
 
-        $content = $result->content;
+            try {
+                $result = BulkContentImporter::import($this->issue, $contentType, $file, auth()->id());
+            } catch (ValidationException $e) {
+                return ['ok' => false, 'message' => collect($e->errors())->flatten()->first() ?? 'File non accettato.'];
+            } finally {
+                // Il file è già stato copiato (o scartato): la copia temporanea
+                // di Livewire resterebbe fino a 24 ore, e un lotto di PDF da
+                // 100 MB riempirebbe livewire-tmp.
+                $file->delete();
+            }
 
-        // Stessa propagazione di ContentCreate::createContentAndFinish():
-        // broadcast/polling per gli altri utenti, eventi locali per Grid
-        // (pannello "Contenuti da assegnare") e per il banner miniature.
-        broadcast(new ContentCreated(
-            issueId: $this->issue->id,
-            contentId: $content->id,
-            title: $content->title,
-            createdByUserId: auth()->id(),
-            createdByUserName: auth()->user()->name,
-        ))->toOthers();
-        $this->issue->markPagesUpdated();
-        $this->dispatch('content-created', contentId: $content->id);
-        $this->dispatch('thumbnail-work-started');
+            $content = $result->content;
+            $contentId = $content->id;
 
-        return [
-            'ok' => true,
-            'title' => $content->title,
-            'duplicateOf' => $result->duplicateOf,
-            'occupancy' => $content->occupancy()?->label(),
-        ];
+            // Stessa propagazione di ContentCreate::createContentAndFinish():
+            // broadcast/polling per gli altri utenti, eventi locali per Grid
+            // (pannello "Contenuti da assegnare") e per il banner miniature.
+            broadcast(new ContentCreated(
+                issueId: $this->issue->id,
+                contentId: $content->id,
+                title: $content->title,
+                createdByUserId: auth()->id(),
+                createdByUserName: auth()->user()->name,
+            ))->toOthers();
+            $this->issue->markPagesUpdated();
+            $this->dispatch('content-created', contentId: $content->id);
+            $this->dispatch('thumbnail-work-started');
+
+            return [
+                'ok' => true,
+                'title' => $content->title,
+                'duplicateOf' => $result->duplicateOf,
+                'occupancy' => $content->occupancy()?->label(),
+            ];
+        }, batchKey: $batch !== null ? mb_substr($batch, 0, 64) : null, transactional: false, scope: function () use (&$contentId) {
+            return array_filter([$contentId]);
+        });
     }
 
     /**

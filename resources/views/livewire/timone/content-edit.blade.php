@@ -5,7 +5,7 @@
      mostrarsi. z-50 come le altre modali, sopra l'header fisso (z-40). --}}
 <div>
     @if ($showModal && $content)
-        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-gray-900/50 p-4" x-on:keydown.escape.window="$wire.close()" data-testid="content-edit-modal">
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-gray-900/50 p-4" x-on:keydown.escape.window="$wire.close()" data-testid="content-edit-modal" role="dialog" aria-modal="true">
             <div class="w-full max-w-2xl mt-8 rounded-lg bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700" x-on:click.outside="$wire.close()">
                 <form wire:submit="save" class="p-4 space-y-4">
                     <div class="flex items-center justify-between">

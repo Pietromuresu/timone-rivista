@@ -235,6 +235,22 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - Comprimere la fascia: bottone ⌃ a destra del riepilogo, che lo riduce a una riga corta; ⌄ per riaprirlo. La scelta resta salvata nel browser.
 - Il Commerciale vede solo seleziona e deseleziona: le altre azioni sono della redazione.
 
+## Pannello Contenuti: assegnare senza risalire (2026-10-28)
+
+- Nella fascia fissa in alto c'è il bottone «📚 Contenuti · N da assegnare». Si apre un pannello con tutti gli articoli e le pubblicità: sugli schermi larghi come colonna a destra (il bordo sinistro si trascina per allargarla), sugli altri come tendina sotto la fascia. Resta aperto anche ricaricando la pagina.
+- Dentro: schede «Da assegnare», «Tutti», «Segnaposto», filtro Articoli/Pubblicità, ricerca per titolo, ordine per data o alfabetico, e i bottoni «+ Nuovo contenuto» e «Carica più file».
+- Per mettere un contenuto su una pagina senza tornare in cima: trascinarlo sulla pagina (il timone scorre da solo verso il bordo), oppure selezionare una o più pagine e premere «Assegna alla selezione», oppure scrivere il numero in «Vai a pag.» (o I, II, III, IV per le copertine) e premere Invio. Se non c'è spazio un messaggio in alto dice cosa occupa la pagina e quanto manca.
+- Nel riepilogo in alto, quello che si chiamava «Da assegnare» ora si chiama «Segnaposto» (le pubblicità previste ancora senza cliente né file).
+
+## Annullare e ripetere (2026-10-28)
+
+- Ctrl+Z (⌘+Z su Mac) annulla l'ultima azione fatta sul timone, Ctrl+Shift+Z o Ctrl+Y la ripete. Ci sono anche i bottoni ↶ ↷ all'inizio della barra comandi: passandoci sopra dicono cosa annullano. Dopo un annulla compare un avviso con il bottone «Ripeti».
+- Si annullano solo le proprie azioni, mai quelle dei colleghi, fino a 50 passi nelle ultime 24 ore. Mentre si scrive in un campo, Ctrl+Z annulla il testo come sempre.
+- Si può annullare: spostare pagine e gruppi, assegnare o togliere contenuti, frecce e rotazione, spazio sulla pagina, collegare/scollegare, stato e blocco delle pagine, rinominare, modificare, creare (anche più file insieme), archiviare ed eliminare un contenuto (resta recuperabile per 24 ore).
+- Non si può annullare: pagine totali, bandella, scadenza, peso, chiusura del numero, eliminazione di riviste/numeri/utenti, export, sostituzione del PDF di un contenuto.
+- A volte l'annulla viene rifiutato: se dopo di te un collega ha cambiato le stesse pagine o lo stesso contenuto (l'avviso dice chi e a che ora), oppure se lo spazio dove tornerebbe il contenuto è stato occupato. In quel caso non cambia nulla.
+- Il bottone 🕘 mostra la cronologia delle proprie ultime azioni.
+
 ## Punti di attenzione
 
 - Vulnerabilità note: Livewire 3.8.2 (XSS) e Laravel 12.64 vanno aggiornati (composer audit: 19 advisory).

@@ -234,3 +234,36 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - `App\Support\PageSelectionActions` (etichetta e motivi), `partials/selection-bar.blade.php`, pulizia della selezione in `Grid::render()`. Nessun metodo delle azioni modificato.
 - Altezza misurata (Chrome): 138 px senza selezione, 169 px con la riga di selezione a 1366×768 (25% dell'area visibile, 22% della finestra), 134 px compressa.
 
+## 2026-10-28 — Pannello contenuti sempre raggiungibile (fase 1 di «contenuti + annulla»)
+
+### Visibili agli utenti
+- Bottone **«📚 Contenuti · N da assegnare»** nella fascia fissa: pannello a colonna destra da 1440 px (larghezza regolabile), a tendina sotto la fascia sugli schermi più piccoli; aperto/larghezza ricordati.
+- Schede Da assegnare / Tutti / Segnaposto, filtro tipo, ricerca, ordine ultimi creati o A–Z; «Nuovo contenuto» e «Caricamento multiplo» dentro il pannello.
+- Assegnazione senza risalire: drag (con auto-scroll), «Assegna alla selezione», «Vai a pag.» (numero o I–IV). Un contenuto assegnato da un collega sparisce dal pannello e un rilascio «vecchio» viene rifiutato con un messaggio.
+- Nel riepilogo «Da assegnare» diventa **«Segnaposto»**. Etichette brevi nella barra comandi («Storico», «Scambio», «Selezione»; nome completo nel tooltip).
+
+### Tecniche
+- `App\Support\ContentPanelFilter`, `partials/content-panel-item.blade.php` (sostituisce `unassigned-content-chip`), store Alpine `contentPanel`, `Grid::assignContentToSelection()`, `assignContentToTarget()`, `placeUnassignedContent()` (con il controllo «già assegnato»), `Grid::$contentTab/$contentType/$contentSort`. Errori di assegnazione/estensione/rinomina nella fascia.
+- Nessuna migration, nessuna dipendenza.
+
+## 2026-10-28 — Annulla / ripeti (fase 2 di «contenuti + annulla»)
+
+### Visibili agli utenti
+- **Ctrl/⌘+Z** annulla, **Ctrl/⌘+Shift+Z** e **Ctrl+Y** ripetono; bottoni ↶ ↷ nella fascia con l'azione nel tooltip; toast di 4 secondi «Annullato: …» con «Ripeti»; menu 🕘 «Cronologia».
+- Solo le proprie azioni, per numero, fino a 50 passi in 24 ore. Annullabili: spostamenti di pagine/gruppi/copertine, assegnazioni e rimozioni, frecce e rotazione, spazio, collega/scollega, stato e blocco, rinomina, modifica, creazione (caricamento multiplo = un passo), archivia/ripristina, eliminazione (ora recuperabile 24 ore).
+- Annulla rifiutato con il motivo se un collega ha modificato le stesse righe o se lo spazio è stato occupato; il passo resta come «non annullabile». La modifica con PDF sostituito non si annulla.
+
+### Tecniche
+- `app/Support/Timeline/` (`TimelineActionService`, `TimelineSnapshot`, `TimelineDiff`, `TimelineApplier`, `TimelineAuthorizer`, `TimelineLabeler`, `TimelineConflict`), model `TimelineAction`, evento `TimelineApplied`, comando `timone:history-prune` (ogni ora).
+- Migration `2026_10_28_300000_add_soft_deletes_to_contents`, `2026_10_28_310000_create_timone_azioni_table`; `Content` con `SoftDeletes`.
+- Azioni avvolte senza cambiarne la logica: `Grid` (25 metodi via `recordStep()`), `ContentCreate::save()/confirmMultipageUpload()`, `ContentEdit::save()`, `BulkUpload::importUploaded()` (parametro lotto), `AdReservations::deleteReservation()`.
+
+## 2026-10-29 — Annulla: mai il lavoro dei colleghi
+
+### Visibili agli utenti
+- Annullare una creazione, una modifica o un caricamento multiplo non disfa più quello che un collega ha fatto sullo stesso numero mentre il file si caricava (prima poteva succedere, senza avviso).
+
+### Tecniche
+- `TimelineDiff::onlyContents()` e parametro `$scope` di `TimelineActionService::run()`, usato da `ContentCreate`, `ContentEdit` e `BulkUpload` (le azioni senza transazione). `ContentEdit` legge l'id prima dell'azione (`close()` lo azzera).
+- Tre test nuovi in `TimelineUndoRedoTest` (creazione, modifica + caricamento multiplo, nessun passo di un altro utente in annulla/ripeti/cronologia); i primi due falliscono senza la correzione.
+

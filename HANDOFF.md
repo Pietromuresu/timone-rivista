@@ -1922,3 +1922,62 @@ Nuovo `tests/Feature/Livewire/StickySelectionBarTest.php` (6). Aggiornati `Conte
 ### Documentazione
 `MANUALE_UTENTE.md` (§3), `docs/02`, `docs/10-debugging.md`, `docs/CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`, commento in `resources/js/drag-autoscroll.js`.
 
+## Sessione 2026-10-28 (continuazione) — «Contenuti sempre raggiungibili + annulla/ripeti»: Fase 1, pannello contenuti
+
+Richiesta in due fasi (pannello contenuti; annulla/ripeti). Fase 0 della Fase 1 mostrata e approvata: contatore = contenuti senza pagina e la voce della dashboard rinominata «Segnaposto»; «Nuovo contenuto» e «Caricamento multiplo» spostati nel pannello; nella scheda «Tutti» i contenuti già in pagina non si trascinano; «Assegna alla selezione» parte dalla prima pagina selezionata anche se la selezione non è contigua.
+
+### Cosa è stato fatto
+- **Pannello** `<aside data-testid="content-panel">` in `grid.blade.php` (sempre markup di `Timone\Grid`: una sola istanza) al posto della sezione nel flusso; bottone «📚 Contenuti · N da assegnare» nella riga comandi. Store Alpine `contentPanel` (`resources/js/timone-alpine.js`: aperto, larghezza 280–520 px, docked da 1440 px, localStorage `timone.contentPanel` con try/catch, `html[data-content-panel]` e `--content-panel-width`). CSS `main { padding-right }` in colonna (`resources/css/app.css`). Tendina: `max-h-[40vh]`, `data-sticky-top` (auto-scroll; `stickyTopEdge()` accetta ora elementi fino al 75% dell'altezza). `!mt-0`: il genitore `space-y-4` spostava di 16 px l'aside fixed (trovato nella prova nel browser).
+- **Voce** `partials/content-panel-item.blade.php` (sostituisce ed elimina `unassigned-content-chip.blade.php`, stessi marcatori: `text/content-id`, `data-not-movable`, conferma eliminazione), con «Assegna alla selezione» e «Vai a pag.».
+- **Server**: `App\Support\ContentPanelFilter` (tipo, ricerca, ordine, `placementLabel()`); `Grid::$contentTab/$contentType/$contentSort`; `unassignedCount` dalla stessa lista della scheda; `assignContent()` → `placeUnassignedContent()` (unico punto, con il nuovo rifiuto «già assegnato»), `assignContentToSelection()`, `assignContentToTarget()` (numero, I–IV, bandella). Permessi `ContentPolicy::move` come il drag. Errori `percentage`/`extend`/`rename` nella fascia.
+- `ContentCreate`/`BulkUpload` dentro il pannello; «📎 Carica materiale» apre il pannello e porta al modulo.
+- Riepilogo: «Da assegnare» → «Segnaposto». Barra comandi: etichette brevi (testo completo `sr-only` e tooltip) per restare su una riga col nuovo bottone.
+
+### Verifiche (Chrome headless, 1920×1080 e 1366×768)
+Apertura senza perdere lo scroll; 1920: colonna 360 px sotto la fascia (166 = 166), `main` ristretto di 368 px, larghezza trascinata 439 px ricordata dopo il reload; 1366: tendina 272 px = 40%, z-30. Drag dal pannello con auto-scroll in giù (1516/1472 px) e drop su pagina libera assegnato; auto-scroll in su dal fondo della fascia (colonna) o della tendina. ⌘+clic su due pagine in fondo + «Assegna alla selezione» → prima pagina; «Vai a pag. 20» con Invio → pagina 20; assegnazione di un collega (polling) → voce sparita e contatore aggiornato; «📎 Carica materiale» apre pannello e modulo; console pulita. Fascia: 138 px (169 con selezione) come prima. Errori dello script di prova trovati e corretti strada facendo (Invio senza `\r`, punto di drop sopra la fascia in modalità colonna): nessuno era dell'app.
+
+### Test
+Nuovo `tests/Feature/Livewire/ContentPanelTest.php` (9: stessa occupazione/posizione drag vs pannello, «Vai a pag.» numero/copertina/errore, spazio insufficiente, Commerciale 403, contatore = scheda = `unassignedContents()`, drop rifiutato se già assegnato, schede/filtri/ricerca/ordine e «Tutti» non trascinabile, etichetta della posizione, moduli dentro il pannello). Aggiornati `ContentClickAndEyeTest`, `PlaceholderAdFormTest`, `SummaryBarTest` (Segnaposto, pannello). Suite locale 886 passati + 46 saltati. File protetti non toccati.
+
+### Documentazione
+`MANUALE_UTENTE.md` (§3, §5), `README.md`, `docs/02`, `docs/10-debugging.md`, `docs/CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`. La Fase 2 (annulla/ripeti) parte dopo l'ok dell'utente con la sua Fase 0.
+
+## Sessione 2026-10-28 (continuazione) — «Contenuti + annulla/ripeti»: Fase 2, annulla/ripeti
+
+Fase 1 approvata («continua»). Fase 0 della Fase 2 mostrata (elenco delle azioni con tabelle, proposta di annullabili e non, modello a fotografie) e approvata: soft delete dei contenuti (anche «elimina prenotazione»), stato e blocco annullabili, modifica con PDF sostituito = passo «non annullabile», menu Cronologia incluso.
+
+### Cosa è stato fatto
+- **Modello**: `app/Support/Timeline/` — `TimelineActionService` (run/undo/redo/state/history, lock della riga del numero, max 50 passi, nuova azione svuota il ripeti, lotti per `batch_key`, azioni annidate contate una volta, `Cache::lock` per una richiesta alla volta), `TimelineSnapshot` (tabelle del timone del numero, righe grezze), `TimelineDiff` (solo campi cambiati, timestamp ignorati, `content_files` solo presenza, `merge()` per i lotti), `TimelineApplier` (conflitti campo per campo con autore e ora dal registro attività, applicazione in ordine di tabelle, posizioni/slot di copertina in due passi, contenuti nel cestino con figli conservati, controllo di capienza/griglia rispetto a prima), `TimelineAuthorizer` (regole di `TimoneAbilities` sulle righe del passo: Commerciale solo pubblicità e posizione di pagine senza articoli), `TimelineLabeler` (etichette dalle righe), `TimelineConflict`. Model `TimelineAction` (tabella `timone_azioni`), evento `TimelineApplied`, comando `timone:history-prune` (ogni ora, `routes/console.php`).
+- **Migration** `2026_10_28_300000_add_soft_deletes_to_contents` e `2026_10_28_310000_create_timone_azioni_table` (nuove, reversibili, nessun dato esistente modificato). `Content` usa `SoftDeletes`; `StoredFiles` include i contenuti nel cestino.
+- **Agganci senza cambiare la logica**: 25 metodi di `Grid` avvolti in `recordStep()`; `ContentCreate::save()/confirmMultipageUpload()`, `ContentEdit::save()` (con `notUndoable` se c'è un file nuovo), `BulkUpload::importUploaded($type, $batch)` (il browser manda una chiave per lotto), `AdReservations::deleteReservation()`; creazione/modifica con file in modalità non transazionale (job delle miniature).
+- **Interfaccia** (`grid.blade.php`): ↶ ↷ 🕘 all'inizio della barra comandi (tooltip con l'azione o il motivo), menu Cronologia (`$showTimelineMenu`), toast `timeline-result` con «Ripeti», scorciatoie Ctrl/⌘+Z, Ctrl/⌘+Shift+Z, Ctrl+Y (mai in un campo né con modale aperta: `isModalOpen()`; modale di modifica ora `role="dialog" aria-modal="true"`), flag `timelineBusy`. Testo di eliminazione nel pannello: «annullabile con Ctrl/⌘+Z per 24 ore».
+
+### Verifiche (due utenti in due Chrome headless, polling)
+Spostamento con la tastiera → Ctrl+Z → pagina tornata, toast «Annullato: … Ripeti», tooltip di ↷; Ctrl+Shift+Z e Ctrl+Y ripetono (sequenza Ctrl+Z / Ctrl+Y / Ctrl+Z / Ctrl+Shift+Z verificata con le chiamate `undo[]`/`redo[]`); Ctrl+Z nel campo di ricerca e con la modale di modifica aperta: ignorato; 6 Ctrl+Z ravvicinati → un solo annulla (gli altri ignorati, stato coerente); **conflitto**: A cambia lo stato della pagina 20, B (Redattore Test) la cambia, A Ctrl+Z → «Non posso annullare: la pagina 20 è stata modificata da Redattore Test alle 19:16.», nessuna modifica, passo «non annullabile» nel tooltip; B annulla una sua azione e A la vede al poll senza ricaricare; menu Cronologia; nessun errore in console. Errori dello script di prova strada facendo (stato «Ok stampa» che richiede un PDF, tempi di attesa): non dell'app.
+
+### Test
+Nuovi `tests/Feature/Livewire/TimelineUndoRedoTest.php` (15: i test della specifica — stato identico dopo annulla/ripeti, gruppo in un passo, conflitto A/B, azioni di B intatte, ripeti svuotato, eliminazione e creazione con pagine, Commerciale 403, limite 50 e pulizia —, più pulizia del cestino con file, spazio occupato, lotto unico, PDF sostituito, azioni senza effetto non registrate e tooltip, etichette) e `tests/Unit/TimelineDiffTest.php` (3). Aggiornati `AdReservationsTest` e `UnassignedContentArchiveTest` (soft delete), `ContentClickAndEyeTest` (fine fascia). La suite è più lenta (due fotografie per azione).
+
+### Documentazione
+`MANUALE_UTENTE.md` (§6quinquies), `README.md`, `docs/02`, `docs/04`, `docs/08`, `docs/10-debugging.md` («Ctrl+Z non fa nulla»), `docs/11`, `docs/12`, `docs/CHANGELOG.md`, `docs/nextcloud/timone-rivista.md`.
+
+## Sessione 2026-10-29 — Annulla/ripeti: solo le proprie azioni
+
+Richiesta dell'utente: controllare che ognuno possa annullare solo le sue azioni, non quelle degli altri.
+
+### Verifica
+- `TimelineActionService::undo()/redo()/state()/history()` scelgono i passi per `issue_id` + `user_id` dell'utente collegato; `Grid::undo()/redo()` non ricevono parametri dal browser (nessun id di passo da manipolare). Il menu Cronologia è in sola lettura. Quindi non si può scegliere il passo di un altro.
+- **Buco trovato**: creazione, modifica e caricamento multiplo girano senza transazione (job delle miniature). Se un collega scriveva sullo stesso numero fra le due fotografie (es. durante il salvataggio di un PDF grande), la sua modifica finiva nel MIO passo; annullandolo la disfacevo, e il controllo dei conflitti non se ne accorgeva (il valore attuale era proprio il «dopo» del passo).
+
+### Correzione
+- `TimelineDiff::onlyContents($changes, $contentIds, $before, $after)`: tiene solo le righe dei contenuti indicati (contents, articles, advertisements, content_files, page_content), le pagine su cui stanno prima o dopo e i gruppi di quelle pagine.
+- `TimelineActionService::run(..., ?Closure $scope)`: se c'è, dopo l'azione chiede quali contenuti ha toccato e filtra il passo. Usato da `ContentCreate::save()/confirmMultipageUpload()` (proprietà privata `$createdContentId`, scritta in `createContentAndFinish()`), `ContentEdit::save()` (id letto PRIMA dell'azione: `close()` lo azzera — il primo tentativo leggeva null e non registrava nulla, trovato dal test), `BulkUpload::importUploaded()` (variabile per riferimento).
+- Le azioni in transazione (le 25 di `Grid`, eliminazione prenotazione) non ne hanno bisogno: lock della riga del numero + MySQL REPEATABLE READ, le due fotografie vedono la stessa vista più le mie scritture. Annotato in `docs/11` che con READ COMMITTED servirebbe il filtro anche lì.
+- Limite consapevole: se un collega cambia proprio una pagina su cui sta il mio contenuto nello stesso istante del salvataggio, quella modifica finisce ancora nel passo (caso molto stretto; filtrare per campo richiederebbe sapere quali campi tocca ogni azione).
+
+### Test
+`tests/Feature/Livewire/TimelineUndoRedoTest.php`: «A's undo of a creation does not undo what B did meanwhile», «A's undo of an edit and of a bulk upload does not undo what B did meanwhile» (la scrittura di B avviene DURANTE l'azione di A, con un listener `Content::saved`; entrambi falliscono togliendo il filtro, verificato), «undo and redo never pick another user's step, even when it is the most recent on the issue» (anche la cronologia).
+
+### Documentazione
+`docs/10-debugging.md`, `docs/11-debito-tecnico.md`, `docs/CHANGELOG.md`. Manuale/README/Nextcloud già dicevano «solo le proprie azioni, mai quelle dei colleghi»: ora è vero anche nel caso sopra, nessun testo da cambiare.
+
