@@ -251,6 +251,14 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - A volte l'annulla viene rifiutato: se dopo di te un collega ha cambiato le stesse pagine o lo stesso contenuto (l'avviso dice chi e a che ora), oppure se lo spazio dove tornerebbe il contenuto è stato occupato. In quel caso non cambia nulla.
 - Il bottone 🕘 mostra la cronologia delle proprie ultime azioni.
 
+## Commenti sulle pagine (2026-10-29)
+
+- Ogni pagina ha un fumetto 💬: il numero dice quanti commenti ha, giallo se ce ne sono di non letti. Cliccandolo si apre il pannello con i commenti e il campo per scriverne uno.
+- Per avvisare qualcuno via mail: sceglierlo in «Avvisa via mail…», oppure «Tutti gli utenti di questa rivista», oppure scrivere @Nome Cognome nel testo. La mail ha il link alla pagina.
+- In alto nella pagina del numero, «💬 N commenti non letti» apre l'elenco dei non letti con il link alle pagine.
+- I commenti seguono la pagina quando viene spostata; se la pagina viene eliminata restano consultabili (scheda «Tutti», «Pagina 47, eliminata»).
+- Ognuno modifica ed elimina i propri commenti; l'Admin può eliminare quelli di tutti. Sola lettura legge e basta.
+
 ## Punti di attenzione
 
 - Vulnerabilità note: Livewire 3.8.2 (XSS) e Laravel 12.64 vanno aggiornati (composer audit: 19 advisory).

@@ -203,6 +203,14 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 - **Sostituzione del PDF non annullabile** (scelta dell'utente): il file vecchio si cancella subito.
 - **Autore del conflitto dal registro attività**: è l'ultima voce di un altro utente sul numero dopo la mia azione, non necessariamente quella sulla stessa riga.
 
+## Commenti (aggiunto il 2026-10-29)
+
+- **Polling dei commenti sempre acceso** (1 richiesta al secondo per utente, anche con Reverb collegato: `checkForCommentUpdates`): scelta dell'utente («niente broadcast»). Leggera (una colonna, nessun render), ma con molti utenti sono richieste continue; l'alternativa sarebbe un evento broadcast `PageCommentsChanged`.
+- **Menzioni senza suggerimenti**: si scrive il nome completo a mano; nessun completamento automatico mentre si digita @.
+- **Una pagina eliminata da un percorso nuovo** senza `DeletedPageComments::preserve()` lascia ai commenti il nome della pagina di quando sono stati scritti (non di quando è stata eliminata).
+- **Non letti per i nuovi utenti**: chi viene aggiunto a una rivista trova come «non letti» tutti i commenti già esistenti.
+- **Esc con una finestra aperta**: dal 2026-10-29 chiude solo la finestra (prima toglieva anche la selezione delle pagine).
+
 ## Cose che sembrano sbagliate ma hanno un motivo (non "correggerle")
 
 | Cosa | Perché è così |

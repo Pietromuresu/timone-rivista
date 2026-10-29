@@ -31,6 +31,7 @@
 | **PDF sfogliabile** | Export della rivista finita: una pagina A4 per pagina, in ordine di stampa, con i PDF dei contenuti al loro posto; generato in coda, qualità piena o leggera | `App\Support\MagazineExport\MagazinePdfComposer`, `App\Jobs\GenerateMagazinePdf`, tabella `magazine_exports` |
 | **File mancante** | Riquadro tratteggiato nel PDF sfogliabile per un contenuto senza file (o con il file assente/illeggibile) | `MagazinePdfComposer::drawMissing()` |
 | **Annulla/ripeti** | Ctrl+Z / Ctrl+Shift+Z: riporta il timone allo stato prima/dopo un proprio passo, con controllo dei conflitti | `App\Support\Timeline\TimelineActionService`, tabella `timone_azioni` |
+| **Commento di pagina** | Nota su una pagina (💬), con mail ai colleghi scelti o menzionati; segue la pagina quando si sposta | `App\Models\PageComment`, `App\Support\Comments\*` |
 | **Passo non annullabile** | Passo rimasto in cronologia che non si può annullare (PDF sostituito, conflitto con un collega, spazio occupato) | `timone_azioni.blocked_reason` |
 | **Vetrina** | Pubblicità da ¼ di pagina (formato «Un quarto pagina») | `AdFormat::UnQuartoPagina` (3/12) |
 | **Piedino** | Pubblicità a fascia in basso, ⅓ di pagina | `AdFormat::Piedino` (4/12) |

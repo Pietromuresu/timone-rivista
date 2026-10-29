@@ -32,6 +32,8 @@ use App\Support\ActivityLogger;
 use App\Support\AdLoadCalculator;
 use App\Support\AdPlaceholder;
 use App\Support\AutomaticChecks;
+use App\Support\Comments\DeletedPageComments;
+use App\Support\Comments\PageCommentReader;
 use App\Support\ContentPageAttacher;
 use App\Support\ContentPanelFilter;
 use App\Support\ContentPlacer;
@@ -103,6 +105,13 @@ class Grid extends Component
      * issue (caso raro, issue appena creata senza alcuna mutazione).
      */
     public ?string $lastKnownPagesUpdatedAt = null;
+
+    /**
+     * Commenti (2026-10-29): come lastKnownPagesUpdatedAt ma per
+     * issues.comments_updated_at. Separata apposta: un commento aggiorna
+     * contatori e pannello, non ridisegna la griglia.
+     */
+    public ?string $lastKnownCommentsUpdatedAt = null;
 
     /**
      * Il pannello storico spostamenti (page_reorder_logs) è chiuso di
@@ -244,6 +253,7 @@ class Grid extends Component
         $this->issue = $issue;
         $this->reorderVersion = $issue->reorder_version ?? 0;
         $this->lastKnownPagesUpdatedAt = $issue->getRawOriginal('pages_updated_at');
+        $this->lastKnownCommentsUpdatedAt = $issue->getRawOriginal('comments_updated_at');
     }
 
     public function setViewMode(string $mode): void
@@ -351,6 +361,8 @@ class Grid extends Component
             if ($newTotal > $currentTotal) {
                 $this->insertPages($currentTotal, $newTotal);
             } else {
+                // Commenti (2026-10-29): restano nel numero come «pagina N, eliminata».
+                DeletedPageComments::preserve($this->issue->pages()->where('position', '>', $newTotal)->get());
                 $this->issue->pages()->where('position', '>', $newTotal)->delete();
             }
 
@@ -1296,7 +1308,9 @@ class Grid extends Component
      */
     public function checkForUpdates(): void
     {
-        $latest = DB::table('issues')->where('id', $this->issue->id)->value('pages_updated_at');
+        $markers = DB::table('issues')->where('id', $this->issue->id)->first(['pages_updated_at', 'comments_updated_at']);
+        $this->syncComments($markers?->comments_updated_at);
+        $latest = $markers?->pages_updated_at;
 
         if ($latest === null || $latest === $this->lastKnownPagesUpdatedAt) {
             $this->skipRender();
@@ -1316,6 +1330,49 @@ class Grid extends Component
 
         if (! $this->onlyOwnChangesSince($previous)) {
             $this->notifyRemoteChange('Il timone è stato aggiornato da un altro utente.');
+        }
+    }
+
+    /**
+     * Commenti (2026-10-29), polling quando Reverb È collegato: le pagine
+     * arrivano dagli eventi broadcast, i commenti no (scelta dell'utente:
+     * niente broadcast per i commenti). Una query su una colonna, e mai un
+     * render della griglia.
+     */
+    public function checkForCommentUpdates(): void
+    {
+        $this->syncComments(DB::table('issues')->where('id', $this->issue->id)->value('comments_updated_at'));
+        $this->skipRender();
+    }
+
+    /**
+     * Il pannello commenti ha scritto o segnato come letto (evento locale):
+     * contatori ricalcolati per questo utente, griglia intatta.
+     */
+    #[On('comments-changed')]
+    public function refreshCommentCounts(): void
+    {
+        $this->lastKnownCommentsUpdatedAt = DB::table('issues')->where('id', $this->issue->id)->value('comments_updated_at');
+        $this->dispatchCommentCounts();
+        $this->skipRender();
+    }
+
+    /** Se i commenti del numero sono cambiati: nuovi contatori e avviso al pannello. */
+    private function syncComments(?string $latest): void
+    {
+        if ($latest === null || $latest === $this->lastKnownCommentsUpdatedAt) {
+            return;
+        }
+
+        $this->lastKnownCommentsUpdatedAt = $latest;
+        $this->dispatchCommentCounts();
+        $this->dispatch('comments-remote-changed');
+    }
+
+    private function dispatchCommentCounts(): void
+    {
+        if (auth()->user() !== null) {
+            $this->dispatch('comment-counts', counts: PageCommentReader::counts($this->issue, auth()->user()));
         }
     }
 
@@ -2756,6 +2813,8 @@ class Grid extends Component
 
         return view('livewire.timone.grid', [
             'abilities' => $abilities,
+            // Commenti (2026-10-29): «seme» dello store Alpine pageComments.
+            'commentCounts' => auth()->user() ? PageCommentReader::counts($this->issue, auth()->user()) : ['pages' => [], 'unread' => 0],
             // Annulla/ripeti (2026-10-28): stato dei bottoni ↶ ↷ e menu Cronologia (solo se aperto).
             'timeline' => auth()->user() ? app(TimelineActionService::class)->state($this->issue, auth()->user()) : null,
             'timelineHistory' => $this->showTimelineMenu && auth()->user() ? app(TimelineActionService::class)->history($this->issue, auth()->user()) : collect(),

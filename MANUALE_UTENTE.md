@@ -266,7 +266,7 @@ Riducono i click per le operazioni più comuni su selezione e collegamento pagin
 | **Click semplice** su una pagina, con selezione multipla già attiva | Azzera la selezione e seleziona solo quella pagina (come in un file manager) |
 | **Ctrl+Shift+G**, con almeno 2 pagine selezionate | Le collega in un gruppo se non lo sono già (come [§6ter](#6ter-collegare-pagine-in-un-gruppo-permanente)); se sono già collegate tra loro, le scollega — stesso tasto per entrambe le direzioni. Se la selezione non si può collegare/scollegare (es. una pagina bloccata, o pagine che appartengono a gruppi diversi), compare lo stesso messaggio di avviso che vedresti cliccando i bottoni corrispondenti, mai un silenzio |
 | **Ctrl+A** (Cmd+A su Mac) | Seleziona tutte le pagine del numero corrente (equivale al bottone "Seleziona tutte", attivando da sola la selezione multipla se serve) |
-| **Esc** | Deseleziona tutte le pagine (equivale al bottone "Deseleziona tutte") |
+| **Esc** | Deseleziona tutte le pagine (equivale al bottone "Deseleziona tutte"). Se è aperta una finestra (commenti, modifica contenuto) chiude solo quella e la selezione resta |
 
 Le pagine selezionate con Ctrl+click hanno un contorno verde acceso, ben distinto dal contorno del gruppo collegato (colorato secondo il gruppo) e da quello della modalità scambio (indaco).
 
@@ -282,6 +282,17 @@ Dal 2026-10-28 le azioni sul timone si possono **annullare** e **ripetere**, com
 - **Cosa non si può annullare**: pagine totali, bandella, «sposta le pagine dopo», scadenza stampa, parametri del peso, chiusura del numero, rubriche, eliminazione di riviste/numeri/utenti, export PDF e — in una modifica — la sostituzione del PDF (il passo resta in cronologia ma è segnato «non annullabile»).
 - **Perché a volte l'annulla viene rifiutato**: se dopo la tua azione un collega ha modificato le stesse pagine o lo stesso contenuto («Non posso annullare: la pagina 12 è stata modificata da Mario alle 16:42»), oppure se rimettere le cose a posto sovrapporrebbe contenuti (lo spazio è stato occupato nel frattempo). In quel caso non cambia nulla e il passo resta in cronologia come «non annullabile»; i passi precedenti si fermano lì.
 - **Cronologia**: il bottone **🕘** accanto a ↶ ↷ mostra le tue ultime azioni su questo numero con l'ora e lo stato (eseguita, annullata, non annullabile).
+
+## 6sexies. Commenti sulle pagine
+
+Dal 2026-10-29 ogni pagina (anche le copertine) ha i suoi **commenti**.
+- **Aprire i commenti**: il fumetto **💬** in alto sulla card della pagina (anche nella vista Lista). Il numero accanto è quanti commenti ha la pagina; se il fumetto è **giallo** ce ne sono che non hai ancora letto. Si apre un pannello a destra con i commenti in ordine di data (autore, data, testo). Aprirlo li segna come letti.
+- **Scrivere**: in fondo al pannello, poi **Invia**. Per avvisare qualcuno via mail apri «Avvisa via mail…» e scegli le persone, oppure «Tutti gli utenti di questa rivista»; oppure scrivi nel testo **@Nome Cognome** (il nome completo come appare in «Utenti», maiuscole indifferenti, anche senza spazio: @MarioRossi). La mail contiene rivista, numero, pagina, autore, testo e un link che apre direttamente quella pagina con i suoi commenti. Tu non ricevi la mail del tuo commento, e nessuno la riceve due volte. Dopo l'invio il pannello dice a chi è partita.
+- **Modificare ed eliminare**: «Modifica» ed «Elimina» sotto i propri commenti; un Admin può eliminare qualsiasi commento. Un commento modificato porta la scritta «modificato»; la modifica non manda nuove mail.
+- **Commenti non letti del numero**: il bottone **💬 N commenti non letti** in alto a destra nella testata del numero apre l'elenco dei non letti con il link alla pagina («Pagina 12 →»: apre i suoi commenti e la mostra nel timone); «Segna tutti come letti» li azzera. La scheda **Tutti** mostra tutti i commenti del numero.
+- **Le pagine si spostano, i commenti le seguono**: il commento è della pagina, non del numero di pagina. Se una pagina viene **eliminata** (riducendo le pagine totali o togliendo la bandella) i suoi commenti restano nella scheda «Tutti» come «Pagina 47, eliminata».
+- **Chi può**: Admin, Redattore e Commerciale leggono e scrivono su qualunque pagina dei numeri che vedono; Sola lettura legge soltanto.
+- I commenti dei colleghi compaiono entro un paio di secondi, senza ricaricare la pagina. Non si annullano con Ctrl+Z (Ctrl+Z non agisce sul timone mentre il pannello è aperto).
 
 ## 7. Caricare e vedere un PDF
 
@@ -532,12 +543,12 @@ Chi ha in quel momento il numero aperto viene riportato all'elenco delle riviste
 
 ## 14. Cosa può fare ciascun ruolo
 
-| Ruolo | Vede le riviste a cui ha accesso | Pubblicità: crea, modifica, sposta (anche segnaposto) | Articoli; pagine con articoli; stati, blocchi, gruppi, pagine totali, scadenza | Crea numeri | Crea riviste | Gestisce ed elimina utenti; elimina riviste e numeri |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Admin** | Tutte, sempre | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Redattore** | Solo quelle a cui è stato dato accesso | ✅ | ✅ (solo sulle sue riviste) | ✅ (solo sulle sue riviste) | ❌ | ❌ |
-| **Commerciale** | Solo quelle a cui è stato dato accesso | ✅ (dal 2026-10-28) | ❌ | ❌ | ❌ | ❌ |
-| **Sola lettura** | Solo quelle a cui è stato dato accesso | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Ruolo | Vede le riviste a cui ha accesso | Commenti sulle pagine | Pubblicità: crea, modifica, sposta (anche segnaposto) | Articoli; pagine con articoli; stati, blocchi, gruppi, pagine totali, scadenza | Crea numeri | Crea riviste | Gestisce ed elimina utenti; elimina riviste e numeri |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Admin** | Tutte, sempre | ✅ (elimina anche quelli altrui) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Redattore** | Solo quelle a cui è stato dato accesso | ✅ | ✅ | ✅ (solo sulle sue riviste) | ✅ (solo sulle sue riviste) | ❌ | ❌ |
+| **Commerciale** | Solo quelle a cui è stato dato accesso | ✅ | ✅ (dal 2026-10-28) | ❌ | ❌ | ❌ | ❌ |
+| **Sola lettura** | Solo quelle a cui è stato dato accesso | Solo legge | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 > **Commerciale (dal 2026-10-28)**: lavora **solo sulle pubblicità**. Le crea («+ Nuovo contenuto», dove il tipo è già Pubblicità, e il caricamento multiplo), le modifica (✏️, doppio click sul nome) e le sposta: trascinamento, frecce e rotazione nel menu «⋯», «Posizione nel timone» nella modale, togliere dalla pagina. Può spostare anche **pagine intere** (o gruppi di pagine), ma solo se **non contengono articoli**. Sugli articoli vede i comandi disattivati con il tooltip **«Solo la redazione può spostare questo contenuto»**; il chip dell'articolo ha il cursore 🚫 e non si trascina; una pagina con articoli non ha la maniglia ⠿. Stato e blocco delle pagine, gruppi, pagine totali e scadenza stampa restano della redazione. I controlli valgono anche lato server: un tentativo diretto viene rifiutato.
 

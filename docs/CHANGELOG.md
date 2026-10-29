@@ -267,3 +267,18 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - `TimelineDiff::onlyContents()` e parametro `$scope` di `TimelineActionService::run()`, usato da `ContentCreate`, `ContentEdit` e `BulkUpload` (le azioni senza transazione). `ContentEdit` legge l'id prima dell'azione (`close()` lo azzera).
 - Tre test nuovi in `TimelineUndoRedoTest` (creazione, modifica + caricamento multiplo, nessun passo di un altro utente in annulla/ripeti/cronologia); i primi due falliscono senza la correzione.
 
+## 2026-10-29 — Commenti sulle pagine con notifica (fase 1 di «commenti, 32esimi, doppia pagina»)
+
+### Visibili agli utenti
+- 💬 su ogni pagina (griglia, doppia pagina, lista, copertine): numero di commenti, giallo se ce ne sono di non letti; pannello a destra con elenco, nuovo commento, modifica/eliminazione dei propri (un Admin elimina anche quelli altrui).
+- Mail ai colleghi scelti, a «tutti gli utenti di questa rivista» o menzionati con @Nome Cognome; mai all'autore, mai due volte; link diretto alla pagina.
+- Nella testata del numero «💬 N commenti non letti» con l'elenco (e la scheda «Tutti»); i commenti seguono la pagina quando si sposta e restano come «Pagina 47, eliminata» se la pagina viene eliminata.
+- Sola lettura legge i commenti, non li scrive.
+- Esc con una finestra aperta chiude solo la finestra, senza togliere la selezione delle pagine.
+- Mail dell'app con i testi fissi in italiano.
+
+### Tecniche
+- Migration `2026_10_29_100000_create_page_comments_tables` (`page_comments`, `page_comment_reads`, `issues.comments_updated_at`).
+- `App\Support\Comments\{CommentRecipients, PageCommentWriter, PageCommentReader, DeletedPageComments}`, `App\Models\PageComment`, `App\Notifications\PageCommentPosted`, `App\Policies\PageCommentPolicy`, `TimoneAbilities::canComment()`, componente `App\Livewire\Timone\PageComments`.
+- `Grid`: `checkForCommentUpdates()` (polling sempre attivo con Reverb), `checkForUpdates()` controlla anche i commenti, `refreshCommentCounts()`; contatori al browser con l'evento `comment-counts` (store Alpine `pageComments`) senza render.
+- `lang/it.json` (testi del modello mail di Laravel).

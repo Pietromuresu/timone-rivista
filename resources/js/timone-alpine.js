@@ -549,6 +549,38 @@ document.addEventListener('alpine:init', () => {
         },
     });
 
+    /**
+     * Commenti per pagina (2026-10-29): contatori delle icone 💬 e del
+     * contatore «non letti» nella testata. Li manda Grid (evento
+     * comment-counts, e l'elemento «seme» a ogni render): così un commento
+     * aggiorna le icone senza ridisegnare la griglia (Grid::checkForUpdates()
+     * fa skipRender quando cambiano solo i commenti).
+     */
+    Alpine.store('pageComments', {
+        pages: {},
+        unreadTotal: 0,
+
+        replace(counts) {
+            this.pages = counts?.pages ?? {};
+            this.unreadTotal = counts?.unread ?? 0;
+        },
+
+        total(pageId) {
+            return this.pages[pageId]?.total ?? 0;
+        },
+
+        unread(pageId) {
+            return this.pages[pageId]?.unread ?? 0;
+        },
+    });
+
+    window.addEventListener('comment-counts', (event) => Alpine.store('pageComments').replace(event.detail?.counts));
+
+    // Dal pannello commenti alla pagina nel timone (link «pagina 12 →», mail).
+    window.addEventListener('scroll-to-page', (event) => {
+        document.querySelector(`[data-page-id="${event.detail?.pageId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
     Alpine.store('timoneZoom', {
         levels: ZOOM_LEVELS,
         level: 'm',

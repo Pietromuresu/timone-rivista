@@ -57,6 +57,11 @@ Stessa logica, per i `PageFile` caricati direttamente su una pagina prima del 20
 
 Accodata da `SendDeadlineReminders` con `Mail::to(...)->queue(...)` ed eseguita dal worker come `SendQueuedMailable`. Fallimento: 3 tentativi, poi `failed_jobs`. Vedi [07-integrazioni.md](07-integrazioni.md#mail-smtp).
 
+### Notifica in coda: `App\Notifications\PageCommentPosted` (commenti, 2026-10-29)
+
+- Una per destinatario, accodata da `PageCommentWriter::post()` (mail con rivista, numero, pagina, autore, testo e link `?commenti={pagina}`). Non parte se il commento è stato eliminato prima che il worker la prenda (`shouldSend()`).
+- Se il worker è fermo i commenti si vedono comunque nel timone; le mail partono quando riparte.
+
 ### Gestione dei job falliti
 
 ```bash

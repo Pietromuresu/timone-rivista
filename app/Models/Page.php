@@ -8,6 +8,7 @@ use App\Enums\PageFillStatus;
 use App\Enums\PageStatus;
 use App\Enums\ThumbnailStatus;
 use App\Support\PageCapacity;
+use App\Support\PageGrid\GridRect;
 use App\Support\PageGrid\PageGridPlanner;
 use App\Support\PageGrid\PageGridPositions;
 use App\Support\PageGrid\ThumbnailFit;
@@ -155,6 +156,12 @@ class Page extends Model
     /**
      * File PDF caricati per questa pagina, dal più recente.
      */
+    /** Commenti (2026-10-29): seguono la pagina anche quando viene spostata. */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(PageComment::class);
+    }
+
     public function files(): HasMany
     {
         return $this->hasMany(PageFile::class)->latest();
@@ -227,7 +234,7 @@ class Page extends Model
      * sull'istanza: card, menu dei comandi ed export la chiedono più volte
      * nello stesso render.
      *
-     * @return array{blocks: list<array{content: Content, kind: string, cells: \App\Support\PageGrid\GridRect, rect: array, pieces: list<array>, file: ContentFile|null, imageUrl: string|null, moves: array<string, bool>, canRotate: bool}>, free: list<array>, overfull: bool}
+     * @return array{blocks: list<array{content: Content, kind: string, cells: GridRect, rect: array, pieces: list<array>, file: ContentFile|null, imageUrl: string|null, moves: array<string, bool>, canRotate: bool}>, free: list<array>, overfull: bool}
      */
     public function layout(): array
     {

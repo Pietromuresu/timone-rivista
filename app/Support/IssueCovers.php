@@ -7,6 +7,7 @@ use App\Enums\PageContentType;
 use App\Enums\PageStatus;
 use App\Models\Issue;
 use App\Models\Page;
+use App\Support\Comments\DeletedPageComments;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -77,6 +78,8 @@ final class IssueCovers
             return 'La bandella ha contenuti assegnati: rimuovili prima di toglierla.';
         }
 
+        // Commenti (2026-10-29): restano nel numero come «bandella, eliminata».
+        DeletedPageComments::preserve(collect([$bandella]));
         $bandella->delete();
         self::syncPrintedPages($issue);
 
@@ -107,7 +110,7 @@ final class IssueCovers
             }
         }
 
-        if (CoverSlot::Bandella === $a->cover_slot || CoverSlot::Bandella === $b->cover_slot) {
+        if ($a->cover_slot === CoverSlot::Bandella || $b->cover_slot === CoverSlot::Bandella) {
             return 'La bandella non si scambia con le copertine: ha un formato diverso.';
         }
 

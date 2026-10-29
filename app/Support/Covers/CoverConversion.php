@@ -3,6 +3,8 @@
 namespace App\Support\Covers;
 
 use App\Enums\CoverSlot;
+use App\Models\Page;
+use App\Support\Comments\DeletedPageComments;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -201,6 +203,7 @@ final class CoverConversion
         // eventualmente assegnati tornano "da assegnare": page_content è in
         // cascata sulla pagina).
         $created = $logs->where('action', 'created_cover')->pluck('page_id');
+        DeletedPageComments::preserve(Page::whereIn('id', $created)->get());
         DB::table('pages')->whereIn('id', $created)->delete();
 
         // Prima tutte le posizioni coinvolte a NULL, poi quelle vecchie: in

@@ -378,6 +378,13 @@ Non correggere i valori con un UPDATE alla cieca: vanno ricontrollati sulla sche
 - **Causa reale in produzione (2026-10-28)**: script e Alpine c'erano, ma nel DOM il trigger del menu era `<div open="">` invece di `<div @click="open = ! open">` (l'HTML del server era corretto): qualcosa tra server e browser (estensione del browser — in console compariva `content.js … [Violation]` — o un proxy che riscrive l'HTML) toglieva gli attributi `@click`. Corretto usando `x-on:click`/`x-on:click.outside` in `components/dropdown.blade.php` e `layouts/navigation.blade.php`, come nel resto del progetto; un test verifica che nessuna vista usi `@click`. Per scoprire chi riscrive: confrontare «Visualizza sorgente» (HTML del server) con «Elementi» (DOM), e provare in finestra anonima senza estensioni.
 - Se il menu non si apre su NESSUNA pagina e lo script manca, lo script non arriva: in Network cercare `livewire.js`/`livewire.min.js` (404 → il web server davanti all'app deve passare a `index.php` le richieste `.js` che non sono file, come `docker/nginx/default.conf`; bloccato → http/https misti; percorso sbagliato → app sotto un sottopercorso).
 
+## Commenti: il collega non vede il mio commento / non arriva la mail (2026-10-29)
+
+- **Contatori fermi**: arrivano solo dal polling (niente broadcast). Controllare che l'elemento `wire:poll.1s` sia montato: `checkForCommentUpdates` con Reverb collegato, `checkForUpdates` senza (in `grid.blade.php`); si fermano durante un trascinamento. Il segnale è `issues.comments_updated_at`: se non cambia dopo un commento, la scrittura non è passata da `PageCommentWriter`.
+- **Mail non arrivata**: va in coda (`PageCommentPosted` è `ShouldQueue`): serve il worker (`docker compose ps worker`, `php artisan queue:failed`). Con `MAIL_MAILER=log` la mail finisce in `storage/logs/laravel.log`, non parte. Variabili in [05-configurazione.md](05-configurazione.md#mail). Una mail non parte se nel frattempo il commento è stato eliminato (`shouldSend()`).
+- **Menzione ignorata**: serve il nome completo come in «Utenti» (`@Mario Rossi` o `@MarioRossi`), e la persona deve vedere il numero (assegnata alla rivista, o admin). `CommentRecipients::mentioned()`.
+- **Commento sparito dopo aver ridotto le pagine**: non è sparito, è nella scheda «Tutti» dei commenti del numero come «Pagina N, eliminata» (`page_id` NULL).
+
 ## Ctrl+Z non fa nulla (annulla/ripeti, 2026-10-28)
 
 - **Focus in un campo** (input, textarea, select, contenteditable): lì resta l'annulla del browser (`isTimoneShortcutTarget()` in `grid.blade.php`). Cliccare fuori dal campo.

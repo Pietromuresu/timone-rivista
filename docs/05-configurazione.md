@@ -99,6 +99,8 @@ Legenda colonna *Obbl.*: **Sì** = senza, l'app o lo stack non partono o una fun
 
 ### Mail
 
+Usate dai solleciti di scadenza e, dal 2026-10-29, dalle **mail dei commenti sulle pagine** (`App\Notifications\PageCommentPosted`, in coda: serve anche il worker). Con `MAIL_MAILER=log` i commenti funzionano lo stesso nel timone, ma nessuna mail parte. Testi fissi del modello di mail di Laravel in italiano: `lang/it.json`.
+
 | Variabile | Obbl. | Default | Esempio | Usata in | Dove si ottiene |
 |---|---|---|---|---|---|
 | `MAIL_MAILER` | Prod | `log` | `smtp` | `config/mail.php:17` | Con `log` **nessuna mail viene inviata** (finisce in `laravel.log`). ⚠️ DA VERIFICARE: provider SMTP di produzione |

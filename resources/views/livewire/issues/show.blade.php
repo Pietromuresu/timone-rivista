@@ -60,6 +60,16 @@
                         x-init="join()"
                         class="flex flex-col items-end gap-2 shrink-0"
                     >
+                        {{-- Commenti (2026-10-29): non letti del numero, dallo store
+                             Alpine pageComments (lo aggiorna Grid col polling). --}}
+                        <button
+                            type="button"
+                            x-on:click="$dispatch('open-issue-comments')"
+                            class="text-xs rounded-full px-2.5 py-1 border whitespace-nowrap"
+                            :class="$store.pageComments?.unreadTotal ? 'bg-amber-100 border-amber-400 text-amber-900 font-semibold' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300'"
+                            title="Commenti del numero (non letti e tutti)"
+                            data-testid="unread-comments-button"
+                        >💬 <span x-text="$store.pageComments?.unreadTotal ?? 0">0</span> <span x-text="$store.pageComments?.unreadTotal === 1 ? 'commento non letto' : 'commenti non letti'">commenti non letti</span></button>
                         <span class="text-xs text-gray-400 dark:text-gray-500">Online ora</span>
                         <div class="flex -space-x-2">
                             <template x-for="user in online" :key="user.id">
@@ -84,6 +94,9 @@
             <livewire:timone.magazine-export-panel :issue="$issue" :key="'magazine-export-'.$issue->id" />
 
             <livewire:timone.grid :issue="$issue" :key="'timone-grid-'.$issue->id" />
+
+            {{-- Commenti per pagina (2026-10-29): cassetto unico per il numero. --}}
+            <livewire:timone.page-comments :issue="$issue" :key="'page-comments-'.$issue->id" />
         </div>
     </div>
 </div>

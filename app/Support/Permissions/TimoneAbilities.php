@@ -47,6 +47,15 @@ final class TimoneAbilities
         );
     }
 
+    /**
+     * Commenti (2026-10-29): admin, redattore e commerciale su qualunque
+     * pagina; la sola lettura no. PageCommentPolicy e la vista usano questo.
+     */
+    public function canComment(): bool
+    {
+        return $this->hasAccess && ($this->role?->handlesAds() ?? false);
+    }
+
     /** Tutto il timone: pagine, stati, gruppi, articoli, impostazioni del numero. */
     public function editsTimone(): bool
     {

@@ -54,6 +54,9 @@
             }
 
             if (event.key === 'Escape') {
+                // Con una finestra aperta (commenti, modifica contenuto) Esc
+                // chiude solo quella: la selezione delle pagine resta (2026-10-29).
+                if (this.isModalOpen()) return;
                 $wire.clearSelection();
 
                 return;
@@ -394,6 +397,17 @@
     <template x-if="$store.realtimeFallback && ! $store.realtimeFallback.connected && ! $store.pagePresence?.dragging">
         <div wire:poll.1s="checkForUpdates" aria-hidden="true" style="display: none;"></div>
     </template>
+    {{-- Commenti (2026-10-29): con Reverb collegato le pagine arrivano dagli
+         eventi, i commenti solo dal polling (niente broadcast per i
+         commenti, scelta dell'utente). Una richiesta al secondo in tutti e
+         due i casi: senza Reverb checkForUpdates() controlla anche i
+         commenti. In pausa durante il drag, come l'altro. --}}
+    <template x-if="$store.realtimeFallback && $store.realtimeFallback.connected && ! $store.pagePresence?.dragging">
+        <div wire:poll.1s="checkForCommentUpdates" aria-hidden="true" style="display: none;"></div>
+    </template>
+    {{-- «Seme» dei contatori dei commenti a ogni render: la chiave cambia
+         con i valori, così x-init riparte e lo store si riallinea. --}}
+    <div wire:key="comment-counts-{{ md5(json_encode($commentCounts)) }}" x-data x-init="$store.pageComments.replace(@js($commentCounts))" aria-hidden="true" hidden></div>
 
     {{-- Componente a sé (bottone + pannello insieme, non separabili come
          gli altri toggle qui sopra che sono proprietà di Grid.php) — la

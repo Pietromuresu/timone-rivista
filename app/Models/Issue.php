@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Issue extends Model
 {
@@ -95,6 +96,19 @@ class Issue extends Model
     public function markPagesUpdated(): void
     {
         $this->touch('pages_updated_at');
+    }
+
+    /**
+     * Commenti (2026-10-29): colonna separata da pages_updated_at, così un
+     * commento aggiorna solo contatori e pannello, senza ridisegnare la
+     * griglia a tutti (Grid::checkForUpdates()). Query diretta e non
+     * touch(): non deve salvare altri attributi sporchi del model né
+     * cambiare updated_at; microsecondi per distinguere due commenti nello
+     * stesso secondo.
+     */
+    public function markCommentsUpdated(): void
+    {
+        DB::table('issues')->where('id', $this->id)->update(['comments_updated_at' => now()->format('Y-m-d H:i:s.u')]);
     }
 
     /**

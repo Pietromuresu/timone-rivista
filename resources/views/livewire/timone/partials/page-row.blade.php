@@ -270,6 +270,16 @@
         </select>
     @endif
 
+    {{-- Commenti (2026-10-29): come in page-card. --}}
+    <button
+        type="button"
+        x-on:click.stop="$dispatch('open-page-comments', { pageId: {{ $page->id }} })"
+        class="shrink-0 text-xs rounded px-0.5 whitespace-nowrap"
+        :class="$store.pageComments?.unread({{ $page->id }}) ? 'bg-amber-200 text-amber-900 ring-1 ring-amber-500 font-semibold' : 'opacity-60 hover:opacity-100'"
+        :title="$store.pageComments?.unread({{ $page->id }}) ? $store.pageComments.unread({{ $page->id }}) + ($store.pageComments.unread({{ $page->id }}) === 1 ? ' commento non letto' : ' commenti non letti') : ($store.pageComments?.total({{ $page->id }}) ? 'Commenti' : 'Commenta questa pagina')"
+        data-testid="page-comments-button"
+    >💬<span x-text="$store.pageComments?.total({{ $page->id }}) || ''"></span></button>
+
     @if ($editsTimone)
         <button
             type="button"
