@@ -70,8 +70,10 @@
             $suggestion = $signatures->suggestion();
             $sizeName = \App\Support\Signatures\SignaturePlan::formatName($signatures->size, 2);
         @endphp
+        {{-- Va a capo (non whitespace-nowrap come gli altri): con avviso e
+             suggerimento è lungo e sugli schermi stretti dava scroll orizzontale. --}}
         <span
-            class="{{ $chip }}"
+            class="inline-flex flex-wrap items-baseline gap-x-1 min-w-0"
             title="Segnature da {{ $signatures->size }} pagine{{ $signatures->includeCovers ? ', copertine incluse in testa' : ', copertine escluse (stampate a parte)' }} — impostazione della rivista{{ $suggestion ? '. Per un numero intero di '.$sizeName.': +'.$suggestion['add'].' pagine ('.$suggestion['addTotal'].')'.($suggestion['remove'] !== null ? ' oppure −'.$suggestion['remove'].' ('.$suggestion['removeTotal'].')' : '') : '' }}"
             data-testid="summary-signatures"
         >

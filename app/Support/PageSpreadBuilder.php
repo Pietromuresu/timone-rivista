@@ -60,4 +60,44 @@ class PageSpreadBuilder
             array_keys($spreads),
         );
     }
+
+    /**
+     * Lato di una pagina interna nella rivista aperta (griglia a doppia
+     * pagina, 2026-10-29): pari a sinistra, dispari a destra — la 1 è
+     * sempre a destra. Dalla posizione, mai salvato: dopo uno spostamento
+     * le pagine che scorrono cambiano lato da sole.
+     */
+    public static function side(int $position): string
+    {
+        return $position % 2 === 0 ? 'left' : 'right';
+    }
+
+    /**
+     * Aperture della griglia a doppia pagina (2026-10-29): coppie
+     * [sinistra, destra] ricavate dalla POSIZIONE di ogni pagina (coppia n =
+     * pagine 2n e 2n+1), null = slot vuoto. Le copertine stanno nella fascia
+     * in alto (scelta dell'utente), quindi la 1 ha sempre lo slot sinistro
+     * vuoto (lì sarebbe la II) e un'ultima pagina pari ha vuoto il destro
+     * (la III). A differenza di slots(), che conta le pagine nell'ordine,
+     * qui conta la posizione: una posizione mancante resta uno slot vuoto
+     * invece di far slittare di lato tutte le pagine successive.
+     *
+     * @template T of object
+     *
+     * @param  Collection<int, T>  $pages  oggetti con `position` (pagine interne)
+     * @return list<array{0: T|null, 1: T|null}>
+     */
+    public static function layout(Collection $pages): array
+    {
+        $pairs = [];
+
+        foreach ($pages as $page) {
+            $position = (int) $page->position;
+            $pairs[intdiv($position, 2)][self::side($position) === 'left' ? 0 : 1] = $page;
+        }
+
+        ksort($pairs);
+
+        return array_values(array_map(fn (array $pair) => [$pair[0] ?? null, $pair[1] ?? null], $pairs));
+    }
 }

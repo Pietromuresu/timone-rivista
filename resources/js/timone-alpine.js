@@ -653,6 +653,8 @@ document.addEventListener('alpine:init', () => {
             const { pageMin, pageWidth } = ZOOM_LEVELS[this.level];
             document.documentElement.style.setProperty('--timone-page-min', pageMin);
             document.documentElement.style.setProperty('--timone-page-w', pageWidth);
+            // Griglia a doppia pagina (2026-10-29): coppie per riga in app.css secondo lo zoom.
+            document.documentElement.dataset.zoom = this.level;
         },
     });
 

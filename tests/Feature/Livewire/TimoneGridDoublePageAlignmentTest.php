@@ -20,33 +20,16 @@ test('in double-page view the first page is right-aligned and the last page is n
     $page6 = $issue->pages()->where('position', 6)->first();
     $page3 = $issue->pages()->where('position', 3)->first();
 
-    $blockFor = function (int $pageId) use ($html) {
-        $markerPos = mb_strpos($html, 'data-page-id="'.$pageId.'"');
-        expect($markerPos)->not->toBeFalse();
+    // Griglia a doppia pagina (2026-10-29): non più ml-auto sulla pagina 1.
+    // La 1 è a destra perché la precede lo slot vuoto «II di copertina»;
+    // l'ultima (totale pari) è a sinistra perché la segue «III di copertina».
+    // Le colonne le assegna app.css (.timone-spreads) dall'ordine dei figli.
+    $grid = substr($html, strpos($html, 'data-testid="spread-grid"'));
+    $at = fn (string $needle) => strpos($grid, $needle);
 
-        // Il numero di attributi tra data-page-id= e class= sul root di
-        // page-card varia (keydown/dragover/drop/click sono condizionali,
-        // vedi page-card.blade.php) — una finestra di lunghezza fissa è
-        // fragile (ha già rotto questo test il 2026-09-02, rimuovendo il
-        // div-wrapper che prima stava più vicino a data-page-id=). Si cerca
-        // quindi esplicitamente il class= di quel tag, non un offset fisso.
-        $classPos = mb_strpos($html, 'class="', $markerPos);
-        expect($classPos)->not->toBeFalse();
-
-        $classEnd = mb_strpos($html, '"', $classPos + mb_strlen('class="'));
-
-        return mb_substr($html, $classPos, $classEnd - $classPos);
-    };
-
-    // Pagina 1: apertura singola iniziale, spinta a destra (ml-auto) —
-    // nessuna pagina sinistra la precede, convenzione di stampa.
-    expect($blockFor($page1->id))->toContain('ml-auto');
-
-    // Pagina 6 (ultima, totale pari): apertura singola finale, resta a
-    // sinistra per comportamento flex-start di default, NON "ml-auto".
-    expect($blockFor($page6->id))->not->toContain('ml-auto');
-
-    // Pagina 3: fa parte di un'apertura da due pagine (2-3), non va
-    // spinta né a destra né altrove.
-    expect($blockFor($page3->id))->not->toContain('ml-auto');
+    expect($at('data-spread-empty="left"'))->toBeLessThan($at('data-page-id="'.$page1->id.'"'))
+        ->and($at('data-page-id="'.$page6->id.'"'))->toBeLessThan($at('data-spread-empty="right"'))
+        ->and(substr_count($grid, 'data-testid="spread-empty"'))->toBe(2)
+        ->and(preg_match('/data-page-id="'.$page3->id.'"[^>]*data-spread-side="right"/s', $grid))->toBe(1)
+        ->and($grid)->not->toContain('ml-auto');
 });

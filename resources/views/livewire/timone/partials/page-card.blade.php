@@ -119,6 +119,8 @@
          CSS (app.css, html[data-signatures="on"]); vedi SignaturePlan. --}}
     @if ($signatureIndex !== null) data-signature="{{ $signatureIndex % 2 ? 'odd' : 'even' }}" @endif
     @if ($signatureStart) data-signature-start @endif
+    {{-- Griglia a doppia pagina (2026-10-29): lato nella coppia, solo in quella vista. --}}
+    @isset($spreadSide) data-spread-side="{{ $spreadSide }}" @endisset
     @unless ($locked || $isCover || ! $canMovePage)
         @keydown.arrow-left.prevent="$animatedMove('nudgePage', {{ $page->id }}, -1)"
         @keydown.arrow-right.prevent="$animatedMove('nudgePage', {{ $page->id }}, 1)"

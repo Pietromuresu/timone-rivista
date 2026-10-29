@@ -146,3 +146,129 @@ html[data-signatures="on"] .signature-label {
     pointer-events: none;
 }
 html[data-signatures="on"] li .signature-label { position: static; border-radius: 4px; margin-right: 4px; }
+
+/*
+ * Griglia a doppia pagina (2026-10-29, grid.blade.php, vista «Doppia
+ * pagina»). Figli del contenitore: slot vuoto o pagina, a coppie
+ * (PageSpreadBuilder::layout()). Ogni coppia occupa cinque colonne:
+ * mezzo spazio | sinistra | 2px (la «linea» della rivista aperta) | destra |
+ * mezzo spazio. Ogni figlio va nella sua colonna in base al suo posto
+ * nell'ordine (:nth-child), con N coppie per riga.
+ *
+ * Perché colonne fisse e non margini: durante un trascinamento Sortable
+ * sposta la pagina nel DOM. Con i margini (lato dall'ordine) tutte le
+ * pagine successive cambiavano margine sotto il puntatore e Sortable le
+ * rincorreva (rilasciata sulla 6, finiva sulla 12); con il lato scritto dal
+ * server le pagine che scorrevano restavano col margine vecchio e le coppie
+ * si scollavano. Con colonne fisse una pagina cambia solo posto, come nella
+ * vista Griglia: le coppie si ricompongono dal vivo e nessun posto si
+ * sposta.
+ *
+ * N con una container query sulla larghezza del timone, soglie diverse per
+ * lo zoom S/M/L (html[data-zoom], store timoneZoom). Regole ripetitive
+ * generate per N = 1…4: per ogni N, i 2N figli di una riga.
+ * Colonne minmax(0, 1fr): mai scroll orizzontale.
+ */
+.timone-spreads-wrap { container-type: inline-size; }
+
+.timone-spreads {
+    --spread-gap: 1.5rem;
+    --spread-tracks: calc(var(--spread-gap) / 2) minmax(0, 1fr) 2px minmax(0, 1fr) calc(var(--spread-gap) / 2);
+    display: grid;
+    grid-template-columns: repeat(1, var(--spread-tracks));
+    row-gap: 1.25rem;
+}
+.timone-spreads > :nth-child(2n+1) { grid-column: 2; }
+.timone-spreads > :nth-child(2n+2) { grid-column: 4; }
+
+/* Zoom S */
+@container (min-width: 33rem) {
+    html[data-zoom="s"] .timone-spreads { grid-template-columns: repeat(2, var(--spread-tracks)); }
+    html[data-zoom="s"] .timone-spreads > :nth-child(4n+1) { grid-column: 2; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(4n+2) { grid-column: 4; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(4n+3) { grid-column: 7; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(4n+4) { grid-column: 9; }
+}
+@container (min-width: 49rem) {
+    html[data-zoom="s"] .timone-spreads { grid-template-columns: repeat(3, var(--spread-tracks)); }
+    html[data-zoom="s"] .timone-spreads > :nth-child(6n+1) { grid-column: 2; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(6n+2) { grid-column: 4; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(6n+3) { grid-column: 7; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(6n+4) { grid-column: 9; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(6n+5) { grid-column: 12; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(6n+6) { grid-column: 14; }
+}
+@container (min-width: 65rem) {
+    html[data-zoom="s"] .timone-spreads { grid-template-columns: repeat(4, var(--spread-tracks)); }
+    html[data-zoom="s"] .timone-spreads > :nth-child(8n+1) { grid-column: 2; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(8n+2) { grid-column: 4; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(8n+3) { grid-column: 7; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(8n+4) { grid-column: 9; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(8n+5) { grid-column: 12; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(8n+6) { grid-column: 14; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(8n+7) { grid-column: 17; }
+    html[data-zoom="s"] .timone-spreads > :nth-child(8n+8) { grid-column: 19; }
+}
+/* Zoom M */
+@container (min-width: 43rem) {
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads { grid-template-columns: repeat(2, var(--spread-tracks)); }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(4n+1) { grid-column: 2; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(4n+2) { grid-column: 4; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(4n+3) { grid-column: 7; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(4n+4) { grid-column: 9; }
+}
+@container (min-width: 64rem) {
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads { grid-template-columns: repeat(3, var(--spread-tracks)); }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(6n+1) { grid-column: 2; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(6n+2) { grid-column: 4; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(6n+3) { grid-column: 7; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(6n+4) { grid-column: 9; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(6n+5) { grid-column: 12; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(6n+6) { grid-column: 14; }
+}
+@container (min-width: 85rem) {
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads { grid-template-columns: repeat(4, var(--spread-tracks)); }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(8n+1) { grid-column: 2; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(8n+2) { grid-column: 4; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(8n+3) { grid-column: 7; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(8n+4) { grid-column: 9; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(8n+5) { grid-column: 12; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(8n+6) { grid-column: 14; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(8n+7) { grid-column: 17; }
+    html:not([data-zoom="s"]):not([data-zoom="l"]) .timone-spreads > :nth-child(8n+8) { grid-column: 19; }
+}
+/* Zoom L */
+@container (min-width: 55rem) {
+    html[data-zoom="l"] .timone-spreads { grid-template-columns: repeat(2, var(--spread-tracks)); }
+    html[data-zoom="l"] .timone-spreads > :nth-child(4n+1) { grid-column: 2; }
+    html[data-zoom="l"] .timone-spreads > :nth-child(4n+2) { grid-column: 4; }
+    html[data-zoom="l"] .timone-spreads > :nth-child(4n+3) { grid-column: 7; }
+    html[data-zoom="l"] .timone-spreads > :nth-child(4n+4) { grid-column: 9; }
+}
+@container (min-width: 82rem) {
+    html[data-zoom="l"] .timone-spreads { grid-template-columns: repeat(3, var(--spread-tracks)); }
+    html[data-zoom="l"] .timone-spreads > :nth-child(6n+1) { grid-column: 2; }
+    html[data-zoom="l"] .timone-spreads > :nth-child(6n+2) { grid-column: 4; }
+    html[data-zoom="l"] .timone-spreads > :nth-child(6n+3) { grid-column: 7; }
+    html[data-zoom="l"] .timone-spreads > :nth-child(6n+4) { grid-column: 9; }
+    html[data-zoom="l"] .timone-spreads > :nth-child(6n+5) { grid-column: 12; }
+    html[data-zoom="l"] .timone-spreads > :nth-child(6n+6) { grid-column: 14; }
+}
+
+/* Slot vuoto (II o III di copertina, nella fascia in alto): marcato, non una pagina. */
+.spread-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border: 2px dashed #d1d5db;
+    border-radius: 0.5rem;
+    color: #9ca3af;
+    font-size: 0.7rem;
+    text-align: center;
+    background: repeating-linear-gradient(135deg, transparent 0 8px, rgba(156, 163, 175, 0.12) 8px 16px);
+}
+@media (prefers-color-scheme: dark) {
+    .spread-empty { border-color: #4b5563; color: #6b7280; }
+}
+

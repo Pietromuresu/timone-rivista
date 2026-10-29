@@ -378,6 +378,12 @@ Non correggere i valori con un UPDATE alla cieca: vanno ricontrollati sulla sche
 - **Causa reale in produzione (2026-10-28)**: script e Alpine c'erano, ma nel DOM il trigger del menu era `<div open="">` invece di `<div @click="open = ! open">` (l'HTML del server era corretto): qualcosa tra server e browser (estensione del browser — in console compariva `content.js … [Violation]` — o un proxy che riscrive l'HTML) toglieva gli attributi `@click`. Corretto usando `x-on:click`/`x-on:click.outside` in `components/dropdown.blade.php` e `layouts/navigation.blade.php`, come nel resto del progetto; un test verifica che nessuna vista usi `@click`. Per scoprire chi riscrive: confrontare «Visualizza sorgente» (HTML del server) con «Elementi» (DOM), e provare in finestra anonima senza estensioni.
 - Se il menu non si apre su NESSUNA pagina e lo script manca, lo script non arriva: in Network cercare `livewire.js`/`livewire.min.js` (404 → il web server davanti all'app deve passare a `index.php` le richieste `.js` che non sono file, come `docker/nginx/default.conf`; bloccato → http/https misti; percorso sbagliato → app sotto un sottopercorso).
 
+## Doppia pagina: una pagina trascinata non si sposta o finisce altrove (2026-10-29)
+
+- **Il drag non parte**: le page-card devono essere figlie dirette di `.timone-spreads` (niente div attorno, Sortable lo verifica in silenzio).
+- **Coppie scollate o pagine che «saltano» durante il drag**: il lato deve venire dalle colonne fisse di `app.css` (`:nth-child` → `grid-column`), non da margini (vedi `docs/02`). Le regole per N = 1…4 coppie per riga sono generate: aggiungendo uno zoom o una soglia vanno aggiunte tutte.
+- **Prove automatiche con CDP**: il puntatore deve scorrere a piccoli passi e il bersaglio stare lontano dal bordo dello schermo; altrimenti lo scorrimento automatico (`drag-autoscroll.js`) sposta la pagina sotto il puntatore e la pagina finisce più avanti (succede uguale nella vista Griglia, non è un difetto).
+
 ## Commenti: il collega non vede il mio commento / non arriva la mail (2026-10-29)
 
 - **Contatori fermi**: arrivano solo dal polling (niente broadcast). Controllare che l'elemento `wire:poll.1s` sia montato: `checkForCommentUpdates` con Reverb collegato, `checkForUpdates` senza (in `grid.blade.php`); si fermano durante un trascinamento. Il segnale è `issues.comments_updated_at`: se non cambia dopo un commento, la scrittura non è passata da `PageCommentWriter`.

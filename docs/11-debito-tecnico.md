@@ -203,6 +203,13 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 - **Sostituzione del PDF non annullabile** (scelta dell'utente): il file vecchio si cancella subito.
 - **Autore del conflitto dal registro attività**: è l'ultima voce di un altro utente sul numero dopo la mia azione, non necessariamente quella sulla stessa riga.
 
+## Griglia a doppia pagina (aggiunto il 2026-10-29)
+
+- **Regole CSS generate** per 1–4 coppie per riga e tre zoom (`app.css`): ripetitive ma senza JavaScript; una soglia nuova richiede di generarne un blocco.
+- **Copertine sempre nella fascia** (scelta dell'utente): la prima coppia [II | 1] e l'ultima [N | III] hanno riquadri vuoti, non le copertine vere. Mostrarle in griglia richiederebbe che Sortable le ignori come pagine interne.
+- **Il fantasma del trascinamento** è la card stessa (come in Griglia), senza uno stile dedicato.
+- `data-spread-side` sulle card è il lato secondo il server, solo informativo: durante il drag può non corrispondere al posto mostrato.
+
 ## Segnature (aggiunto il 2026-10-29)
 
 - **Copertine «in testa»**: con l'opzione attiva tutte le facciate di copertina contano all'inizio della prima segnatura (richiesta dell'utente); fisicamente III e IV sono in fondo. Se servisse la sequenza reale di stampa, andrebbe cambiato `SignaturePlan::signatureOf()`.

@@ -2042,3 +2042,31 @@ Reverb vero (aggiornamento del conteggio per gli altri via evento `IssuePageCoun
 3. A: totale 126 → B vede l'avviso rosso «126 non è multiplo di 4».
 4. B: vista «Doppia pagina» → la linea rossa è tra la 32 e la 33 della stessa coppia. Bottone «32°» → spariscono fasce e linee (A le vede ancora).
 5. Admin: «Modifica rivista» → 16 pagine per segnatura → i timoni aperti mostrano «sedicesimi» al poll (senza Reverb) o al prossimo aggiornamento.
+
+## Sessione 2026-10-29 — Fase 3: griglia a doppia pagina
+
+Fase 2 (segnature) approvata dall'utente («vai con la fase 3»), non committata. Decisione E della Fase 0: si trasforma la vista «Doppia pagina» esistente (nessuna terza vista), copertine nella fascia in alto.
+
+### Cosa è stato fatto
+- **Accoppiamento** in `App\Support\PageSpreadBuilder`: `side($position)` (pari sinistra, dispari destra) e `layout($pages)` (coppie [sinistra, destra] dalla POSIZIONE, coppia n = pagine 2n e 2n+1, null = slot vuoto; una posizione mancante resta uno slot vuoto invece di far cambiare lato alle successive). Mai salvato. `build()`/`slots()` restano per l'export PDF.
+- **Vista** (`grid.blade.php`, ramo `doppia`): `$spreadLayout` da `Grid::render()`; ogni page-card e ogni slot vuoto è figlio diretto del contenitore Sortable (vincolo del 2026-09-02); slot vuoti tratteggiati «II di copertina» (prima coppia), «III di copertina» (ultima, totale pari), «Nessuna pagina» (buco, non dovrebbe succedere). `data-spread-side` sulla card: lato secondo il server, informativo.
+- **CSS** (`.timone-spreads` in `app.css`): ogni coppia occupa cinque colonne (½ spazio | sinistra | 2px | destra | ½ spazio); ogni figlio va nella sua colonna in base all'ordine (`:nth-child` → `grid-column`), N coppie per riga con container query sulla larghezza, soglie per zoom S/M/L (`html[data-zoom]`, aggiunto in `timoneZoom.apply()`). Regole generate per N = 1…4. Risultato misurato: 2 px tra le pagine di una coppia, 24 px tra coppie; M: 1 coppia a 390–768 px, 2 a 1024, 3 a 1366/1920 (S: 4; L: 2); nessuno scorrimento orizzontale.
+- **Due versioni scartate dopo la prova con trascinamento vero** (documentate perché sembrano più semplici): (1) lato dall'ordine con margini (`:nth-child` → margin): quando Sortable sposta la pagina nel DOM tutte le successive cambiavano margine sotto il puntatore e Sortable le rincorreva (rilasciata sulla 6 finiva sulla 12); (2) margini scritti dal server: durante il drag le pagine che scorrevano tenevano il margine vecchio e le coppie si scollavano. Con colonne fisse una pagina cambia solo posto, come in Griglia: le coppie si ricompongono dal vivo.
+- **Fix collaterale (Fase 2)**: il chip «Segnature» era `whitespace-nowrap` e sotto i ~780 px dava scorrimento orizzontale a tutta la pagina (trovato misurando a 390/768): ora va a capo.
+
+### Verificato
+- **Test unità** `tests/Unit/PageSpreadBuilderTest.php` (+5): lato; totale dispari e pari; dopo uno spostamento (tutte le successive cambiano lato); dopo inserimento ed eliminazione; posizione mancante.
+- **Test funzionali** `tests/Feature/Livewire/SpreadGridTest.php` (7): ordine dei figli con slot vuoti (5 e 6 pagine), dopo `movePage`, dopo `resizePages` in su e in giù, blocco di 3 pagine selezionate con `moveSelectedBlock`, figli diretti del contenitore Sortable, lato dal server per pagine e slot. `TimoneGridTest`: il test del vecchio `border-l-2` sostituito (la linea ora è del contenitore); `TimoneGridDoublePageAlignmentTest` riscritto (la pagina 1 non ha più `ml-auto`: la precede lo slot «II di copertina», l'ultima pari è seguita da «III di copertina»). Suite completa dopo la fase: 950 passati, 46 saltati.
+- **Browser** (Chrome headless, drag nativo simulato via CDP con `Input.setInterceptDrags`, puntatore che scorre a piccoli passi): 3→6, 3→9, 6→3 (righe diverse), 3→4 (dentro una coppia), blocco 8–10 → 14–16, tutti esatti e uguali alla vista Griglia; screenshot durante il drag: coppie regolari, la pagina compare già come sinistra della coppia in cui cadrà; freccia → sulla 4: diventa 5 e passa a destra; confine della segnatura tra 32 e 33 (2 px) con ombra rossa; 💬 sulle card; larghezze 390/768/1024/1366/1920 × zoom S/M/L senza scorrimento orizzontale; nessun errore in console.
+- Nota di metodo: le prime prove davano spostamenti sbagliati anche nella vista Griglia (non toccata) quando il bersaglio era in fondo allo schermo o il puntatore saltava: lo scorrimento automatico vicino al bordo sposta la pagina sotto il puntatore. Non un difetto dell'app (annotato in `docs/10-debugging.md`).
+
+### Non verificato
+Mouse vero in Chrome/Firefox/Safari (container query: Safari 16+, Firefox 110+), tablet reale, trascinamento di un gruppo collegato nella nuova griglia (lato server invariato), tema scuro degli slot vuoti.
+
+### Procedura manuale con due browser (doppia pagina)
+1. Due utenti sullo stesso numero, entrambi in «Doppia pagina». Prima riga: [II di copertina | 1] [2 | 3]…; con totale pari, ultima [N | III di copertina].
+2. A trascina la pagina 3 sulla 6: mentre trascina le coppie si ricompongono; al rilascio la vecchia 3 è la 6 a sinistra; B (senza ricaricare) vede lo stesso ordine.
+3. A seleziona 3 pagine (Selezione) e le trascina insieme: si spostano tutte; B le vede spostate.
+4. A cambia il totale pagine (+1 / −1): le ultime coppie si ricompongono per entrambi; il riquadro «III di copertina» compare/sparisce.
+5. Restringere la finestra: le coppie per riga scendono (3 → 2 → 1) senza barra di scorrimento orizzontale; zoom S/M/L cambia quante coppie stanno in una riga.
+6. Commenti (💬) e confini delle segnature (linea rossa tra 32 e 33) visibili come nelle altre viste.

@@ -875,104 +875,71 @@
             @endforeach
         </div>
     @elseif ($viewMode === 'doppia')
-        {{-- Ogni pagina resta un elemento Sortable a sé, figlio diretto
-             dello stesso contenitore usato da griglia/lista (non annidata
-             in un div per apertura, il bug originario: Sortable richiede
-             figli diretti dello stesso contenitore per il drag&drop di
-             riordino, e prima ogni apertura aveva il proprio div "flex
-             justify-center", rendendo le pagine trascinabili solo tra loro
-             all'interno della stessa coppia). L'andata a capo visiva tra
-             un'apertura e la successiva è ottenuta con un elemento
-             "spacer" (flex-basis:100%) invece che con l'annidamento: lo
-             spacer non ha data-page-id, quindi il filtro
-             `draggable: '[data-page-id]'` in resources/js/app.js lo
-             esclude sia dal trascinamento sia dal calcolo dell'indice di
-             destinazione (Sortable conta solo gli elementi che
-             corrispondono al selettore). Risultato: si può trascinare una
-             singola pagina fuori da una coppia, dentro un'altra coppia, o
-             in una posizione che ne spacca una esistente — lato/posizione
-             si ricalcolano da soli al prossimo render() (PageSpreadBuilder
-             raggruppa sempre le pagine nell'ordine risultante).
+        {{-- Griglia a doppia pagina (2026-10-29, sostituisce la colonna di
+             aperture una sotto l'altra): più coppie per riga, le due pagine
+             di una coppia attaccate come una rivista aperta, più spazio tra
+             una coppia e l'altra. Coppie da PageSpreadBuilder::layout()
+             (dalla posizione: pari a sinistra, dispari a destra), slot vuoti
+             marcati dove starebbero II e III di copertina (le copertine sono
+             nella fascia in alto).
 
-             IMPORTANTE — niente div-wrapper attorno a ogni page-card qui
-             (bug reale trovato e corretto il 2026-09-02, la sessione
-             precedente lo aveva solo mascherato aggiungendo un wire:key
-             al wrapper senza accorgersi che il wrapper stesso rompeva il
-             drag&drop): il root di page-card.blade.php porta già il suo
-             data-page-id, IDENTICO a quello usato da griglia/lista.
-             SortableJS individua l'elemento trascinabile risalendo dal
-             target del click fino al primo antenato che soddisfa il
-             selettore `draggable: '[data-page-id]'` (closest(), vedi
-             node_modules/sortablejs/src/Sortable.js) e poi verifica che
-             il suo `parentNode` sia esattamente il contenitore Sortable
-             (Sortable.js:566, `target.parentNode === el`) prima di
-             avviare il drag. Con un wrapper esterno che duplica anche lui
-             data-page-id, closest() risale e si ferma SUBITO al root di
-             page-card (il primo match, più vicino alla maniglia
-             ".drag-handle"), il cui parentNode è il wrapper e non questo
-             contenitore: la condizione fallisce silenziosamente e il drag
-             non parte mai — esattamente il sintomo osservato ("la pagina
-             non si muove minimamente"), invisibile ai test esistenti
-             perché nessuno di essi guida un mousedown reale in un
-             browser (niente Dusk in questo progetto, solo
-             Livewire::test()/lettura markup). Le classi di posizione per
-             apertura (larghezza, margine, bordo separatore) che prima
-             stavano sul wrapper vengono quindi passate a page-card come
-             parametro `extraClasses`, mantenendo il root di page-card
-             l'unico elemento draggable reale, figlio diretto di questo
-             contenitore, identico in tutte e tre le viste. --}}
-        <div
-            x-sortable="$wire.swapMode"
-            @page-dropped="$flipAfterDrop('movePage', $event.detail.pageId, $event.detail.newPosition)"
-            @block-dropped="$flipAfterDrop('moveSelectedBlock', $event.detail.anchorPageId, $event.detail.newPosition)"
-            class="flex flex-wrap gap-x-0.5 mx-auto w-[calc(var(--timone-page-w,13rem)*2+0.125rem)]"
-        >
-            {{-- Niente gap-y sul contenitore: applicherebbe uno spazio
-                 verticale anche sopra/sotto la riga a lì-height dello
-                 spacer (raddoppiando la distanza tra due aperture) — un
-                 mt-3 su ogni pagina che apre una nuova apertura ottiene lo
-                 stesso risultato visivo di prima senza quell'effetto.
+             Vincoli che restano dal 2026-09-02 (vedi HANDOFF.md): ogni
+             page-card è figlia DIRETTA del contenitore Sortable, senza div
+             attorno (Sortable controlla target.parentNode === el, un wrapper
+             fa fallire il drag in silenzio); gli slot vuoti non hanno
+             data-page-id, quindi Sortable non li trascina e non li conta.
 
-                 Larghezza contenitore fissata a esattamente 2 pagine +
-                 gap-x-0.5 (invece di "justify-center" su un contenitore a
-                 piena larghezza): convenzione editoriale di stampa, la
-                 pagina 1 è sempre una pagina destra (nessuna pagina
-                 sinistra la precede) e, se il totale pagine è pari,
-                 l'ultima pagina resta sola a sinistra (nessuna destra
-                 successiva) — PageSpreadBuilder raggruppa già le pagine in
-                 questo modo (prima pagina da sola, poi coppie), qui basta
-                 allineare la prima apertura (singola) a destra con
-                 "ml-auto"; l'ultima apertura, se singola, resta a sinistra
-                 per il normale comportamento flex-start (nessuna classe
-                 extra necessaria) ora che "justify-center" non c'è più a
-                 ricentrarla. Senza un contenitore di larghezza fissa,
-                 "ml-auto"/l'allineamento flex-start di una singola pagina
-                 la spingerebbe ai bordi dello schermo invece che a
-                 fianco della "spina" delle aperture da due pagine. --}}
-            @foreach ($spreads as $spreadIndex => $spread)
-                @foreach ($spread as $indexInSpread => $page)
-                    @include('livewire.timone.partials.page-card', [
-                        'page' => $page,
-                        'dropEnabled' => true,
-                        'avgThumbnailSeconds' => $avgThumbnailSeconds,
-                        'pageAspectRatio' => $pageAspectRatio,
-                        // Dimensione fissa + margini/bordo di posizione nell'apertura:
-                        // prima stavano su un div-wrapper attorno a page-card, rimosso
-                        // perché rompeva silenziosamente il drag&drop (vedi commento
-                        // sopra) — page-card resta l'unico root, qui gli si passano
-                        // solo le classi extra da appendere al suo class= esistente.
-                        'extraClasses' => trim(
-                            // Larghezza dallo zoom S/M/L (Fase 1, bug 7): stessa
-                            // variabile usata per la larghezza del contenitore sopra.
-                            'w-[var(--timone-page-w,13rem)]'
-                            . ($spreadIndex > 0 ? ' mt-6' : '')
-                            . ($indexInSpread > 0 ? ' border-l-2 border-gray-300 dark:border-gray-600' : '')
-                            . ($spreadIndex === 0 && count($spread) === 1 ? ' ml-auto' : '')
-                        ),
-                    ])
+             Disegno in app.css (.timone-spreads): ogni posto ha una colonna
+             fissa (mezzo spazio | sinistra | 2px | destra | mezzo spazio) e i
+             figli la prendono dal loro ordine. Durante un trascinamento,
+             quando Sortable sposta la pagina nel DOM, le pagine cambiano solo
+             posto (come nella vista Griglia): le coppie si ricompongono dal
+             vivo e si vede dove cade la pagina, anche tra le due pagine di una
+             coppia. Due versioni scartate dopo la prova nel browser (margini
+             dal lato: spostamenti a catena sotto il puntatore; margini scritti
+             dal server: coppie scollate durante il drag), vedi HANDOFF.md.
+             data-spread-side è il lato secondo il server, informativo (test).
+             Coppie per riga con una container query sulla larghezza e lo zoom
+             S/M/L: niente scroll orizzontale. --}}
+        <div class="timone-spreads-wrap">
+            <div
+                x-sortable="$wire.swapMode"
+                @page-dropped="$flipAfterDrop('movePage', $event.detail.pageId, $event.detail.newPosition)"
+                @block-dropped="$flipAfterDrop('moveSelectedBlock', $event.detail.anchorPageId, $event.detail.newPosition)"
+                class="timone-spreads"
+                data-testid="spread-grid"
+            >
+                @foreach ($spreadLayout as $spreadIndex => $pair)
+                    @foreach ($pair as $sideIndex => $page)
+                        @if ($page)
+                            @include('livewire.timone.partials.page-card', [
+                                'page' => $page,
+                                'dropEnabled' => true,
+                                'avgThumbnailSeconds' => $avgThumbnailSeconds,
+                                'pageAspectRatio' => $pageAspectRatio,
+                                'spreadSide' => $sideIndex === 0 ? 'left' : 'right',
+                            ])
+                        @else
+                            @php
+                                $emptyLabel = match (true) {
+                                    $loop->parent->first && $sideIndex === 0 => 'II di copertina',
+                                    $loop->parent->last && $sideIndex === 1 => 'III di copertina',
+                                    default => 'Nessuna pagina',
+                                };
+                            @endphp
+                            <div
+                                wire:key="spread-empty-{{ $spreadIndex }}-{{ $sideIndex }}"
+                                class="spread-empty"
+                                style="aspect-ratio: {{ $pageAspectRatio ?? '3 / 4' }};"
+                                data-spread-empty="{{ $sideIndex === 0 ? 'left' : 'right' }}"
+                                data-spread-side="{{ $sideIndex === 0 ? 'left' : 'right' }}"
+                                data-testid="spread-empty"
+                                title="{{ $emptyLabel === 'Nessuna pagina' ? 'Posizione senza pagina' : 'Qui sarebbe la '.$emptyLabel.': le copertine sono nella fascia in alto' }}"
+                            >{{ $emptyLabel }}</div>
+                        @endif
+                    @endforeach
                 @endforeach
-                <div class="basis-full h-0" aria-hidden="true"></div>
-            @endforeach
+            </div>
         </div>
     @else
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">

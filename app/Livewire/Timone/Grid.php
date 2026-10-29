@@ -2831,7 +2831,8 @@ class Grid extends Component
             'covers' => $covers,
             'hasBandella' => $covers->contains(fn (Page $cover) => $cover->cover_slot === CoverSlot::Bandella),
             'pageAspectRatio' => $pageAspectRatio,
-            'spreads' => $this->viewMode === 'doppia' ? PageSpreadBuilder::build($pages) : null,
+            // Griglia a doppia pagina (2026-10-29): coppie dalla posizione, con gli slot vuoti.
+            'spreadLayout' => $this->viewMode === 'doppia' ? PageSpreadBuilder::layout($pages) : [],
             'unassignedContents' => $unassignedContents,
             // Contatore del bottone «Contenuti · N da assegnare»: la stessa
             // lista della scheda «Da assegnare», prima di filtri e ricerca.

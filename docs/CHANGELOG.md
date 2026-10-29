@@ -292,3 +292,15 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 
 ### Tecniche
 - `App\Support\Signatures\SignaturePlan` (pura, `tests/Unit/SignaturePlanTest.php`), migration `2026_10_29_200000_add_signature_settings_to_magazines`, store Alpine `timoneView`, stili in `app.css`.
+
+## 2026-10-29 — Griglia a doppia pagina (fase 3 di «commenti, 32esimi, doppia pagina»)
+
+### Visibili agli utenti
+- «Doppia pagina» diventa una griglia: più coppie per riga (secondo schermo e zoom), pari a sinistra e dispari a destra, coppie attaccate, riquadri «II di copertina» e «III di copertina» dove mancano le copertine; nessuno scorrimento orizzontale.
+- Trascinamento (anche di più pagine) e frecce come in Griglia; durante il drag le coppie si ricompongono e si vede dove cade la pagina.
+- Il conteggio «Segnature» va a capo sugli schermi stretti (prima dava scorrimento orizzontale sotto i 780 px).
+
+### Tecniche
+- `PageSpreadBuilder::side()` e `::layout()` (coppie dalla posizione), `.timone-spreads` in `app.css` (colonne fisse, container query, `html[data-zoom]` dallo store `timoneZoom`).
+- Test: `tests/Unit/PageSpreadBuilderTest.php` (accoppiamento), `tests/Feature/Livewire/SpreadGridTest.php`; aggiornati `TimoneGridTest` (il bordo tra le pagine della coppia ora è del contenitore) e `TimoneGridDoublePageAlignmentTest` (slot vuoti al posto di `ml-auto`).
+

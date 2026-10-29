@@ -82,29 +82,25 @@ test('the doppia view mode wraps every page in a single flat sortable container,
     }
 });
 
-test('in doppia view mode only the second page of a spread pair gets the visual separator border', function () {
+test('in doppia view mode the pair separation comes from the container (CSS), not from per-page classes', function () {
+    // Griglia a doppia pagina (2026-10-29): prima la seconda pagina della
+    // coppia aveva border-l-2; ora lato e linea sottile tra le due pagine li
+    // decide .timone-spreads in app.css dall'ordine dei figli (le coppie si
+    // ricompongono anche durante il trascinamento). Test del lato in
+    // tests/Feature/Livewire/SpreadGridTest.php.
     $issue = Issue::factory()->create(['total_pages' => 4]);
     $pages = $issue->pages()->orderBy('pages.position')->get()->values();
 
-    // Revisione 2, Fase 4.1: i comandi dipendono dal ruolo — un redattore li vede.
     $html = Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])
         ->call('setViewMode', 'doppia')
         ->html();
 
-    $wrapperMarkup = function (string $html, int $pageId): string {
-        // Il wrapper ora ha anche wire:key PRIMA di data-page-id (bugfix
-        // drag&drop doppia pagina, vedi HANDOFF.md) — il pattern non deve
-        // più assumere data-page-id come primo attributo dopo <div.
-        preg_match('/<div\s+[^>]*data-page-id="'.$pageId.'"[^>]*>/', $html, $matches);
+    foreach ($pages as $page) {
+        preg_match('/<div\s+[^>]*data-page-id="'.$page->id.'"[^>]*>/', $html, $matches);
+        expect($matches[0] ?? '')->not->toContain('border-l-2')->not->toContain('ml-auto');
+    }
 
-        return $matches[0] ?? '';
-    };
-
-    // Aperture: [pagina 1] da sola (copertina), poi [pagina 2, pagina 3],
-    // poi [pagina 4] — solo la pagina 3 (seconda della coppia centrale)
-    // deve avere il bordo di separazione.
-    expect($wrapperMarkup($html, $pages[1]->id))->not->toContain('border-l-2')
-        ->and($wrapperMarkup($html, $pages[2]->id))->toContain('border-l-2');
+    expect($html)->toContain('class="timone-spreads"');
 });
 
 test('the swap mode banner and page highlight appear only while swap mode is active', function () {
