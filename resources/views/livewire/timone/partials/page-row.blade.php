@@ -1,4 +1,12 @@
 @php
+    // Segnature (2026-10-29): vedi page-card.
+    $signatureIndex = match (true) {
+        ! isset($signatures) => null,
+        $page->cover_slot !== null => $signatures->includeCovers ? 1 : null,
+        default => $signatures->signatureOf((int) $page->position),
+    };
+    $signatureStart = isset($signatures) && $page->cover_slot === null && $signatures->startsSignature((int) $page->position);
+
     $isCover = $page->isCover();
     // Punto 4 del prompt (2026-09-02): l'anteprima ora viene dal contenuto
     // assegnato alla pagina (Page::previewFile()) — vedi la nota completa
@@ -71,6 +79,9 @@
     data-page-id="{{ $page->id }}"
     @if ($page->page_group_id) data-group-id="{{ $page->page_group_id }}" @endif
     @if ($isCover) data-cover-slot="{{ $page->cover_slot->value }}" @endif
+    {{-- Segnature (2026-10-29): come in page-card. --}}
+    @if ($signatureIndex !== null) data-signature="{{ $signatureIndex % 2 ? 'odd' : 'even' }}" @endif
+    @if ($signatureStart) data-signature-start @endif
     tabindex="0"
     @unless ($locked || $isCover || ! $canMovePage)
         @keydown.arrow-up.prevent="$animatedMove('nudgePage', {{ $page->id }}, -1)"
@@ -106,6 +117,9 @@
     class="flex items-center gap-4 px-4 py-3 border-l-4 {{ $isCover ? 'bg-indigo-50/60 dark:bg-indigo-950/30' : '' }} {{ $page->status->borderClasses() }} hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-inset {{ $focusClasses }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $selectionRowClasses }} {{ $highlightClasses }}"
     @if ($isHighlighted) data-highlighted="1" @endif
 >
+    @if ($signatureStart)
+        <span class="signature-label" data-testid="signature-label">{{ $signatures->label($signatureIndex) }}</span>
+    @endif
     @if (($selectionMode ?? false) && ! $isCover)
         <input
             type="checkbox"

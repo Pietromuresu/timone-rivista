@@ -203,6 +203,12 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 - **Sostituzione del PDF non annullabile** (scelta dell'utente): il file vecchio si cancella subito.
 - **Autore del conflitto dal registro attività**: è l'ultima voce di un altro utente sul numero dopo la mia azione, non necessariamente quella sulla stessa riga.
 
+## Segnature (aggiunto il 2026-10-29)
+
+- **Copertine «in testa»**: con l'opzione attiva tutte le facciate di copertina contano all'inizio della prima segnatura (richiesta dell'utente); fisicamente III e IV sono in fondo. Se servisse la sequenza reale di stampa, andrebbe cambiato `SignaturePlan::signatureOf()`.
+- **Cambio delle impostazioni della rivista con Reverb collegato**: i timoni aperti si aggiornano solo al prossimo render (il segnale è `pages_updated_at`, che con Reverb collegato non viene letto dal polling).
+- **Etichetta «32° n. 2»** sopra l'angolo della maniglia ⠿: non blocca il trascinamento (`pointer-events: none`).
+
 ## Commenti (aggiunto il 2026-10-29)
 
 - **Polling dei commenti sempre acceso** (1 richiesta al secondo per utente, anche con Reverb collegato: `checkForCommentUpdates`): scelta dell'utente («niente broadcast»). Leggera (una colonna, nessun render), ma con molti utenti sono richieste continue; l'alternativa sarebbe un evento broadcast `PageCommentsChanged`.

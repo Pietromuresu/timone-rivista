@@ -451,6 +451,14 @@ I valori di partenza vengono dalla rivista ([§12bis](#12bis-modificare-una-rivi
 
 ---
 
+## 9quater. Segnature (trentaduesimi)
+
+Dal 2026-10-29 il timone mostra come il numero si divide in **segnature** di stampa (di solito da 32 pagine: i «trentaduesimi»).
+- **Nella barra in alto**, accanto alla percentuale di pubblicità: «Segnature: **3 trentaduesimi + 24 pagine** (16 + 8)». Tra parentesi il resto scomposto nei formati di stampa (16esimo, 8vo, quartino da 4). Se il totale non è multiplo di 4 compare in rosso «⚠️ 126 non è multiplo di 4: non stampabile così». Dopo la freccia il suggerimento: quante pagine aggiungere o togliere per arrivare a un numero intero di segnature (es. «→ +8 = 128 · −24 = 96»). Il conteggio cambia da solo, anche per i colleghi, quando cambiano le pagine totali.
+- **Sulla griglia**: una fascia colorata in cima a ogni pagina, alternata azzurro/viola per segnatura, e una linea rossa con l'etichetta «32° n. 2» sul lato sinistro della prima pagina di ogni segnatura. Nella vista Doppia pagina la linea cade **dentro** la coppia [32 | 33], tra le due pagine; nella Lista è una linea sopra la riga. Le copertine non hanno fascia, salvo che la rivista le conti nelle segnature.
+- **Mostrare o nascondere i confini**: il bottone **32°** all'inizio del conteggio «Segnature» nella barra in alto (blu = visibili). È una preferenza tua, ricordata dal browser; non cambia nulla per i colleghi.
+- **Impostazioni della rivista** (Admin, «Modifica rivista» → «📐 Segnature di stampa»): pagine per segnatura (8, 16, 32 o 64; di solito 32) e «Copertina inclusa nelle segnature» (di solito no: la copertina si stampa a parte; se sì, le sue facciate — 4, o 6 con la bandella — contano in testa alla prima segnatura). Valgono subito per tutti i numeri della rivista.
+
 ## 10. Consultare lo storico spostamenti e la cronologia generale
 
 Bottone **"📜 Storico spostamenti"** nella barra del timone: apre un elenco degli ultimi 50 spostamenti di pagina fatti su questo numero, con chi li ha fatti, da quale posizione a quale, e quando.
@@ -507,6 +515,8 @@ Le posizioni si decidono **solo adesso**: dopo puoi spostare, togliere e modific
 **Scadenza stampa di un numero**: si imposta in creazione ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)) o, per un numero già esistente, con il campo **"📅 Scadenza stampa"** nella barra in alto sopra il timone. Quando la scadenza si avvicina (di default 3 giorni prima — l'esatto preavviso è un'impostazione tecnica dell'installazione, non modificabile dall'interfaccia), il **redattore di riferimento della rivista** riceve automaticamente una mail con il numero, la rivista e un link diretto al timone. La mail parte **una sola volta per scadenza**: se la sposti, può ripartire per la nuova data; se il redattore l'ha già ricevuta per la scadenza attuale, vedrai una ✉️ accanto al campo data.
 
 Se una rivista non ha un redattore assegnato, nessuna mail viene inviata per i suoi numeri finché non gliene assegni uno.
+
+**Segnature di stampa** (nella stessa pagina): pagine per segnatura e copertina inclusa o no, vedi [§9quater](#9quater-segnature-trentaduesimi). Valgono subito per tutti i numeri della rivista.
 
 **Carta e peso — valori di default** (nella stessa pagina "Modifica rivista"): formato, grammature, pagine di copertina, maggiorazione, peso del bancale e tolleranze usati per il peso della rivista ([§9ter](#9ter-peso-della-rivista)). **Valgono solo per i nuovi numeri**: vengono copiati su ogni numero creato dopo, mentre i numeri già esistenti mantengono i propri valori. Anche qui le grammature vanno in g/m² (es. 80 e 170) e sotto ognuna compare il peso a pagina; l'anteprima del peso usa "Pagine totali per l'anteprima (non salvate)", proposte dall'ultimo numero della rivista.
 

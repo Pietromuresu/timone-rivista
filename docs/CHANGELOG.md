@@ -282,3 +282,13 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - `App\Support\Comments\{CommentRecipients, PageCommentWriter, PageCommentReader, DeletedPageComments}`, `App\Models\PageComment`, `App\Notifications\PageCommentPosted`, `App\Policies\PageCommentPolicy`, `TimoneAbilities::canComment()`, componente `App\Livewire\Timone\PageComments`.
 - `Grid`: `checkForCommentUpdates()` (polling sempre attivo con Reverb), `checkForUpdates()` controlla anche i commenti, `refreshCommentCounts()`; contatori al browser con l'evento `comment-counts` (store Alpine `pageComments`) senza render.
 - `lang/it.json` (testi del modello mail di Laravel).
+
+## 2026-10-29 — Segnature / 32esimi (fase 2 di «commenti, 32esimi, doppia pagina»)
+
+### Visibili agli utenti
+- Barra in alto: «Segnature: 3 trentaduesimi + 24 pagine (16 + 8)», avviso se il totale non è multiplo di 4, suggerimento «+8 = 128 · −24 = 96»; si aggiorna anche per i colleghi quando cambiano le pagine totali.
+- Griglia, doppia pagina e lista: fascia colorata alternata per segnatura e confine rosso con «32° n. 2» (in doppia pagina tra le due pagine della coppia [32 | 33]); bottone «32°» nella barra per nasconderli (preferenza personale).
+- «Modifica rivista» → «📐 Segnature di stampa»: pagine per segnatura (8/16/32/64) e copertina inclusa (di default no).
+
+### Tecniche
+- `App\Support\Signatures\SignaturePlan` (pura, `tests/Unit/SignaturePlanTest.php`), migration `2026_10_29_200000_add_signature_settings_to_magazines`, store Alpine `timoneView`, stili in `app.css`.

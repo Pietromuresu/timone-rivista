@@ -51,6 +51,7 @@ use App\Support\PageReorderer;
 use App\Support\PageSelectionActions;
 use App\Support\PageSpreadBuilder;
 use App\Support\Permissions\TimoneAbilities;
+use App\Support\Signatures\SignaturePlan;
 use App\Support\ThumbnailProgressEstimator;
 use App\Support\Timeline\TimelineActionService;
 use App\Support\Twelfths;
@@ -2813,6 +2814,8 @@ class Grid extends Component
 
         return view('livewire.timone.grid', [
             'abilities' => $abilities,
+            // Segnature (2026-10-29): riepilogo nella fascia e confini sulla griglia.
+            'signatures' => SignaturePlan::forIssue($this->issue),
             // Commenti (2026-10-29): «seme» dello store Alpine pageComments.
             'commentCounts' => auth()->user() ? PageCommentReader::counts($this->issue, auth()->user()) : ['pages' => [], 'unread' => 0],
             // Annulla/ripeti (2026-10-28): stato dei bottoni ↶ ↷ e menu Cronologia (solo se aperto).

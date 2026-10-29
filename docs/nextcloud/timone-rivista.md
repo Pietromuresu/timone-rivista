@@ -259,6 +259,12 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - I commenti seguono la pagina quando viene spostata; se la pagina viene eliminata restano consultabili (scheda «Tutti», «Pagina 47, eliminata»).
 - Ognuno modifica ed elimina i propri commenti; l'Admin può eliminare quelli di tutti. Sola lettura legge e basta.
 
+## Segnature / trentaduesimi (2026-10-29)
+
+- Nella barra in alto «Segnature: 3 trentaduesimi + 24 pagine (16 + 8)»: quante segnature intere e come si scompone il resto. In rosso se il totale non è multiplo di 4; dopo la freccia quante pagine aggiungere o togliere per avere segnature intere.
+- Sulla griglia ogni segnatura ha una fascia colorata e la prima pagina una linea rossa con «32° n. 2». In doppia pagina la linea è tra la 32 e la 33, dentro la stessa coppia. Il bottone «32°» nella barra le nasconde o le mostra (solo per sé).
+- Le impostazioni (16 o 32 pagine, copertina inclusa o no) sono in «Modifica rivista».
+
 ## Punti di attenzione
 
 - Vulnerabilità note: Livewire 3.8.2 (XSS) e Laravel 12.64 vanno aggiornati (composer audit: 19 advisory).

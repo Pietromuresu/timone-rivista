@@ -1,4 +1,13 @@
 @php
+    // Segnature (2026-10-29): solo pagine interne, o copertine se la rivista
+    // le conta in testa (sempre nella prima segnatura).
+    $signatureIndex = match (true) {
+        ! isset($signatures) => null,
+        $page->cover_slot !== null => $signatures->includeCovers ? 1 : null,
+        default => $signatures->signatureOf((int) $page->position),
+    };
+    $signatureStart = isset($signatures) && $page->cover_slot === null && $signatures->startsSignature((int) $page->position);
+
     // Punto 4 del prompt (2026-09-02): l'anteprima ora viene dal contenuto
     // assegnato alla pagina (Page::previewFile()), con fallback al vecchio
     // PageFile diretto solo per le pagine caricate prima di questa
@@ -106,6 +115,10 @@
          che si spostano (resources/js/timone-alpine.js). --}}
     @if ($page->page_group_id) data-group-id="{{ $page->page_group_id }}" @endif
     @if ($isCover) data-cover-slot="{{ $page->cover_slot->value }}" @endif
+    {{-- Segnature (2026-10-29): fascia alternata e confine, disegnati dal
+         CSS (app.css, html[data-signatures="on"]); vedi SignaturePlan. --}}
+    @if ($signatureIndex !== null) data-signature="{{ $signatureIndex % 2 ? 'odd' : 'even' }}" @endif
+    @if ($signatureStart) data-signature-start @endif
     @unless ($locked || $isCover || ! $canMovePage)
         @keydown.arrow-left.prevent="$animatedMove('nudgePage', {{ $page->id }}, -1)"
         @keydown.arrow-right.prevent="$animatedMove('nudgePage', {{ $page->id }}, 1)"
@@ -148,6 +161,13 @@
     class="relative flex flex-col rounded-lg border-4 p-2 text-xs overflow-hidden focus:outline-none {{ $focusClasses }} {{ $page->content_type->colorClasses() }} {{ $page->status->borderClasses() }} {{ $locked ? 'opacity-70' : '' }} {{ $swapMode && ! $locked ? 'cursor-pointer' : '' }} {{ $ringClasses }} {{ $isCover && $ringClasses === '' ? 'ring-2 ring-offset-2 ring-indigo-400 dark:ring-offset-gray-900' : '' }} {{ $highlightClasses }} {{ $extraClasses }}"
     @if ($isHighlighted) data-highlighted="1" @endif
 >
+    @if ($signatureIndex !== null)
+        <div class="signature-strip" aria-hidden="true"></div>
+    @endif
+    @if ($signatureStart)
+        <span class="signature-label" data-testid="signature-label">{{ $signatures->label($signatureIndex) }}</span>
+    @endif
+
     <template x-if="$store.pagePresence?.editorFor({{ $page->id }})">
         <span
             class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white text-[8px] flex items-center justify-center ring-2 ring-white dark:ring-gray-800 uppercase animate-pulse z-10"

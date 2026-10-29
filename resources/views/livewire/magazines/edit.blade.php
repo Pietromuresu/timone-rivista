@@ -47,6 +47,26 @@
                     </div>
 
 
+                    {{-- Segnature (2026-10-29): valgono subito per tutti i numeri della rivista
+                         (riepilogo e confini sulla griglia, App\Support\Signatures\SignaturePlan). --}}
+                    <fieldset class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                        <legend class="px-1 font-medium text-gray-700 dark:text-gray-300">📐 Segnature di stampa</legend>
+                        <div class="max-w-xs">
+                            <x-input-label for="signature_pages" value="Pagine per segnatura" />
+                            <select id="signature_pages" wire:model="signature_pages" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">
+                                @foreach (\App\Support\Signatures\SignaturePlan::SIZES as $size)
+                                    <option value="{{ $size }}">{{ $size }} ({{ \App\Support\Signatures\SignaturePlan::formatName($size, 1) }})</option>
+                                @endforeach
+                            </select>
+                            <x-input-error class="mt-2" :messages="$errors->get('signature_pages')" />
+                        </div>
+                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <input type="checkbox" wire:model="signature_includes_covers" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500" />
+                            Copertina inclusa nelle segnature (le sue facciate contano in testa alla prima)
+                        </label>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Di solito no: la copertina si stampa a parte. Vale subito per tutti i numeri della rivista.</p>
+                    </fieldset>
+
                     {{-- Default del calcolo peso: copiati su ogni nuovo numero (Issues\Create). --}}
                     <fieldset class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-4">
                         <legend class="px-1 font-medium text-gray-700 dark:text-gray-300">⚖️ Carta e peso — valori di default</legend>

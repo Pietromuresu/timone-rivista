@@ -8,6 +8,7 @@ use App\Livewire\Concerns\NormalizesEmptyNumericInput;
 use App\Models\Magazine;
 use App\Models\User;
 use App\Support\ActivityLogger;
+use App\Support\Signatures\SignaturePlan;
 use App\Support\Weight\WeightLimits;
 use App\Support\Weight\WeightParameters;
 use App\Support\Weight\WeightPreview;
@@ -40,6 +41,12 @@ class Edit extends Component
     public string $notes = '';
 
     public ?int $redattore_id = null;
+
+    /** Segnature (2026-10-29): pagine per segnatura (SignaturePlan::SIZES). */
+    public int $signature_pages = SignaturePlan::DEFAULT_SIZE;
+
+    /** Segnature: facciate di copertina contate in testa alla prima segnatura. */
+    public bool $signature_includes_covers = false;
 
     /**
      * Default del calcolo peso della rivista (WeightParameters::FIELDS).
@@ -74,6 +81,8 @@ class Edit extends Component
         // role. In produzione arriva sempre da route model binding (query
         // reale), questo è solo un secondo strato difensivo a costo zero.
         $this->redattore_id = $magazine->redattore_id;
+        $this->signature_pages = (int) ($magazine->signature_pages ?? SignaturePlan::DEFAULT_SIZE);
+        $this->signature_includes_covers = (bool) $magazine->signature_includes_covers;
         $this->weight = WeightParameters::formValuesFrom($magazine);
         $this->previewTotalPages = (string) ($magazine->issues()->orderByDesc('issue_date')->value('total_pages') ?? '');
     }
@@ -91,6 +100,8 @@ class Edit extends Component
             'color' => 'required|string|max:7',
             'notes' => 'nullable|string|max:2000',
             'redattore_id' => 'nullable|exists:users,id',
+            'signature_pages' => 'required|integer|in:'.implode(',', SignaturePlan::SIZES),
+            'signature_includes_covers' => 'boolean',
         ], WeightParameters::messages('weight'));
 
         $weightValues = WeightParameters::toDatabase($validated['weight']);
@@ -98,7 +109,16 @@ class Edit extends Component
 
         $this->logWeightDefaultsChange($weightValues);
 
+        $signaturesChanged = (int) $this->magazine->signature_pages !== (int) $validated['signature_pages']
+            || (bool) $this->magazine->signature_includes_covers !== (bool) $validated['signature_includes_covers'];
+
         $this->magazine->update($validated + $weightValues);
+
+        // Segnature (2026-10-29): i timoni aperti di questa rivista ricalcolano
+        // conteggio e confini al prossimo poll (stesso segnale delle pagine).
+        if ($signaturesChanged) {
+            $this->magazine->issues()->update(['pages_updated_at' => now()]);
+        }
 
         // Fase 5.2: il redattore di riferimento deve poter vedere/gestire la
         // sua rivista, non solo comparire come etichetta — canAccessMagazine()

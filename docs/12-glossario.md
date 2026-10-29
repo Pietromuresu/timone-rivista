@@ -32,6 +32,7 @@
 | **File mancante** | Riquadro tratteggiato nel PDF sfogliabile per un contenuto senza file (o con il file assente/illeggibile) | `MagazinePdfComposer::drawMissing()` |
 | **Annulla/ripeti** | Ctrl+Z / Ctrl+Shift+Z: riporta il timone allo stato prima/dopo un proprio passo, con controllo dei conflitti | `App\Support\Timeline\TimelineActionService`, tabella `timone_azioni` |
 | **Commento di pagina** | Nota su una pagina (💬), con mail ai colleghi scelti o menzionati; segue la pagina quando si sposta | `App\Models\PageComment`, `App\Support\Comments\*` |
+| **Segnatura (trentaduesimo)** | Gruppo di pagine stampate su un foglio e piegate insieme: di solito 32 (trentaduesimo), poi 16esimo, 8vo, quartino (4) | `App\Support\Signatures\SignaturePlan`, `magazines.signature_pages` |
 | **Passo non annullabile** | Passo rimasto in cronologia che non si può annullare (PDF sostituito, conflitto con un collega, spazio occupato) | `timone_azioni.blocked_reason` |
 | **Vetrina** | Pubblicità da ¼ di pagina (formato «Un quarto pagina») | `AdFormat::UnQuartoPagina` (3/12) |
 | **Piedino** | Pubblicità a fascia in basso, ⅓ di pagina | `AdFormat::Piedino` (4/12) |

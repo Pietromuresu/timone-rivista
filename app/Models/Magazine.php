@@ -22,6 +22,9 @@ class Magazine extends Model
         'color',
         'notes',
         'battente_counted_in_total',
+        // Segnature (2026-10-29, App\Support\Signatures\SignaturePlan).
+        'signature_pages',
+        'signature_includes_covers',
         'redattore_id',
         // Default del calcolo peso (App\Support\Weight\WeightParameters::FIELDS):
         // copiati su ogni NUOVO numero, mai riletti dai numeri esistenti.
@@ -42,6 +45,8 @@ class Magazine extends Model
         return [
             'periodicity' => Periodicity::class,
             'battente_counted_in_total' => 'boolean',
+            'signature_pages' => 'integer',
+            'signature_includes_covers' => 'boolean',
             // Parametri peso: solo gli interi hanno un cast. I decimal restano
             // grezzi (stringa/float a seconda del driver) di proposito: il cast
             // `decimal:2` produce la deprecation di brick/math già documentata

@@ -20,7 +20,8 @@
     <div x-show="collapsed" x-cloak class="truncate" data-testid="summary-compact">
         <strong>{{ $summary['internalPages'] }}</strong> pagine · {{ $summary['fullPages'] }} piene · {{ $summary['blankPages'] }} bianche ·
         libero {{ $summary['freeLabel'] }} · pubblicità <strong>{{ $summary['adPercentage'] }}%</strong> ·
-        segnaposto {{ $summary['placeholderCount'] }}
+        segnaposto {{ $summary['placeholderCount'] }} ·
+        {{ $signatures->summaryLabel() }}@unless ($signatures->isPrintable()) ⚠️@endunless
     </div>
 
     <div x-show="! collapsed" class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -63,6 +64,41 @@
                 <span class="opacity-75">({{ collect($summary['placeholderByFormat'])->map(fn ($n, $format) => \App\Enums\AdFormat::from($format)->label().' '.$n)->implode(', ') }})</span>
             @endif
         </button>
+
+        {{-- Segnature (2026-10-29): App\Support\Signatures\SignaturePlan. --}}
+        @php
+            $suggestion = $signatures->suggestion();
+            $sizeName = \App\Support\Signatures\SignaturePlan::formatName($signatures->size, 2);
+        @endphp
+        <span
+            class="{{ $chip }}"
+            title="Segnature da {{ $signatures->size }} pagine{{ $signatures->includeCovers ? ', copertine incluse in testa' : ', copertine escluse (stampate a parte)' }} — impostazione della rivista{{ $suggestion ? '. Per un numero intero di '.$sizeName.': +'.$suggestion['add'].' pagine ('.$suggestion['addTotal'].')'.($suggestion['remove'] !== null ? ' oppure −'.$suggestion['remove'].' ('.$suggestion['removeTotal'].')' : '') : '' }}"
+            data-testid="summary-signatures"
+        >
+            {{-- Interruttore dei confini sulla griglia: preferenza del singolo
+                 utente (store timoneView, localStorage), solo CSS, nessuna
+                 richiesta. Qui e non nella barra comandi, che a 1366 px
+                 andava a capo. --}}
+            <button
+                type="button"
+                x-on:click="$store.timoneView?.toggleSignatures()"
+                :aria-pressed="$store.timoneView?.signatures ? 'true' : 'false'"
+                :class="$store.timoneView?.signatures ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:border-indigo-500'"
+                class="self-center rounded border px-1 leading-4 font-semibold"
+                title="Mostra o nascondi sulla griglia i confini dei {{ \App\Support\Signatures\SignaturePlan::formatName($signatures->size, 2) }}"
+                data-testid="toggle-signatures"
+            >{{ $signatures->size }}°</button>
+            Segnature: <strong>{{ $signatures->summaryLabel() }}</strong>
+            @if ($signatures->remainder() > 0)
+                <span class="opacity-75">({{ $signatures->breakdownLabel() }})</span>
+            @endif
+            @if (! $signatures->isPrintable())
+                <span class="font-semibold text-red-700 dark:text-red-400" data-testid="summary-signatures-warning">⚠️ {{ $signatures->countedPages() }} non è multiplo di 4: non stampabile così</span>
+            @endif
+            @if ($suggestion)
+                <span class="opacity-75" data-testid="summary-signatures-suggestion">→ +{{ $suggestion['add'] }} = {{ $suggestion['addTotal'] }}{{ $suggestion['remove'] !== null ? ' · −'.$suggestion['remove'].' = '.$suggestion['removeTotal'] : '' }}</span>
+            @endif
+        </span>
 
         <span class="{{ $chip }}" title="Copertine con almeno un contenuto">
             Copertine: <strong>{{ $summary['coversAssigned'] }}</strong>/{{ $summary['coversTotal'] }} assegnate

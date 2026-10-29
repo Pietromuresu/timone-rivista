@@ -581,6 +581,45 @@ document.addEventListener('alpine:init', () => {
         document.querySelector(`[data-page-id="${event.detail?.pageId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
+    /**
+     * Opzioni di vista del singolo utente (2026-10-29): per ora i confini
+     * delle segnature. Su <html> (fuori dall'albero di Livewire, un morph
+     * non lo tocca) come contentPanel; il disegno è tutto in app.css.
+     */
+    const VIEW_STORAGE_KEY = 'timone.view';
+
+    Alpine.store('timoneView', {
+        signatures: true,
+
+        init() {
+            try {
+                const saved = JSON.parse(window.localStorage.getItem(VIEW_STORAGE_KEY) || '{}');
+
+                if (typeof saved.signatures === 'boolean') this.signatures = saved.signatures;
+            } catch (error) {
+                // Preferenza non leggibile: confini visibili.
+            }
+
+            this.apply();
+        },
+
+        toggleSignatures() {
+            this.signatures = ! this.signatures;
+
+            try {
+                window.localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify({ signatures: this.signatures }));
+            } catch (error) {
+                // Non ricordata, ma applicata per questa sessione.
+            }
+
+            this.apply();
+        },
+
+        apply() {
+            document.documentElement.dataset.signatures = this.signatures ? 'on' : 'off';
+        },
+    });
+
     Alpine.store('timoneZoom', {
         levels: ZOOM_LEVELS,
         level: 'm',

@@ -178,6 +178,9 @@ Numeri e riviste **già esistenti** al momento della migration:
 - **Colonne**: `issue_id` (cascade), `variant`, `status` (`queued`/`processing`/`ready`/`failed`, `App\Enums\MagazineExportStatus`), `disk`, `path` (`exports/issue-{id}/{variant}.pdf`), `size`, `page_count`, `missing_files` (contenuti disegnati «File mancante»), `error`, `requested_by` (nullOnDelete), `started_at`, `finished_at`.
 - **Scrive**: `App\Support\MagazineExport\MagazineExportRequester` (richiesta), `App\Jobs\GenerateMagazinePdf` (avanzamento). Eliminando un numero il file va nell'elenco di `DeleteStoredFiles` (`StoredFiles::forIssues()`).
 
+### `magazines.signature_pages`, `magazines.signature_includes_covers` (segnature, 2026-10-29, migration `2026_10_29_200000_add_signature_settings_to_magazines`)
+- `signature_pages` (default 32; il modulo ammette 8, 16, 32, 64), `signature_includes_covers` (default false). Lette a ogni render dai numeri della rivista (non copiate sul numero). Salvarle tocca `pages_updated_at` dei numeri della rivista, così i timoni aperti si aggiornano al poll.
+
 ### `page_comments`, `page_comment_reads`, `issues.comments_updated_at` (commenti, 2026-10-29, migration `2026_10_29_100000_create_page_comments_tables`)
 - **`page_comments`**: `issue_id` (cascade col numero), `page_id` (**nullable, nullOnDelete**: i commenti seguono la pagina come entità; se la pagina viene eliminata restano), `user_id` (nullable, nullOnDelete: restano anche se l'utente viene eliminato), `body`, `page_label` (nome della pagina al momento del commento, riscritto con il nome di quel momento da `DeletedPageComments::preserve()` prima di ogni eliminazione di pagine), `page_deleted_at`, `edited_at`, timestamp, `deleted_at` (soft delete = commento eliminato dall'autore o da un admin).
 - **`page_comment_reads`**: (`page_comment_id`, `user_id`) chiave primaria, `read_at`. Non letto = commento di un altro senza riga per me.

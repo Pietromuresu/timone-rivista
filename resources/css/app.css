@@ -92,3 +92,57 @@
     .manuale-content table { @apply w-full text-sm border-collapse mb-4; }
     .manuale-content th, .manuale-content td { @apply border border-gray-200 dark:border-gray-600 px-2 py-1 text-left; }
 }
+
+/*
+ * Segnature (2026-10-29, App\Support\Signatures\SignaturePlan): fascia
+ * colorata alternata per segnatura e confine rosso sul lato SINISTRO della
+ * pagina che apre una segnatura (in doppia pagina cade tra le due pagine
+ * della coppia [32 | 33]). Accese/spente da <html data-signatures="on|off">
+ * (store Alpine timoneView): niente stato Livewire, nessuna richiesta.
+ * Il confine è un box-shadow che si somma agli anelli di Tailwind
+ * (--tw-shadow) invece di sostituirli: la card ha overflow-hidden, un
+ * elemento sporgente verrebbe tagliato, l'ombra no.
+ */
+.signature-strip,
+.signature-label { display: none; }
+
+html[data-signatures="on"] [data-signature] > .signature-strip {
+    display: block;
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 4px;
+    pointer-events: none;
+}
+html[data-signatures="on"] [data-signature="odd"] > .signature-strip { background: #38bdf8; }
+html[data-signatures="on"] [data-signature="even"] > .signature-strip { background: #a78bfa; }
+
+html[data-signatures="on"] [data-signature-start] {
+    --tw-shadow: -4px 0 0 0 #dc2626;
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+/* Lista: il bordo sinistro è già il colore dello stato, quindi la fascia è
+   una seconda striscia interna e il confine una linea sopra la riga. */
+html[data-signatures="on"] li[data-signature] {
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--signature-band), var(--signature-edge, 0 0 #0000);
+}
+html[data-signatures="on"] li[data-signature="odd"] { --signature-band: inset 4px 0 0 0 #38bdf8; }
+html[data-signatures="on"] li[data-signature="even"] { --signature-band: inset 4px 0 0 0 #a78bfa; }
+html[data-signatures="on"] li[data-signature-start] { --signature-edge: 0 -3px 0 0 #dc2626; }
+
+html[data-signatures="on"] .signature-label {
+    display: inline-block;
+    position: absolute;
+    top: 4px;
+    left: 0;
+    z-index: 5;
+    padding: 1px 4px;
+    border-radius: 0 0 4px 0;
+    background: #dc2626;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.2;
+    pointer-events: none;
+}
+html[data-signatures="on"] li .signature-label { position: static; border-radius: 4px; margin-right: 4px; }

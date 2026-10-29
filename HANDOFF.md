@@ -2015,3 +2015,30 @@ Invio reale via SMTP; Reverb vero (simulato «collegato» nel browser: il pollin
 5. A riduce le pagine totali eliminando quella pagina: in B, testata → scheda «Tutti» → «Pagina N, eliminata».
 6. Con l'SMTP configurato: B riceve la mail; il link apre il timone con i commenti della pagina.
 7. Utente Sola lettura: vede i commenti, al posto del campo «puoi leggere i commenti ma non scriverne».
+
+## Sessione 2026-10-29 — Fase 2: organizzazione in segnature (32esimi)
+
+Fase 1 (commenti) approvata dall'utente («vai avanti»), non committata.
+
+### Cosa è stato fatto
+- **Calcolo**: `App\Support\Signatures\SignaturePlan`, pura (quattro numeri: pagine interne, facciate di copertina, dimensione, copertine incluse). Segnature intere e resto («3 trentaduesimi + 24 pagine»), scomposizione del resto a metà ripetute fino al quartino (32 → 16, 8, 4; 24 = 16 + 8; pagine sciolte se non multiplo di 4), stampabile se multiplo di 4, suggerimento in pagine interne verso il multiplo in su e in giù (in giù non sotto la prima segnatura), segnatura di ogni pagina, pagina che apre una segnatura, nomi («trentaduesimo/i», «sedicesimi», «ottavo», «quartini»). Copertine incluse = facciate reali (4, 6 con la bandella) in testa (decisione D): la pagina interna p è la (p + copertine)-esima.
+- **Peso: indipendente (motivazione richiesta)**: `MagazineWeightCalculator` e `SignaturePlan` leggono le stesse due quantità (`issues.total_pages`, `Issue::coverPageCount()`), ma il peso non dipende dalle segnature né le segnature dalla carta. Farle dipendere l'una dall'altra avrebbe accoppiato due calcoli che cambiano per motivi diversi (carta/formato contro piegatura in tipografia) senza togliere duplicazioni: la «fonte» comune sono già le due colonne.
+- **Impostazioni per rivista**: migration `2026_10_29_200000_add_signature_settings_to_magazines` (`signature_pages` default 32, `signature_includes_covers` default false), lette a ogni render (non copiate sul numero come i parametri del peso). Modulo «Modifica rivista» → «📐 Segnature di stampa» (8/16/32/64, validato); salvarle tocca `pages_updated_at` dei numeri della rivista, così i timoni aperti in polling si aggiornano.
+- **Riepilogo**: chip «Segnature» nella barra (`summary-bar.blade.php`, anche nella riga compressa), con scomposizione, avviso rosso «N non è multiplo di 4: non stampabile così» e suggerimento «→ +8 = 128 · −24 = 96». Si aggiorna con il totale pagine come il resto della barra (render di `Grid`; per gli altri utenti broadcast `IssuePageCountUpdated` o polling su `pages_updated_at`).
+- **Griglia**: `page-card`/`page-row` mettono `data-signature="odd|even"` e `data-signature-start` sulla pagina che apre una segnatura (dalla seconda), più la fascia e l'etichetta «32° n. 2». Disegno tutto in `app.css`: fascia alternata azzurro/viola, confine = `box-shadow` rosso a sinistra sommato agli anelli di Tailwind (`--tw-shadow`: la card ha `overflow-hidden`, un elemento sporgente sarebbe tagliato). In doppia pagina la pagina che apre una segnatura è sempre dispari, quindi destra: il confine cade tra le due pagine della coppia [32 | 33]. Lista: il bordo sinistro è già lo stato, quindi fascia = seconda striscia interna e confine = linea sopra la riga (prima versione sovrascriveva il bordo dello stato: corretta dopo la prova).
+- **Interruttore** «32°» nella barra di riepilogo (store Alpine `timoneView` in `timone-alpine.js`, localStorage `timone.view`, `<html data-signatures="on|off">`): preferenza personale, nessuna richiesta al server. Prima versione nella barra comandi: a 1366 px la mandava a capo, spostato accanto al conteggio.
+
+### Verificato
+- **Test unità** `tests/Unit/SignaturePlanTest.php` (12): totali 0, 4, 32, 64, 120, 126; suggerimenti; copertine incluse/escluse e bandella; dimensione 16; indice di segnatura di ogni pagina; **confine dentro la coppia** [32 | 33] con `PageSpreadBuilder::slots()` (anche con copertine incluse → [28 | 29], e con 16 pagine); nomi.
+- **Test funzionali** `tests/Feature/Livewire/SignaturesTest.php` (9): riepilogo, avviso, aggiornamento per un secondo utente al poll dopo `resizePages`, confini e fasce in griglia/doppia/lista (niente sulle copertine), copertine incluse (confine sulla 29), dimensione 16 dalla rivista, impostazioni salvate/validate e segnale ai timoni aperti.
+- **Browser** (Chrome headless, 1366×900 e 1920×1080, 62 pagine): chip «1 trentaduesimo + 30 pagine (16 + 8 + 4 + 2 sciolte) ⚠️ 62 non è multiplo di 4 … → +2 = 64 · −30 = 32»; griglia: confine rosso a sinistra della 33 con «32° n. 2», fasce 32 azzurra / 33 viola; doppia pagina: 32 e 33 nella stessa riga a 2 px, confine tra le due; lista: etichetta e linea sopra la 33, bordo dello stato intatto; interruttore: spento → nessuna ombra/fascia/etichetta, ricordato dopo il ricaricamento; A porta le pagine a 70 → B (polling) vede «2 trentaduesimi + 6 pagine (4 + 2 sciolte)» ed etichette «32° n. 2», «32° n. 3» senza ricaricare; barra comandi su una riga a 1366 px; nessun errore in console.
+
+### Non verificato
+Reverb vero (aggiornamento del conteggio per gli altri via evento `IssuePageCountUpdated`: già esistente, non toccato); Safari/Firefox; tema scuro dei colori della fascia; con la rivista che cambia impostazioni mentre un timone è aperto con Reverb collegato (si aggiorna solo al prossimo render, annotato in `docs/11`).
+
+### Procedura manuale con due browser (segnature)
+1. Due utenti sullo stesso numero. A: «⚙️ Pagine interne» → porta il totale a un valore non multiplo di 32 (es. 120).
+2. B, senza ricaricare: «Segnature: 3 trentaduesimi + 24 pagine (16 + 8) → +8 = 128 · −24 = 96»; sulla griglia «32° n. 2» sulla 33 e «32° n. 4» sulla 97.
+3. A: totale 126 → B vede l'avviso rosso «126 non è multiplo di 4».
+4. B: vista «Doppia pagina» → la linea rossa è tra la 32 e la 33 della stessa coppia. Bottone «32°» → spariscono fasce e linee (A le vede ancora).
+5. Admin: «Modifica rivista» → 16 pagine per segnatura → i timoni aperti mostrano «sedicesimi» al poll (senza Reverb) o al prossimo aggiornamento.
