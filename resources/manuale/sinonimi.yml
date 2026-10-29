@@ -1,0 +1,41 @@
+# Sinonimi del dominio per la ricerca nel manuale (2026-10-29).
+# Una riga per gruppo: le parole di un gruppo si cercano come se fossero
+# la stessa. Solo parole singole (le frasi non servono: la ricerca lavora
+# parola per parola). Le parole passano dalla stessa normalizzazione della
+# ricerca (App\Support\Manual\ItalianText): accenti e desinenze non contano.
+# Letto da App\Support\Manual\ManualSynonyms; un test controlla il formato.
+
+- [togliere, tolgo, toglie, rimuovere, rimuovo, eliminare, elimino, cancellare, cancello, levare]
+- [pubblicità, adv, inserzione, inserzioni, annuncio, annunci, pubblicitario, inserzionista]
+- [pdf, file, materiale, allegato, documento, immagine]
+- [spostare, sposto, muovere, trascinare, trascino, riordinare, drag]
+- [annullare, annullo, annulla, undo, indietro, ripristinare, recuperare]
+- [ripetere, ripeti, redo, rifare]
+- [stampa, stampare, stampabile, tipografia]
+- [articolo, articoli, redazionale, editoriale, servizio]
+- [copertina, copertine, cover]
+- [bandella, battente, aletta, lembo]
+- [pagina, pagine, facciata, facciate]
+- [aggiungere, aggiungo, inserire, creare, nuovo, nuova]
+- [modificare, modifico, cambiare, cambio, correggere, editare]
+- [rinominare, rinomino, nome, titolo]
+- [bloccare, blocco, lucchetto, proteggere]
+- [scambiare, scambio, invertire, swap]
+- [selezionare, selezione, seleziono, spuntare]
+- [collegare, collegate, gruppo, legare, agganciare]
+- [commento, commenti, commentare, nota, messaggio]
+- [errore, problema, avviso, messaggio, rifiutato]
+- [vedere, vedo, visualizzare, mostra, compare, appare]
+- [esportare, esporta, export, scaricare, download]
+- [peso, pesa, grammi, grammatura, scaglione]
+- [segnatura, segnature, trentaduesimi, sedicesimi, quartino, foglio]
+- [utente, utenti, account, persona]
+- [ruolo, ruoli, permessi, permesso, autorizzazione]
+- [scadenza, deadline, sollecito, promemoria]
+- [chiudere, chiusura, archiviare, archivio]
+- [anteprima, miniatura, thumbnail]
+- [ctrl, cmd, control, command]
+- [tasto, tasti, scorciatoia, scorciatoie, tastiera, shortcut]
+- [occupazione, spazio, occupato, misura, formato, dimensione]
+- [segnaposto, prevista, previste, riservata]
+- [prenotata, prenotate, prenotato, prenotazione]

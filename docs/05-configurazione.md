@@ -157,7 +157,9 @@ I valori di default dei parametri di peso (maggiorazione 2 %, peso bancale 20 kg
 
 | Chiave | Dove | Note |
 |---|---|---|
-| `app.manual_path` | `config/app.php:23` | `base_path('MANUALE_UTENTE.md')`; modificabile solo nei test |
+| `app.manual_path` | `config/app.php:23` | `base_path('MANUALE_UTENTE.md')`: dal 2026-10-29 è il file unico **generato** (`php artisan manuale:genera`); la pagina non lo legge più |
+| `timone.manual_dir` | `config/timone.php` | `resource_path('manuale')`: le pagine del manuale (2026-10-29); modificabile solo nei test |
+| `timone.manual_archive` | `config/timone.php` | `docs/archivio/MANUALE_UTENTE_2026-10-29.md`: manuale a pagina unica archiviato, usato da `manuale:verifica`; non va modificato |
 | `livewire.temporary_file_upload.rules` | `config/livewire.php:88` | `mimes:pdf,jpg,jpeg,png,webp`, `max:` letto da `config/timone.php` → `upload_max_kb` (100 MB). PHP e nginx devono accettare almeno il 10% in più: `docker/php/uploads.ini` (110M/120M) e `client_max_body_size 120m` in nginx |
 | `livewire.temporary_file_upload.max_upload_time` | `config/livewire.php:98` | 30 (minuti; era 10) |
 

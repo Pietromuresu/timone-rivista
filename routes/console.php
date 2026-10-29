@@ -17,3 +17,9 @@ Schedule::command('timone:send-deadline-reminders')->dailyAt('07:30');
 
 // Annulla/ripeti (2026-10-28): cronologia oltre 24 ore e contenuti nel cestino.
 Schedule::command('timone:history-prune')->hourly();
+
+// Assistente del manuale (2026-10-29): ricalcolo notturno dai voti (pubblica
+// solo se il set di riferimento resta verde) e cancellazione dei voti oltre
+// 12 mesi. Di notte: il ricalcolo legge tutti i voti e rifà ~280 domande.
+Schedule::command('manuale:apprendi')->dailyAt('03:15');
+Schedule::command('manuale:pulisci')->dailyAt('03:05');

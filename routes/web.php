@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdDashboardExportController;
 use App\Http\Controllers\ContentFileController;
 use App\Http\Controllers\DocumentationController;
+use App\Http\Controllers\ManualAssistantController;
 use App\Http\Controllers\MagazineExportController;
 use App\Http\Controllers\PageFileController;
 use App\Http\Controllers\ProfileController;
@@ -13,6 +14,7 @@ use App\Livewire\Magazines\Create as MagazineCreate;
 use App\Livewire\Magazines\Edit as MagazineEdit;
 use App\Livewire\Magazines\Index as MagazineIndex;
 use App\Livewire\Magazines\Show as MagazineShow;
+use App\Livewire\Manual\Questions as ManualQuestions;
 use App\Livewire\Users\Create as UserCreate;
 use App\Livewire\Users\Edit as UserEdit;
 use App\Livewire\Users\Index as UserIndex;
@@ -76,6 +78,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // {magazine:slug} che verificano canAccessMagazine() per quella rivista
     // specifica (qui non c'è alcuna rivista specifica da verificare).
     Route::get('/manuale', [DocumentationController::class, 'show'])->name('documentation.show');
+    // Indice di ricerca del manuale (2026-10-29): JSON usato dal browser
+    // (la ricerca nel campo del manuale resta nel browser).
+    Route::get('/manuale/indice.json', [DocumentationController::class, 'searchIndex'])->name('documentation.search-index');
+    // Assistente «Chiedi al manuale» (2026-10-29): domanda → pagina, e voti.
+    // Limite per utente: è un servizio interno, ma ogni domanda costa
+    // qualche millisecondo di CPU e scrive le domande senza risposta.
+    Route::post('/manuale/assistente', [ManualAssistantController::class, 'ask'])
+        ->middleware('throttle:30,1')
+        ->name('documentation.assistant.ask');
+    Route::post('/manuale/assistente/voto', [ManualAssistantController::class, 'vote'])
+        ->middleware('throttle:30,1')
+        ->name('documentation.assistant.vote');
+    // «Cosa chiedono gli utenti»: solo admin (controllo nel componente).
+    Route::get('/manuale/amministrazione/domande', ManualQuestions::class)->name('documentation.questions');
+    // Una pagina del manuale per argomento (2026-10-29), resources/manuale/{slug}.md.
+    Route::get('/manuale/{slug}', [DocumentationController::class, 'page'])
+        ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
+        ->name('documentation.page');
     // Vecchio indirizzo (Fase 6.1): reindirizzato per non rompere segnalibri.
     Route::redirect('/documentazione', '/manuale', 301);
 

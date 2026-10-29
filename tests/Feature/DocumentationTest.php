@@ -1,67 +1,90 @@
 <?php
 
 use App\Models\User;
+use App\Support\Manual\LegacyAnchors;
+use App\Support\Manual\ManualPage;
+use App\Support\Manual\ManualRepository;
+use App\Support\ManualRenderer;
 
-test('a guest is redirected away from the documentation page', function () {
+// Manuale utente in app. Bug 3 (2026-10-12): /manuale, indice cliccabile,
+// HTML grezzo non eseguito, manuale mancante gestito con un messaggio.
+// Dal 2026-10-29 una pagina per argomento (resources/manuale/*.md):
+// /manuale = pagina d'ingresso, /manuale/{slug} = una pagina.
+
+function manualReader(): User
+{
+    return User::factory()->create(['email_verified_at' => now()]);
+}
+
+test('a guest is redirected away from the manual', function () {
     $this->get(route('documentation.show'))->assertRedirect(route('login'));
+    $this->get(route('documentation.page', 'spostare-pagine'))->assertRedirect(route('login'));
 });
 
-test('any authenticated user can view the documentation page, rendered from MANUALE_UTENTE.md', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
+test('the entry page shows «Inizia qui», «Cosa vuoi fare?» and the index of every page', function () {
+    $response = $this->actingAs(manualReader())->get(route('documentation.show'))->assertOk();
 
-    $response = $this->actingAs($user)->get(route('documentation.show'));
+    $response->assertSee('data-testid="manual-start"', false)
+        ->assertSee('data-testid="manual-tasks"', false)
+        ->assertSee('aria-label="Indice del manuale"', false)
+        ->assertSee('rivista → numero → timone')
+        ->assertSee('class="manual-task"', false)
+        // Fase 2: ricerca in testa, con l'indirizzo dell'indice e i compiti di riserva.
+        ->assertSee('data-testid="manual-search"', false)
+        ->assertSee('manuale\\/indice.json', false)
+        ->assertSee('class="manual-search-tasks"', false)
+        ->assertSee('data-testid="manual-role-filter"', false);
 
-    $response->assertOk();
-
-    // Un campione di sezioni, non tutte: una feature pre-esistente
-    // (percentuale contenuto, Punto 3) e tre aggiunte in questo stesso
-    // batch (Fase 2.3 gruppi, Fase 3.1 copertina, Fase 5 redattore/scadenza)
-    // — se una di queste manca, la pagina sta servendo un manuale non
-    // aggiornato insieme al codice, non solo uno stantio in generale.
-    $response->assertSee('Cambiare lo stato di una pagina', false);
-    $response->assertSee('Collegare pagine in un gruppo permanente', false);
-    $response->assertSee('Le copertine (I, II, III, IV) e la bandella', false); // Fase 2: sezione 9bis rinominata
-    $response->assertSee('redattore di riferimento', false);
-
-    // La conversione Markdown->HTML è avvenuta per davvero (non solo
-    // testo grezzo passato attraverso): un titolo "##" deve diventare un
-    // vero tag <h2>, non comparire come testo con i cancelletti letterali.
-    $response->assertSee('<h2', false);
-    $response->assertDontSee('## Collegare', false);
+    foreach (ManualRepository::fromConfig()->all() as $page) {
+        $response->assertSee('href="'.route('documentation.page', $page->slug).'"', false);
+    }
 });
 
-// Bug 3 (2026-10-12): manuale su /manuale, indice cliccabile, HTML grezzo
-// non eseguito, file mancante gestito con un messaggio.
+test('every page of the manual opens at /manuale/{slug} with its «In breve» and the index marking it as current', function () {
+    $user = manualReader();
+
+    foreach (ManualRepository::fromConfig()->all() as $page) {
+        $this->actingAs($user)->get('/manuale/'.$page->slug)
+            ->assertOk()
+            ->assertSee('<h1>'.e($page->titolo).'</h1>', false)
+            ->assertSee('class="manual-in-breve"', false)
+            ->assertSee('aria-current="page"', false)
+            ->assertDontSee(':::', false)
+            ->assertDontSee('](manuale:', false);
+    }
+});
+
+test('an unknown page is a 404', function () {
+    $this->actingAs(manualReader())->get('/manuale/non-esiste')->assertNotFound();
+});
 
 test('the manual lives at /manuale and the old /documentazione address redirects there', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
-
     expect(route('documentation.show', absolute: false))->toBe('/manuale');
-    $this->actingAs($user)->get('/documentazione')->assertRedirect('/manuale');
+    $this->actingAs(manualReader())->get('/documentazione')->assertRedirect('/manuale');
 });
 
-test('the manual page has a clickable table of contents pointing at the real heading ids', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
+test('the entry page carries the full old-anchor map for the redirect script', function () {
+    $response = $this->actingAs(manualReader())->get(route('documentation.show'))->assertOk();
 
-    $response = $this->actingAs($user)->get(route('documentation.show'))->assertOk();
+    // Lo script legge window.location.hash e usa questa mappa (JSON).
+    $response->assertSee('window.location.hash', false);
 
-    $response->assertSee('aria-label="Indice del manuale"', false);
-    // Stesso id dell'anchor scritto a mano nel manuale ([§4bis](#4bis-...)).
-    $response->assertSee('href="#4bis-bloccare-una-pagina"', false);
-    $response->assertSee('id="4bis-bloccare-una-pagina"', false);
+    foreach (LegacyAnchors::MAP as $anchor => $slug) {
+        $response->assertSee(json_encode($anchor), false)->assertSee(json_encode($slug), false);
+    }
 });
 
-test('a missing manual file shows a message instead of a server error', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
-    config(['app.manual_path' => base_path('NON_ESISTE.md')]);
+test('a missing manual shows a message instead of a server error', function () {
+    config(['timone.manual_dir' => base_path('NON_ESISTE')]);
 
-    $this->actingAs($user)->get(route('documentation.show'))
+    $this->actingAs(manualReader())->get(route('documentation.show'))
         ->assertOk()
         ->assertSee('Il manuale utente non è disponibile');
+    $this->actingAs(manualReader())->get('/manuale/spostare-pagine')->assertNotFound();
 });
 
 test('raw html in the manual is escaped, never rendered', function () {
-    $rendered = \App\Support\ManualRenderer::render("## Titolo\n\n<script>alert(1)</script>\n\n### Sotto");
+    $rendered = ManualRenderer::render("## Titolo\n\n<script>alert(1)</script>\n\n### Sotto");
 
     expect($rendered['html'])->not->toContain('<script>')
         ->and($rendered['html'])->toContain('&lt;script&gt;')
@@ -69,17 +92,19 @@ test('raw html in the manual is escaped, never rendered', function () {
             ['level' => 2, 'id' => 'titolo', 'text' => 'Titolo'],
             ['level' => 3, 'id' => 'sotto', 'text' => 'Sotto'],
         ]);
+
+    // Anche dentro i blocchi :::nome: l'HTML dei blocchi lo scrive il renderer, il testo resta escapato.
+    $page = ManualPage::parse("---\ntitolo: T\nslug: t\ncategoria: Riferimento\nruoli: [admin]\nparole_chiave: [a]\nsinonimi: [b]\nordine: 1\n---\n:::in-breve\n<img src=x onerror=alert(1)>\n:::\n:::problema <b>titolo</b>\ntesto\n:::\n");
+    $html = ManualRenderer::renderPage($page, fn ($slug) => '/manuale/'.$slug)['html'];
+
+    expect($html)->not->toContain('<img')->not->toContain('<b>')->toContain('&lt;img')->toContain('&lt;b&gt;');
 });
 
 test('links to the application in the manual use APP_URL from the environment, not a hardcoded localhost', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
     config(['app.url' => 'https://timone.example.org/']);
 
-    $this->actingAs($user)->get(route('documentation.show'))
+    $this->actingAs(manualReader())->get(route('documentation.show'))
         ->assertOk()
         ->assertSee('href="https://timone.example.org"', false)
-        ->assertDontSee('{{APP_URL}}', false)
-        // Solo la riga del manuale: il resto del layout (asset, host della
-        // richiesta di test) contiene legittimamente "localhost".
-        ->assertDontSee('Accedi da <a href="http://localhost', false);
+        ->assertDontSee('{{APP_URL}}', false);
 });

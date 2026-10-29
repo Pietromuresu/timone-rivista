@@ -90,4 +90,25 @@ return [
         'directory' => 'exports',
         'preview_settings' => '/ebook',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Manuale utente (2026-10-29)
+    |--------------------------------------------------------------------------
+    |
+    | Cartella delle pagine del manuale (una per argomento, con il front
+    | matter): App\Support\Manual\ManualRepository. Qui e non in
+    | config/app.php, che è un file protetto (CLAUDE.md, regola 4): lì resta
+    | `app.manual_path`, che punta a MANUALE_UTENTE.md, ora generato da
+    | `php artisan manuale:genera`. Si cambia solo nei test.
+    |
+    */
+    'manual_dir' => resource_path('manuale'),
+
+    /*
+    | Copia del manuale a pagina unica com'era il 2026-10-29: la usa
+    | `php artisan manuale:verifica` per controllare che nelle pagine nuove
+    | non manchi nulla. Non va modificata.
+    */
+    'manual_archive' => base_path('docs/archivio/MANUALE_UTENTE_2026-10-29.md'),
 ];

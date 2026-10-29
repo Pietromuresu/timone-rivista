@@ -8,8 +8,8 @@
         <title>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        {{-- Font Figtree in locale (2026-10-29): arriva da app.css
+             (@fontsource/figtree via Vite), non più da fonts.bunny.net. --}}
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -70,6 +70,14 @@
                 {{ $slot }}
             </main>
         </div>
+
+        {{-- «?» fisso (2026-10-29): apre «Chiedi al manuale» da ogni schermata,
+             con il contesto della schermata (App\Support\Manual\ManualContexts).
+             In basso a SINISTRA: a destra ci sono già gli avvisi del timone e
+             «torna su» del manuale. --}}
+        @auth
+            @include('documentation.partials.help-button', ['context' => \App\Support\Manual\ManualContexts::forRoute(request()->route()?->getName())])
+        @endauth
 
         {{-- 2026-10-28: Alpine arriva solo con lo script di Livewire, che
              Livewire inserisce da sé SOLO nelle pagine con un suo

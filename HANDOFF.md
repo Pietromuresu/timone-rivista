@@ -2070,3 +2070,118 @@ Mouse vero in Chrome/Firefox/Safari (container query: Safari 16+, Firefox 110+),
 4. A cambia il totale pagine (+1 / −1): le ultime coppie si ricompongono per entrambi; il riquadro «III di copertina» compare/sparisce.
 5. Restringere la finestra: le coppie per riga scendono (3 → 2 → 1) senza barra di scorrimento orizzontale; zoom S/M/L cambia quante coppie stanno in una riga.
 6. Commenti (💬) e confini delle segnature (linea rossa tra 32 e 33) visibili come nelle altre viste.
+
+
+## Sessione 2026-10-29 — Manuale utente: Fase 0 (analisi, nessuna modifica al manuale)
+
+Prompt «Manuale utente: riorganizzazione, ricerca e assistente senza LLM» (5 fasi, una per sessione). Le Fasi 1–3 di «commenti, 32esimi, doppia pagina» sono ancora nel working tree, non committate.
+
+### Fatto
+- **Copia d'archivio** `docs/archivio/MANUALE_UTENTE_2026-10-29.md`, identica al manuale (sha1 `fd579c4d…` uguale per i due file, verificato).
+- **Inventario** `docs/manuale/INVENTARIO.md`: 583 righe (B 303, D 228, N 22, A 14, R 16), ognuna con destinazione; nessun ID ripetuto (controllato con uno script). In fondo la struttura proposta (47 pagine in 8 categorie), l'elenco delle incoerenze interne del manuale e dei nomi di bottoni che non corrispondono più all'app.
+
+### Trovato (da tenere presente nelle fasi successive)
+- `config('app.manual_path')` è in `config/app.php` (file protetto, CLAUDE.md regola 4): non si cambia. Proposta: `MANUALE_UTENTE.md` resta come file generato, così quel percorso resta valido.
+- `.dockerignore` esclude tutti i `*.md` tranne `README.md` e `MANUALE_UTENTE.md`: i file in `resources/manuale/` vanno aggiunti alle eccezioni, o mancherebbero in produzione (è il bug 3 del 2026-10-12).
+- Nessuna view dell'app punta ad ancore del manuale (solo il link del menu); ci sono 25 ancore diverse usate dentro il manuale e riferimenti testuali («§14», «§5bis», «§6quinquies») in `docs/`.
+- Nomi di bottoni non più corrispondenti (verificati nelle view): «☑️ Selezione multipla» → «☑️ Selezione», «🔀 Modalità scambio» → «🔀 Scambio», «📜 Storico spostamenti» → «📜 Storico», la vecchia barra della selezione («Collega selezionate», «Cambia stato in», «Seleziona tutte»…) → «🔗 Collega», «Stato:», «Tutte»…; elenco completo nell'inventario.
+- Sei incoerenze interne (es. «🗑️ Elimina» definitivo in §5 ma recuperabile 24 ore in §6quinquies; «fino a 20MB» e «fino a 100 MB» nella stessa sezione).
+
+## Sessione 2026-10-29 — Commit delle Fasi 1–3 e Manuale utente: Fase 1 (riorganizzazione)
+
+### Commit delle tre fasi (richiesta dell'utente: uno per fase, test verdi)
+I file condivisi tra fasi (Grid, page-card, app.css, documenti…) non si potevano dividere per blocchi di diff: lo stato di fine Fase 1 e Fase 2 è stato ricostruito togliendo dalla versione finale i blocchi delle fasi successive (script nello scratchpad), con la suite completa su ogni stato prima del commit: `33faa46` commenti (917 passati), `ef9f566` segnature (938), `e9cbad6` doppia pagina (950). Le note sul manuale (Fase 0) restano fuori dai tre commit. Inciampo trovato: ripristinando i file con `tar` le date erano più vecchie delle viste compilate e Laravel riusava le viste dello stato precedente (un test rosso non vero): `php artisan view:clear` prima di ogni giro.
+
+### Archivio e inventario
+La copia `docs/archivio/MANUALE_UTENTE_2026-10-29.md` è stata rifatta dal commit `e9cbad6`: identica a quella inventariata (sha1 `fd579c4d…`), inventario invariato.
+
+### Fase 1 — cosa è stato fatto (decisioni dell'utente: 47 pagine con «copertine» e «bandella» unite → 46; una pagina per indirizzo; ancore vecchie con uno script)
+- **Pagine**: 46 file `resources/manuale/<slug>.md` in 7 categorie, ognuno con front matter (titolo, slug, categoria, ruoli, parole chiave, sinonimi, ordine), un blocco `:::in-breve` per primo, «Dettagli» richiudibili, riquadri Attenzione/Suggerimento, «Vedi anche». Testi riscritti per un utente base (frasi corte, seconda persona, nomi dei bottoni come nell'app); date e storico solo in `novita`, dettagli tecnici in `note-amministratore`. Le tabelle lunghe sono diventate elenchi; restano due tabelle brevi (scorciatoie, ruoli).
+- **Codice**: `App\Support\Manual\` — `ManualPage` (front matter con parser minimo: `symfony/yaml` è solo dev), `ManualBlocks` (blocchi `:::nome`, errore se non chiusi), `ManualRepository` (cartella in `config('timone.manual_dir')`, categorie in ordine fisso, slug unici), `ManualCompiler` (MANUALE_UTENTE.md generato), `ManualVerifier` + `php artisan manuale:verifica`, `LegacyAnchors` (28 ancore vecchie → pagina). `ManualRenderer` esteso con `renderPage()` (stesso escape; link `manuale:slug`; `data-label` sulle celle per le tabelle-elenco su telefono). `DocumentationController::show()` (ingresso) e `page()` (route `documentation.page`, `/manuale/{slug}`); viste `documentation/index`, `documentation/page`, `partials/nav` (vecchia `show.blade.php` tolta). `php artisan manuale:genera [--check]`.
+- **Incoerenze** (7, verificate nel codice, dettaglio nell'inventario: cosa diceva, cosa fa il codice con file e metodo, cosa dice ora): Elimina definitivo vs recuperabile 24 ore; 20 MB vs 100 MB; ⚠️ PDF cliccabile; «Pagine totali»; stato non in Doppia pagina; «+ Nuovo contenuto» sopra la griglia; conteggio copertine.
+- **Bottoni rinominati**: nel manuale i nomi attuali; i vecchi nelle eccezioni di `manuale:verifica` con il nome nuovo accanto.
+- **`.dockerignore`**: aggiunta `!resources/manuale/*.md`. La build ha mostrato che `*.md` vale solo per la radice: i .md in sottocartelle entravano già (commento corretto).
+- **Due problemi trovati nel browser e corretti**: indice chiuso anche sul desktop (ora uno script lo chiude solo sotto i 1024 px; senza JavaScript resta aperto); stili dei riquadri «Attenzione»/«Suggerimento» e dei bordi della legenda assenti dal CSS perché il renderer componeva i nomi delle classi (Tailwind tiene solo nomi scritti per intero).
+
+### Verificato
+- `php artisan manuale:verifica`: 428 grassetti, 64 emoji, 16 scorciatoie, 21 valori con unità del manuale archiviato, nessuno mancante; 23 eccezioni motivate.
+- Inventario: 583 righe tutte con destinazione esistente (test); controllo riga per riga degli elementi distintivi: 3 dettagli mancanti trovati e aggiunti, gli altri 20 segnalati spiegati nell'inventario.
+- Test: `tests/Feature/ManualPagesTest.php` (13: front matter, «In breve» primo e unico, «Vedi anche», link tra pagine, id dei titoli unici, blocco non chiuso, mappa delle ancore completa rispetto ai titoli e ai link del manuale archiviato, verifica dei termini, file unico aggiornato, archivio intatto, inventario), `tests/Feature/DocumentationTest.php` riscritto (ingresso, tutte le 46 pagine aperte con «In breve» e voce corrente, 404, redirect `/documentazione`, mappa nello script, manuale mancante, escape anche nei blocchi, APP_URL).
+- Build dell'immagine `app` (`docker build --target app`): 46 file in `resources/manuale/`, route del manuale presenti, `manuale:genera --check` e `manuale:verifica` verdi dentro l'immagine; immagine di prova rimossa.
+- Browser (Chrome headless, redattore): pagina d'ingresso con 12 riquadri e 46 voci; ancore vecchie (anche con «può» codificato) → pagina giusta, ancora sconosciuta → resta all'ingresso; a 500 px nessuno scorrimento orizzontale, indice chiuso, tabelle come elenchi con l'intestazione accanto; Tab raggiunge indice e link; nessun errore in console.
+
+### Non verificato / aperto
+- **Risorse esterne**: la pagina carica il font Figtree da `fonts.bunny.net` tramite il layout comune dell'app (non dal manuale): decisione chiesta all'utente.
+- Rilettura dei testi da parte di un redattore e di un commerciale (DV-52); Safari/Firefox; lettori di schermo.
+- Screenshot: segnaposto `[Screenshot da fare: …]` (timone intero, card della pagina, formati nella card) fino alla Fase 4.
+
+## Sessione 2026-10-29 — Manuale utente: Fase 2 (pagina del manuale e ricerca)
+
+Fase 1 approvata («ok font in locale con fontsource, procedi con la Fase 2»); Fase 1 non committata.
+
+### Fatto
+- **Font in locale**: `@fontsource/figtree` (pesi 400/500/600) importato in `resources/css/app.css`; tolti i link a fonts.bunny.net da `layouts/app.blade.php` e `layouts/guest.blade.php`. Nessun'altra vista carica risorse esterne (cercato con grep).
+- **Indice di ricerca** (`App\Support\Manual\ManualSearchIndex`): un documento per pagina (titolo, parole chiave, sinonimi, testo prima del primo `##`) e uno per ogni sezione `##` (con l'ancora vera del titolo); testo ripulito come lo legge l'utente. `cosa-vuoi-fare` fuori dall'indice (elenca tutti i compiti e vinceva su tutto). Route `/manuale/indice.json` (`documentation.search-index`), cache con l'impronta dei file (cambia appena cambia una pagina o sinonimi.yml), ETag.
+- **Lingua** (`ItalianText`): minuscole, accenti con una mappa esplicita, parole vuote (anche «non», che non distingue un argomento), desinenze in ordine dal più lungo con radice minima di 3 lettere. Le liste arrivano al browser nel JSON; l'algoritmo è uguale in `resources/js/manual-search-core.js`; `tests/fixtures/manual-text.json` è controllato in PHP e in JavaScript (node).
+- **Sinonimi** `resources/manuale/sinonimi.yml` (33 gruppi, parole singole, formato «- [a, b]», `ManualSynonyms` con errore sulle righe sbagliate). Tolto «collega» dal gruppo utenti (stessa radice di «collegare»); «ctrl» separato da «scorciatoia».
+- **MiniSearch** (npm, al posto di Fuse.js: indice di parole, prefisso, errori di battitura, pesi per campo, normalizzazione nostra), caricato con import dinamico solo quando si usa la ricerca (file a parte, ~18 kB). Pesi: titolo 4, sezione 3, parole chiave 3, sinonimi 2, testo 1; prefisso da 3 lettere, errori ammessi da 6 lettere («togli» diventava «sogli»).
+- **Punteggio, regolato sulle 15 domande** (tutte al primo posto alla fine; partenza 10/15): (1) i sinonimi di una parola valgono 0,5/√(n−1) della parola scritta, 0,8 se la parola scritta nel manuale non compare mai (forme irregolari come «tolgo»); serve passarli in un'unica stringa, perché MiniSearch numera i termini per stringa (con una sotto-ricerca per sinonimo ognuno era «il primo» e il peso ridotto non si applicava: trovato nel debug); (2) punteggio × (parole trovate / parole cercate)², così chi trova tutte le parole batte chi ne trova una nel titolo; (3) novita/note-amministratore/glossario con un peso ridotto. Ritocchi ai testi: «(Ctrl+Z)» nel titolo di «Annullare e ripetere» (come nel vecchio manuale), parole chiave in ruoli, caricamento multiplo, pagine interne, una frase in «Togliere un contenuto da una pagina» e in «Commerciale».
+- **Interfaccia** (`documentation/partials/search.blade.php`, `resources/js/manual-search.js`): campo grande in testa a ogni pagina del manuale (nell'ingresso: ricerca, poi «Cosa vuoi fare?», poi «Inizia qui»), `/` e Ctrl/⌘+K, risultati mentre si scrive (titolo › sezione, frammento con le parole in `<mark>`, categoria), frecce, Invio, Esc; arrivo sulla sezione evidenziato per un attimo; nessun risultato → «Prova con…» (sinonimi) e i 5 compiti più frequenti (scritti dal server: nel browser l'elenco dipendeva dai tempi di caricamento dell'indice, visto nella prova). Indice: «Mostrami le pagine per» (predefinito sul ruolo, `localStorage`, «Mostra tutto (N…)»), «In questa pagina» con la sezione corrente (IntersectionObserver). # accanto ai titoli copia il link (tooltip «Copia il link a questa sezione», «Link copiato»); «↑ Torna su»; stampa: niente menu/ricerca/indice, Dettagli aperti (beforeprint/afterprint).
+
+### Le 15 domande (risultato al primo posto, `tests/Feature/ManualSearchTest.php`)
+| Domanda | Pagina attesa | Primo risultato |
+|---|---|---|
+| come tolgo una pubblicità | assegnare-contenuto | assegnare-contenuto |
+| annullare | annullare-ripetere | annullare-ripetere |
+| bandella | copertine | copertine |
+| pdf non si vede | caricare-file | caricare-file |
+| commerciale non può spostare | ruoli | ruoli#commerciale |
+| peso | peso | peso |
+| ctrl z | annullare-ripetere | annullare-ripetere |
+| come sposto una pagina | spostare-pagine | spostare-pagine |
+| aggiungere pagine al numero | pagine-interne | pagine-interne |
+| cosa vuol dire il bordo giallo | legenda | legenda |
+| ok stampa non si può mettere | stato-pagina | stato-pagina#ok-stampa-richiede-il-pdf |
+| caricare tanti pdf insieme | caricamento-multiplo | caricamento-multiplo |
+| trentaduesimi | segnature | segnature |
+| esportare il timone in pdf | esporta-timone-pdf | esporta-timone-pdf |
+| avvisare un collega con un commento | commenti | commenti |
+
+10 domande di controllo, scritte dopo e **non usate per regolare la ricerca** (7 al primo posto, 8 nei primi 3): mancano «chi ha spostato una pagina» (quasi solo parole vuote → «Spostare le pagine» invece di «Storico e cronologia»), «pubblicità sulla seconda di copertina» («seconda» non collegata a «II») e, solo al secondo posto, «cambiare lo stato di tante pagine insieme». Lasciate così di proposito: è il terreno della Fase 3.
+
+### Verificato
+- Test: `tests/Unit/ItalianTextTest.php`, `tests/Feature/ManualSearchTest.php` (ogni pagina e sezione indicizzata con l'ancora vera, nessun markup nel testo, sinonimi validi e riga sbagliata = errore, route con login ed ETag, cache che cambia con una pagina, normalizzazione uguale nel browser, 15 domande al primo posto), `DocumentationTest` esteso. Suite completa: vedi consegna.
+- Browser (Chrome headless, redattore): ordine dell'ingresso (ricerca, compiti, Inizia qui); l'indice non si scarica finché non si usa la ricerca; `/` e Ctrl+K portano al campo; «come tolgo una pubblicità» → «Mettere un contenuto su una pagina» con frammento evidenziato; freccia giù + Invio aprono il secondo risultato; arrivo su `/manuale/copertine#la-bandella` evidenziato; nessun risultato → 5 compiti; filtro: redattore predefinito, «commerciale» 34 pagine + «Mostra tutto (12…)» → 46; «In questa pagina» evidenzia «Peso reale dopo la stampa» scorrendo; «Torna su» riporta a 0; copia link negli appunti (`…/manuale/peso#peso-copia-e-scaglione`); stampa: indice e ricerca nascosti, Dettagli presenti nel PDF; a 500 px «bandella» → «Le copertine e la bandella», nessuno scorrimento orizzontale; **nessuna risorsa esterna** nella scheda Network; nessun errore in console.
+
+### Non verificato
+Safari/Firefox (scorciatoie, appunti), lettori di schermo sulla lista dei risultati (ruoli ARIA combobox/listbox messi, non provati con uno screen reader), domande vere degli utenti (DV-53).
+
+### Manutenzione
+Pagina nuova o cambiata: parole chiave e sinonimi nel front matter; parola del dominio con più nomi: un gruppo in `sinonimi.yml`; poi `ManualSearchTest` (le 15 domande devono restare al primo posto: se una scende, sistemare la pagina o i sinonimi, non la soglia).
+
+
+## Sessione 2026-10-29 — Manuale utente: Fase 3 (assistente «Chiedi al manuale», senza LLM)
+
+Fase 2 approvata («ok procedi con la Fase 3»); Fasi 1–3 del manuale non committate.
+
+### Fatto
+- **Motore di ricerca in PHP** (`App\Support\Manual\SearchEngine`): copia delle regole di MiniSearch (BM25 k 1,2 b 0,7 d 0,5, prefisso, errori di battitura, pesi per campo, sinonimi, copertura², moltiplicatore «quality» = termini distinti trovati). Serve perché il cancello del job gira in produzione, dove non c'è node. Un test confronta i primi 5 risultati PHP/browser su 35 domande: identici. Prefissi con ricerca binaria, errori di battitura per lunghezza, espansioni memorizzate: ~4,5 ms a domanda.
+- **Domande iniziali** `resources/manuale/domande.yml` (61 voci, 266 formulazioni, nessun testo di risposta) letto da `ManualQuestions`; le 15 domande della Fase 2 spostate in `resources/manuale/domande-di-controllo.yml` (`tests/` non entra nell'immagine Docker).
+- **Chiave di domanda** (`QuestionKey`): token ItalianText → rappresentante del gruppo di sinonimi, unici, ordinati, max 255; se restano solo parole vuote la chiave le tiene.
+- **Assistente** (`ManualAssistant`): punteggio pagina = max dei suoi documenti (pagina, sezioni, domande con campo `domanda` peso 12) × bonus contesto 1,15 × (1 + correzione ±0,3). Domanda già nota (stessa chiave) → la sua pagina vale il migliore × 1,5. Soglie misurate: risposta ≥ 60 punti e copertura ≥ 0,5; «Forse cercavi» ≥ 12; sotto, «niente». Se cambiano i pesi di SearchEngine le soglie vanno rimisurate.
+- **HTTP**: `POST /manuale/assistente` e `/manuale/assistente/voto` (throttle 30/min), `ManualAssistantController` sottile; `ManualAssistantDesk` (risposta + ricevuta cifrata `AnswerToken`, 24 h + domande senza risposta), `ManualFeedbackRecorder` (un voto per risposta e una scelta; alternativa solo dopo 👎; utente = HMAC con APP_KEY).
+- **Tabelle** (migrazione `2026_10_29_300000`): manual_feedback, manual_learned_boosts, manual_learned_questions, manual_unanswered, manual_learning_runs, manual_disabled.
+- **Apprendimento** (`ManualLearning`, puro): ultimo voto per persona/chiave/pagina; peso posizione (risposta 1, lista pos. 2–3 1,5, scelta dopo 👎 2) × decadimento (mezza vita 90 gg) × versione (pagina cambiata ½, «In breve» cambiato 0: il voto giudicava un testo che non c'è più); min 5 voti da 3 persone; Wilson 95% (inferiore se maggioranza positiva, superiore se negativa), correzione = 0,6 × scostamento da 0,5 (quindi ±0,3 max); domanda imparata se Jaccard < 0,5 con ogni chiave iniziale; sospetta con ≥ 5 persone e superiore < 0,3. **Nota**: dopo la regola 1 «5 voti» implica 5 persone, quindi «≥ 3 persone» è sempre vero (lasciato come da spec).
+- **Cancello** (`ManualLearningGate`): tutte le domande di domande.yml + controllo nei primi 3 con i pesi nuovi, altrimenti non si pubblica. `ManualLearningPublisher` ricalcola da zero, pubblica in transazione, registra il giro e logga. Comandi `manuale:apprendi` (03:15) e `manuale:pulisci` (03:05, 12 mesi) in `routes/console.php`.
+- **Interfaccia**: bottone «?» fisso in basso a sinistra in `layouts/app` (contesto da `ManualContexts`), riquadro sulla pagina /manuale, 6 domande rapide, `resources/js/manual-assistant.js`. Pagina admin «Cosa chiedono gli utenti» `/manuale/amministrazione/domande` (Livewire `Manual\Questions`, `ManualInsights`, unica azione «Disattiva»).
+- **Manuale**: pagina nuova `chiedi-al-manuale` (47 pagine), aggiornate novita, inizia-qui, note-amministratore; `manuale:genera` e `manuale:verifica` verdi.
+
+### Verificato
+- Test: `tests/Unit/ManualLearningTest.php` (Wilson, decadimento, ±0,3, un voto per persona, soglie, versione ½/0, domande imparate, pagine tolte, sospette), `tests/Feature/ManualAssistantTest.php` (domande.yml tutte al 1° posto, controllo 15/15, 20 domande nuove: 13 nei primi 3 con i 7 fuori elencati nel fixture, HTTP, voti, job, cancello che rifiuta, simulazione 600 voti a caso + avversario sempre 👎, admin, pulizia, «?»), test di parità PHP/JS in ManualSearchTest. 72 test del manuale verdi.
+- Ricerca da sola (senza «domanda già nota») 252/262 domande al primo posto; domande fuori tema 0–22 punti.
+- Browser (Chrome headless): «?» con tastiera, contesto, risposta, 👎 → alternative → scelta, Esc riporta il fuoco, «Forse cercavi», «niente», telefono, nessuna risorsa esterna, nessun errore JS.
+- `manuale:apprendi` lanciato a mano sul DB locale: 3 voti, set verde, riga nel log `Manuale, apprendimento: pesi pubblicati.`
+
+### Non verificato / da fare
+- Suite completa: lanciata, esito da riportare. Docs docs/02..12, CHANGELOG, DA-VERIFICARE, README e nextcloud NON ancora aggiornati per la Fase 3.
+- I 7 fallimenti delle 20 domande in stile utente (vedi fixture) non sono stati corretti: da valutare con domande vere.

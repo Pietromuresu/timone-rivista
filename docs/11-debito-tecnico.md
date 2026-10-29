@@ -203,6 +203,15 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 - **Sostituzione del PDF non annullabile** (scelta dell'utente): il file vecchio si cancella subito.
 - **Autore del conflitto dal registro attività**: è l'ultima voce di un altro utente sul numero dopo la mia azione, non necessariamente quella sulla stessa riga.
 
+## Manuale a pagine (aggiunto il 2026-10-29)
+
+- **Font da `fonts.bunny.net`**: risolto il 2026-10-29 (scelta dell'utente): Figtree in locale con `@fontsource/figtree`, nessuna risorsa esterna.
+- **Ricerca a regole fisse**: desinenze e sinonimi scritti a mano. Forme irregolari («tolgo») e domande fatte quasi solo di parole vuote («chi ha spostato…») si appoggiano ai sinonimi o falliscono; su 10 domande di controllo non usate per regolare la ricerca: 7 al primo posto, 8 nei primi 3 (vedi HANDOFF). La Fase 3 (apprendimento dal feedback) è pensata per questo.
+- **Indice di ricerca da 180 documenti**, scaricato per intero la prima volta che si usa la ricerca (~175 kB, poi in cache del browser con ETag).
+- **Front matter con un parser minimo** (`ManualPage::parse()`): solo `chiave: valore` e liste `[a, b]`, perché `symfony/yaml` è solo una dipendenza di sviluppo.
+- **I link `#` dei titoli** sono raggiungibili con Tab (rumore per chi usa la tastiera): da rivedere con il «copia link» della Fase 2.
+- **Screenshot**: segnaposto visibili `[Screenshot da fare: …]` finché non c'è la Fase 4.
+
 ## Griglia a doppia pagina (aggiunto il 2026-10-29)
 
 - **Regole CSS generate** per 1–4 coppie per riga e tre zoom (`app.css`): ripetitive ma senza JavaScript; una soglia nuova richiede di generarne un blocco.

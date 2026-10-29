@@ -15,6 +15,13 @@
  * (e './echo' ora non lancia comunque più: vedi lì).
  */
 import './timone-alpine';
+// Manuale (2026-10-29): ricerca, filtro per ruolo, copia link. Registra i
+// suoi componenti Alpine all'avvio come timone-alpine; MiniSearch si carica
+// solo quando si usa la ricerca (import dinamico, file a parte).
+import './manual-search';
+// Assistente «Chiedi al manuale» e bottone «?» (2026-10-29): solo fetch al
+// server, nessuna libreria.
+import './manual-assistant';
 import { installDragAutoScroll } from './drag-autoscroll';
 import './deleted-issue-redirect';
 import './bootstrap';

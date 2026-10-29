@@ -275,7 +275,11 @@ Limite noto: non è consapevole dei gruppi di pagine (`HANDOFF.md`, "Debito noto
 
 ## Flusso 14 — Manuale in-app
 
-`GET /manuale` → `DocumentationController::show` legge `config('app.manual_path')` (= `MANUALE_UTENTE.md`), sostituisce `{{APP_URL}}` e lo converte con `App\Support\ManualRenderer` (CommonMark, HTML grezzo escapato). Se il file manca, mostra un messaggio + `report()` invece di un 500. `.dockerignore` include esplicitamente `!MANUALE_UTENTE.md`.
+Dal 2026-10-29 il manuale è diviso in pagine, `resources/manuale/<slug>.md` (front matter + blocchi `:::in-breve`, `:::dettagli`, `:::attenzione`, `:::suggerimento`, `:::screenshot`, `:::compiti`, `:::legenda`, `:::problema`).
+- `GET /manuale` → `DocumentationController::show`: pagina d'ingresso («Inizia qui» + «Cosa vuoi fare?» + indice per categorie). Un piccolo script legge l'hash dei link vecchi (`#9bis-…`) e porta alla pagina nuova (`App\Support\Manual\LegacyAnchors`).
+- `GET /manuale/{slug}` → `DocumentationController::page`: una pagina, 404 se lo slug non esiste.
+- Le pagine le legge `App\Support\Manual\ManualRepository` (cartella in `config('timone.manual_dir')`), le converte `App\Support\ManualRenderer::renderPage()` (CommonMark, HTML grezzo escapato; l'HTML dei blocchi lo scrive il renderer; link `manuale:slug` → route). Se la cartella manca: messaggio + `report()`, non un 500.
+- `MANUALE_UTENTE.md` è generato (`php artisan manuale:genera`, `App\Support\Manual\ManualCompiler`); `config('app.manual_path')` resta e punta lì (config/app.php è protetto). `php artisan manuale:verifica` (`ManualVerifier`) controlla che nessun termine del manuale archiviato `docs/archivio/MANUALE_UTENTE_2026-10-29.md` manchi.
 
 ## Calcolo peso rivista
 

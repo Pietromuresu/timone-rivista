@@ -1,0 +1,22 @@
+[
+  {"domanda": "ho messo la pubblicità sulla pagina sbagliata come la levo", "pagina": "assegnare-contenuto"},
+  {"domanda": "mi sono sbagliato, si può tornare a prima?", "pagina": "annullare-ripetere"},
+  {"domanda": "come faccio a far vedere al grafico che una pagina è pronta", "pagina": "stato-pagina", "fuori_dai_primi_3": true},
+  {"domanda": "la pagina 12 deve andare dopo la 20", "pagina": "spostare-pagine", "fuori_dai_primi_3": true},
+  {"domanda": "voglio mettere in fila 30 pdf senza farlo uno per uno", "pagina": "caricamento-multiplo", "fuori_dai_primi_3": true},
+  {"domanda": "quanti grammi pesa il numero", "pagina": "peso"},
+  {"domanda": "il numero è uscito, come lo metto via", "pagina": "chiudere-numero", "fuori_dai_primi_3": true},
+  {"domanda": "mandare una mail a un collega su una pagina", "pagina": "commenti"},
+  {"domanda": "che vuol dire la pagina viola", "pagina": "legenda"},
+  {"domanda": "il commerciale vede solo le pubblicità?", "pagina": "ruoli", "fuori_dai_primi_3": true},
+  {"domanda": "aggiungere un collega che non ha l'accesso", "pagina": "utenti"},
+  {"domanda": "come faccio un nuovo numero di ottobre", "pagina": "creare-numero"},
+  {"domanda": "dove carico il pdf dell'inserzionista", "pagina": "caricare-file"},
+  {"domanda": "una pubblicità da mezza pagina in basso", "pagina": "disposizione-nella-pagina", "fuori_dai_primi_3": true},
+  {"domanda": "come si stampa il timone su carta", "pagina": "esporta-timone-pdf"},
+  {"domanda": "chi ha mosso la pagina 7", "pagina": "storico-e-cronologia", "fuori_dai_primi_3": true},
+  {"domanda": "le pagine 10 e 11 devono restare sempre insieme", "pagina": "gruppi-collegati"},
+  {"domanda": "quando scade la consegna in tipografia", "pagina": "scadenza-stampa"},
+  {"domanda": "mettere il cliente su una pubblicità che tiene il posto", "pagina": "segnaposto"},
+  {"domanda": "vedere le pagine affiancate come la rivista aperta", "pagina": "viste-del-timone"}
+]

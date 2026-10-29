@@ -271,6 +271,13 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - Accanto alla pagina 1 c'è il riquadro tratteggiato «II di copertina» (le copertine sono nella fascia in alto); con un numero pari di pagine, dopo l'ultima c'è «III di copertina».
 - Si trascina come nella griglia, anche più pagine insieme; mentre trascini le coppie si ricompongono e si vede dove cadrà la pagina. Dopo lo spostamento le pagine che seguono cambiano lato da sole.
 
+## Manuale (2026-10-29)
+
+- Il manuale (voce «📖 Manuale») ha una pagina per argomento. La pagina d'ingresso ha «Cosa vuoi fare?»: si clicca il compito e si arriva alla spiegazione.
+- Ogni pagina inizia con «In breve» (i passi per il caso normale); sotto, «Dettagli» si apre solo se serve.
+- «Problemi frequenti» spiega i messaggi d'errore; «Legenda» i colori e le icone; «Novità» cosa è cambiato.
+- In alto c'è «Cerca nel manuale»: si scrive cosa si vuole fare (anche con parole proprie, es. «come tolgo una pubblicità») e i risultati compaiono mentre si scrive. Tasto / o Ctrl+K per andarci.
+
 ## Punti di attenzione
 
 - Vulnerabilità note: Livewire 3.8.2 (XSS) e Laravel 12.64 vanno aggiornati (composer audit: 19 advisory).

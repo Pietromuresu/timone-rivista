@@ -344,7 +344,7 @@ La migration `2026_10_27_100000_convert_occupancy_to_twelfths` (Fase 3) ha un `d
 - [ ] Drag&drop pagine e drop di un contenuto su una pagina.
 - [ ] Upload di un PDF di 2+ pagine → le miniature passano da "in elaborazione" a visibili (verifica worker, Imagick, Ghostscript e policy PDF).
 - [ ] Export "Timone PDF" e "Carico pubblicitario CSV/PDF".
-- [ ] `/manuale` si apre (il `MANUALE_UTENTE.md` è nell'immagine).
+- [ ] `/manuale` si apre, e una pagina come `/manuale/spostare-pagine` (le pagine di `resources/manuale/` sono nell'immagine: verificato con una build il 2026-10-29, 46 file).
 - [ ] `docker compose exec app php artisan migrate:status`: nessuna migration *Pending*.
 - [ ] `docker compose exec app php artisan queue:failed`: nessun job fallito nuovo.
 - [ ] `docker compose exec app tail -n 50 storage/logs/laravel.log`: nessun errore nuovo.

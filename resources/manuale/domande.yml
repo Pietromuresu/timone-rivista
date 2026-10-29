@@ -1,0 +1,465 @@
+# Domande iniziali dell'assistente «Chiedi al manuale» (2026-10-29).
+#
+# Ogni voce collega un compito alla pagina che lo spiega: 3–6 modi diversi
+# di chiedere la stessa cosa, come li scriverebbe un collega. La risposta
+# NON è qui: l'assistente mostra sempre il blocco «In breve» della pagina,
+# così cambiando la pagina cambia anche la risposta.
+#
+# Formato (letto da App\Support\Manual\ManualQuestions, un test lo controlla):
+#   - pagina: slug-della-pagina
+#     domande:
+#       - prima domanda
+#       - seconda domanda
+#
+# Ogni domanda di questo file deve trovare la sua pagina al primo posto
+# (tests/Feature/ManualAssistantTest.php): se aggiungi una domanda che
+# porta altrove, correggi la pagina (parole chiave, sinonimi) o la domanda.
+
+- pagina: annullare-ripetere
+  domande:
+    - come annullo l'ultima cosa che ho fatto
+    - ho sbagliato posso tornare indietro
+    - come si fa ctrl z nel timone
+    - rifare un'azione annullata
+    - annullare uno spostamento sbagliato
+
+- pagina: annullare-ripetere
+  domande:
+    - perché l'annulla non funziona
+    - annulla rifiutato perché un collega ha modificato
+    - non riesco ad annullare
+
+- pagina: assegnare-contenuto
+  domande:
+    - come metto un articolo su una pagina
+    - assegnare una pubblicità a una pagina
+    - trascinare un contenuto sulla pagina
+    - mettere un contenuto su più pagine selezionate
+    - assegna alla selezione
+
+- pagina: assegnare-contenuto
+  domande:
+    - togliere un articolo da una pagina
+    - liberare una pagina occupata
+    - rimuovere una pubblicità dalla pagina
+    - svuotare una pagina
+
+- pagina: avvisi
+  domande:
+    - cosa sono gli avvisi sotto il timone
+    - perché compare un avviso
+    - riquadro avvisi con il triangolo
+    - pagina revisionata senza contenuto
+
+- pagina: bloccare-pagina
+  domande:
+    - bloccare una pagina
+    - impedire che una pagina venga spostata
+    - icona del lucchetto sulla pagina
+    - sbloccare una pagina bloccata
+    - perché non riesco a spostare una pagina bloccata
+
+- pagina: caricamento-multiplo
+  domande:
+    - caricare molti file in una volta
+    - trascinare una cartella di pdf
+    - carica più file insieme
+    - creare tanti articoli dai file
+    - caricamento multiplo
+
+- pagina: caricare-file
+  domande:
+    - come carico il pdf di una pagina
+    - allegare un file a un articolo
+    - caricare un'immagine
+    - dove carico il materiale
+    - sostituire il pdf di un contenuto
+
+- pagina: caricare-file
+  domande:
+    - quanto può essere grande un file
+    - quali formati di file posso caricare
+    - il pdf non viene caricato
+    - la miniatura del pdf non compare
+
+- pagina: chiudere-numero
+  domande:
+    - come chiudo un numero
+    - archiviare un numero finito
+    - spostare il numero nell'archivio
+    - riaprire un numero chiuso
+
+- pagina: commenti
+  domande:
+    - scrivere un commento su una pagina
+    - lasciare una nota a un collega su una pagina
+    - avvisare via mail un collega
+    - fumetto sulla pagina
+    - eliminare un commento
+
+- pagina: commenti
+  domande:
+    - vedere i commenti che non ho letto
+    - commenti nuovi del numero
+    - segnare i commenti come letti
+
+- pagina: copertine
+  domande:
+    - dove sono le copertine
+    - prima di copertina
+    - quarta di copertina
+    - mettere una pubblicità in terza di copertina
+    - spostare una copertina
+
+- pagina: copertine
+  domande:
+    - aggiungere una bandella
+    - cos'è la bandella
+    - togliere la bandella
+    - copertina con aletta
+
+- pagina: creare-contenuto
+  domande:
+    - creare un nuovo articolo
+    - creare una pubblicità
+    - nuovo contenuto
+    - aggiungere un'inserzione
+    - inserire un nuovo cliente pubblicitario
+
+- pagina: creare-numero
+  domande:
+    - creare un nuovo numero
+    - aggiungere un numero alla rivista
+    - preparare il prossimo numero
+    - duplicare la struttura del numero precedente
+    - nuovo numero della rivista
+
+- pagina: cruscotto-pubblicitario
+  domande:
+    - percentuale di pubblicità del numero
+    - quanta pubblicità c'è nel numero
+    - carico pubblicitario
+    - cruscotto pubblicitario
+    - quante inserzioni sono assegnate
+
+- pagina: disposizione-nella-pagina
+  domande:
+    - spostare un contenuto dentro la pagina
+    - ruotare una pubblicità nella pagina
+    - mettere la mezza pagina in alto
+    - posizione del riquadro nella pagina
+    - due contenuti nella stessa pagina
+
+- pagina: eliminare
+  domande:
+    - eliminare un numero
+    - cancellare una rivista
+    - eliminare un utente
+    - chi può eliminare un numero
+
+- pagina: eliminare
+  domande:
+    - recuperare un contenuto eliminato
+    - cestino dei contenuti
+    - ho cancellato un articolo per sbaglio
+
+- pagina: esporta-report-pubblicita
+  domande:
+    - scaricare il report delle pubblicità
+    - esportare le pubblicità in excel
+    - csv delle inserzioni
+    - elenco delle pubblicità da mandare al commerciale
+
+- pagina: esporta-timone-pdf
+  domande:
+    - stampare il timone
+    - esporta pdf del timone
+    - timone da appendere in redazione
+    - condividere il timone in pdf
+    - scaricare il timone
+
+- pagina: glossario
+  domande:
+    - cosa vogliono dire le parole del timone
+    - significato dei termini
+    - glossario
+
+- pagina: gruppi-collegati
+  domande:
+    - collegare due pagine
+    - spostare insieme le pagine di un articolo
+    - gruppo di pagine collegate
+    - scollegare le pagine di un gruppo
+    - icona della catena sulla pagina
+
+- pagina: chiedi-al-manuale
+  domande:
+    - come funziona l'assistente
+    - a cosa serve il punto interrogativo in basso
+    - come si usa chiedi al manuale
+    - a cosa servono i voti utile e non è questo
+
+- pagina: inizia-qui
+  domande:
+    - come si usa il timone
+    - da dove comincio
+    - primo accesso al timone
+    - cos'è il timone
+    - come entro nell'applicazione
+
+- pagina: legenda
+  domande:
+    - cosa significano i colori delle pagine
+    - bordo arancione
+    - sfondo viola della pagina
+    - colori del bordo
+    - legenda dei colori
+
+- pagina: legenda
+  domande:
+    - cosa vogliono dire le icone sulla card
+    - etichetta segnaposto sulla pagina
+    - simboli sulle pagine
+
+- pagina: modificare-contenuto
+  domande:
+    - rinominare un articolo
+    - cambiare il nome di una pubblicità
+    - modificare un contenuto
+    - correggere il cliente di un'inserzione
+    - matita accanto al contenuto
+
+- pagina: note-amministratore
+  domande:
+    - impostazioni tecniche dell'installazione
+    - limite di dimensione dei file da configurare
+    - note per l'amministratore
+    - aggiornamenti in tempo reale non arrivano server
+
+- pagina: novita
+  domande:
+    - cosa è cambiato nel timone
+    - ultime novità
+    - nuove funzioni
+    - cosa c'è di nuovo
+
+- pagina: pagine-interne
+  domande:
+    - aumentare le pagine del numero
+    - togliere pagine dal numero
+    - cambiare il numero di pagine
+    - aggiungere quattro pagine in fondo
+    - ridurre le pagine interne
+
+- pagina: pannello-contenuti
+  domande:
+    - dove trovo gli articoli da mettere
+    - pannello contenuti
+    - contenuti da assegnare
+    - elenco degli articoli del numero
+    - cercare un contenuto
+
+- pagina: pdf-sfogliabile
+  domande:
+    - pdf della rivista intera
+    - vedere la rivista come sarà stampata
+    - sfogliare la rivista finita
+    - esporta pdf rivista
+    - anteprima della rivista in pdf
+
+- pagina: peso
+  domande:
+    - quanto pesa una copia
+    - peso della rivista
+    - scaglione di spedizione
+    - calcolare il peso della tiratura
+    - grammatura della carta
+
+- pagina: pubblicita-prenotate
+  domande:
+    - pubblicità prenotate
+    - elenco delle pubblicità del numero
+    - quali pubblicità mancano ancora
+    - pubblicità senza pdf
+    - eliminare una prenotazione
+
+- pagina: riepilogo-del-numero
+  domande:
+    - quante pagine sono piene
+    - spazio libero nel numero
+    - riepilogo in alto
+    - quante pagine bianche ci sono
+    - stato del numero a colpo d'occhio
+
+- pagina: rivista
+  domande:
+    - creare una nuova rivista
+    - modificare una rivista
+    - cambiare il colore della rivista
+    - impostare la carta di default della rivista
+    - redattore di riferimento della rivista
+
+- pagina: riviste-e-numeri
+  domande:
+    - dove trovo le mie riviste
+    - aprire un numero
+    - trovare un numero vecchio
+    - archivio della rivista
+    - non vedo una rivista
+
+- pagina: ruoli
+  domande:
+    - chi può fare cosa
+    - cosa può fare un commerciale
+    - differenza tra redattore e commerciale
+    - utente in sola lettura
+    - perché non posso modificare
+
+- pagina: scadenza-stampa
+  domande:
+    - impostare la scadenza di stampa
+    - data di consegna in tipografia
+    - mail di sollecito prima della stampa
+    - promemoria della scadenza
+    - quando arriva il sollecito
+
+- pagina: scambiare-pagine
+  domande:
+    - scambiare due pagine
+    - invertire due pagine
+    - modalità scambio
+    - scambiare la pagina 3 con la 40
+
+- pagina: scorciatoie
+  domande:
+    - scorciatoie da tastiera
+    - tasti rapidi
+    - spostare le pagine con le frecce
+    - a cosa serve il tasto esc
+
+- pagina: segnaposto
+  domande:
+    - cos'è un segnaposto
+    - pubblicità prevista senza cliente
+    - trasformare un segnaposto in pubblicità
+    - pagina tratteggiata
+    - pubblicità previste alla creazione del numero
+
+- pagina: segnature
+  domande:
+    - segnature di stampa
+    - quanti trentaduesimi ha il numero
+    - sedicesimi e trentaduesimi
+    - le pagine non sono multiplo di quattro
+    - confini delle segnature sulla griglia
+
+- pagina: selezione-multipla
+  domande:
+    - selezionare più pagine
+    - cambiare lo stato di molte pagine
+    - selezione multipla
+    - spuntare le pagine
+    - spostare più pagine insieme
+
+- pagina: spazio-occupato
+  domande:
+    - quanto spazio occupa un contenuto
+    - pubblicità di mezza pagina
+    - occupazione di un articolo
+    - un quarto di pagina
+    - articolo di due pagine e mezzo
+
+- pagina: spostare-pagine
+  domande:
+    - spostare una pagina
+    - trascinare una pagina in un altro punto
+    - riordinare le pagine
+    - maniglia per trascinare
+    - spostare una pagina in fondo
+
+- pagina: stato-pagina
+  domande:
+    - cambiare lo stato di una pagina
+    - mettere ok stampa
+    - segnare una pagina come revisionata
+    - pagina in bozza
+    - stati di una pagina
+
+- pagina: storico-e-cronologia
+  domande:
+    - chi ha fatto questa modifica
+    - storico degli spostamenti
+    - cronologia del numero
+    - vedere le modifiche dei colleghi
+    - chi ha cambiato lo stato
+
+- pagina: utenti
+  domande:
+    - creare un nuovo utente
+    - dare accesso a una rivista
+    - cambiare il ruolo di un utente
+    - cambiare la password di un collega
+    - gestire gli utenti
+
+- pagina: viste-del-timone
+  domande:
+    - cambiare vista del timone
+    - vista doppia pagina
+    - vista lista
+    - vedere le pagine affiancate
+    - griglia delle pagine
+
+- pagina: problemi-frequenti
+  domande:
+    - ho visto un messaggio di errore
+    - problemi frequenti
+    - la pagina non si aggiorna
+    - cosa faccio se compare un messaggio strano
+
+- pagina: caricare-file
+  domande:
+    - pdf di più pagine su un articolo
+    - caricare un pdf con tante pagine
+    - il pdf ha più pagine del contenuto
+
+- pagina: stato-pagina
+  domande:
+    - perché non posso mettere ok stampa
+    - ok stampa senza pdf
+    - ok stampa bloccato
+
+- pagina: assegnare-contenuto
+  domande:
+    - assegnare scrivendo il numero di pagina
+    - mettere una pubblicità sulla copertina
+    - una pubblicità su due pagine affiancate
+
+- pagina: commenti
+  domande:
+    - i commenti seguono la pagina spostata
+    - chi riceve la mail del commento
+    - notifica dei commenti
+
+- pagina: viste-del-timone
+  domande:
+    - pagine pari a sinistra e dispari a destra
+    - più coppie di pagine per riga
+    - barra dei comandi sempre visibile
+
+- pagina: peso
+  domande:
+    - cambiare la carta di questo numero
+    - margine d'errore del peso
+    - peso della copertina
+
+- pagina: ruoli
+  domande:
+    - il commerciale non riesce a spostare le pagine
+    - permessi degli utenti
+    - chi può vedere i commenti
+
+- pagina: spostare-pagine
+  domande:
+    - un collega ha spostato le pagine mentre lavoravo
+    - le pagine sono slittate
+    - spostare una pagina sulla copertina

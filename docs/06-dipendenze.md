@@ -70,6 +70,8 @@ Transitive rilevanti: `league/commonmark` (via Laravel, usato da `Str::markdown(
 | `laravel-echo` | 1.19.0 | dependency | Client WebSocket | `resources/js/echo.js` |
 | `pusher-js` | 8.6.0 | dependency | Protocollo Pusher, usato da Echo verso Reverb | `resources/js/echo.js` |
 | `sortablejs` | 1.15.7 | dev | Drag&drop riordino pagine | `resources/js/app.js` (direttiva `x-sortable`) |
+| `minisearch` | 7.2.0 | produzione (2026-10-29, prevista dal prompt del manuale) | Ricerca nel manuale nel browser: indice di parole, prefisso, tolleranza agli errori, pesi per campo, normalizzazione italiana nostra. Scelta al posto di Fuse.js (confronto approssimato di stringhe intere, più lento e meno preciso su testi lunghi). Caricata solo quando si usa la ricerca (import dinamico, ~18 kB) | `resources/js/manual-search-core.js`, `manual-search.js` |
+| `@fontsource/figtree` | 5.3.0 | produzione (2026-10-29, ok dell'utente) | Font Figtree in locale (pesi 400/500/600) al posto di fonts.bunny.net: nessuna risorsa esterna nelle pagine | `resources/css/app.css` (`@import`) |
 | `axios` | 1.18.1 | dev | Esposto su `window.axios`, ma **nessuna chiamata** nel codice (le mutazioni passano da `$wire`) | `resources/js/bootstrap.js` |
 | `vite` | 6.4.3 | dev | Build e dev server | `vite.config.js` |
 | `laravel-vite-plugin` | 1.3.0 | dev | Integrazione `@vite()` / `public/hot` | `vite.config.js` |

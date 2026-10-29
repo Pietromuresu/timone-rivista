@@ -304,3 +304,29 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - `PageSpreadBuilder::side()` e `::layout()` (coppie dalla posizione), `.timone-spreads` in `app.css` (colonne fisse, container query, `html[data-zoom]` dallo store `timoneZoom`).
 - Test: `tests/Unit/PageSpreadBuilderTest.php` (accoppiamento), `tests/Feature/Livewire/SpreadGridTest.php`; aggiornati `TimoneGridTest` (il bordo tra le pagine della coppia ora è del contenitore) e `TimoneGridDoublePageAlignmentTest` (slot vuoti al posto di `ml-auto`).
 
+## 2026-10-29 — Manuale utente: una pagina per argomento (fase 1 di «manuale, ricerca, assistente»)
+
+### Visibili agli utenti
+- Il manuale è diviso in 46 pagine brevi in 7 categorie; `/manuale` è la pagina d'ingresso («Inizia qui», «Cosa vuoi fare?» con 12 riquadri, indice), `/manuale/<slug>` una pagina. Ogni pagina inizia con «In breve», poi «Dettagli» richiudibili, riquadri «Attenzione»/«Suggerimento», «Vedi anche».
+- Nuove pagine: «Legenda» visiva, «Scorciatoie da tastiera» con Mac e Windows affiancati, «Problemi frequenti» (messaggio → significato → cosa fare), «Glossario», «Novità», «Note per l'amministratore».
+- I link vecchi del manuale (`/manuale#9bis-…`) portano alla pagina nuova; su telefono l'indice è un menu e le tabelle diventano elenchi.
+- Corrette 7 incoerenze del vecchio manuale e i nomi dei bottoni cambiati nell'app.
+
+### Tecniche
+- `resources/manuale/*.md` (front matter, blocchi `:::nome`), `App\Support\Manual\{ManualPage, ManualBlocks, ManualRepository, ManualCompiler, ManualVerifier, LegacyAnchors}`, `ManualRenderer::renderPage()`, route `documentation.page`, viste `documentation/index|page`, stili `.manual-*` in `app.css`.
+- `MANUALE_UTENTE.md` generato da `php artisan manuale:genera`; `php artisan manuale:verifica` contro la copia archiviata `docs/archivio/MANUALE_UTENTE_2026-10-29.md`; inventario `docs/manuale/INVENTARIO.md`.
+- `config/timone.php`: `manual_dir`, `manual_archive` (config/app.php non toccato). `.dockerignore`: eccezione `!resources/manuale/*.md`.
+
+## 2026-10-29 — Manuale: ricerca e pagine (fase 2 di «manuale, ricerca, assistente»)
+
+### Visibili agli utenti
+- Campo «Cerca nel manuale» grande in testa a ogni pagina del manuale (`/` o Ctrl/⌘+K per andarci): risultati mentre scrivi con il frammento e la parola evidenziata, frecce e Invio, la sezione si evidenzia all'arrivo; se non trova nulla propone parole vicine e i compiti più frequenti. Capisce sinonimi (togliere = rimuovere = eliminare…), desinenze (sposta, spostare, spostamento) e qualche errore di battitura.
+- Indice con «Mostrami le pagine per: Tutti / Redattore / Commerciale / Admin / Sola lettura» (predefinito sul proprio ruolo, «Mostra tutto» riporta le altre) e «In questa pagina» con la sezione corrente evidenziata.
+- # accanto ai titoli copia il link della sezione; «↑ Torna su»; stampa senza menu e con i Dettagli aperti.
+- Font Figtree in locale: nessuna pagina carica più risorse esterne.
+
+### Tecniche
+- `App\Support\Manual\{ItalianText, ManualSearchIndex, ManualSynonyms}`, route `documentation.search-index` (`/manuale/indice.json`, cache con l'impronta dei file, ETag), `resources/manuale/sinonimi.yml`, `resources/js/manual-search-core.js` (puro) e `manual-search.js` (Alpine), viste `documentation/partials/{search,back-to-top}`.
+- npm: `minisearch` (import dinamico), `@fontsource/figtree`.
+- Test: `tests/Unit/ItalianTextTest.php`, `tests/Feature/ManualSearchTest.php` (indice, route, cache, sinonimi, normalizzazione uguale nel browser e 15 domande reali con node), `tests/js/manual-search-check.mjs`, `tests/fixtures/manual-{text,queries}.json`.
+

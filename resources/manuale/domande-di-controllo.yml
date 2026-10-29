@@ -1,0 +1,67 @@
+# Domande di controllo (2026-10-29): 15 domande vere, scritte come le
+# scrivono i colleghi, con la pagina che deve uscire. NON sono domande
+# dell'assistente (non diventano documenti cercabili): servono a
+# controllare la ricerca. La ricerca del manuale deve dare questa pagina
+# al primo posto (tests/Feature/ManualSearchTest.php); il job notturno
+# manuale:apprendi non pubblica pesi nuovi se una di queste esce dai
+# primi tre. Stesso formato di domande.yml (App\Support\Manual\ManualQuestions).
+
+- pagina: assegnare-contenuto
+  domande:
+    - come tolgo una pubblicità
+
+- pagina: annullare-ripetere
+  domande:
+    - annullare
+
+- pagina: copertine
+  domande:
+    - bandella
+
+- pagina: caricare-file
+  domande:
+    - pdf non si vede
+
+- pagina: ruoli
+  domande:
+    - commerciale non può spostare
+
+- pagina: peso
+  domande:
+    - peso
+
+- pagina: annullare-ripetere
+  domande:
+    - ctrl z
+
+- pagina: spostare-pagine
+  domande:
+    - come sposto una pagina
+
+- pagina: pagine-interne
+  domande:
+    - aggiungere pagine al numero
+
+- pagina: legenda
+  domande:
+    - cosa vuol dire il bordo giallo
+
+- pagina: stato-pagina
+  domande:
+    - ok stampa non si può mettere
+
+- pagina: caricamento-multiplo
+  domande:
+    - caricare tanti pdf insieme
+
+- pagina: segnature
+  domande:
+    - trentaduesimi
+
+- pagina: esporta-timone-pdf
+  domande:
+    - esportare il timone in pdf
+
+- pagina: commenti
+  domande:
+    - avvisare un collega con un commento

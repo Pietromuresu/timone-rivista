@@ -42,3 +42,11 @@ tests
 # (DocumentationController) — senza questa eccezione mancava
 # dall'immagine di produzione e la pagina andava in errore 500.
 !MANUALE_UTENTE.md
+# Manuale a pagine (2026-10-29): le pagine sono lette a runtime da
+# /manuale/{slug} (App\Support\Manual\ManualRepository). «*.md» qui sopra
+# vale solo per la cartella principale (verificato con una build: i .md di
+# resources/manuale/ e di docs/ entrano comunque nell'immagine); l'eccezione
+# esplicita resta per chiarezza, nel caso la regola diventi «**/*.md».
+!resources/manuale/*.md
+# Le immagini del manuale (Fase 4) stanno in public/manuale/img: non sono
+# escluse da nessuna regola sopra.

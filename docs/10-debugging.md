@@ -378,6 +378,17 @@ Non correggere i valori con un UPDATE alla cieca: vanno ricontrollati sulla sche
 - **Causa reale in produzione (2026-10-28)**: script e Alpine c'erano, ma nel DOM il trigger del menu era `<div open="">` invece di `<div @click="open = ! open">` (l'HTML del server era corretto): qualcosa tra server e browser (estensione del browser — in console compariva `content.js … [Violation]` — o un proxy che riscrive l'HTML) toglieva gli attributi `@click`. Corretto usando `x-on:click`/`x-on:click.outside` in `components/dropdown.blade.php` e `layouts/navigation.blade.php`, come nel resto del progetto; un test verifica che nessuna vista usi `@click`. Per scoprire chi riscrive: confrontare «Visualizza sorgente» (HTML del server) con «Elementi» (DOM), e provare in finestra anonima senza estensioni.
 - Se il menu non si apre su NESSUNA pagina e lo script manca, lo script non arriva: in Network cercare `livewire.js`/`livewire.min.js` (404 → il web server davanti all'app deve passare a `index.php` le richieste `.js` che non sono file, come `docker/nginx/default.conf`; bloccato → http/https misti; percorso sbagliato → app sotto un sottopercorso).
 
+## Manuale: pagina non trovata, avviso giallo o test del manuale rossi (2026-10-29)
+
+- **Avviso «Il manuale utente non è disponibile»**: manca la cartella `resources/manuale/` (o è vuota) sul server; il dettaglio è nel log (`report()` in `DocumentationController`).
+- **404 su `/manuale/<slug>`**: lo slug non esiste (nome del file = slug). Un link vecchio `/manuale#…` lo gestisce lo script della pagina d'ingresso con `App\Support\Manual\LegacyAnchors`.
+- **Una pagina dà errore 500**: front matter non valido o blocco `:::nome` non chiuso: l'eccezione dice il file e il motivo (`ManualPage::parse()`, `ManualBlocks::split()`); `tests/Feature/ManualPagesTest.php` lo trova prima.
+- **Test «MANUALE_UTENTE.md is the file generated…» rosso**: hai cambiato una pagina senza rigenerare: `php artisan manuale:genera`.
+- **`manuale:verifica` rosso**: un termine del vecchio manuale non c'è più; aggiungilo nella pagina giusta o, se è un bottone rinominato, mettilo in `ManualVerifier::EXCEPTIONS` con il nome nuovo.
+- **La ricerca non trova una pagina**: prova la domanda con `node tests/js/manual-search-check.mjs <indice.json> <domande.json>` (indice da `ManualSearchIndex::build()`); aggiungi parole chiave o sinonimi alla pagina (front matter) o un gruppo in `resources/manuale/sinonimi.yml`, poi rilancia `tests/Feature/ManualSearchTest.php` (le 15 domande di riferimento devono restare al primo posto). L'indice in cache cambia da solo quando cambiano i file.
+- **«La ricerca non è disponibile»**: `/manuale/indice.json` non risponde (manuale mancante o errore): l'indice e i riquadri restano utilizzabili.
+- **Uno stile del manuale non si vede**: Tailwind tiene solo le classi scritte per intero nei file; in `ManualRenderer` non comporre i nomi delle classi (`'manual-x-'.$tipo`).
+
 ## Doppia pagina: una pagina trascinata non si sposta o finisce altrove (2026-10-29)
 
 - **Il drag non parte**: le page-card devono essere figlie dirette di `.timone-spreads` (niente div attorno, Sortable lo verifica in silenzio).

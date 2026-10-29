@@ -1,0 +1,14 @@
+[
+  {"testo": "sposta", "parole": ["spost"]},
+  {"testo": "Spostare", "parole": ["spost"]},
+  {"testo": "spostamento", "parole": ["spost"]},
+  {"testo": "spostata", "parole": ["spost"]},
+  {"testo": "Come tolgo una pubblicità?", "parole": ["tolg", "pubblic"]},
+  {"testo": "pubblicitaria", "parole": ["pubblic"]},
+  {"testo": "Ctrl+Z", "parole": ["ctrl", "z"]},
+  {"testo": "Perché non si può mettere «Ok stampa»?", "parole": ["mett", "ok", "stamp"]},
+  {"testo": "100 MB e 32 pagine", "parole": ["100", "mb", "32", "pagin"]},
+  {"testo": "Città, è già lì", "parole": ["citt", "gia", "li"]},
+  {"testo": "eliminazione delle prenotazioni", "parole": ["elimin", "prenot"]},
+  {"testo": "il PDF non si vede", "parole": ["pdf", "ved"]}
+]

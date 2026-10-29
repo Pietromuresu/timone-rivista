@@ -1,565 +1,2249 @@
+<!-- File generato da «php artisan manuale:genera»: NON modificare a mano.
+     Le pagine del manuale sono in resources/manuale/ (una per argomento). -->
+
 # Manuale utente — Timone Elettronico
 
-Guida per chi lavora sul timone ogni giorno: redattori, commerciali, grafici. Organizzata per "voglio fare X → ecco come": cerca la sezione che ti serve, non serve leggerlo tutto di fila.
+Il manuale si legge anche nell'applicazione, dalla voce «📖 Manuale» nel menu in alto, una pagina per argomento.
 
-**Dove trovare questo manuale**: è consultabile anche **dentro l'applicazione**, senza uscire dal browser — voce **"📖 Manuale"** nel menu in alto (indirizzo `/manuale`; il vecchio `/documentazione` ti porta comunque lì), visibile a qualunque utente loggato (nessun ruolo specifico richiesto — è materiale di aiuto, non un'azione che modifica dati). A sinistra trovi un **indice cliccabile** con tutte le sezioni: un clic ti porta direttamente alla sezione che ti serve. Se al posto del manuale compare un avviso giallo "Il manuale utente non è disponibile", avvisa chi gestisce l'installazione.
+## Inizia qui
 
-Per avviare l'applicazione la prima volta vedi invece [README.md](README.md).
+### Inizia qui
 
----
+**In breve**
 
-## 1. Prima di iniziare
+Il timone è la pianificazione delle pagine di una rivista: vedi quali pagine sono occupate da articoli o pubblicità, quali sono libere, e le sposti insieme ai colleghi. La struttura è sempre **rivista → numero → timone**.
 
-La struttura è sempre: **rivista → numero → timone**.
+1. Apri <{{APP_URL}}> e entra con l'email e la password che ti hanno dato.
+2. In «Le tue riviste» scegli la rivista.
+3. Scegli il numero: si apre il suo timone.
+4. Per i compiti più comuni parti da [Cosa vuoi fare?](resources/manuale/cosa-vuoi-fare.md). Per una domanda, il bottone **?** in basso a sinistra.
 
-- Una **rivista** (es. "Motori Elettrici") è la testata.
-- Un **numero** (es. "Novembre 2026") è una singola uscita di quella rivista, con un numero di pagine deciso.
-- Il **timone** è la griglia delle pagine di un numero specifico: qui si fa il lavoro vero e proprio.
+#### Rivista, numero, timone
 
-Accedi da <{{APP_URL}}> (l'indirizzo della tua installazione: nella pagina "📖 Manuale" dell'applicazione qui compare quello vero) con l'email e la password che ti sono state assegnate. Se non hai ancora un account, chiedi a un Admin di crearlo (vedi [§13](#13-gestire-gli-utenti-solo-admin)).
+- Una **rivista** è la testata, per esempio «Motori Elettrici».
+- Un **numero** è una singola uscita della rivista, per esempio «Novembre 2026». Ha un numero di pagine deciso.
+- Il **timone** è la griglia delle pagine di un numero. Qui si fa il lavoro vero e proprio.
 
-Quello che vedi dipende dal tuo **ruolo** — riepilogo completo in [§14](#14-cosa-può-fare-ciascun-ruolo).
+#### Entrare
 
----
+Accedi da <{{APP_URL}}>. È l'indirizzo della tua installazione: nella pagina «📖 Manuale» dell'app compare quello vero. Usa l'email e la password che ti sono state assegnate. Se non hai ancora un account, chiedi a un Admin di crearlo: vedi [Gestire gli utenti](resources/manuale/utenti.md).
 
-## 2. Scegliere rivista e numero
+Quello che vedi e puoi fare dipende dal tuo **ruolo**: vedi [Chi può fare cosa](resources/manuale/ruoli.md).
 
-Dopo il login vedi **"Le tue riviste"**: solo quelle a cui hai accesso (un Admin le vede tutte). Ogni riquadro mostra il numero attualmente in lavorazione, se c'è.
+#### La schermata del timone
 
-Cliccando su una rivista vedi:
-- **Numeri attivi** (bozza o in lavorazione);
-- **Archivio** (numeri chiusi), in fondo alla pagina.
+[Screenshot da fare: il timone intero con le parti principali numerate]
 
-Clicca su un numero per aprirne il timone.
+#### Dove trovare questo manuale
 
----
+Il manuale è anche **dentro l'applicazione**, senza uscire dal browser: voce **«📖 Manuale»** nel menu in alto. Ogni argomento ha una sua pagina. Per trovare quello che ti serve scrivi nel campo **«Cerca nel manuale»** in alto (premi `/` o Ctrl+K, ⌘+K su Mac, per andarci da qualunque punto): i risultati compaiono mentre scrivi, frecce per sceglierne uno, Invio per aprirlo. Oppure usa l'**indice cliccabile** delle categorie. Non serve leggerlo tutto di fila.
 
-## 3. Leggere la griglia del timone
+Se preferisci fare una domanda, clicca il bottone tondo **?** in basso a sinistra, da qualunque schermata: vedi [Chiedi al manuale](resources/manuale/chiedi-al-manuale.md).
 
-La schermata del timone ha tre modalità, selezionabili in alto a destra:
+**Dettagli**
 
-- **Griglia** — una card per pagina, la vista principale per lavorare.
-- **Doppia pagina** — la rivista aperta (dal 2026-10-29 più coppie per riga): pagine **pari a sinistra, dispari a destra**, le due pagine di una coppia attaccate (solo una linea sottile in mezzo) e più spazio tra una coppia e l'altra. La prima coppia è [II di copertina | 1]: le copertine sono nella fascia in alto, quindi a sinistra della 1 c'è un riquadro tratteggiato «II di copertina»; se le pagine sono pari l'ultima sta a sinistra davanti al riquadro «III di copertina». Le coppie per riga dipendono dalla larghezza dello schermo e dallo zoom S/M/L (es. con M: 3 su un monitor da computer, 2 su un tablet, 1 sul telefono), mai scorrimento orizzontale. Puoi assegnare/rimuovere contenuti, cambiare lo stato, commentare e trascinare per riordinare esattamente come in Griglia, anche più pagine selezionate insieme e con le frecce da tastiera: mentre trascini le coppie si ricompongono e il posto vuoto mostra dove cadrà la pagina, anche tra le due pagine di una coppia; dopo lo spostamento le pagine che seguono cambiano lato da sole. I confini delle segnature ([§9quater](#9quater-segnature-trentaduesimi)) cadono tra le due pagine della coppia (es. [32 | 33]).
-- **Lista** — una riga per pagina, utile per scorrere velocemente un numero lungo. Ogni riga mostra anche un'etichetta **DX**/**SX**: pagina destra o sinistra secondo la convenzione di stampa (pagina 1 sempre a destra, poi alternanza) — la stessa usata per affiancare le pagine in Doppia pagina.
+- Nell'indice, «Mostrami le pagine per» mette in evidenza le pagine del tuo ruolo; «Mostra tutto» riporta le altre. Accanto alla pagina aperta, «In questa pagina» elenca le sue sezioni ed evidenzia quella che stai leggendo.
+- Il simbolo # accanto a un titolo copia il link a quella sezione, da mandare a un collega. Il bottone «↑ Torna su» riporta in cima. Stampando una pagina, i «Dettagli» si stampano aperti.
+- La ricerca capisce anche parole simili (togliere, rimuovere, eliminare) e qualche errore di battitura. Se non trova nulla propone parole vicine e i compiti più frequenti.
+- L'indirizzo è `/manuale`. Il vecchio indirizzo `/documentazione` ti porta comunque lì.
+- I vecchi link a una sezione del manuale (per esempio `#9bis-le-copertine-i-ii-iii-iv-e-la-bandella`) portano alla pagina nuova dello stesso argomento.
+- Se al posto del manuale compare un avviso giallo, vedi [Problemi frequenti](resources/manuale/problemi-frequenti.md).
 
-**Dimensione delle pagine (S / M / L)**: in Griglia e Doppia pagina, accanto ai bottoni delle modalità, tre bottoni **S**, **M**, **L** ingrandiscono o rimpiccioliscono le pagine (M è il valore iniziale). La scelta resta memorizzata **su questo browser** per te (non cambia la vista dei colleghi) e la ritrovi alla prossima apertura. Le pagine hanno le **proporzioni del formato reale del numero** (base × altezza impostate nel pannello Peso, [§9ter](#9ter-peso-della-rivista)); se il formato non è ancora impostato si usa una proporzione standard 3:4.
+#### Vedi anche
 
-**La barra in alto** (logo, Riviste, Utenti, Manuale, il tuo nome) resta sempre visibile mentre scorri il timone: non serve tornare in cima per cambiare schermata.
+- [Cosa vuoi fare?](resources/manuale/cosa-vuoi-fare.md)
+- [Le viste del timone](resources/manuale/viste-del-timone.md)
+- [Chi può fare cosa](resources/manuale/ruoli.md)
+- [Glossario](resources/manuale/glossario.md)
 
-**Il riepilogo e i comandi** (subito sotto la barra in alto, sempre visibili anche scorrendo, in un'unica fascia): sopra il colpo d'occhio sul numero, aggiornato in tempo reale; sotto i comandi del timone (scadenza stampa, ⚙️ Pagine interne, storico, modalità scambio, selezione multipla, esporta PDF, zoom S/M/L, Griglia/Doppia pagina/Lista), così non serve tornare in cima per usarli. Su un telefono la fascia scorre con la pagina, per non coprire metà dello schermo.
+### Chiedi al manuale
 
-**Azioni sulle pagine selezionate (dal 2026-10-28)**: con «☑️ Selezione multipla» attiva (o ⌘/Ctrl+clic su una pagina) compare una terza riga nella stessa fascia fissa, quindi sempre a portata anche se le pagine selezionate sono in fondo al timone: «3 pagine selezionate: 12–14», **Deseleziona** (tasto Esc), **Tutte** (Ctrl/⌘+A), **Stato**, **🔗 Collega** (Ctrl/⌘+Shift+G), **✂️ Scollega**, **🔒 Blocca**, **🔓 Sblocca**. Un'azione che non si può fare con la selezione attuale resta al suo posto ma attenuata: passandoci sopra il mouse il riquadro dice perché (es. «Seleziona almeno 2 pagine da collegare», «Sono già collegate in un gruppo»). Su schermi stretti Scollega, Blocca e Sblocca sono nel menu **«Altro ⋯»**. Il Commerciale vede solo seleziona e deseleziona. Le scorciatoie non funzionano mentre si scrive in un campo. Esiti ed errori (pagina bloccata, gruppo) compaiono nella fascia stessa. Il bottone **⌃** a destra del riepilogo lo riduce a una riga corta (⌄ per riaprirlo); la scelta è ricordata in questo browser. Su un Mac si seleziona con ⌘+clic: Ctrl+clic apre il menu del tasto destro.
-- **Pagine interne**: quante sono, quante **piene**, quante **parziali** e quante **bianche** (senza nessun contenuto).
-- **Spazio libero**: tutto lo spazio ancora libero sulle pagine interne, sommato (es. «4 e 1/3 pagine»).
-- **Pubblicità**: la percentuale di pubblicità sulle pagine interne (prenotate e segnaposto compresi), esatta perché calcolata in frazioni di pagina. Solo il numero: niente soglie né colori di allarme.
-- **Segnaposto** (fino al 2026-10-28 si chiamava «Da assegnare»): quante pubblicità segnaposto aspettano ancora inserzionista e PDF, con il dettaglio per formato ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)).
-- **Copertine**: quante hanno già un contenuto e quante sono libere.
-- **Peso copia** e **scaglione** postale, dal pannello Peso ([§9ter](#9ter-peso-della-rivista)); «parametri incompleti» se mancano carta o formato.
+**In breve**
 
-**Clic su «bianche»** o su **«Segnaposto»**: le pagine corrispondenti (copertine comprese, per i segnaposto) si evidenziano con un contorno azzurro e le altre si attenuano, in tutte e tre le viste. Le pagine non si spostano e restano utilizzabili. Un secondo clic sullo stesso bottone toglie l'evidenziazione.
+Scrivi la tua domanda con le tue parole: l'assistente ti mostra il riquadro «In breve» della pagina del manuale che risponde.
 
-**Ogni card/riga mostra:**
+1. Clic sul bottone tondo **?** in basso a sinistra, da qualunque schermata (o usa il riquadro «Chiedi al manuale» nella pagina del Manuale).
+2. Scrivi la domanda e premi **Chiedi** (o Invio). Oppure clicca una delle domande pronte.
+3. Leggi la risposta; **«Leggi tutto →»** apre la pagina intera.
+4. Di' se è servita: **👍 Utile** o **👎 Non è questo**. Con 👎 compaiono altre tre pagine: se una è quella giusta, clicca **«👍 È questa»**.
 
-| Elemento | Significato |
-|---|---|
-| Colore di sfondo | Tipo pagina: blu = editoriale, ambra = pubblicità, viola = mista (metà e metà), grigio = bianca (ancora vuota) — pubblicità sempre riconoscibile a colpo d'occhio |
-| Bordo colorato spesso (griglia/doppia) o striscia colorata a sinistra (lista) | Stato della pagina: grigio = da assegnare, azzurro = assegnata, giallo = in bozza, arancione = revisionata, verde = ok stampa — riconoscibile senza dover leggere l'etichetta |
-| Numero con ⠿ | Numero della pagina interna, da 1 in su (le copertine sono a parte, vedi [§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)). È anche la "maniglia" per trascinare la pagina |
-| 📘 «I di copertina» su sfondo blu | È una copertina, non una pagina interna: sta nella fascia azzurra «Copertine» in cima al timone, prima della pagina 1 ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)) |
-| Etichetta colorata (es. "In bozza") | Stato della pagina, stessa palette del bordo — cliccabile per cambiarlo, vedi [§6](#6-cambiare-lo-stato-di-una-pagina) |
-| 📄 / 📢 | Contenuto assegnato: 📄 articolo, 📢 pubblicità, seguito dal titolo/cliente e dal menu con lo spazio che occupa su quella pagina (1/4, 1/3, 1/2, … «intera») — vedi [§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato). **Doppio click sul nome** per rinominarlo, **✏️** per modificare tutto il contenuto ([§5ter](#5ter-modificare-un-contenuto-e-rinominarlo)) |
-| Etichetta «○ Vuota» / «◐ Libero: 1/3» / «● Piena» | **Quanto è piena la pagina**: l'etichetta dice quanto spazio resta. Pagina piena = etichetta scura con ●, pagina vuota = tratteggiata con ○, parziale = ambra con ◐ (simbolo e testo diversi, si distinguono anche senza i colori). «⚠ Oltre capienza» in rosso è un'anomalia da sistemare (vedi [§5bis](#5bis-occupazione-di-pagina-obbligatoria)). In Lista compare la stessa etichetta |
-| Pallino verde con iniziali, animato | Un collega ha in questo momento il focus su quella pagina (sta cambiando qualcosa) |
-| 📤 | Nessun PDF caricato ancora — clic per caricarne uno |
-| ⏳ PDF | PDF caricato, anteprima in elaborazione |
-| Blocchi dentro la card (griglia/doppia) | **Disposizione dei contenuti** (griglia 6×6 dal 2026-10-27): la pagina è divisa in 6 colonne e 6 righe e ogni contenuto occupa un rettangolo grande esattamente quanto il suo spazio: pagina intera 6×6, mezza verticale 3×6 (metà sinistra o destra), mezza orizzontale 6×3, 1/3 verticale 2×6, 1/3 orizzontale o piedino 6×2 (il piedino nasce in fondo), 2/3 4×6 o 6×4, vetrina 1/4 3×3. Un nuovo contenuto va nel primo posto libero. Lo spazio libero è tratteggiato «libero». Un **3/4 di pagina** (e 7/12, 11/12) non è un rettangolo: ha una **forma a L** che riempie lo spazio lasciato dagli altri e si adatta quando gli altri si spostano. **Cliccando su un contenuto si seleziona la pagina**, come cliccando sulla pagina (non si apre più il file). Ogni blocco mostra l'anteprima del **suo** file: se il file è un PDF a pagina intera con l'annuncio in una zona, si vede **solo la parte che corrisponde al riquadro** (una mezza verticale a sinistra mostra la metà sinistra del PDF); se il file è già della misura dell'annuncio si vede **intero**. Senza file, un fondo azzurro (articolo) o ambra (pubblicità). Il bottone **⋯** nell'angolo del blocco apre il menu: **Spazio su questa pagina**, **Posizione ← ↑ ↓ →** (sposta il contenuto di un passo: la vetrina di mezza pagina, la colonna 1/3 di una colonna; se il posto è occupato da un contenuto con cui forma un rettangolo — due vetrine affiancate, una riga 1/3 sopra una 2/3 — i due si scambiano; una freccia grigia vuol dire che si uscirebbe dalla pagina o ci si sovrapporrebbe), **⟳ Ruota** (verticale ↔ orizzontale: per una mezza pagina o un 1/3 cambia anche il formato della pubblicità, per un 2/3 o un articolo solo la forma; grigio se è quadrato o ruotato non ci sta), **👁 Apri il file** in una nuova scheda (grigio con «Nessun file caricato» se manca), **✏️ Modifica**, **↗ Estendi a un'altra pagina**, **✕ Rimuovi dalla pagina**. Le posizioni sono salvate e le vedono subito anche i colleghi; su una pagina bloccata non si cambiano. È una rappresentazione dello spazio, non l'impaginato definitivo. In Lista restano le righe di testo, con gli stessi comandi accanto al nome |
-| ⚠️ PDF (rosso) | Generazione dell'anteprima fallita — clic per ricaricare il file |
-| 🕐 | Apre lo storico di tutti i PDF caricati su questa pagina (compare solo se ce n'è almeno uno) |
-| 📝 | La pagina ha una nota (passa il mouse per leggerla) |
-| 🔓 / 🔒 | Blocca/sblocca la pagina — vedi [§4bis](#4bis-bloccare-una-pagina) |
-| Casella di spunta (solo con "☑️ Selezione multipla" attivo) | Seleziona la pagina per un'azione di massa — vedi [§6bis](#6bis-selezione-multipla-e-azioni-di-massa) |
+#### Cosa risponde
 
-Tutto si aggiorna da solo in tempo reale se un collega è collegato sullo stesso numero — non serve mai ricaricare la pagina. Quando arriva un cambiamento fatto da qualcun altro, compare per pochi secondi un piccolo avviso in basso a destra (es. "Una pagina è stata spostata da un altro utente.") — un promemoria discreto che qualcosa è cambiato, non un blocco: la griglia si è già aggiornata da sola. Se per qualche minuto non arrivano aggiornamenti (rete che taglia fuori i websocket), compare invece un avviso giallo permanente: la pagina continua comunque a controllare da sola se c'è qualcosa di nuovo (circa una volta al secondo) e si aggiorna nello stesso identico modo, avviso "qualcosa è cambiato" compreso — l'unica differenza percepibile è un ritardo massimo di un secondo invece dell'istante.
+La risposta è sempre il riquadro «In breve» di una pagina di questo manuale: l'assistente non scrive testi suoi, sceglie la pagina. Se non è sicuro mostra **«Non sono sicuro. Forse cercavi:»** con tre pagine; apri quella che ti sembra giusta con un clic sul titolo. Se non trova nulla ti suggerisce di riformulare e alcuni compiti da cui partire.
 
-**Per stampare o condividere il timone**: bottone **"📄 Esporta PDF"** nella barra in alto — un foglio A4 orizzontale pensato per essere appeso in redazione, come il timone cartaceo. In testa: rivista, numero, data di uscita e gli stessi numeri del riepilogo (pagine piene/parziali/bianche, spazio libero, % pubblicità, pubblicità da assegnare, copertine, peso copia). Poi le **copertine** e le **pagine interne**, tutte della stessa misura con le proporzioni del formato, **affiancate in doppie pagine** come sfogliando la rivista (la pagina 1 da sola a destra). Dentro ogni pagina la **disposizione dei contenuti** come nel timone (colonne per le pubblicità verticali, righe per gli altri, piedino in fondo, spazio libero tratteggiato) con il nome di ciascuno; accanto al numero un pallino colorato indica lo stato. In fondo una legenda e, a piè di pagina, «Foglio N di M». Prima di scaricare puoi scegliere di includere le **miniature** (ogni blocco mostra l'anteprima del suo contenuto, copertine comprese; senza miniature i blocchi sono azzurri per gli articoli e ambra per le pubblicità; le immagini WEBP potrebbero non comparire), mostrare solo le pagine con pubblicità, o solo quelle non ancora approvate (non in stato "Revisionata"/"Ok stampa"): con un filtro le pagine non sono più consecutive e vengono mostrate una per una, non in doppie pagine.
+Dalla schermata in cui sei l'assistente capisce un po' l'argomento: dal timone, per esempio, preferisce le pagine sul timone.
 
-**PDF sfogliabile della rivista (dal 2026-10-28)**: riquadro **«📖 PDF sfogliabile della rivista»** sopra il timone → **«Esporta PDF rivista»**. A differenza dell'export del timone (un foglio riassuntivo), questo simula la **rivista finita**: una pagina del PDF per ogni pagina della rivista, nell'ordine di stampa — I di copertina, II di copertina, pagine interne 1…N, III e IV di copertina (la bandella, se c'è, dopo la I). Ogni pagina è un **A4 verticale** con dentro la pagina della rivista in scala, centrata e non deformata, e il numero di pagina in piccolo sotto. In ogni pagina:
-- i contenuti con un file mostrano **il loro PDF (o la loro immagine) nel loro riquadro**, con la stessa regola delle anteprime del timone ([§5ter](#5ter-modificare-un-contenuto-e-rinominarlo), «Anteprima nel riquadro»): un file a pagina intera mostra solo la sua parte, un file già nel formato si vede intero. Un contenuto su più pagine usa, su ogni pagina, la pagina corrispondente del suo PDF;
-- i contenuti **senza file** (segnaposto, articoli ancora senza PDF) **non spariscono**: riquadro tratteggiato con titolo, tipo e «File mancante». Lo stesso se il file non si trova più sul server;
-- lo spazio libero resta bianco; una pagina vuota mostra «Pagina bianca».
+> **Suggerimento**
+>
+> Usa le parole che vedi sullo schermo, per esempio il nome di un bottone («Pagine interne», «Scambio»): l'assistente le riconosce meglio.
 
-Il PDF si apre **a coppie affiancate** come una rivista (la I di copertina da sola) e ha un segnalibro per ogni pagina. Si genera **in coda**: lo stato compare nel riquadro (**In coda → In generazione → Pronto**, oppure **Errore** con il motivo) e si aggiorna da solo; quando è pronto compare **«⬇ Scarica»** con il numero di pagine, il peso del file e quanti contenuti sono senza file. Puoi intanto continuare a lavorare. Con **«Bassa risoluzione per anteprima»** spuntato ottieni una versione leggera (immagini ricompresse) da mandare via mail: è un file a parte, che non sostituisce quello a qualità piena. Ogni nuova esportazione sostituisce la precedente dello stesso tipo. Può esportare chiunque veda il numero.
+#### I tuoi voti
 
----
+Ogni risposta si vota una volta. I voti di più colleghi insieme aiutano l'assistente a scegliere meglio le risposte la volta dopo: un voto da solo non cambia nulla. Il voto non è legato al tuo nome.
 
-## 4. Spostare le pagine
+**Dettagli**
 
-**Con il mouse (tutte e tre le modalità):** trascina una pagina prendendola dalla maniglia ⠿ (il numero di posizione) e rilasciala nel punto desiderato. Le altre pagine si spostano di conseguenza — tutte le pagine intermedie slittano per fare spazio. Con "☑️ Selezione multipla" attiva e più pagine selezionate, trascinarne una sposta **l'intera selezione insieme** come blocco unico — vedi [§6bis](#6bis-selezione-multipla-e-azioni-di-massa). Se una pagina fa parte di un **gruppo collegato** (🔗), trascinarla sposta automaticamente tutto il gruppo insieme, anche senza selezione multipla — vedi [§6ter](#6ter-collegare-pagine-in-un-gruppo-permanente).
+- Contano solo i voti dati con i bottoni: l'assistente non guarda cosa clicchi né quanto leggi.
+- Un voto conta di più se hai scelto tu la pagina giusta dopo «Non è questo».
+- I voti vecchi contano sempre meno e dopo 12 mesi vengono cancellati.
+- Le risposte che sappiamo giuste non possono essere peggiorate dai voti: prima di usare quello che ha imparato, l'assistente controlla di rispondere ancora bene a tutte le domande di prova.
 
-Mentre trascini un **gruppo collegato** o una **selezione multipla**, tutte le pagine coinvolte si "raccolgono" sotto quella che hai afferrato e si muovono insieme (hanno un bordo tratteggiato blu); l'immagine che segue il mouse le mostra tutte affiancate. Al rilascio le pagine scorrono fino alla loro posizione finale.
+#### Vedi anche
 
-**Da tastiera (tutte e tre le modalità):** clicca una volta sulla card/riga per selezionarla (o raggiungila con Tab), poi:
-- in **Griglia**/**Doppia pagina**: freccia sinistra/destra;
-- in **Lista**: freccia su/giù.
+- [Inizia qui](resources/manuale/inizia-qui.md)
+- [Cosa vuoi fare?](resources/manuale/cosa-vuoi-fare.md)
+- [Note per l'amministratore](resources/manuale/note-amministratore.md)
 
-La pagina si sposta di un posto e scorre visibilmente nella nuova posizione, restando selezionata: puoi premere la freccia più volte di fila. Se fa parte di un **gruppo collegato**, si sposta di un posto **l'intero gruppo**, qualunque pagina del gruppo tu abbia selezionato.
+### Cosa vuoi fare?
 
-**Modalità scambio (bottone "🔀 Modalità scambio" in barra, funziona in tutte e tre le modalità):** attivala, poi clicca una pagina (si evidenzia con un bordo colorato) e clicca una seconda pagina — si scambiano di posto direttamente, senza far slittare nient'altro. Un secondo click sulla stessa pagina annulla la selezione senza fare nulla. Utile per scambiare due pagine lontane tra loro senza dover trascinare attraverso tutto lo schermo. Contenuti, stato e PDF caricati restano legati alla pagina, non alla posizione: si "spostano" insieme ad essa.
+**In breve**
 
-Se nel frattempo un collega ha spostato o scambiato delle pagine e la tua vista non si è ancora aggiornata, l'operazione viene rifiutata con un avviso invece di mescolare le posizioni in modo imprevedibile — la vista si allinea subito da sola e puoi riprovare.
+Scegli il compito: ogni riquadro porta alla pagina che spiega come farlo.
 
----
+- [Spostare una pagina](resources/manuale/spostare-pagine.md) — trascinala o usa le frecce.
+- [Mettere una pubblicità su una pagina](resources/manuale/assegnare-contenuto.md) — dal pannello Contenuti alla pagina.
+- [Creare un articolo o una pubblicità](resources/manuale/creare-contenuto.md) — il modulo «+ Nuovo contenuto».
+- [Caricare un PDF](resources/manuale/caricare-file.md) — su un contenuto, anche più file insieme.
+- [Cambiare lo stato di una pagina](resources/manuale/stato-pagina.md) — da «Da assegnare» a «Ok stampa».
+- [Annullare un errore](resources/manuale/annullare-ripetere.md) — Ctrl+Z, o ⌘+Z su Mac.
+- [Aggiungere o togliere pagine](resources/manuale/pagine-interne.md) — il bottone «⚙️ Pagine interne».
+- [Esportare il timone in PDF](resources/manuale/esporta-timone-pdf.md) — il foglio da appendere in redazione.
+- [Capire cosa significano i colori](resources/manuale/legenda.md) — colori, bordi e icone delle pagine.
+- [Selezionare più pagine](resources/manuale/selezione-multipla.md) — per cambiare stato o bloccare tante pagine insieme.
+- [Lasciare un commento su una pagina](resources/manuale/commenti.md) — e avvisare un collega via mail.
+- [Risolvere un messaggio d'errore](resources/manuale/problemi-frequenti.md) — cosa significa e cosa fare.
 
-## 4bis. Bloccare una pagina
+#### Vedi anche
 
-Bottone **🔓** su ogni card/riga (accanto allo stato) — clic per bloccarla, diventa **🔒**. Una pagina bloccata:
+- [Inizia qui](resources/manuale/inizia-qui.md)
+- [Scorciatoie da tastiera](resources/manuale/scorciatoie.md)
+- [Glossario](resources/manuale/glossario.md)
 
-- **non può essere spostata o scambiata di posto** (drag&drop, tastiera, modalità scambio: tutti rifiutati con un avviso);
-- **non può essere modificata**: niente cambio di stato, assegnazione/rimozione contenuti, modifica dello spazio occupato, caricamento di un nuovo PDF — tutti i controlli diventano di sola visualizzazione, in tutte e tre le modalità di vista;
-- **non può essere eliminata** riducendo il numero totale di pagine — se provi a ridurre e una delle pagine che verrebbero tolte è bloccata, l'operazione viene rifiutata (il bottone di conferma nel pannello "⚙️ Pagine totali" si disabilita da solo se questo succede).
+## Lavorare sul timone
 
-Per sbloccarla, clic sulla stessa icona (ora 🔒): torna 🔓 e la pagina è di nuovo modificabile normalmente. Utile per esempio per una pagina già mandata in stampa, che non deve più essere toccata per errore.
+### Le viste del timone
 
-**Limite da sapere**: il blocco impedisce di toccare *direttamente* la pagina bloccata, ma non impedisce che la sua *posizione* cambi come conseguenza indiretta se un'altra pagina viene spostata attraverso di essa (il riordino fa slittare tutte le pagine intermedie). Per spostamenti "puliti" attorno a una pagina bloccata, preferisci la [modalità scambio](#4-spostare-le-pagine), che coinvolge solo le due pagine scelte esplicitamente.
+**In breve**
 
----
+Il timone ha tre viste: **Griglia**, **Doppia pagina** e **Lista**. Cambiale con i bottoni in alto a destra nella fascia dei comandi.
 
-## 5. Creare, assegnare/rimuovere contenuti e modificare lo spazio occupato
+1. **Griglia**: una card per pagina, la vista principale per lavorare.
+2. **Doppia pagina**: la rivista aperta, **pari a sinistra, dispari a destra**.
+3. **Lista**: una riga per pagina, per scorrere velocemente un numero lungo.
+4. Con i bottoni **S**, **M**, **L** rimpicciolisci o ingrandisci le pagine.
 
-**Per creare un nuovo articolo o una nuova pubblicità:** bottone **"+ Nuovo contenuto"** sopra la griglia. Scegli il tipo (Articolo o Pubblicità): i campi del form cambiano di conseguenza.
+#### Doppia pagina
 
-- **Articolo**: titolo, rubrica (opzionale), **occupazione di pagina (obbligatoria, vedi [§5bis](#5bis-occupazione-di-pagina-obbligatoria))**, autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
-- **Pubblicità**: titolo (opzionale: se lo lasci vuoto diventa «Pubblicità 1/2 — da assegnare», con la misura dello spazio occupato), rubrica, cliente (opzionale: **senza cliente e senza file la pubblicità è un segnaposto «da assegnare»**, come quelle previste alla creazione del numero, [§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)), agenzia (opzionale), **formato (obbligatorio, nessun valore già scelto)** (l'intero listino ufficiale: pagina intera, mezza pagina orizzontale/verticale, 1/3, 1/4 (vetrina), 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale — accanto a ciascuno è indicato lo spazio che occupa, es. «(1/2 di pagina)»). Scelto il formato, i campi **"Pagine intere" + "Frazione"** ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)) si compilano da soli con lo spazio del formato, e puoi **correggerli** (es. una mezza pagina che in questo numero occupa 2/3). Poi **pagina preferita (opzionale)** — solo un promemoria di dove piazzarla, non assegna nulla da sola, visibile nel pannello "Pubblicità prenotate" ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), stato commerciale, note commerciali. Per la **doppia pagina** (2 pagine intere affiancate): trascinala sulla prima delle due pagine — occupa da sola anche la successiva, ciascuna per intero, e le due pagine vengono collegate tra loro. La **battente copertina** occupa la bandella, che nel timone è un solo riquadro ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)).
+Le pagine sono affiancate come nella rivista aperta. Le due pagine di una coppia sono attaccate, con una linea sottile in mezzo. Tra una coppia e l'altra c'è più spazio.
 
-**Rubrica**: accanto al menu a tendina ci sono due bottoni — **➕** crea una nuova rubrica (nome, poi "Crea": viene selezionata subito), **✏️** rinomina quella attualmente selezionata. Il nome deve essere unico all'interno della rivista.
+- La prima coppia è [II di copertina | 1]. Le copertine stanno nella fascia in alto, quindi a sinistra della pagina 1 vedi un riquadro tratteggiato «II di copertina».
+- Se le pagine sono **pari**, l'ultima sta a sinistra, davanti al riquadro «III di copertina».
+- In Doppia pagina fai tutto come in Griglia: assegni e togli contenuti, cambi lo stato, commenti, trascini le pagine (anche più pagine selezionate) e usi le frecce da tastiera.
+- Dopo uno spostamento le pagine che seguono cambiano lato da sole.
 
-**Posizione nel timone (opzionale, dal 2026-10-27)**: nel modulo «+ Nuovo contenuto» puoi scegliere subito la pagina (1…N) o la copertina (I–IV) da cui il contenuto parte: viene messo lì appena creato, sulle pagine successive se ne occupa più d'una, nel primo posto libero della pagina. Se non c'è spazio il contenuto **non viene creato** e un messaggio dice cosa occupa già la pagina e quanto manca (es. «Sulla pagina ci sono già «Acme» (1/2) e «Beta» (1/4): manca 1/4 di pagina.»). Lasciato su «Da assegnare» il contenuto va tra il pannello Contenuti (scheda «Da assegnare»), come sempre.
+**Dettagli**
 
-**Allegare un file (opzionale)**: nel form di creazione, riquadro tratteggiato "Allega PDF/immagine" — **trascinaci sopra il file** dal tuo computer, oppure cliccaci per sceglierlo come sempre (vedi [§7](#7-caricare-e-vedere-un-pdf) per i dettagli). Un PDF o un'immagine (JPG/PNG/WEBP, fino a 100 MB). L'anteprima si genera da sola in pochi secondi (stessa elaborazione in coda già usata per i PDF di pagina) e compare al posto dell'iconcina 📄/📢 sul chip del contenuto nel pannello Contenuti (scheda «Da assegnare»), senza bisogno di ricaricare la pagina. A differenza del PDF caricato su una pagina ([§7](#7-caricare-e-vedere-un-pdf)), questo file è legato al singolo contenuto: su una pagina con più contenuti (es. metà pubblicità + metà articolo), ciascuno ha il proprio allegato distinto.
+- Quante coppie stanno in una riga dipende dalla larghezza dello schermo e dallo zoom. Con M: 3 su un monitor da computer, 2 su un tablet, 1 sul telefono. Non c'è mai scorrimento orizzontale.
+- I confini delle [segnature](resources/manuale/segnature.md) cadono tra le due pagine di una coppia, per esempio tra 32 e 33.
 
-Una pubblicità creata ma non ancora assegnata a nessuna pagina è considerata **"prenotata"**: resta comunque conteggiata nel carico pubblicitario del cruscotto ([§8](#8-leggere-il-cruscotto-pubblicitario)) e gestibile dal pannello dedicato ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)).
+#### Lista
 
-Il contenuto appena creato compare subito nel pannello **Contenuti** (scheda «Da assegnare») (e, se è una pubblicità, nel pannello "📌 Pubblicità prenotate" se è aperto), pronto per essere trascinato su una pagina — senza ricaricare la pagina, sia per te sia per i colleghi collegati allo stesso numero. Lo stesso vale quando archivi, ripristini o elimini un contenuto non assegnato: sparisce o ricompare subito anche sugli schermi degli altri.
+Ogni riga ha un'etichetta **DX** o **SX**: pagina destra o sinistra secondo la convenzione di stampa. La pagina 1 è sempre a destra, poi si alternano: è la stessa regola della Doppia pagina.
 
-**Il pannello Contenuti (dal 2026-10-28)**: bottone **«📚 Contenuti · N da assegnare»** nella fascia fissa in alto (N = articoli e pubblicità non ancora su una pagina). Si apre senza ricaricare né perdere il punto in cui sei: sugli schermi larghi (da 1440 px) come **colonna a destra** — il timone si stringe accanto, il bordo sinistro della colonna si trascina per allargarla —, sugli altri come **tendina sotto la fascia**. Apertura e larghezza restano ricordate in questo browser. Dentro:
-- schede **Da assegnare** (predefinita), **Tutti** (anche quelli già in pagina, con «p. 12–14» o la copertina) e **Segnaposto**; filtro **Articoli/Pubblicità**, **Cerca per titolo…**, ordine **Ultimi creati** o **A–Z**;
-- **+ Nuovo contenuto** e **Caricamento multiplo** (prima erano sopra il timone);
-- per ogni contenuto: miniatura, titolo, tipo, spazio occupato, «SEGNAPOSTO», 👁 per aprire il file, ✏️ per modificarlo.
+#### Dimensione delle pagine (S / M / L)
 
-**Assegnare senza risalire**, in tre modi equivalenti (stessi controlli di spazio, se non c'è posto un messaggio in alto dice cosa occupa la pagina e quanto manca):
-1. **trascina** la voce su una pagina o una copertina visibile: avvicinandoti al bordo il timone scorre da solo (anche partendo dal pannello);
-2. con una o più pagine selezionate ([§6bis](#6bis-selezione-multipla-e-azioni-di-massa)) compare **«Assegna alla selezione»**: il contenuto parte dalla prima pagina selezionata (se occupa più pagine prende anche le seguenti);
-3. **«Vai a pag.»**: scrivi il numero (es. `12`) o la copertina (`I`, `II`, `III`, `IV`) e premi Invio.
+In Griglia e Doppia pagina, accanto ai bottoni delle viste, trovi **S**, **M** e **L**. M è il valore iniziale.
 
-Si assegnano dal pannello solo i contenuti non ancora in pagina (nella scheda «Tutti» quelli già in pagina si vedono ma non si trascinano: si spostano dalla pagina). Se un collega assegna un contenuto mentre hai il pannello aperto, la voce sparisce al primo aggiornamento; se la stavi trascinando, il rilascio viene rifiutato con un messaggio.
+**Dettagli**
 
-**Archiviare o eliminare un contenuto non assegnato**: passando il mouse su una voce del pannello Contenuti compaiono tre icone — **✏️ Modifica** ([§5ter](#5ter-modificare-un-contenuto-e-rinominarlo)), **🗄️ Archivia** (lo nasconde dal pannello, ma resta nel database: recuperabile in qualsiasi momento dalla sezione "▸ Contenuti archiviati" subito sotto, bottone **↩️** per ripristinarlo) e **🗑️ Elimina** (cancellazione **definitiva**, non recuperabile — chiede doppia conferma). Un contenuto già assegnato a una pagina non può essere né archiviato né eliminato da qui: va prima rimosso dalla pagina ("✕" sulla card).
+- La scelta resta memorizzata **su questo browser**, per te: non cambia la vista dei colleghi. La ritrovi alla prossima apertura.
+- Le pagine hanno le **proporzioni del formato reale del numero**: base × altezza impostate nel [pannello Peso](resources/manuale/peso.md). Se il formato non è ancora impostato si usa una proporzione standard 3:4.
 
-**Per assegnare:** trascina un contenuto dal pannello sopra una pagina. Se la pagina che ti serve è più in basso (o più in alto), porta il contenuto verso il bordo inferiore della finestra (o subito sotto la barra di riepilogo in alto) **senza rilasciarlo**: la pagina scorre da sola, più veloce quanto più sei vicino al bordo. Vale anche trascinando pagine, gruppi di pagine e copertine. Quanto spazio occupa lo decide la sua **occupazione** ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)), uguale per articoli e pubblicità:
-- **meno di una pagina** (es. 1/3): prende quella parte della pagina su cui lo lasci;
-- **pagine intere + una frazione** (es. 2 pagine e 1/2): occupa **pagine consecutive** a partire da quella su cui lo lasci — le pagine intere in sequenza e la frazione sull'ultima (pagina intera, pagina intera, 1/2). Con un PDF, ogni pagina mostra la miniatura della propria pagina del PDF; le pagine vengono collegate tra loro (🔗) e si spostano insieme.
+#### Barre sempre visibili
 
-**Tutto o niente**: se il contenuto non ci sta (il numero finisce prima, una delle pagine è bloccata o non ha abbastanza spazio), compare un messaggio che spiega il motivo — per lo spazio dice anche **quanto ne resta** (es. «richiede 1/2 di pagina, ma resta libero solo 1/3 di pagina») — e **nessuna pagina viene modificata** — scegli un'altra pagina di partenza o libera spazio. Un contenuto creato prima che l'occupazione diventasse obbligatoria e ancora senza occupazione non viene mai piazzato "a caso" su una pagina: il messaggio te lo segnala.
+**La barra in alto** (logo, Riviste, Utenti, Manuale, il tuo nome) resta visibile mentre scorri il timone.
 
-**Per cambiare lo spazio su una pagina** dopo l'assegnazione: usa il menu accanto al contenuto direttamente sulla card (da 1/12 a «intera»). Cambia solo quella pagina: la distribuzione automatica (es. intera, intera, 1/2) è un punto di partenza, poi ogni pagina si regola a mano. Se il nuovo valore non ci sta, viene rifiutato con un messaggio che dice quanto spazio resta.
+**Il riepilogo e i comandi** stanno subito sotto, in un'unica fascia fissa: sopra il [riepilogo del numero](resources/manuale/riepilogo-del-numero.md), sotto i comandi del timone (↶ ↷ 🕘, 📅 scadenza stampa, ⚙️ Pagine interne, 📚 Contenuti, 📜 Storico, 🔀 Scambio, ☑️ Selezione, 📄 Esporta PDF, zoom S/M/L, Griglia/Doppia pagina/Lista). Non serve tornare in cima per usarli.
 
-**Per rimuovere:** clic sulla ✕ accanto al contenuto — torna nel pannello Contenuti (scheda «Da assegnare») (solo da quella pagina: se il contenuto è anche su altre pagine, resta lì).
+**Dettagli**
 
-**Per un contenuto che continua su più pagine** (es. un articolo che prosegue da pagina 5 a pagina 8): una volta assegnato una prima volta, clicca sull'icona **"↗"** accanto al contenuto e indica il numero della pagina aggiuntiva. Il contenuto compare anche lì, con una pagina intera (o tutto il contenuto, se occupa meno di una pagina), modificabile dal menu di quella pagina; un piccolo **"×N"** accanto al titolo indica su quante pagine è presente in totale.
+Su un telefono la fascia scorre con la pagina, per non coprire metà dello schermo.
 
-Una pagina può ospitare più contenuti insieme (es. metà pubblicità + metà articolo = pagina "mista"), purché il totale non superi la pagina intera: per esempio 1/2 + 1/4 + 1/4 riempie esattamente la pagina («● Piena»), 1/2 + 1/3 + 1/4 non ci sta.
+#### Lavorare insieme ai colleghi
 
----
+Tutto si aggiorna da solo se un collega lavora sullo stesso numero: non serve mai ricaricare la pagina. Quando arriva un cambiamento fatto da qualcun altro, per pochi secondi compare un piccolo avviso in basso a destra, per esempio «Una pagina è stata spostata da un altro utente.». È solo un promemoria: la griglia si è già aggiornata.
 
-## 5bis. Occupazione di pagina (obbligatoria)
+Se compare un avviso giallo fisso sugli aggiornamenti, vedi [Problemi frequenti](resources/manuale/problemi-frequenti.md).
 
-Ogni contenuto deve dichiarare **quanto spazio occupa nel timone**: è il dato che usano il posizionamento sulle pagine, il cruscotto pubblicitario e i conteggi di foliazione. Non c'è un valore già scelto per gli articoli: finché non lo indichi, "Crea contenuto" segnala l'errore e non crea nulla.
+#### Vedi anche
 
-**Come si inserisce** (uguale per articoli e pubblicità): due campi affiancati.
-- **Pagine intere**: 0, 1, 2, 3…
-- **Frazione**: nessuna, 1/4, 1/3, 1/2, 2/3 o 3/4 di pagina.
+- [Il riepilogo in alto](resources/manuale/riepilogo-del-numero.md)
+- [Spostare le pagine](resources/manuale/spostare-pagine.md)
+- [Legenda](resources/manuale/legenda.md)
 
-Sotto compare il totale, es. **«Occupa 2 e 1/2 pagine»**. Esempi: un articolo di due pagine e mezza = 2 + 1/2; una vetrina = 0 + 1/4; un piedino = 0 + 1/3; un servizio di 4 pagine = 4 + nessuna. Almeno uno dei due campi deve essere più di zero.
+### Il riepilogo in alto
 
-**Pubblicità**: scegliendo il formato i due campi si compilano da soli (pagina intera = 1 + nessuna, 2/3 = 0 + 2/3, mezza pagina = 0 + 1/2, piedino e 1/3 = 0 + 1/3, vetrina/un quarto = 0 + 1/4, doppia pagina = 2 + nessuna, copertina 2ª/3ª/4ª e battente = 1 + nessuna); restano modificabili.
+**In breve**
 
-**Come si distribuisce sulle pagine**: pagine intere in sequenza e la frazione sull'ultima. 2 e 1/2 pagine → pagina intera, pagina intera, 1/2 pagina. Poi lo spazio su ciascuna pagina si può cambiare dal menu sulla card ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato)).
+In cima al timone, nella fascia fissa, il riepilogo mostra a colpo d'occhio lo stato del numero. Si aggiorna da solo.
 
-**Capienza della pagina**: una pagina contiene al massimo una pagina intera di contenuti. Il sistema conta in **dodicesimi di pagina** (1/4 = 3, 1/3 = 4, 1/2 = 6, 2/3 = 8, 3/4 = 9, intera = 12), così le somme sono sempre esatte: 1/3 + 1/3 + 1/3 fa esattamente una pagina piena, senza arrotondamenti. Non devi fare tu questi conti: li vedi solo come frazioni.
+1. **Pagine interne**: quante sono, quante **piene**, quante **parziali** e quante **bianche**.
+2. **Spazio libero**: tutto lo spazio ancora libero sulle pagine interne, sommato.
+3. **Pubblicità**: la percentuale di pubblicità sulle pagine interne.
+4. **Segnaposto**, **Copertine**, **Segnature** e **Peso copia**.
+5. Clic su **bianche** o su **«Segnaposto»** per evidenziare quelle pagine nel timone.
 
-**Con un PDF allegato**: appena scegli (o trascini) il file, il sistema ne conta le pagine e, se non hai ancora indicato l'occupazione di un articolo, **propone** tante pagine intere quante quelle del PDF (lo dice sotto i campi). Se avevi già indicato un valore, non viene cambiato. Le regole:
-- PDF di **più pagine** → l'occupazione deve attraversare esattamente quel numero di pagine (un PDF di 3 pagine va bene con 3 pagine intere o con 2 e 1/2, non con 2);
-- PDF di **una pagina** → al massimo 1 pagina, anche una frazione (es. mezza pagina);
-- PDF **illeggibile** (danneggiato o protetto) → viene rifiutato subito con un messaggio, invece di essere trattato come "1 pagina".
+#### Cosa mostra
 
-**Contenuti creati prima di questa versione**: lo spazio che avevano sulle pagine è stato convertito alla frazione più vicina (50% → 1/2, 33% → 1/3, 99,7% → intera). Se su una pagina la somma risultasse oltre la capienza, la pagina mostra «⚠ Oltre capienza» in rosso: riduci a mano uno dei contenuti.
+- **Pagine interne**: quante sono, quante piene, quante parziali e quante bianche (senza nessun contenuto).
+- **Spazio libero**: tutto lo spazio libero sulle pagine interne, sommato, per esempio «4 e 1/3 pagine».
+- **Pubblicità**: la percentuale di pubblicità sulle pagine interne, prenotate e segnaposto compresi. È esatta, perché calcolata in frazioni di pagina.
+- **Segnaposto**: quante pubblicità [segnaposto](resources/manuale/segnaposto.md) aspettano ancora inserzionista e PDF, con il dettaglio per formato.
+- **Segnature**: come si divide il numero in segnature di stampa, vedi [Segnature](resources/manuale/segnature.md).
+- **Copertine**: quante hanno già un contenuto e quante sono libere, per esempio «Copertine: 2/4 assegnate (2 libere)».
+- **Peso copia** e **scaglione** postale, dal [pannello Peso](resources/manuale/peso.md). Se mancano carta o formato vedi «parametri incompleti».
 
----
+**Dettagli**
 
-## 5ter. Modificare un contenuto e rinominarlo
+La percentuale di pubblicità è solo un numero: niente soglie né colori di allarme. È la stessa del [cruscotto pubblicitario](resources/manuale/cruscotto-pubblicitario.md).
 
-**Rinominare al volo**: sulla pagina, **doppio click sul nome** del contenuto → diventa un campo di testo. **Invio** salva, **Esc** (o cliccare altrove) annulla. Il nome è del contenuto, non della pagina: un articolo su 3 pagine cambia nome su tutte e 3, e lo vedono subito anche i colleghi collegati. Per un articolo si cambia il titolo; per una pubblicità il **cliente** (è il nome che la pagina mostra). Funziona anche su una pagina bloccata: il blocco riguarda spostamenti e spazio, non i dati del contenuto.
+#### Evidenziare le pagine bianche o i segnaposto
 
-**Modificare tutto**: icona **✏️** accanto al contenuto (sulla pagina) o sulla voce nel pannello Contenuti → si apre la finestra **"Modifica contenuto"** con tutti i campi della creazione: tipo (articolo/pubblicità), titolo, rubrica, campi dell'articolo o della pubblicità, **occupazione** (pagine intere + frazione) e materiale di stampa (il PDF o l'immagine allegati, che sono anche l'anteprima del contenuto nel timone). Dal 2026-10-27 ci sono anche **Posizione nel timone** (la prima pagina in cui si trova: cambiandola il contenuto si sposta da lì, tutto insieme, oppure torna tra il pannello Contenuti (scheda «Da assegnare») se scegli «Da assegnare»; se nella nuova pagina non c'è posto non cambia nulla e un messaggio dice cosa la occupa e quanto spazio manca) e **Anteprima nel riquadro**: «Automatico» (il sistema guarda le proporzioni del file e lo dice tra parentesi), «Il file è a pagina intera» (mostra solo la parte del riquadro) o «Il file è già nel formato» (mostralo intero). "Salva modifiche" applica tutto; "Annulla", ✕ o Esc chiudono senza salvare.
+**Clic su «bianche»** o su **«Segnaposto»**: le pagine corrispondenti si evidenziano con un contorno azzurro e le altre si attenuano, in tutte e tre le viste. Per i segnaposto vengono evidenziate anche le copertine. Un secondo clic sullo stesso bottone toglie l'evidenziazione.
 
-- Le modifiche valgono su **tutte le pagine** dove compare il contenuto.
-- **Cambiare l'occupazione** di un contenuto già sulle pagine lo **ridistribuisce** a partire dalla sua prima pagina, con la regola solita (pagine intere poi la frazione): da 2 a 2 e 1/2 pagine → intera, intera, 1/2 sulle pagine consecutive; riducendolo, le pagine non più usate tornano libere (e il collegamento 🔗 tra le sue pagine viene sciolto). Le regolazioni fatte a mano pagina per pagina vengono sostituite dalla nuova distribuzione. Se non ci sta (numero finito, pagina successiva piena o bloccata) non cambia nulla e il messaggio spiega perché. Lasciando l'occupazione com'è, le pagine restano come sono.
-- **Pagine bloccate**: occupazione e materiale non si possono cambiare finché il contenuto è su una pagina bloccata (gli altri campi sì).
-- **Cambiare tipo** (articolo ↔ pubblicità): i campi del vecchio tipo si perdono, quelli del nuovo vanno compilati; il colore delle pagine si aggiorna.
+**Dettagli**
+
+Le pagine evidenziate non si spostano e restano utilizzabili.
+
+#### Ridurre il riepilogo
+
+Il bottone **⌃** a destra del riepilogo lo riduce a una riga corta. **⌄** lo riapre. La scelta è ricordata in questo browser.
+
+#### Vedi anche
+
+- [Le viste del timone](resources/manuale/viste-del-timone.md)
+- [Il cruscotto pubblicitario](resources/manuale/cruscotto-pubblicitario.md)
+- [Segnature](resources/manuale/segnature.md)
+- [Peso della rivista](resources/manuale/peso.md)
+
+### Spostare le pagine
+
+**In breve**
+
+Trascina la pagina dalla maniglia ⠿ (il suo numero) e rilasciala dove vuoi. Le pagine intermedie slittano per fare spazio.
+
+1. Prendi la pagina dalla maniglia ⠿.
+2. Trascinala nel punto giusto, in qualunque vista.
+3. Rilasciala: le altre pagine si spostano di conseguenza.
+4. Da tastiera: clicca la pagina, poi usa le frecce.
+
+#### Con il mouse
+
+Trascina una pagina prendendola dalla maniglia ⠿ (il numero di posizione) e rilasciala nel punto desiderato. Funziona in tutte e tre le viste. Le pagine intermedie slittano per fare spazio.
+
+- Con [più pagine selezionate](resources/manuale/selezione-multipla.md), trascinarne una sposta **l'intera selezione insieme**.
+- Una pagina di un [gruppo collegato](resources/manuale/gruppi-collegati.md) porta con sé **l'intero gruppo**, anche senza selezione.
+- Contenuti, stato e PDF caricati restano legati alla pagina, non alla posizione: si spostano con lei.
+
+Se la pagina che ti serve è più in basso o più in alto, porta la pagina verso il bordo della finestra (o subito sotto il riepilogo in alto) **senza rilasciarlo**: il timone scorre da solo, più veloce quanto più sei vicino al bordo. Vale anche per gruppi di pagine, copertine e contenuti.
+
+**Dettagli**
+
+- Mentre trascini un gruppo collegato o una selezione, tutte le pagine coinvolte si raccolgono sotto quella che hai afferrato e si muovono insieme, con un bordo tratteggiato blu. L'immagine che segue il mouse le mostra tutte affiancate. Al rilascio le pagine scorrono fino alla loro posizione finale.
+- In Doppia pagina, mentre trascini, le coppie si ricompongono e il posto vuoto mostra dove cadrà la pagina, anche tra le due pagine di una coppia.
+
+#### Da tastiera
+
+1. Clicca una volta sulla card o sulla riga per selezionarla, oppure raggiungila con Tab.
+2. In **Griglia** e **Doppia pagina** usa freccia sinistra o destra. In **Lista** freccia su o giù.
+
+La pagina si sposta di un posto e scorre nella nuova posizione, restando selezionata: puoi premere la freccia più volte di fila.
+
+**Dettagli**
+
+Se la pagina fa parte di un gruppo collegato, si sposta di un posto **l'intero gruppo**, qualunque pagina del gruppo tu abbia selezionato.
+
+#### Se un collega ha appena spostato delle pagine
+
+Se nel frattempo un collega ha spostato o scambiato delle pagine e la tua vista non si è ancora aggiornata, l'operazione viene rifiutata con un avviso. Le posizioni non si mescolano: la vista si allinea subito da sola e puoi riprovare.
+
+> **Suggerimento**
+>
+> Per scambiare due pagine lontane senza far slittare le altre usa la [modalità scambio](resources/manuale/scambiare-pagine.md).
+
+#### Vedi anche
+
+- [Scambiare due pagine](resources/manuale/scambiare-pagine.md)
+- [Selezionare più pagine](resources/manuale/selezione-multipla.md)
+- [Bloccare una pagina](resources/manuale/bloccare-pagina.md)
+- [Annullare e ripetere](resources/manuale/annullare-ripetere.md)
+
+### Scambiare due pagine
+
+**In breve**
+
+Con la **modalità scambio** due pagine si scambiano di posto senza far slittare le altre. Utile per pagine lontane tra loro.
+
+1. Clic su **🔀 Scambio** nella fascia dei comandi.
+2. Clic sulla prima pagina: si evidenzia con un bordo colorato.
+3. Clic sulla seconda pagina: le due pagine si scambiano.
+
+Funziona in tutte e tre le viste. Contenuti, stato e PDF caricati restano legati alla pagina, non alla posizione: si scambiano insieme a lei. Mentre la modalità è attiva compare l'avviso «🔀 Modalità scambio attiva».
+
+**Dettagli**
+
+- Un secondo clic sulla stessa pagina annulla la scelta senza fare nulla.
+- La modalità scambio coinvolge solo le due pagine scelte: è il modo più pulito per spostare pagine attorno a una [pagina bloccata](resources/manuale/bloccare-pagina.md).
+- Le copertine non entrano nella modalità scambio: si scambiano trascinandole una sull'altra, vedi [Le copertine e la bandella](resources/manuale/copertine.md).
+
+#### Vedi anche
+
+- [Spostare le pagine](resources/manuale/spostare-pagine.md)
+- [Bloccare una pagina](resources/manuale/bloccare-pagina.md)
+- [Le copertine e la bandella](resources/manuale/copertine.md)
+
+### Cambiare lo stato di una pagina
+
+**In breve**
+
+Ogni pagina ha uno stato, mostrato dall'etichetta colorata in alto sulla card e dal colore del bordo.
+
+1. Clicca sull'etichetta colorata in alto sulla card o sulla riga.
+2. Scegli il nuovo stato dal menu.
+
+Gli stati sono: **Da assegnare**, **Assegnata**, **In bozza**, **Revisionata**, **Ok stampa**.
+
+Funziona in tutte e tre le viste. Non c'è un ordine obbligato: puoi passare da uno stato all'altro liberamente, **eccetto verso «Ok stampa»**.
+
+#### «Ok stampa» richiede il PDF
+
+**Ogni pagina deve avere un'anteprima (dal contenuto assegnato) prima di poter essere segnata «Ok stampa»**. Se provi a farlo su una pagina senza anteprima compare un messaggio d'errore e lo stato non cambia. Carica prima il file sul contenuto: vedi [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md).
+
+**Dettagli**
+
+- Per cambiare lo stato di tante pagine insieme usa la [selezione](resources/manuale/selezione-multipla.md).
+- Su una [pagina bloccata](resources/manuale/bloccare-pagina.md) lo stato non si cambia.
+- Le pagine «Revisionata» o «Ok stampa» ancora senza anteprima compaiono negli [avvisi](resources/manuale/avvisi.md).
+- Il colore di ogni stato è nella [Legenda](resources/manuale/legenda.md).
+
+#### Vedi anche
+
+- [Selezionare più pagine](resources/manuale/selezione-multipla.md)
+- [Avvisi automatici](resources/manuale/avvisi.md)
+- [Legenda](resources/manuale/legenda.md)
+
+### Bloccare una pagina
+
+**In breve**
+
+Blocca una pagina quando non deve più essere toccata, per esempio perché è già andata in stampa.
+
+1. Clic su **🔓** sulla card o sulla riga, accanto allo stato.
+2. L'icona diventa **🔒**: la pagina è bloccata.
+3. Per sbloccarla clicca di nuovo sull'icona, che torna 🔓.
+
+#### Cosa impedisce il blocco
+
+Una pagina bloccata:
+
+- **non può essere spostata o scambiata di posto**: trascinamento, frecce e modalità scambio vengono rifiutati con un avviso;
+- **non può essere modificata**: niente cambio di stato, assegnazione o rimozione di contenuti, modifica dello spazio occupato, posizione dei contenuti, caricamento di un nuovo PDF. Tutti i comandi diventano di sola visualizzazione, in tutte e tre le viste;
+- **non può essere eliminata** riducendo le pagine del numero.
+
+**Dettagli**
+
+- Se riduci le pagine e una di quelle che verrebbero tolte è bloccata, l'operazione viene rifiutata: il bottone di conferma nel pannello «⚙️ Pagine interne» si disattiva da solo.
+- Il blocco riguarda spostamenti e spazio, non i dati del contenuto: puoi ancora rinominare un contenuto. In «Modifica contenuto» non puoi cambiare occupazione e materiale finché il contenuto è su una pagina bloccata, gli altri campi sì.
+- Un gruppo collegato con una pagina bloccata non si sposta né si scollega.
+
+#### Limite da sapere
+
+Il blocco impedisce di toccare *direttamente* la pagina, ma la sua *posizione* può cambiare se un'altra pagina viene spostata attraverso di essa: lo spostamento fa slittare tutte le pagine intermedie.
+
+> **Suggerimento**
+>
+> Per spostare pagine attorno a una pagina bloccata usa la [modalità scambio](resources/manuale/scambiare-pagine.md): coinvolge solo le due pagine scelte.
+
+#### Vedi anche
+
+- [Scambiare due pagine](resources/manuale/scambiare-pagine.md)
+- [Selezionare più pagine](resources/manuale/selezione-multipla.md)
+- [Aggiungere o togliere pagine](resources/manuale/pagine-interne.md)
+
+### Selezionare più pagine
+
+**In breve**
+
+Seleziona più pagine per cambiare lo stato, bloccarle, collegarle o spostarle tutte insieme.
+
+1. Clic su **☑️ Selezione** nella fascia dei comandi: su ogni pagina compare una casella.
+2. Spunta le pagine, oppure fai ⌘/Ctrl+clic direttamente su una pagina.
+3. Nella fascia in alto compare la riga «3 pagine selezionate: 12–14» con le azioni.
+4. Scegli l'azione: **Stato**, **🔗 Collega**, **✂️ Scollega**, **🔒 Blocca**, **🔓 Sblocca**.
+
+#### Selezionare
+
+- Clic su **☑️ Selezione** (in elenco «selezione multipla»): su ogni card o riga compare una casella di spunta. Funziona in tutte e tre le viste e insieme alla [modalità scambio](resources/manuale/scambiare-pagine.md).
+- **Ctrl+click** sulla card o sulla riga, o **Cmd+click su Mac**, aggiunge o toglie la pagina dalla selezione e attiva da sola la selezione se non lo è già. Su un Mac si usa ⌘+clic: Ctrl+clic apre il menu del tasto destro.
+- **Click semplice** su una pagina, con la selezione già attiva, azzera la selezione e seleziona solo quella.
+- **Tutte** (Ctrl/⌘+A) seleziona tutte le pagine del numero. **Deseleziona** (Esc) le toglie.
+
+Le pagine selezionate hanno un contorno verde acceso.
+
+#### Le azioni
+
+Con almeno una pagina selezionata compare una terza riga nella fascia fissa in alto, quindi sempre a portata anche se le pagine sono in fondo al timone:
+
+- **Deseleziona** (Esc) e **Tutte** (Ctrl/⌘+A);
+- **Stato**: cambia lo stato di tutte le pagine selezionate in un colpo solo;
+- **🔗 Collega** (Ctrl/⌘+Shift+G): le collega in un [gruppo](resources/manuale/gruppi-collegati.md);
+- **✂️ Scollega**: toglie le pagine selezionate dal loro gruppo;
+- **🔒 Blocca** e **🔓 Sblocca**: applica il [blocco](resources/manuale/bloccare-pagina.md) a tutta la selezione.
+
+Esiti ed errori (pagina bloccata, gruppo) compaiono nella fascia stessa.
+
+**Dettagli**
+
+- Un'azione che non si può fare con la selezione attuale resta al suo posto ma attenuata. Passandoci sopra il mouse il riquadro dice perché, per esempio «Seleziona almeno 2 pagine da collegare» o «Sono già collegate in un gruppo».
+- Su schermi stretti Scollega, Blocca e Sblocca stanno nel menu **«Altro ⋯»** (lì Scollega si chiama «✂️ Scollega dal gruppo»).
+- Il Commerciale vede solo seleziona e deseleziona.
+- Le scorciatoie non funzionano mentre scrivi in un campo.
+- In un cambio di stato su tante pagine, le pagine bloccate e (solo verso «Ok stampa») quelle senza PDF vengono **ignorate**: il resto viene aggiornato comunque. Il messaggio dice quante pagine sono cambiate e quante sono state saltate, per esempio «3 pagine aggiornate a «Ok stampa». 1 pagina bloccata ignorata. 2 pagine senza PDF ignorate.»
+- Togliendo la spunta da **☑️ Selezione** la selezione corrente si azzera.
+
+#### Trascinare l'intera selezione insieme
+
+Con più pagine selezionate, afferra una di quelle selezionate dalla maniglia ⠿ e trascinala: **si sposta l'intera selezione come un unico blocco**, mantenendo l'ordine che le pagine avevano tra loro.
+
+**Dettagli**
+
+- Se avevi selezionato pagine non vicine (per esempio 2 e 7), dopo lo spostamento **si ritrovano vicine, una accanto all'altra**, dove hai rilasciato.
+- Se anche una sola pagina selezionata è bloccata (🔒) lo spostamento viene rifiutato: sblocca quella pagina o togli la spunta e riprova.
+- Se trascini una pagina **non** selezionata, si sposta solo quella.
+
+#### Assegnare un contenuto alla selezione
+
+Con una o più pagine selezionate, nel pannello Contenuti compare **«Assegna alla selezione»**: vedi [Mettere un contenuto su una pagina](resources/manuale/assegnare-contenuto.md).
+
+#### Vedi anche
+
+- [Collegare pagine in un gruppo](resources/manuale/gruppi-collegati.md)
+- [Scorciatoie da tastiera](resources/manuale/scorciatoie.md)
+- [Cambiare lo stato di una pagina](resources/manuale/stato-pagina.md)
+
+### Collegare pagine in un gruppo
+
+**In breve**
+
+Se un articolo o un'inserzione occupa sempre le stesse pagine (per esempio pagina 5 e pagina 6 di uno stesso articolo), puoi **collegarle in un gruppo**: trascinandone una si spostano tutte insieme.
+
+1. Clic su **☑️ Selezione** e seleziona almeno 2 pagine.
+2. Clic su **🔗 Collega** nella riga della selezione (oppure Ctrl/⌘+Shift+G).
+3. Le pagine mostrano un contorno colorato e l'etichetta 🔗.
+4. Per sciogliere il gruppo, clic sull'etichetta **🔗** di una sua pagina.
+
+#### Collegare
+
+Attiva **☑️ Selezione**, seleziona almeno 2 pagine e clicca **🔗 Collega**. Le pagine del gruppo mostrano subito un contorno colorato e un'etichetta **🔗**. Ogni gruppo dello stesso numero ha un colore diverso, così si distinguono a colpo d'occhio.
+
+#### Scollegare
+
+- Clic sull'etichetta **🔗** di una qualunque pagina del gruppo: si scioglie **l'intero gruppo**, non solo quella pagina. Le pagine tornano indipendenti.
+- Per togliere solo alcune pagine e lasciare collegate le altre: selezionale e usa **✂️ Scollega** nella riga della selezione.
+
+#### Da sapere
+
+- Una pagina bloccata (🔒) o già in un altro gruppo non si può collegare: sbloccala o scollegala prima.
+- Se una pagina del gruppo è bloccata, il gruppo non si sposta né si scollega finché non la sblocchi.
+- Se selezioni solo alcune pagine di un gruppo per spostarle, le altre pagine del gruppo vengono **incluse automaticamente**: un gruppo non si spacca mai a metà.
+- Funziona in tutte e tre le viste.
+- Le pagine create da un PDF di più pagine vengono collegate da sole: vedi [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md).
+
+#### Vedi anche
+
+- [Selezionare più pagine](resources/manuale/selezione-multipla.md)
+- [Spostare le pagine](resources/manuale/spostare-pagine.md)
+- [Scorciatoie da tastiera](resources/manuale/scorciatoie.md)
+
+### Annullare e ripetere (Ctrl+Z)
+
+**In breve**
+
+Hai sbagliato? Annulla l'ultima azione fatta sul timone, come in un editor.
+
+1. Premi **Ctrl+Z** (⌘+Z su Mac), oppure il bottone **↶** all'inizio della fascia dei comandi.
+2. Per rifare l'azione annullata premi **Ctrl+Shift+Z** (⌘+Shift+Z) o **Ctrl+Y**, oppure **↷**.
+3. Dopo ogni annulla compare per 4 secondi l'avviso «Annullato: …» con il bottone **Ripeti**.
+
+Si annullano solo le tue azioni su quel numero, fino a 50 passi, per 24 ore.
+
+Passando il mouse su ↶ e ↷ vedi quale azione annullano o ripetono, per esempio «Annulla: Sposta pagina 12 → 20».
+
+#### Si annulla solo il proprio lavoro
+
+**Si annulla solo il proprio lavoro** su quel numero: mai le azioni dei colleghi. Fino a 50 passi, per 24 ore. Una nuova azione dopo un annulla cancella i «ripeti» possibili.
+
+#### Cosa si può annullare
+
+Spostare pagine e gruppi (un gruppo è un passo solo), scambiare pagine e copertine, assegnare un contenuto (anche su più pagine) e toglierlo, frecce e rotazione, spazio sulla pagina, collega e scollega, stato e blocco delle pagine, rinomina, modifica di un contenuto, creazione (anche il caricamento multiplo, come un passo solo), archivia e ripristina, eliminazione di un contenuto o di una prenotazione.
+
+Un contenuto eliminato resta recuperabile per 24 ore.
+
+#### Cosa non si può annullare
+
+Pagine interne, bandella, «Sposta le pagine esistenti dopo», scadenza stampa, parametri del peso, chiusura del numero, rubriche, eliminazione di riviste, numeri e utenti, export PDF e, in una modifica, la sostituzione del PDF. Quest'ultima resta in cronologia ma segnata «non annullabile».
+
+#### Perché a volte l'annulla viene rifiutato
+
+- Un collega ha modificato le stesse pagine o lo stesso contenuto dopo la tua azione. Vedi un messaggio come «Non posso annullare: la pagina 12 è stata modificata da Mario alle 16:42».
+- Rimettere le cose a posto sovrapporrebbe contenuti: nel frattempo lo spazio è stato occupato.
+
+In questi casi non cambia nulla e il passo resta in cronologia come «non annullabile». I passi precedenti si fermano lì.
+
+**Dettagli**
+
+- Le scorciatoie non funzionano mentre scrivi in un campo (lì Ctrl+Z annulla il testo, come sempre) né con una finestra aperta, per esempio «Modifica contenuto» o i commenti.
+- Se premi Ctrl+Z più volte di fila molto velocemente annulli un passo alla volta: i tasti premuti mentre il precedente è ancora in corso vengono ignorati.
+
+#### Cronologia
+
+Il bottone **🕘** accanto a ↶ ↷ mostra le tue ultime azioni su questo numero, con l'ora e lo stato: eseguita, annullata, non annullabile.
+
+#### Vedi anche
+
+- [Scorciatoie da tastiera](resources/manuale/scorciatoie.md)
+- [Storico e cronologia](resources/manuale/storico-e-cronologia.md)
+- [Problemi frequenti](resources/manuale/problemi-frequenti.md)
+
+### Commenti sulle pagine
+
+**In breve**
+
+Ogni pagina, copertine comprese, ha i suoi **commenti**. Puoi scrivere e avvisare i colleghi via mail.
+
+1. Clic sul fumetto **💬** in alto sulla card della pagina.
+2. Scrivi il commento in fondo al pannello.
+3. Per avvisare qualcuno apri «Avvisa via mail…» e scegli le persone, oppure scrivi **@Nome Cognome** nel testo.
+4. Clic su **Invia**.
+
+#### Aprire i commenti
+
+Clic sul fumetto **💬** in alto sulla card (anche nella vista Lista). Il numero accanto è quanti commenti ha la pagina. Se il fumetto è **giallo** ce ne sono che non hai ancora letto. Si apre un pannello a destra con i commenti in ordine di data: autore, data e testo. Aprirlo li segna come letti.
+
+#### Scrivere
+
+Scrivi in fondo al pannello e clicca **Invia**. Per avvisare qualcuno via mail:
+
+- apri «Avvisa via mail…» e scegli le persone, oppure «Tutti gli utenti di questa rivista»;
+- oppure scrivi nel testo **@Nome Cognome**: il nome completo come appare in «Utenti». Le maiuscole non contano e lo spazio si può togliere: @MarioRossi.
+
+Dopo l'invio il pannello dice a chi è partita la mail.
+
+**Dettagli**
+
+- La mail contiene rivista, numero, pagina, autore, testo e un link che apre direttamente quella pagina con i suoi commenti.
+- Tu non ricevi la mail del tuo commento, e nessuno la riceve due volte.
+
+#### Modificare ed eliminare
+
+Sotto i tuoi commenti trovi «Modifica» ed «Elimina». Un Admin può eliminare qualsiasi commento. Un commento modificato porta la scritta «modificato»; la modifica non manda nuove mail.
+
+#### Commenti non letti del numero
+
+Il bottone **💬 N commenti non letti** in alto a destra, nella testata del numero, apre l'elenco dei non letti. «Pagina 12 →» apre i commenti di quella pagina e la mostra nel timone. «Segna tutti come letti» li azzera. La scheda **Tutti** mostra tutti i commenti del numero.
+
+#### Le pagine si spostano, i commenti le seguono
+
+Il commento è della pagina, non del numero di pagina: se la pagina si sposta, i suoi commenti la seguono. Se una pagina viene **eliminata** (riducendo le pagine o togliendo la bandella), i suoi commenti restano nella scheda «Tutti» come «Pagina 47, eliminata».
+
+**Dettagli**
+
+- **Chi può**: Admin, Redattore e Commerciale leggono e scrivono su qualunque pagina dei numeri che vedono. Sola lettura legge soltanto.
+- I commenti dei colleghi compaiono entro un paio di secondi, senza ricaricare la pagina.
+- I commenti non si annullano con Ctrl+Z, e Ctrl+Z non agisce sul timone mentre il pannello è aperto.
+
+#### Vedi anche
+
+- [Chi può fare cosa](resources/manuale/ruoli.md)
+- [Gestire gli utenti](resources/manuale/utenti.md)
+- [Legenda](resources/manuale/legenda.md)
+
+### Segnature (trentaduesimi)
+
+**In breve**
+
+Il timone mostra come il numero si divide in **segnature** di stampa, di solito da 32 pagine: i «trentaduesimi».
+
+1. Nella barra in alto leggi per esempio «Segnature: **3 trentaduesimi + 24 pagine** (16 + 8)».
+2. Se il totale non è multiplo di 4 compare un avviso rosso.
+3. Dopo la freccia vedi quante pagine aggiungere o togliere per avere segnature intere.
+4. Sulla griglia, una linea rossa con «32° n. 2» segna l'inizio di ogni segnatura.
+
+#### Nella barra in alto
+
+Accanto alla percentuale di pubblicità leggi per esempio «Segnature: **3 trentaduesimi + 24 pagine** (16 + 8)». Tra parentesi c'è il resto scomposto nei formati di stampa: 16esimo, 8vo, quartino da 4.
+
+- Se il totale non è multiplo di 4 compare in rosso «⚠️ 126 non è multiplo di 4: non stampabile così».
+- Dopo la freccia il suggerimento: quante pagine aggiungere o togliere per arrivare a un numero intero di segnature, per esempio «→ +8 = 128 · −24 = 96».
+
+Il conteggio cambia da solo, anche per i colleghi, quando cambiano le pagine del numero.
+
+#### Sulla griglia
+
+Una fascia colorata in cima a ogni pagina, alternata azzurro e viola da una segnatura all'altra. Sulla prima pagina di ogni segnatura c'è una linea rossa con l'etichetta «32° n. 2» sul lato sinistro.
+
+**Dettagli**
+
+- Nella vista Doppia pagina la linea cade **dentro** la coppia [32 | 33], tra le due pagine. Nella Lista è una linea sopra la riga.
+- Le copertine non hanno la fascia, salvo che la rivista le conti nelle segnature.
+
+#### Mostrare o nascondere i confini
+
+Clic sul bottone **32°** all'inizio del conteggio «Segnature» nella barra in alto. Blu vuol dire visibili. È una preferenza tua, ricordata dal browser: non cambia nulla per i colleghi.
+
+#### Impostazioni della rivista
+
+Un Admin le cambia in «Modifica rivista» → **«📐 Segnature di stampa»**:
+
+- pagine per segnatura: 8, 16, 32 o 64 (di solito 32);
+- «Copertina inclusa nelle segnature»: di solito no, perché la copertina si stampa a parte. Se sì, le sue facciate (4, o 6 con la bandella) contano in testa alla prima segnatura.
+
+Valgono subito per tutti i numeri della rivista.
+
+#### Vedi anche
+
+- [Il riepilogo in alto](resources/manuale/riepilogo-del-numero.md)
+- [Aggiungere o togliere pagine](resources/manuale/pagine-interne.md)
+- [Creare e modificare una rivista](resources/manuale/rivista.md)
+- [Le viste del timone](resources/manuale/viste-del-timone.md)
+
+### Storico e cronologia
+
+**In breve**
+
+Per sapere chi ha fatto cosa e quando:
+
+1. **📜 Storico** nella fascia dei comandi: gli ultimi 50 spostamenti di pagina.
+2. **🕓 Cronologia**, sotto la barra del timone: tutto il resto che succede sul numero.
+3. **🕘** accanto a ↶ ↷: le tue azioni annullabili, vedi [Annullare e ripetere](resources/manuale/annullare-ripetere.md).
+
+#### Storico spostamenti
+
+Il bottone **📜 Storico** apre il pannello «Storico spostamenti»: gli ultimi 50 spostamenti di pagina fatti su questo numero, con chi li ha fatti, da quale posizione a quale e quando.
+
+#### Cronologia
+
+Il bottone **🕓 Cronologia** mostra il registro di **tutto il resto**: cambi di stato delle pagine; contenuti creati, assegnati, rimossi o con lo spazio cambiato; PDF caricati; modifiche alle pagine del numero; modifiche e rinomine dei contenuti; pubblicità previste create con il numero; parametri del peso. Ogni riga dice chi ha fatto cosa e quando.
+
+**Dettagli**
+
+La cronologia non si aggiorna da sola mentre è aperta: chiudila e riaprila per vedere le voci più recenti.
+
+#### Vedi anche
+
+- [Annullare e ripetere](resources/manuale/annullare-ripetere.md)
+- [Spostare le pagine](resources/manuale/spostare-pagine.md)
+- [Avvisi automatici](resources/manuale/avvisi.md)
+
+### Avvisi automatici
+
+**In breve**
+
+Il riquadro **«⚠️ Avvisi»**, sotto la barra del timone, segnala cose da controllare. Non è un errore bloccante, solo un promemoria. Segnala:
+
+1. una pagina **Revisionata** o **Ok stampa** **senza nessun contenuto assegnato**;
+2. una pagina **Revisionata** o **Ok stampa** **senza un PDF caricato**;
+3. un contenuto su **pagine non consecutive** (per esempio 3 e 9): a volte è voluto, ma conviene ricontrollare.
+
+**Dettagli**
+
+- Per «Ok stampa» la pagina senza PDF non è solo un avviso: lo stato non si può proprio mettere, vedi [Cambiare lo stato di una pagina](resources/manuale/stato-pagina.md).
+- Il riquadro compare solo se c'è almeno un avviso; se il timone non ha nulla da segnalare non si vede.
+- Il numero di pagine non multiplo di 4 ha il suo avviso nel conteggio delle [segnature](resources/manuale/segnature.md) e nel [pannello Peso](resources/manuale/peso.md).
+- Il carico pubblicitario non ha soglie né avvisi: si legge la percentuale nel riepilogo e nel cruscotto.
+
+#### Vedi anche
+
+- [Cambiare lo stato di una pagina](resources/manuale/stato-pagina.md)
+- [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md)
+- [Problemi frequenti](resources/manuale/problemi-frequenti.md)
+
+## Contenuti e pubblicità
+
+### Il pannello Contenuti
+
+**In breve**
+
+Il pannello **Contenuti** raccoglie articoli e pubblicità del numero, pronti da mettere sulle pagine.
+
+1. Clic su **«📚 Contenuti · N da assegnare»** nella fascia fissa in alto (N = contenuti non ancora su una pagina).
+2. Scegli la scheda: **Da assegnare**, **Tutti** o **Segnaposto**.
+3. Cerca con **Cerca per titolo…** o filtra **Articoli/Pubblicità**.
+4. Trascina una voce su una pagina, oppure usa «Vai a pag.».
+
+Il pannello si apre senza ricaricare né perdere il punto in cui sei. Sugli schermi larghi è una **colonna a destra**: il timone si stringe accanto. Sugli altri è una **tendina sotto la fascia**.
+
+#### Cosa c'è dentro
+
+- Le schede **Da assegnare** (predefinita), **Tutti** (anche quelli già in pagina, con «p. 12–14» o la copertina) e **Segnaposto**.
+- Il filtro **Articoli/Pubblicità**, la ricerca **Cerca per titolo…**, l'ordine **Ultimi creati** o **A–Z**.
+- I bottoni **+ Nuovo contenuto** e **Caricamento multiplo**.
+- Per ogni contenuto: miniatura, titolo, tipo, spazio occupato, l'etichetta «SEGNAPOSTO» se lo è, 👁 per aprire il file, ✏️ per modificarlo.
+
+**Dettagli**
+
+- Da 1440 px di larghezza il pannello è una colonna a destra; il bordo sinistro della colonna si trascina per allargarla.
+- Apertura e larghezza restano ricordate in questo browser.
+- Dal pannello si assegnano solo i contenuti non ancora in pagina. Nella scheda «Tutti» quelli già in pagina si vedono ma non si trascinano: si spostano dalla pagina.
+- Quando crei, archivi, ripristini o elimini un contenuto, compare o sparisce subito anche sugli schermi dei colleghi.
+
+#### Archiviare o eliminare un contenuto non assegnato
+
+Passando il mouse su una voce compaiono le icone **✏️ Modifica**, **🗄️ Archivia** e **🗑️ Elimina**.
+
+- **🗄️ Archivia** lo nasconde dal pannello. Lo ritrovi nella sezione «▸ Contenuti archiviati» subito sotto: il bottone **↩️** lo ripristina.
+- **🗑️ Elimina** lo cancella. Chiede una doppia conferma.
+
+> **Attenzione**
+>
+> Un contenuto eliminato si recupera solo con **Ctrl+Z** (⌘+Z su Mac) entro 24 ore. Dopo 24 ore l'eliminazione è definitiva, file compresi.
+
+**Dettagli**
+
+Un contenuto già assegnato a una pagina non si archivia né si elimina da qui: prima toglilo dalla pagina con la ✕ sulla card.
+
+#### Vedi anche
+
+- [Mettere un contenuto su una pagina](resources/manuale/assegnare-contenuto.md)
+- [Creare un articolo o una pubblicità](resources/manuale/creare-contenuto.md)
+- [Caricare tanti file insieme](resources/manuale/caricamento-multiplo.md)
+- [Annullare e ripetere](resources/manuale/annullare-ripetere.md)
+
+### Creare un articolo o una pubblicità
+
+**In breve**
+
+Crei articoli e pubblicità dal modulo **«+ Nuovo contenuto»**, nel pannello Contenuti.
+
+1. Apri **«📚 Contenuti»** nella fascia in alto e clicca **+ Nuovo contenuto**.
+2. Scegli il tipo: **Articolo** o **Pubblicità**. I campi cambiano di conseguenza.
+3. Compila i campi obbligatori: il titolo per un articolo, il formato per una pubblicità, e lo [spazio occupato](resources/manuale/spazio-occupato.md).
+4. Se vuoi, allega il PDF e scegli la **Posizione nel timone**.
+5. Clic su **«Crea contenuto»**.
+
+#### Articolo
+
+Titolo, **Rubrica** (opzionale), **occupazione** (obbligatoria, vedi [Spazio occupato](resources/manuale/spazio-occupato.md)), autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
+
+#### Pubblicità
+
+- **cliente** (opzionale): **senza cliente e senza file la pubblicità è un segnaposto «da assegnare»**, come quelle previste alla creazione del numero. Vedi [Segnaposto](resources/manuale/segnaposto.md).
+- **formato (obbligatorio, nessun valore già scelto)**: accanto a ogni formato è indicato lo spazio che occupa, per esempio «(1/2 di pagina)».
+- Scelto il formato, i campi **«Pagine intere» + «Frazione»** si compilano da soli con lo spazio del formato. Puoi **correggerli**, per esempio per una mezza pagina che in questo numero occupa 2/3.
+- **pagina preferita (opzionale)**: solo un promemoria di dove piazzarla, non assegna nulla. La vedi nel pannello [Pubblicità prenotate](resources/manuale/pubblicita-prenotate.md).
+
+**Dettagli**
+
+- Titolo opzionale: se lo lasci vuoto diventa «Pubblicità 1/2 — da assegnare», con la misura dello spazio occupato.
+- Altri campi: agenzia (opzionale), stato commerciale, note commerciali.
+- I formati del listino: pagina intera, mezza pagina orizzontale e verticale, 1/3, 1/4 (vetrina), 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale.
+- La **doppia pagina** (2 pagine intere affiancate) si trascina sulla prima delle due pagine: occupa da sola anche la successiva, ciascuna per intero, e le due pagine vengono collegate.
+- La **battente copertina** occupa la bandella, vedi [Le copertine e la bandella](resources/manuale/copertine.md).
+- Una pubblicità creata ma non ancora su una pagina è considerata **«prenotata»**: vedi [Pubblicità prenotate](resources/manuale/pubblicita-prenotate.md).
+
+#### Rubrica
+
+Accanto al menu della rubrica ci sono due bottoni: **➕** crea una nuova rubrica (scrivi il nome, poi «Crea»: viene selezionata subito) e **✏️** rinomina quella selezionata.
+
+**Dettagli**
+
+Il nome della rubrica deve essere unico nella rivista.
+
+#### Posizione nel timone
+
+Nel modulo puoi scegliere subito la pagina (1…N) o la copertina (I–IV) da cui parte il contenuto. Viene messo lì appena creato, nel primo posto libero della pagina, e sulle pagine successive se ne occupa più d'una. Lasciato su «Da assegnare», il contenuto va nel pannello Contenuti, scheda «Da assegnare».
+
+**Dettagli**
+
+Se sulla pagina non c'è spazio il contenuto **non viene creato** e un messaggio dice cosa occupa già la pagina e quanto manca, per esempio «Sulla pagina ci sono già «Acme» (1/2) e «Beta» (1/4): manca 1/4 di pagina.».
+
+#### Allegare un file (opzionale)
+
+Nel modulo c'è il riquadro tratteggiato «Allega PDF/immagine»: **trascinaci sopra il file** dal computer, oppure cliccaci per sceglierlo. Vedi [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md).
+
+Il contenuto appena creato compare subito nel pannello Contenuti (e, se è una pubblicità, in «📌 Pubblicità prenotate»), per te e per i colleghi, pronto da trascinare su una pagina.
+
+#### Vedi anche
+
+- [Spazio occupato](resources/manuale/spazio-occupato.md)
+- [Mettere un contenuto su una pagina](resources/manuale/assegnare-contenuto.md)
+- [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md)
+- [Pubblicità segnaposto e previste](resources/manuale/segnaposto.md)
+
+### Mettere un contenuto su una pagina
+
+**In breve**
+
+Per mettere un articolo o una pubblicità su una pagina, aprilo nel pannello Contenuti e:
+
+1. **trascina** la voce sulla pagina (o sulla copertina) che vuoi;
+2. oppure, con delle pagine selezionate, clicca **«Assegna alla selezione»**;
+3. oppure scrivi il numero della pagina in **«Vai a pag.»** e premi Invio.
+
+Per togliere un contenuto da una pagina clicca la **✕** accanto al contenuto: torna nel pannello.
+
+#### I tre modi per assegnare
+
+I tre modi sono equivalenti e fanno gli stessi controlli di spazio.
+
+1. **Trascina** la voce su una pagina o una copertina visibile. Avvicinandoti al bordo il timone scorre da solo, anche partendo dal pannello.
+2. Con una o più pagine selezionate ([Selezionare più pagine](resources/manuale/selezione-multipla.md)) compare **«Assegna alla selezione»**: il contenuto parte dalla prima pagina selezionata. Se occupa più pagine prende anche le seguenti.
+3. **«Vai a pag.»**: scrivi il numero (per esempio `12`) o la copertina (`I`, `II`, `III`, `IV`) e premi Invio.
+
+Se la pagina che ti serve è lontana, porta il contenuto verso il bordo della finestra **senza rilasciarlo**: la pagina scorre da sola.
+
+#### Quanto spazio prende
+
+Lo decide l'[occupazione](resources/manuale/spazio-occupato.md) del contenuto, uguale per articoli e pubblicità:
+
+- **meno di una pagina** (per esempio 1/3): prende quella parte della pagina su cui lo lasci;
+- **pagine intere + una frazione** (per esempio 2 pagine e 1/2): occupa **pagine consecutive** a partire da quella su cui lo lasci. Le pagine intere in sequenza e la frazione sull'ultima: pagina intera, pagina intera, 1/2.
+
+**Dettagli**
+
+- Con un PDF, ogni pagina mostra la miniatura della propria pagina del PDF. Le pagine vengono collegate tra loro (🔗) e si spostano insieme.
+- Per la **doppia pagina** trascina la pubblicità sulla prima delle due pagine.
+- Se un collega assegna un contenuto mentre hai il pannello aperto, la voce sparisce al primo aggiornamento. Se la stavi trascinando, il rilascio viene rifiutato con un messaggio.
+
+#### Tutto o niente
+
+Se il contenuto non ci sta (il numero finisce prima, una delle pagine è bloccata o non ha abbastanza spazio), compare un messaggio che spiega il motivo e **nessuna pagina viene modificata**. Per lo spazio il messaggio dice anche **quanto ne resta**, per esempio «richiede 1/2 di pagina, ma resta libero solo 1/3 di pagina». Scegli un'altra pagina di partenza o libera spazio.
+
+#### Togliere un contenuto da una pagina
+
+**Per rimuovere:** per togliere un articolo o una pubblicità da una pagina, clic sulla ✕ accanto al contenuto, o «✕ Rimuovi dalla pagina» nel menu ⋯. Il contenuto torna nel pannello Contenuti, scheda «Da assegnare». Viene tolto solo da quella pagina: se è anche su altre pagine, lì resta.
+
+#### Un contenuto che continua su più pagine
+
+Per un articolo che prosegue, per esempio, da pagina 5 a pagina 8: dopo averlo assegnato una prima volta clicca **«↗»** accanto al contenuto («↗ Estendi a un'altra pagina» nel menu ⋯) e indica la pagina aggiuntiva. Il contenuto compare anche lì.
+
+**Dettagli**
+
+- Sulla pagina aggiunta occupa una pagina intera, o tutto il contenuto se occupa meno di una pagina. Lo cambi dal menu di quella pagina.
+- Un piccolo **«×N»** accanto al titolo indica su quante pagine è presente in totale.
+
+#### Vedi anche
+
+- [Spazio occupato](resources/manuale/spazio-occupato.md)
+- [I contenuti dentro la pagina](resources/manuale/disposizione-nella-pagina.md)
+- [Il pannello Contenuti](resources/manuale/pannello-contenuti.md)
+- [Problemi frequenti](resources/manuale/problemi-frequenti.md)
+
+### Spazio occupato (occupazione)
+
+**In breve**
+
+Ogni contenuto dichiara **quanto spazio occupa nel timone**. L'occupazione è obbligatoria, uguale per articoli e pubblicità.
+
+1. Nel modulo del contenuto compila **Pagine intere** (0, 1, 2, 3…).
+2. Scegli la **Frazione**: nessuna, 1/4, 1/3, 1/2, 2/3 o 3/4 di pagina.
+3. Sotto compare il totale, per esempio **«Occupa 2 e 1/2 pagine»**.
+
+Almeno uno dei due campi deve essere più di zero.
+
+È il dato che usano il posizionamento sulle pagine, il cruscotto pubblicitario e i conteggi delle pagine. Per gli articoli non c'è un valore già scelto: finché non lo indichi, «Crea contenuto» segnala l'errore e non crea nulla.
+
+**Dettagli**
+
+- Esempi: un articolo di due pagine e mezza = 2 + 1/2; una vetrina = 0 + 1/4; un piedino = 0 + 1/3; un servizio di 4 pagine = 4 + nessuna.
+- Per una **Pubblicità**, scegliendo il formato i due campi si compilano da soli e restano modificabili: pagina intera = 1 + nessuna, 2/3 = 0 + 2/3, mezza pagina = 0 + 1/2, piedino e 1/3 = 0 + 1/3, vetrina/un quarto = 0 + 1/4, doppia pagina = 2 + nessuna, copertina 2ª/3ª/4ª e battente = 1 + nessuna.
+
+#### Come si distribuisce sulle pagine
+
+Le pagine intere vanno in sequenza e la frazione sull'ultima. 2 e 1/2 pagine diventano: pagina intera, pagina intera, 1/2 pagina.
+
+#### Cambiare lo spazio su una pagina
+
+Dopo l'assegnazione usa il menu accanto al contenuto sulla card (da 1/12 a «intera»), oppure «Spazio su questa pagina» nel menu ⋯. Cambia solo quella pagina.
+
+**Dettagli**
+
+- La distribuzione automatica (per esempio intera, intera, 1/2) è un punto di partenza: poi ogni pagina si regola a mano.
+- Se il nuovo valore non ci sta viene rifiutato, con un messaggio che dice quanto spazio resta.
+- Cambiare l'occupazione dalla finestra «Modifica contenuto» invece **ridistribuisce** il contenuto su tutte le sue pagine: vedi [Modificare un contenuto](resources/manuale/modificare-contenuto.md).
+
+#### Capienza della pagina
+
+Una pagina contiene al massimo una pagina intera di contenuti. Una pagina può ospitare più contenuti insieme, per esempio metà pubblicità e metà articolo (pagina «mista»), purché il totale non superi la pagina intera.
+
+**Dettagli**
+
+- 1/2 + 1/4 + 1/4 riempie esattamente la pagina («● Piena»); 1/2 + 1/3 + 1/4 non ci sta.
+- I conti sono sempre esatti: 1/3 + 1/3 + 1/3 fa esattamente una pagina piena, senza arrotondamenti. Non devi fare tu questi conti: vedi solo frazioni.
+- Se su una pagina la somma supera la capienza compare «⚠ Oltre capienza»: vedi [Problemi frequenti](resources/manuale/problemi-frequenti.md).
+
+#### Con un PDF allegato
+
+Appena scegli (o trascini) il file, il sistema ne conta le pagine. Se non hai ancora indicato l'occupazione di un articolo, **propone** tante pagine intere quante quelle del PDF e lo dice sotto i campi. Un valore già indicato non viene cambiato. Le regole per i PDF di più pagine sono in [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md).
+
+#### Vedi anche
+
+- [Mettere un contenuto su una pagina](resources/manuale/assegnare-contenuto.md)
+- [I contenuti dentro la pagina](resources/manuale/disposizione-nella-pagina.md)
+- [Creare un articolo o una pubblicità](resources/manuale/creare-contenuto.md)
+
+### I contenuti dentro la pagina
+
+**In breve**
+
+Dentro ogni card, ogni contenuto occupa un riquadro grande quanto il suo spazio. Con il menu **⋯** del riquadro lo sposti, lo ruoti o lo togli.
+
+1. Clic su **⋯** nell'angolo del contenuto.
+2. **Posizione ← ↑ ↓ →** lo sposta di un passo dentro la pagina.
+3. **⟳ Ruota** lo gira da verticale a orizzontale.
+4. **👁 Apri il file**, **✏️ Modifica**, **↗ Estendi a un'altra pagina** o **✕ Rimuovi dalla pagina** per le altre azioni.
+
+È una rappresentazione dello spazio, non l'impaginato definitivo.
+
+[Screenshot da fare: i formati pubblicitari dentro la card (intera, mezza, 1/3, piedino, vetrina, forma a L)]
+
+#### Come è divisa la pagina
+
+La pagina è divisa in 6 colonne e 6 righe. Ogni contenuto occupa un rettangolo grande esattamente quanto il suo spazio. Un nuovo contenuto va nel primo posto libero. Lo spazio libero è tratteggiato «libero».
+
+**Dettagli**
+
+- Pagina intera 6×6.
+- Mezza verticale 3×6 (metà sinistra o destra); mezza orizzontale 6×3.
+- 1/3 verticale 2×6; 1/3 orizzontale o piedino 6×2. Il piedino nasce in fondo.
+- 2/3: 4×6 o 6×4.
+- Vetrina 1/4: 3×3.
+- Un **3/4 di pagina** (e anche 7/12 e 11/12) non è un rettangolo: ha una **forma a L** che riempie lo spazio lasciato dagli altri e si adatta quando gli altri si spostano.
+
+#### Cliccare un contenuto
+
+**Cliccando su un contenuto si seleziona la pagina**, come cliccando sulla pagina. Per aprire il file usa 👁 nel menu ⋯.
+
+#### Il menu ⋯
+
+- **Spazio su questa pagina**: cambia quanto occupa su questa pagina.
+- **Posizione ← ↑ ↓ →**: sposta il contenuto di un passo. La vetrina si sposta di mezza pagina, la colonna 1/3 di una colonna.
+- **⟳ Ruota**: verticale ↔ orizzontale.
+- **👁 Apri il file** in una nuova scheda.
+- **✏️ Modifica**, **↗ Estendi a un'altra pagina**, **✕ Rimuovi dalla pagina**.
+
+**Dettagli**
+
+- Se il posto è occupato da un contenuto con cui forma un rettangolo (due vetrine affiancate, una riga 1/3 sopra una 2/3), i due si scambiano.
+- Una freccia grigia vuol dire che il contenuto uscirebbe dalla pagina o si sovrapporrebbe a un altro.
+- Ruotare una mezza pagina o un 1/3 cambia anche il formato della pubblicità; per un 2/3 o un articolo cambia solo la forma. ⟳ Ruota è grigio se il contenuto è quadrato o se ruotato non ci sta.
+- 👁 Apri il file è grigio, con «Nessun file caricato», se il file manca.
+- Le posizioni sono salvate e i colleghi le vedono subito. Su una pagina bloccata non si cambiano.
+- In Lista restano le righe di testo, con gli stessi comandi accanto al nome.
+
+#### L'anteprima nel riquadro
+
+Ogni riquadro mostra l'anteprima del **suo** file. Senza file vedi un fondo azzurro (articolo) o ambra (pubblicità).
+
+**Dettagli**
+
+- Se il file è un PDF a pagina intera con l'annuncio in una zona, si vede **solo la parte che corrisponde al riquadro**: una mezza verticale a sinistra mostra la metà sinistra del PDF.
+- Se il file è già della misura dell'annuncio si vede **intero**.
+- Se il sistema sbaglia, scegli tu in «Anteprima nel riquadro» nella finestra [Modifica contenuto](resources/manuale/modificare-contenuto.md).
+
+#### Vedi anche
+
+- [Spazio occupato](resources/manuale/spazio-occupato.md)
+- [Modificare o rinominare un contenuto](resources/manuale/modificare-contenuto.md)
+- [Legenda](resources/manuale/legenda.md)
+
+### Modificare o rinominare un contenuto
+
+**In breve**
+
+**Rinominare al volo**: fai **doppio click sul nome** del contenuto sulla pagina, scrivi e premi **Invio**.
+
+**Modificare tutto**:
+
+1. Clic su **✏️** accanto al contenuto (sulla pagina o nel pannello Contenuti).
+2. Si apre la finestra **«Modifica contenuto»** con tutti i campi.
+3. Cambia quello che serve e clicca **«Salva modifiche»**.
+
+Le modifiche valgono su **tutte le pagine** dove compare il contenuto.
+
+#### Rinominare al volo
+
+Sulla pagina, **doppio click sul nome** del contenuto: diventa un campo di testo. **Invio** salva, **Esc** (o un clic altrove) annulla. Per un articolo cambi il titolo; per una pubblicità il **cliente**, che è il nome mostrato sulla pagina.
+
+**Dettagli**
+
+- Il nome è del contenuto, non della pagina: un articolo su 3 pagine cambia nome su tutte e 3, e i colleghi lo vedono subito.
+- Funziona anche su una pagina bloccata: il blocco riguarda spostamenti e spazio, non i dati del contenuto.
+
+#### La finestra «Modifica contenuto»
+
+Contiene tutti i campi della creazione: tipo (articolo o pubblicità), titolo, rubrica, campi dell'articolo o della pubblicità, **occupazione** (pagine intere + frazione) e **Materiale di stampa** (il PDF o l'immagine allegati, che sono anche l'anteprima nel timone). In più:
+
+- **Posizione nel timone**: la prima pagina in cui si trova. Cambiandola il contenuto si sposta lì, tutto insieme. Scegliendo «Da assegnare» torna nel pannello Contenuti.
+- **Anteprima nel riquadro**: «Automatico» (il sistema guarda le proporzioni del file e dice tra parentesi cosa ha deciso), «Il file è a pagina intera» (mostra solo la parte del riquadro) o «Il file è già nel formato» (mostra il file intero).
+
+«Salva modifiche» applica tutto. «Annulla», ✕ o Esc chiudono senza salvare.
+
+**Dettagli**
+
+- Se nella nuova posizione non c'è posto non cambia nulla, e un messaggio dice cosa occupa la pagina e quanto spazio manca.
+- **Cambiare l'occupazione** di un contenuto già sulle pagine lo **ridistribuisce** dalla sua prima pagina, con la regola solita: da 2 a 2 e 1/2 pagine diventa intera, intera, 1/2 sulle pagine consecutive. Riducendolo, le pagine non più usate tornano libere e il collegamento 🔗 tra le sue pagine si scioglie. Le regolazioni fatte a mano pagina per pagina vengono sostituite. Se non ci sta (numero finito, pagina successiva piena o bloccata) non cambia nulla e il messaggio spiega perché. Lasciando l'occupazione com'è, le pagine restano come sono.
+- **Pagine bloccate**: occupazione e materiale non si cambiano finché il contenuto è su una pagina bloccata; gli altri campi sì.
+- **Cambiare tipo** (articolo ↔ pubblicità): i campi del vecchio tipo si perdono e quelli del nuovo vanno compilati. Il colore delle pagine si aggiorna.
 - **Pubblicità**: cambiando formato viene riproposto lo spazio del formato, modificabile.
-- **Materiale di stampa**: sotto "Attuale" vedi il file allegato. Scegliendo un nuovo file **sostituisci** quello vecchio (che viene eliminato); con un PDF di più pagine ogni pagina del timone riceve la pagina del PDF corrispondente. Il PDF deve attraversare lo stesso numero di pagine dell'occupazione (un PDF di 3 pagine con un contenuto di 2 pagine viene rifiutato: cambia prima l'occupazione). La scelta "usa tutte / solo da X a Y" esiste solo in creazione.
 
----
+#### Cambiare il file
 
-## 6. Cambiare lo stato di una pagina
+Sotto «Attuale» vedi il file allegato. Scegliendo un nuovo file **sostituisci** quello vecchio. Anche qui vedi la barra di avanzamento e il massimo accettato.
 
-Clicca sull'etichetta colorata in alto sulla card/riga (in modalità Griglia o Lista) e scegli il nuovo stato dal menu:
+> **Attenzione**
+>
+> Il file vecchio viene eliminato e questa sostituzione non si può annullare con Ctrl+Z.
 
-1. **Da assegnare**
-2. **Assegnata**
-3. **In bozza**
-4. **Revisionata**
-5. **Ok stampa**
+**Dettagli**
 
-Non c'è un ordine obbligato: puoi passare da uno stato all'altro liberamente — **eccetto verso «Ok stampa»**, che richiede un PDF già caricato sulla pagina ([§7](#7-caricare-e-vedere-un-pdf)).
+- Con un PDF di più pagine ogni pagina del timone riceve la pagina del PDF corrispondente.
+- Il PDF deve attraversare lo stesso numero di pagine dell'occupazione: un PDF di 3 pagine per un contenuto di 2 pagine viene rifiutato. Cambia prima l'occupazione.
+- La scelta «usa tutte le pagine / solo da X a Y» esiste solo in creazione.
 
----
+#### Vedi anche
 
-## 6bis. Selezione multipla e azioni di massa
+- [Spazio occupato](resources/manuale/spazio-occupato.md)
+- [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md)
+- [I contenuti dentro la pagina](resources/manuale/disposizione-nella-pagina.md)
+- [Pubblicità segnaposto e previste](resources/manuale/segnaposto.md)
 
-Bottone **☑️ Selezione multipla** nella toolbar in alto — attivalo per far comparire una casella di spunta su ogni card/riga (funziona in tutte e tre le modalità di vista, e puoi tenerlo attivo insieme alla modalità scambio senza conflitti).
+### Caricare un PDF o un'immagine
 
-Seleziona le pagine che ti interessano (clic sulla casella, oppure **Ctrl+click — o Cmd+click su Mac — direttamente sulla card/riga**, che attiva da sola la selezione multipla se non lo è già: vedi [§6quater](#6quater-scorciatoie-da-tastiera)), poi usa la barra che compare sotto la toolbar per:
+**In breve**
 
-- **Cambiare stato** a tutte le pagine selezionate in un colpo solo, scegliendolo dal menu a tendina "Cambia stato in";
-- **Bloccare selezionate** / **Sbloccare selezionate** — applica il blocco pagina (vedi punto 4bis) a tutta la selezione.
+Il PDF (o un'immagine) si carica sempre su un **contenuto**, mai direttamente su una pagina.
 
-Comodi anche i bottoni **Seleziona tutte** / **Deseleziona tutte** per non dover cliccare pagina per pagina.
+1. Su una pagina vuota clicca **«📎 Carica materiale»**, oppure apri il pannello Contenuti e clicca **+ Nuovo contenuto**.
+2. Compila titolo, tipo e [occupazione](resources/manuale/spazio-occupato.md).
+3. **Trascina il file** sul riquadro «Allega PDF/immagine», o **clicca sul riquadro** per sceglierlo.
+4. Crea il contenuto: l'anteprima si genera da sola in pochi secondi.
 
-Le pagine bloccate nella selezione, e — solo quando lo stato scelto è «Ok stampa» — quelle senza un PDF caricato, vengono **ignorate** da un cambio di stato multiplo (non bloccano l'intera operazione: il resto della selezione viene comunque aggiornato) — il messaggio di esito sotto la barra ti dice sempre quante pagine sono state effettivamente cambiate e quante sono state saltate e perché, es. "3 pagine aggiornate a «Ok stampa». 1 pagina bloccata ignorata. 2 pagine senza PDF ignorate."
+Sono accettati PDF e immagini JPG, PNG, WEBP fino a 100 MB.
 
-**Trascinare l'intera selezione insieme**: con più pagine selezionate, afferra una di quelle selezionate (dalla maniglia ⠿) e trascinala — invece di spostare solo quella, **si sposta l'intera selezione come un unico blocco**, mantenendo l'ordine con cui le pagine erano messe tra loro prima dello spostamento. Se avevi selezionato pagine non vicine tra loro (es. pagina 2 e pagina 7), dopo lo spostamento **si ritrovano vicine, una accanto all'altra**, alla posizione dove hai rilasciato: è così che funziona un "blocco unico", non resta mai una selezione sparsa. Se anche solo una delle pagine selezionate è bloccata (🔒), l'intero spostamento viene rifiutato — sblocca prima quella pagina, o togli la spunta e riprova. Se trascini una pagina che **non** fa parte della selezione corrente, si sposta solo quella, normalmente.
+#### I modi per caricare
 
-Disattivando **☑️ Selezione multipla** la selezione corrente viene azzerata.
+- **Dal bottone «📎 Carica materiale»**, in basso su una card o una riga ancora vuota. È il modo più rapido: il modulo «Nuovo contenuto» è già pronto a collegare quello che crei alla pagina da cui sei partito, con un promemoria «📌» in cima. Se il modulo non è visibile, la pagina scorre per mostrartelo.
+- **Dal bottone «+ Nuovo contenuto»** nel pannello Contenuti (bottone «📚 Contenuti» nella fascia in alto). Il contenuto nasce libero: lo trovi nel pannello, scheda «Da assegnare», e da lì lo trascini dove vuoi.
+- **Da «⇪ Carica più file»**, per caricare tanti file in una volta: vedi [Caricare tanti file insieme](resources/manuale/caricamento-multiplo.md).
 
-## 6ter. Collegare pagine in un gruppo permanente
+#### Allegare il file
 
-Se un articolo o un'inserzione occupa sempre le stesse pagine (es. pagina 5 e pagina 6 di uno stesso articolo), puoi **collegarle in un gruppo**: da quel momento, trascinandone anche una sola, tutte le altre del gruppo si spostano insieme — senza dover rifare la selezione multipla ogni volta come al punto 6bis.
+- **trascina il file** dal computer sopra il riquadro: mentre ci passi sopra il riquadro diventa blu («Rilascia per caricare»). Rilascialo: parte il caricamento con una **barra di avanzamento** in percentuale;
+- oppure **clicca sul riquadro** per sceglierlo dalla finestra del computer.
 
-**Per collegare**: attiva **☑️ Selezione multipla**, seleziona almeno 2 pagine, poi clicca **🔗 Collega selezionate** nella barra che compare. Le pagine del gruppo mostrano subito un contorno colorato e un'etichetta **🔗** (colore diverso per ogni gruppo diverso nello stesso numero, così più gruppi si distinguono a colpo d'occhio).
+Il risultato è identico nei due modi. Dopo il caricamento il nome del file compare nel riquadro con una ✓. Appena il contenuto è creato, il file genera da solo la sua anteprima, che compare sul contenuto nel pannello senza ricaricare la pagina. Clic sulla miniatura sulla card o sulla riga per aprire il file originale in una nuova scheda.
 
-**Per scollegare**: clicca l'etichetta **🔗** su una qualunque pagina del gruppo — l'intero gruppo viene sciolto (non solo quella pagina: un gruppo con una sola pagina non avrebbe senso). Il gruppo torna a essere pagine indipendenti, spostabili singolarmente come sempre.
+**Dettagli**
 
-**Da sapere**:
-- Una pagina già bloccata (🔒) o già in un altro gruppo non può essere collegata: sblocca/scollega prima.
-- Se una pagina del gruppo è bloccata, l'intero gruppo non si può né spostare né scollegare finché non la sblocchi.
-- Se selezioni per un'azione di massa (punto 6bis) solo alcune pagine di un gruppo già esistente, le altre pagine del gruppo vengono **incluse automaticamente** nello spostamento — un gruppo non si spacca mai a metà.
-- Funziona in tutte e tre le modalità di vista (Griglia, Doppia pagina, Lista).
+- Si possono caricare file fino a **100 MB**, per esempio i PDF di stampa ad alta risoluzione. Il massimo accettato è scritto nel riquadro.
+- Un file del tipo sbagliato o troppo grande viene rifiutato subito con un messaggio rosso sotto il riquadro. Per un file troppo grande il messaggio dice quanto pesa e qual è il massimo.
+- Trascinando più file insieme ti viene chiesto di trascinarne uno solo: ogni contenuto ha un solo PDF o immagine.
+- Il file è legato al singolo contenuto: su una pagina con più contenuti (per esempio metà pubblicità e metà articolo) ognuno ha il suo.
+- Un'immagine è pronta quasi subito. Un PDF prima viene contato (numero di pagine), poi si genera la miniatura.
 
-## 6quater. Scorciatoie da tastiera
+#### Da «📎 Carica materiale» con un PDF di una pagina
 
-Riducono i click per le operazioni più comuni su selezione e collegamento pagine — identiche in tutte e tre le modalità di vista. Non si attivano mai mentre stai scrivendo in un campo di testo (una ricerca, un modulo in una finestra) per non entrare in conflitto con le stesse combinazioni usate dal browser lì.
+Se il file è un PDF di **una sola pagina** (o un'immagine), il contenuto si assegna **subito** alla pagina da cui sei partito.
 
-| Scorciatoia | Effetto |
-|---|---|
-| **Ctrl+click** (Cmd+click su Mac) su una pagina | Aggiunge/rimuove quella pagina dalla selezione multipla (attivandola da sola se non lo è già) — stesso effetto della casella di spunta, un click più veloce |
-| **Click semplice** su una pagina, con selezione multipla già attiva | Azzera la selezione e seleziona solo quella pagina (come in un file manager) |
-| **Ctrl+Shift+G**, con almeno 2 pagine selezionate | Le collega in un gruppo se non lo sono già (come [§6ter](#6ter-collegare-pagine-in-un-gruppo-permanente)); se sono già collegate tra loro, le scollega — stesso tasto per entrambe le direzioni. Se la selezione non si può collegare/scollegare (es. una pagina bloccata, o pagine che appartengono a gruppi diversi), compare lo stesso messaggio di avviso che vedresti cliccando i bottoni corrispondenti, mai un silenzio |
-| **Ctrl+A** (Cmd+A su Mac) | Seleziona tutte le pagine del numero corrente (equivale al bottone "Seleziona tutte", attivando da sola la selezione multipla se serve) |
-| **Esc** | Deseleziona tutte le pagine (equivale al bottone "Deseleziona tutte"). Se è aperta una finestra (commenti, modifica contenuto) chiude solo quella e la selezione resta |
+**Dettagli**
 
-Le pagine selezionate con Ctrl+click hanno un contorno verde acceso, ben distinto dal contorno del gruppo collegato (colorato secondo il gruppo) e da quello della modalità scambio (indaco).
+Se sulla pagina non c'è più spazio libero compare un avviso giallo: il contenuto è creato comunque, ma non assegnato lì. Lo trovi nel pannello Contenuti.
 
----
+#### PDF di più pagine
 
-## 6quinquies. Annullare e ripetere (Ctrl+Z)
+- PDF di **più pagine**: l'occupazione deve attraversare esattamente quel numero di pagine. Un PDF di 3 pagine va bene con 3 pagine intere o con 2 e 1/2, non con 2.
+- PDF di **una pagina**: al massimo 1 pagina, anche una frazione (per esempio mezza pagina).
+- PDF **illeggibile** (danneggiato o protetto): viene rifiutato subito con un messaggio.
 
-Dal 2026-10-28 le azioni sul timone si possono **annullare** e **ripetere**, come in un editor:
-- **Ctrl+Z** (⌘+Z su Mac) annulla, **Ctrl+Shift+Z** (⌘+Shift+Z) o **Ctrl+Y** ripete; oppure i bottoni **↶ ↷** all'inizio della barra comandi (passandoci sopra il mouse dicono quale azione, es. «Annulla: Sposta pagina 12 → 20»). Dopo ogni annulla compare per 4 secondi un avviso «Annullato: …» con il bottone **Ripeti**.
-- Le scorciatoie non funzionano mentre scrivi in un campo (lì Ctrl+Z annulla il testo, come sempre) né con una finestra aperta (es. «Modifica contenuto»). Premere Ctrl+Z più volte di fila molto velocemente annulla un passo alla volta: i tasti premuti mentre il precedente è ancora in corso vengono ignorati.
-- **Si annulla solo il proprio lavoro** su quel numero: mai le azioni dei colleghi. Fino a 50 passi, per 24 ore. Una nuova azione dopo un annulla cancella i «ripeti» possibili.
-- **Cosa si può annullare**: spostare pagine e gruppi (un gruppo è un passo solo), scambiare pagine e copertine, assegnare un contenuto (anche su più pagine) e toglierlo, frecce e rotazione, spazio sulla pagina, collega/scollega, stato e blocco delle pagine, rinomina, modifica di un contenuto, creazione (anche il caricamento multiplo, come un passo solo), archivia/ripristina ed eliminazione di un contenuto o di una prenotazione: un contenuto eliminato resta recuperabile per 24 ore.
-- **Cosa non si può annullare**: pagine totali, bandella, «sposta le pagine dopo», scadenza stampa, parametri del peso, chiusura del numero, rubriche, eliminazione di riviste/numeri/utenti, export PDF e — in una modifica — la sostituzione del PDF (il passo resta in cronologia ma è segnato «non annullabile»).
-- **Perché a volte l'annulla viene rifiutato**: se dopo la tua azione un collega ha modificato le stesse pagine o lo stesso contenuto («Non posso annullare: la pagina 12 è stata modificata da Mario alle 16:42»), oppure se rimettere le cose a posto sovrapporrebbe contenuti (lo spazio è stato occupato nel frattempo). In quel caso non cambia nulla e il passo resta in cronologia come «non annullabile»; i passi precedenti si fermano lì.
-- **Cronologia**: il bottone **🕘** accanto a ↶ ↷ mostra le tue ultime azioni su questo numero con l'ora e lo stato (eseguita, annullata, non annullabile).
+**Dettagli**
 
-## 6sexies. Commenti sulle pagine
+**PDF con più pagine creato da «+ Nuovo contenuto»**: il contenuto conserva tutte le pagine del PDF, una miniatura per pagina. Trascinato su una pagina occupa da solo le N pagine consecutive, ognuna con la miniatura della propria pagina del PDF. Se non c'è spazio per tutte non viene piazzato, e un messaggio spiega perché.
 
-Dal 2026-10-29 ogni pagina (anche le copertine) ha i suoi **commenti**.
-- **Aprire i commenti**: il fumetto **💬** in alto sulla card della pagina (anche nella vista Lista). Il numero accanto è quanti commenti ha la pagina; se il fumetto è **giallo** ce ne sono che non hai ancora letto. Si apre un pannello a destra con i commenti in ordine di data (autore, data, testo). Aprirlo li segna come letti.
-- **Scrivere**: in fondo al pannello, poi **Invia**. Per avvisare qualcuno via mail apri «Avvisa via mail…» e scegli le persone, oppure «Tutti gli utenti di questa rivista»; oppure scrivi nel testo **@Nome Cognome** (il nome completo come appare in «Utenti», maiuscole indifferenti, anche senza spazio: @MarioRossi). La mail contiene rivista, numero, pagina, autore, testo e un link che apre direttamente quella pagina con i suoi commenti. Tu non ricevi la mail del tuo commento, e nessuno la riceve due volte. Dopo l'invio il pannello dice a chi è partita.
-- **Modificare ed eliminare**: «Modifica» ed «Elimina» sotto i propri commenti; un Admin può eliminare qualsiasi commento. Un commento modificato porta la scritta «modificato»; la modifica non manda nuove mail.
-- **Commenti non letti del numero**: il bottone **💬 N commenti non letti** in alto a destra nella testata del numero apre l'elenco dei non letti con il link alla pagina («Pagina 12 →»: apre i suoi commenti e la mostra nel timone); «Segna tutti come letti» li azzera. La scheda **Tutti** mostra tutti i commenti del numero.
-- **Le pagine si spostano, i commenti le seguono**: il commento è della pagina, non del numero di pagina. Se una pagina viene **eliminata** (riducendo le pagine totali o togliendo la bandella) i suoi commenti restano nella scheda «Tutti» come «Pagina 47, eliminata».
-- **Chi può**: Admin, Redattore e Commerciale leggono e scrivono su qualunque pagina dei numeri che vedono; Sola lettura legge soltanto.
-- I commenti dei colleghi compaiono entro un paio di secondi, senza ricaricare la pagina. Non si annullano con Ctrl+Z (Ctrl+Z non agisce sul timone mentre il pannello è aperto).
+**PDF con più pagine interne da «📎 Carica materiale»**: il sistema propone di occupare le pagine successive del timone, a partire da quella da cui sei partito, con la **stessa identica finestra di conferma di sempre**:
+- se nessuna delle pagine coinvolte ha già un'anteprima, un solo bottone **«Occupa le N pagine»** conferma tutto;
+- se una o più pagine hanno già un'anteprima scegli tra **«Salta le pagine in conflitto»** (occupa solo quelle libere), **«Sovrascrivi le pagine in conflitto»** (il contenuto nuovo si aggiunge comunque anche lì) e **«↪️ Sposta le pagine esistenti dopo»** (non perde nulla: contenuti, note e materiale delle pagine in conflitto vanno su nuove pagine bianche inserite subito dopo, e le pagine del numero aumentano se serve);
+- **«Annulla il caricamento»** interrompe tutto: il contenuto non viene creato.
 
-## 7. Caricare e vedere un PDF
+**Le pagine derivate da un PDF multi-pagina vengono collegate automaticamente tra loro** (🔗): trascinandone una si spostano tutte. Per scollegarne solo alcune usa ✂️ Scollega, vedi [Collegare pagine in un gruppo](resources/manuale/gruppi-collegati.md).
 
-**Dal 2026-09-02 il PDF (o un'immagine) si carica sempre su un contenuto, mai più direttamente su una pagina.** Due modi per farlo, con lo stesso risultato:
+Ogni pagina del timone mostra la miniatura della propria pagina del PDF (pagina 1 del PDF sulla prima card, pagina 2 sulla successiva…), e «apri file» porta alla pagina giusta del PDF.
 
-- **Dal bottone "📎 Carica materiale"** in basso su una card/riga ancora vuota — il modo più rapido: si apre il modulo "Nuovo contenuto" già pronto a collegare quello che crei alla pagina da cui sei partito (compare un promemoria "📌" in cima al modulo). Se il modulo non è visibile subito, la pagina scorre automaticamente per mostrartelo.
-- **Dal bottone "+ Nuovo contenuto"** nel pannello Contenuti (bottone «📚 Contenuti» nella fascia in alto) — crea un contenuto "libero", non ancora assegnato a nessuna pagina: lo trovi poi nel pannello Contenuti (scheda «Da assegnare»), da lì lo trascini dove vuoi come sempre.
-- **Da «⇪ Carica più file»** (riquadro «Caricamento multiplo» nel pannello Contenuti) — per caricare tanti file in una volta, vedi sotto.
+#### Pubblicità con un PDF più lungo del formato
 
-**Caricare più file insieme (dal 2026-10-28)**: nel pannello Contenuti apri «⇪ Carica più file», scegli in alto se creare **Articoli** o **Pubblicità** (vale per i file che aggiungi da quel momento), poi trascina i file nel riquadro tratteggiato o cliccalo per sceglierli (PDF, JPG, PNG, WebP, fino a 100 MB ciascuno). Ogni file diventa un contenuto tra il pannello Contenuti (scheda «Da assegnare»):
-- **titolo** = nome del file senza estensione, con trattini e underscore trasformati in spazi («servizio_moto-elettrica.pdf» → «servizio moto elettrica»);
-- **spazio occupato** = tante pagine intere quante le pagine del PDF (1 pagina per un'immagine); le pubblicità nascono come «Pagina intera», senza cliente;
-- correggi poi a mano con ✏️ spazio, formato, cliente e posizione dove serve, e trascinali nel timone come sempre.
+Per esempio un PDF di 3 pagine per una pubblicità «Pagina intera» o «Copertina (2ª/3ª/4ª)». Non è un errore: sotto il riquadro del file compare un riquadro azzurro «📄 Il PDF ha 3 pagine, il formato … ne occupa 1» con due scelte.
 
-I file partono **uno alla volta**: nell'elenco vedi per ciascuno «in coda», la percentuale di caricamento, «✓ creato» o «✕ errore» con il motivo (formato non accettato, file troppo grande, PDF illeggibile). Un file scartato non ferma gli altri; alla fine compare il riepilogo («12 caricati, 1 scartato: …») con **«↻ Riprova i falliti»**. Se nel numero esiste già un contenuto con lo stesso titolo, il file viene caricato lo stesso come «… (2)» e la riga lo segnala. Non chiudere né ricaricare la pagina finché l'elenco non è finito: i file ancora in coda andrebbero persi (quelli già «creati» restano).
+**Dettagli**
 
-In entrambi i casi, compila titolo/tipo (articolo o pubblicità) e l'occupazione ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)), poi allega il file nel riquadro tratteggiato "Allega PDF/immagine" — PDF o immagine (jpg/png/webp), fino a **20MB**:
-- **trascina il file** dal computer sopra il riquadro: mentre ci passi sopra il riquadro diventa blu ("Rilascia per caricare"); rilascialo e parte il caricamento, con una **barra di avanzamento** in percentuale;
-- oppure **clicca sul riquadro** per sceglierlo dalla solita finestra del computer.
+- **«Usa tutte le 3 pagine»** (proposta di partenza): la pubblicità occuperà 3 pagine intere consecutive. Per il formato copertina la dicitura è «la prima sulla copertina, le altre sulle pagine successive».
+- **«Usa solo le pagine da X a Y»**: scrivi la prima e l'ultima pagina del PDF da usare. Per una sola pagina scrivi la stessa in entrambi i campi, per esempio da 2 a 2. Se le pagine scelte sono quante quelle del formato, la pubblicità occupa lo spazio del formato (per esempio mezza pagina); se sono di più, occupa quel numero di pagine intere.
+- Sotto le scelte una riga riassume cosa succederà, per esempio «→ La pubblicità occuperà 3 pagine intere (pagine del PDF 1–3)». Con «da 2 a 3» la prima pagina occupata mostra la pagina 2 del PDF e la successiva la pagina 3.
+- Se il PDF ha *meno* pagine del formato (per esempio una doppia pagina consegnata come pagina singola) non compare nessuna scelta.
 
-Il risultato è identico nei due modi (stessi controlli, stessa anteprima). Si possono caricare file fino a **100 MB** (dal 2026-10-27; prima 20 MB), per esempio i PDF di stampa ad alta risoluzione. Un file del tipo sbagliato o troppo grande viene rifiutato subito con un messaggio rosso sotto il riquadro — per un file troppo grande il messaggio dice quanto pesa e qual è il massimo accettato (lo stesso indicato nel riquadro: è il limite **reale** del server, che può essere più basso di 100 MB se il server è configurato così). Anche sostituendo il file dalla finestra «Modifica contenuto» vedi la barra di avanzamento e il massimo accettato. Se il caricamento viene rifiutato dal server prima ancora di controllare il file, compare il messaggio «Il file non è arrivato al server…»: riprova, e se si ripete avvisa l'amministratore indicando l'ora del tentativo (nel registro del server c'è la causa); trascinando più file insieme ti viene chiesto di trascinarne uno solo (ogni contenuto ha un solo PDF o immagine). Dopo il caricamento il nome del file compare nel riquadro con una ✓; appena il contenuto è creato, il file allegato genera automaticamente la sua anteprima, esattamente come succedeva prima per il caricamento diretto — un'immagine è pronta quasi subito, un PDF passa per lo stesso esame (conteggio pagine, poi generazione miniatura) di prima.
+#### Anteprime in elaborazione
 
-Se hai usato "📎 Carica materiale" (ancorato a una pagina) e il file allegato è un PDF di **una sola pagina** (o un'immagine), il contenuto si assegna **subito** a quella pagina, stessa immediatezza di prima. Se sulla pagina non c'è più spazio libero, compare un avviso giallo: il contenuto resta comunque creato, solo non assegnato lì — lo trovi nel pannello Contenuti.
+Mentre le anteprime si generano compare in cima un banner «🖼️ N pagine in elaborazione — circa Xs rimanenti in totale». Sulla card vedi ⏳ PDF.
 
-Una volta pronta, clicca sulla miniatura sulla card/riga per aprire il file originale in una nuova scheda del browser.
+**Dettagli**
 
-Se la generazione dell'anteprima fallisce (icona ⚠️ rossa), il file più probabilmente è danneggiato o non è un PDF valido: crea un nuovo contenuto con un file diverso (non c'è più, per un contenuto già creato, un pulsante di "ricarica" — allega di nuovo dal modulo, come per qualunque altro contenuto).
+- Il conteggio e la stima riguardano tutte le pagine del numero ancora in lavorazione. Finché la stima non c'è, il banner dice «— stima non ancora disponibile».
+- Il banner sparisce da solo quando non resta nulla in coda; puoi chiuderlo prima con la ✕ (ricompare al prossimo caricamento, se c'è ancora lavoro).
+- Ricaricando la pagina del browser il banner e le stime sulle card restano: riflettono sempre lo stato reale.
 
-**Ogni pagina deve avere un'anteprima (dal contenuto assegnato) prima di poter essere segnata «Ok stampa»** — se provi a farlo su una pagina senza anteprima, compare un messaggio d'errore e lo stato non cambia. Le pagine già "Revisionata"/"Ok stampa" ma ancora senza anteprima compaiono anche nel pannello "⚠️ Avvisi" ([§11](#11-avvisi-automatici)).
+#### Formato pubblicitario non conforme
 
-**Pubblicità con un PDF più lungo del formato** (es. un PDF di 3 pagine per una pubblicità "Copertina (2ª/3ª/4ª)" o "Pagina intera", che occupano una pagina): non è un errore. Sotto il riquadro del file compare un riquadro azzurro «📄 Il PDF ha 3 pagine, il formato … ne occupa 1» con due scelte:
-- **«Usa tutte le 3 pagine»** (proposta di partenza): la pubblicità occuperà 3 pagine intere consecutive. Per il formato copertina la dicitura è «la prima sulla copertina, le altre sulle pagine successive»: piazzala sulla pagina di copertina e occuperà anche quelle dopo.
-- **«Usa solo le pagine da X a Y»**: scrivi la prima e l'ultima pagina del PDF da usare (per una sola pagina, la stessa in entrambi i campi, es. da 2 a 2). Se il numero di pagine scelte è quello del formato, la pubblicità occupa lo spazio del formato (es. mezza pagina); se è maggiore, occupa quel numero di pagine intere.
+Se il PDF finisce su una pagina con una pubblicità di un formato preciso, il sistema confronta le dimensioni reali del file con quelle del listino. Se non corrispondono compare l'avviso rosso **«⚠️ formato»** con le dimensioni ricevute. Non blocca nulla. Se va bene comunque, clicca **«accetta»** accanto all'avviso: sparisce, e resta registrato chi l'ha confermato.
 
-Sotto le scelte una riga riassume cosa succederà («→ La pubblicità occuperà 3 pagine intere (pagine del PDF 1–3)»). Ogni pagina del timone mostra la pagina del PDF che le corrisponde: con «da 2 a 3», la prima pagina occupata mostra la pagina 2 del PDF e la successiva la pagina 3. Se il PDF ha *meno* pagine del formato (es. una doppia pagina consegnata come pagina singola) non compare nessuna scelta.
+**Dettagli**
 
-**PDF con più pagine creato da "+ Nuovo contenuto"**: il contenuto conserva tutte le pagine del PDF (una miniatura per pagina). Quando lo trascini dal pannello Contenuti (scheda «Da assegnare») su una pagina, occupa automaticamente le N pagine consecutive da lì in poi, ognuna con la miniatura della propria pagina del PDF — se non c'è spazio per tutte, non viene piazzato e un messaggio spiega perché ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato)).
+- Le dimensioni attese comprendono 3 mm di abbondanza per lato.
+- Se le dimensioni non sono misurabili (file danneggiato) o la pagina non ha un formato pubblicitario chiaro, non compare nessun avviso.
 
-**PDF con più pagine interne da "📎 Carica materiale"**: se il file che alleghi (dal bottone "📎 Carica materiale" di una pagina, con un titolo/tipo già compilati) ha più di una pagina interna (es. un PDF di 3 pagine per un'inserzione su tre pagine consecutive), il sistema propone di occupare automaticamente le pagine successive del timone a partire da quella da cui sei partito — **stessa identica finestra di conferma di sempre**, nessuna modifica lì:
-- se nessuna delle pagine coinvolte ha già un'anteprima, un solo bottone **"Occupa le N pagine"** conferma tutto in un colpo;
-- se una o più pagine hanno già un'anteprima, puoi scegliere tra tre opzioni: **"Salta le pagine in conflitto"** (occupa solo quelle libere, lascia intatte le altre), **"Sovrascrivi le pagine in conflitto"** (il contenuto nuovo si aggiunge comunque anche lì), oppure **"↪️ Sposta le pagine esistenti dopo"** — non perde nulla: contenuto, note e materiale già presenti sulle pagine in conflitto vengono spostati su nuove pagine bianche inserite subito dopo, e il numero di pagine totali si allunga automaticamente se serve spazio;
-- **"Annulla il caricamento"** interrompe tutto senza scrivere nulla (il contenuto non viene creato).
+#### Se l'anteprima non si genera
 
-**Le pagine derivate da un PDF multi-pagina vengono collegate automaticamente tra loro** (stesso 🔗 di [§6ter](#6ter-collegare-pagine-in-un-gruppo-permanente)) — trascinandone una si spostano tutte insieme. Se serve, puoi scollegarne una o più singolarmente senza sciogliere tutto il gruppo: selezionale (☑️ Selezione multipla) e usa **"✂️ Scollega selezionate dal gruppo"** ([§6bis](#6bis-selezione-multipla-e-azioni-di-massa)) — a differenza del bottone 🔗 sul badge (che scioglie sempre l'intero gruppo), questo rimuove solo le pagine che hai selezionato, lasciando le altre ancora collegate.
+L'icona ⚠️ PDF rossa sulla card vuol dire che la generazione dell'anteprima è fallita: il file più probabilmente è danneggiato o non è un PDF valido. Non c'è un pulsante per ricaricarlo: allega un file diverso dalla finestra [Modifica contenuto](resources/manuale/modificare-contenuto.md), oppure crea un nuovo contenuto con un file diverso.
 
-Mentre le anteprime si generano una alla volta (per questo o per qualunque altro caricamento in corso sul numero), compare in cima un banner **"🖼️ N pagine in elaborazione — circa Xs rimanenti in totale"**: il conteggio e la stima sono calcolati dal sistema in tempo reale sulla base di tutte le pagine del numero ancora in lavorazione — sparisce da solo appena non resta più nessuna pagina in coda, oppure puoi chiuderlo prima con la ✕ (ricompare da solo al prossimo caricamento, se c'è ancora lavoro in corso). Se aggiorni la pagina del browser mentre delle miniature sono ancora in lavorazione, sia questo banner sia le stime sulle singole card restano visibili — riflettono sempre lo stato reale, non si perdono con un refresh.
+#### Vedi anche
 
-Ogni pagina timone coinvolta mostra la miniatura della propria pagina interna corrispondente (pagina 1 del PDF → prima card, pagina 2 → la successiva, ecc.), e il link "apri file" ti porta direttamente alla pagina interna giusta, non sempre alla prima.
+- [Caricare tanti file insieme](resources/manuale/caricamento-multiplo.md)
+- [Spazio occupato](resources/manuale/spazio-occupato.md)
+- [Cambiare lo stato di una pagina](resources/manuale/stato-pagina.md)
+- [Problemi frequenti](resources/manuale/problemi-frequenti.md)
 
-**Formato pubblicitario non conforme**: se il PDF allegato finisce su una pagina con una pubblicità assegnata che ha un formato specifico (es. "1 pagina intera"), il sistema confronta le dimensioni reali del file con quelle attese dal listino ufficiale (comprensive di 3mm di abbondanza per lato) — stesso controllo di sempre. Se non corrispondono, compare un avviso rosso "⚠️ formato" con le dimensioni ricevute — non blocca nulla, ma segnala il problema. Se sei sicuro che vada bene comunque (un caso limite legittimo), clicca **"accetta"** accanto all'avviso: sparisce e resta registrato chi l'ha confermato. Se le dimensioni non sono misurabili (file danneggiato) o la pagina non ha un formato pubblicitario chiaro a cui riferirsi, non compare nessun avviso.
+### Caricare tanti file insieme
 
-**Pagine caricate prima del 2026-09-02**: se una pagina ha ancora un PDF caricato con il vecchio sistema (direttamente sulla pagina, prima di questa modifica), continua a funzionare esattamente come prima — anteprima visibile, storico consultabile dall'icona 🕐 — finché non verrà migrata al nuovo sistema (operazione futura, non ancora effettuata: nessun dato esistente è stato toccato da questa modifica).
+**In breve**
 
----
+Per caricare tanti file in una volta: ogni file diventa un contenuto nel pannello Contenuti.
 
-## 8. Leggere il cruscotto pubblicitario
+1. Apri il pannello **«📚 Contenuti»** e clicca **«⇪ Carica più file»** (riquadro «Caricamento multiplo»).
+2. Scegli in alto se creare **Articoli** o **Pubblicità**.
+3. Trascina i file nel riquadro tratteggiato, o cliccalo per sceglierli.
+4. Aspetta che l'elenco sia finito, poi correggi i contenuti con ✏️ e trascinali nel timone.
 
-Pannello sempre visibile sopra la griglia. Mostra, per il numero che stai guardando:
+Sono accettati PDF, JPG, PNG, WebP, fino a 100 MB ciascuno.
 
-- **Percentuale di carico pubblicitario** (numero grande) — quanta parte del numero è occupata da pubblicità, **incluse le pubblicità prenotate ma non ancora assegnate a una pagina** ([§8bis](#8bis-pubblicità-prenotate-e-chiusura-del-numero)), non solo quelle già piazzate: il testo accanto al numero mostra il dettaglio "X già assegnate + Y prenotate". È calcolata sullo spazio realmente occupato in dodicesimi di pagina ([§5bis](#5bis-occupazione-di-pagina-obbligatoria)), quindi è esatta: tre pubblicità da 1/3 su 3 pagine fanno 1 pagina su 3 = 33,33%. Le prenotate contano per l'occupazione indicata nel loro modulo. Nessuna soglia né colore di allarme (tolti il 2026-10-27): è solo la percentuale, la stessa del riepilogo in alto ([§3](#3-leggere-la-griglia-del-timone)). Le pagine di copertina non entrano mai in questo calcolo (né come "pagine totali" del denominatore, né un eventuale contenuto assegnato per errore su di esse) — vedi [§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella).
-- **Inserzioni assegnate** vs **pubblicità non ancora assegnate**.
-- **Pubblicità da assegnare (segnaposto)**: quante pubblicità previste non hanno ancora un inserzionista, in tutto il numero (copertine comprese), con il dettaglio per formato ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)).
-- **Riepilogo per formato pubblicitario** (pagina intera, mezza pagina, ecc.) e **per stato commerciale** (in trattativa, confermata, annullata) — include anche le prenotazioni.
+> **Attenzione**
+>
+> Non chiudere né ricaricare la pagina finché l'elenco non è finito: i file ancora in coda andrebbero persi. Quelli già «creati» restano.
 
-**Esportare il report:** i link "⬇️ CSV" e "⬇️ PDF" in alto a destra del pannello scaricano lo stesso riepilogo in un file, utile per condividerlo con chi non ha accesso al sistema.
+#### Cosa diventa ogni file
 
----
+Ogni file diventa un contenuto nel pannello Contenuti, scheda «Da assegnare». Correggi poi a mano con ✏️ spazio, formato, cliente e posizione dove serve.
 
-## 8bis. Pubblicità prenotate e chiusura del numero
+**Dettagli**
 
-Bottone **"📌 Pubblicità prenotate"** sopra la griglia: elenca **tutte** le pubblicità di questo numero, non solo quelle già su una pagina, con uno stato calcolato automaticamente:
+- **titolo** = nome del file senza estensione, con trattini e underscore trasformati in spazi: «servizio_moto-elettrica.pdf» diventa «servizio moto elettrica».
+- **spazio occupato** = tante pagine intere quante le pagine del PDF, 1 pagina per un'immagine.
+- Le pubblicità nascono come «Pagina intera», senza cliente.
+- La scelta Articoli/Pubblicità vale per i file che aggiungi da quel momento.
 
-| Stato | Significato |
-|---|---|
-| 🟠 **Prenotato** | Cliente, formato e note commerciali già inseriti ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato), "+ Nuovo contenuto" → Pubblicità), ma non ancora messo su nessuna pagina — è quello che succede automaticamente quando crei una pubblicità e non la trascini subito su una pagina. Se al momento della creazione hai indicato una **pagina preferita**, la vedi qui accanto (es. "posizione preferita: pagina 7") — è solo un promemoria per chi compone il timone, non assegna nulla da sola. |
-| 🔵 **Assegnato** | È già su una pagina, ma quella pagina non ha ancora un PDF pronto (o il PDF caricato ha un formato non conforme non ancora accettato, [§7](#7-caricare-e-vedere-un-pdf)). |
-| 🟢 **Completo** | È su una pagina e il materiale è a posto — pronta per la stampa. |
+#### L'elenco dei file
 
-**Eliminare una prenotazione**: bottone "🗑 Elimina" — disponibile solo per le pubblicità ancora in stato "Prenotato" (non ancora su una pagina). Se una pubblicità è già assegnata e vuoi toglierla, usa la ✕ direttamente sulla card/riga della pagina ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato)).
+I file partono **uno alla volta**. Per ciascuno vedi «in coda», la percentuale di caricamento, «✓ creato» oppure «✕ errore» con il motivo (formato non accettato, file troppo grande, PDF illeggibile). Un file scartato non ferma gli altri. Alla fine compare il riepilogo, per esempio «12 caricati, 1 scartato: …», con **«↻ Riprova i falliti»**.
 
-**Chiudere il numero**: bottone **"🔒 Chiudi numero"** in cima al pannello. Il numero **non può essere chiuso** finché esiste almeno una pubblicità non ancora "Completo" — compare un messaggio con i nomi dei clienti coinvolti. Per sbloccare: aspetta il materiale (così passa a "Completo" da sola) oppure elimina la prenotazione se non serve più. Un numero chiuso passa nell'"Archivio" della pagina della rivista ([§2](#2-scegliere-rivista-e-numero)) e il bottone si trasforma in un'etichetta "🔒 Numero chiuso" — al momento non c'è un modo per riaprirlo da qui.
+**Dettagli**
 
----
+Se nel numero esiste già un contenuto con lo stesso titolo, il file viene caricato lo stesso come «… (2)» e la riga lo segnala.
 
-## 9. Modificare il numero totale di pagine
+#### Vedi anche
 
-Bottone **"⚙️ Pagine interne"** in alto nella barra degli strumenti del timone. Si cambiano solo le **pagine interne**: le quattro copertine restano sempre, a parte ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)).
+- [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md)
+- [Il pannello Contenuti](resources/manuale/pannello-contenuti.md)
+- [Mettere un contenuto su una pagina](resources/manuale/assegnare-contenuto.md)
 
-Puoi scrivere liberamente nel campo (anche cancellarlo del tutto e riscrivere): la validazione e il ricalcolo avvengono solo quando esci dal campo (tab o clic altrove), non ad ogni carattere digitato. Se il valore lasciato non è un numero valido (vuoto, non numerico, negativo), compare un avviso chiaro e nessuna operazione viene tentata — non un errore imprevisto.
+### Pubblicità segnaposto e previste
 
-**Per aumentare le pagine:** scrivi il nuovo totale, scegli se le pagine nuove vanno **in coda** o **in una posizione specifica** (le pagine successive slittano automaticamente), poi clicca **Applica**. Le nuove pagine sono bianche e vuote.
+**In breve**
 
-**Per ridurre le pagine:** scrivi il nuovo totale (più basso) — vengono sempre tolte le pagine in coda, mai una scelta a caso. Prima di poter confermare, il pannello ti mostra **cosa andrebbe perso**:
-- quante pagine verrebbero eliminate;
-- quali di queste hanno già contenuti assegnati (torneranno automaticamente nel pannello Contenuti (scheda «Da assegnare») — **non vengono cancellati**, restano solo senza una pagina);
-- quali hanno un PDF caricato (**quello sì, va perso davvero** — non c'è modo di spostare un file su un'altra pagina).
+Un **segnaposto** è una pubblicità prevista che non ha ancora né cliente né PDF: tiene il posto nel timone.
 
-Solo dopo aver visto questo riepilogo puoi cliccare **"Conferma rimozione definitiva"** (compare anche una richiesta di conferma del browser). Senza questo secondo clic esplicito, nessuna pagina viene toccata.
+1. Lo riconosci dal bordo tratteggiato e dall'etichetta «Da assegnare» sulla pagina («SEGNAPOSTO» nel pannello Contenuti).
+2. Per trasformarlo in una **pubblicità vera** fai doppio click sul nome e scrivi il cliente.
+3. Oppure clicca ✏️ e indica il cliente o carica il PDF.
 
----
+#### I segnaposto nel timone
 
-## 9bis. Le copertine (I, II, III, IV) e la bandella
+Bordo tratteggiato ed etichetta **«Da assegnare»**, titolo automatico (per esempio «Pubblicità 1/2 — da assegnare»), nessun cliente né PDF.
 
-**Le copertine non sono pagine del timone.** Ogni numero ha sempre quattro copertine — **I di copertina** (la copertina vera e propria), **II** (il suo retro, a sinistra della pagina 1), **III** (la pagina interna della quarta) e **IV di copertina** (il retro della rivista) — create da sole insieme al numero, separate dalle pagine interne. Le pagine interne partono **sempre da 1** e arrivano al numero di pagine interne del numero: nessuno deve più sommare o sottrarre le copertine.
+**Dettagli**
 
-**Dove sono nel timone**: tutte insieme in una fascia azzurra «📘 Copertine» **in cima al timone, prima della pagina 1**, in ordine di sfoglio: I, eventuale bandella, II, III, IV. Ogni copertina ha un'etichetta blu «📘 I di copertina» al posto del numero di pagina e un contorno azzurro, per distinguerla subito da una pagina interna (anche senza guardare i colori: c'è sempre la scritta).
+- Contano nella percentuale pubblicitaria e nel contatore «Pubblicità da assegnare (segnaposto)» del [cruscotto](resources/manuale/cruscotto-pubblicitario.md).
+- Cambiare solo titolo, formato, stato o spazio non basta: resta un segnaposto. Serve il cliente o il PDF.
+- Al contrario, se togli il cliente a una pubblicità che non ha file, torna segnaposto.
+- La mezza pagina nasce orizzontale: se è verticale, cambia il formato dalla ✏️.
 
-**Cosa si può fare su una copertina**: le stesse cose di una pagina — assegnarle contenuti e pubblicità trascinandoli dal pannello Contenuti (scheda «Da assegnare»), caricarle materiale col bottone «📎 Carica materiale», cambiarne lo stato, bloccarla, togliere un contenuto con ✕.
+#### Creare un segnaposto a mano
 
-**Spostare le copertine**: trascina l'etichetta blu di una copertina sopra un'altra copertina e si **scambiano** (es. la pubblicità passa dalla II alla III, con il suo stato e il suo PDF). Una copertina **non** si può trascinare tra le pagine interne, e una pagina interna non si può trascinare dentro una copertina. Le copertine non entrano nella selezione multipla, nella modalità scambio e negli spostamenti con le frecce.
+«+ Nuovo contenuto» → Pubblicità, lasciando vuoto il cliente. Vedi [Creare un articolo o una pubblicità](resources/manuale/creare-contenuto.md).
 
-**Una pubblicità di più pagine su una copertina**: trascinata sulla **II** continua sulle pagine 1, 2… (la II e la pagina 1 sono affiancate quando si apre la rivista); trascinata sulla **III** occupa le ultime pagine interne e poi la III. La **I** e la **IV** accolgono una sola pagina: per più pagine compare un messaggio che spiega dove partire.
+#### Pubblicità previste alla creazione del numero
 
-**La bandella** (il lembo ripiegato agganciato alla copertina, detto anche battente): bottone **«+ Aggiungi bandella»** nella fascia delle copertine iniziali, **«− Togli bandella»** per toglierla (solo se è vuota e non bloccata). Con la bandella le pagine di copertina diventano **6** invece di 4, e il peso si aggiorna da solo ([§9ter](#9ter-peso-della-rivista)). Se la rivista ha 6 pagine di copertina tra le sue impostazioni del peso, i nuovi numeri nascono già con la bandella.
+Nel modulo di creazione del numero, la sezione **«📢 Pubblicità previste»** chiede quante pubblicità sono già previste per tipo: **pagina intera**, **2/3**, **1/2**, **piedino (1/3)**, **vetrina (1/4)**. Alla creazione diventano segnaposto già messi nel timone.
 
-**Conteggi**: in cima al timone «N pagine interne · copertine 4 (X assegnate)». Il cruscotto pubblicitario ([§8](#8-leggere-il-cruscotto-pubblicitario)) e gli avvisi contano solo le pagine interne; una pubblicità sulla IV di copertina non cambia la percentuale delle pagine interne.
+Mentre scrivi, sotto compaiono:
 
-**Nell'esportazione PDF del timone** (bottone "📄 Esporta PDF", [§3](#3-leggere-la-griglia-del-timone)): le copertine compaiono in una sezione «Copertine» a sé, prima delle pagine interne.
-
-**Numeri creati prima del 2026-10-26**: sono stati convertiti automaticamente — le pagine che erano copertina sono diventate le copertine I–IV (con i loro contenuti), le pagine interne sono state rinumerate da 1, e le copertine che mancavano (spesso la II e la III) sono state create vuote.
-
----
-
-## 9ter. Peso della rivista
-
-Riquadro **"⚖️ Peso"** in cima alla pagina del numero. Mostra il **peso teorico di una copia**, il **margine d'errore** (± grammi), lo **scaglione** di spedizione e il peso della **tiratura**, con le stesse formule del foglio Excel usato finora.
-
-- **Peso copia**: es. "510,7 g ± 31 g (481 – 541 g)". Il peso è teorico: la carta reale e il taglio non sono mai esatti, e il "±" è lo scostamento massimo nel caso peggiore. Il riquadro "ℹ️ Come è calcolato il margine" elenca le tolleranze usate.
-- **Scaglione**: badge **verde** se la copia resta nello scaglione anche nel caso peggiore; **giallo** se il margine potrebbe farla passare allo scaglione successivo ("Rischio di passare allo scaglione X g"); **rosso** se supera 1000 g (fuori scaglione). Scaglioni: 250, 350, 500, 1000 g. Il limite è incluso: 500,0 g sta nello scaglione 500.
-- **Interno / Copertina / Maggiorazione / Tiratura**: il dettaglio del calcolo. Le **pagine interne** sono quelle del timone (es. 208); le **pagine di copertina** sono le copertine che esistono: 4, oppure 6 se il numero ha la bandella ([§9bis](#9bis-le-copertine-i-ii-iii-iv-e-la-bandella)). Quando cambi le pagine interne ([§9](#9-modificare-il-numero-totale-di-pagine)) o aggiungi/togli la bandella, il peso si aggiorna da solo.
-
-**Modificare i parametri di questo numero** (Admin e Redattore): bottone **"Modifica parametri"**.
-- In cima c'è la sezione **"Carta"**: grammatura interno, grammatura copertina e pagine copertina. Per un numero già creato le **pagine copertina non si scrivono a mano** (campo grigio): sono le copertine esistenti, 4 o 6 con la bandella.
-- **Grammatura**: scrivi quella stampata sulla carta, in g/m² (es. **80** per l'interno, **170** per la copertina), **non il peso di una pagina**: il peso a pagina lo calcola il sistema e lo mostra sotto il campo, es. "80 g/m² → 2,268 g a pagina · 208 pagine = 471,7 g". Valori sotto 30 o sopra 400 vengono rifiutati con un messaggio che spiega l'errore. Puoi usare la virgola o il punto (`80,5` o `80.5`).
-- Poi formato in **millimetri** (210 × 270, non 21 × 27: valori sotto 50 vengono rifiutati perché quasi certamente in centimetri), n. copie, n. bancali e peso reale. Maggiorazione e tolleranze stanno sotto "Avanzate".
-- Mentre scrivi, l'**anteprima** in fondo alla finestra mostra il nuovo peso, il margine e lo scaglione **prima di salvare**, con la differenza dal peso salvato (es. "+12,4 g rispetto al valore salvato …, passa da scaglione 500 g a 1.000 g.").
-- I valori diversi da quelli della rivista hanno il badge **"modificato"**; **"Ripristina default rivista"** li riporta a quelli della rivista (poi devi comunque premere "Salva").
-- **"Salva" modifica solo questo numero**, mai i valori della rivista.
-- Le pagine interne devono essere un numero **pari** (un foglio ha due facciate): un numero dispari blocca il calcolo con un messaggio rosso. Se non sono un multiplo di 4 compare solo un avviso.
-- Ogni modifica resta nella cronologia ([§10](#10-consultare-lo-storico-spostamenti-e-la-cronologia-generale)).
-
-**"Parametri peso da configurare"**: mancano dei valori, di solito il formato o le grammature (succede per i numeri creati prima di questa funzione). Inseriscili con "Modifica parametri".
-
-**"Grammatura … fuori dall'intervallo ammesso"** o **"Formato … fuori dall'intervallo ammesso"** al posto del peso: sul numero è salvato un valore con l'unità sbagliata (il peso di una pagina, es. 0,8, invece della grammatura 80; oppure il formato in centimetri, 21 invece di 210). Correggilo con "Modifica parametri".
-
-**Peso reale dopo la stampa**:
-1. Pesa una copia e inserisci il valore in "Peso reale misurato (g)".
-2. Il riquadro mostra la differenza dal teorico e la **maggiorazione** che avrebbe dato il peso esatto.
-3. Un Admin può salvarla con **"Copia nei default della rivista"**, dopo una conferma. Vale solo per i numeri creati da quel momento.
-
-Il suggerimento non viene mai applicato da solo.
-
-**Simulazione**: nel campo "Simula +/- pagine interne" scrivi per esempio `8` o `-4` per vedere peso e scaglione con quelle pagine in più o in meno. Non modifica nulla. Sotto, il riquadro indica quante pagine puoi ancora aggiungere restando nello scaglione attuale (a passi di 2 pagine).
-
-I valori di partenza vengono dalla rivista ([§12bis](#12bis-modificare-una-rivista-redattore-di-riferimento-e-scadenza-stampa)) e si possono cambiare già quando crei il numero ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)), nella sezione "Carta e peso".
-
----
-
-## 9quater. Segnature (trentaduesimi)
-
-Dal 2026-10-29 il timone mostra come il numero si divide in **segnature** di stampa (di solito da 32 pagine: i «trentaduesimi»).
-- **Nella barra in alto**, accanto alla percentuale di pubblicità: «Segnature: **3 trentaduesimi + 24 pagine** (16 + 8)». Tra parentesi il resto scomposto nei formati di stampa (16esimo, 8vo, quartino da 4). Se il totale non è multiplo di 4 compare in rosso «⚠️ 126 non è multiplo di 4: non stampabile così». Dopo la freccia il suggerimento: quante pagine aggiungere o togliere per arrivare a un numero intero di segnature (es. «→ +8 = 128 · −24 = 96»). Il conteggio cambia da solo, anche per i colleghi, quando cambiano le pagine totali.
-- **Sulla griglia**: una fascia colorata in cima a ogni pagina, alternata azzurro/viola per segnatura, e una linea rossa con l'etichetta «32° n. 2» sul lato sinistro della prima pagina di ogni segnatura. Nella vista Doppia pagina la linea cade **dentro** la coppia [32 | 33], tra le due pagine; nella Lista è una linea sopra la riga. Le copertine non hanno fascia, salvo che la rivista le conti nelle segnature.
-- **Mostrare o nascondere i confini**: il bottone **32°** all'inizio del conteggio «Segnature» nella barra in alto (blu = visibili). È una preferenza tua, ricordata dal browser; non cambia nulla per i colleghi.
-- **Impostazioni della rivista** (Admin, «Modifica rivista» → «📐 Segnature di stampa»): pagine per segnatura (8, 16, 32 o 64; di solito 32) e «Copertina inclusa nelle segnature» (di solito no: la copertina si stampa a parte; se sì, le sue facciate — 4, o 6 con la bandella — contano in testa alla prima segnatura). Valgono subito per tutti i numeri della rivista.
-
-## 10. Consultare lo storico spostamenti e la cronologia generale
-
-Bottone **"📜 Storico spostamenti"** nella barra del timone: apre un elenco degli ultimi 50 spostamenti di pagina fatti su questo numero, con chi li ha fatti, da quale posizione a quale, e quando.
-
-Bottone **"🕓 Cronologia"**, poco sotto la barra del timone: il registro di **tutto il resto** che succede su questo numero — cambi di stato pagina, contenuti creati/assegnati/rimossi/con spazio sulla pagina modificato, PDF caricati, modifiche al numero di pagine totali, modifiche e rinomine dei contenuti, pubblicità previste create con il numero (le voci vecchie sui cambi della soglia di allarme restano leggibili, ma la soglia non esiste più). Ogni riga mostra chi ha fatto cosa e quando. Non si aggiorna da solo mentre resta aperto: chiudilo e riaprilo per vedere le voci più recenti.
-
----
-
-## 11. Avvisi automatici
-
-Se compare un riquadro **"⚠️ Avvisi"** sotto la barra del timone, il sistema ha notato qualcosa da controllare (non un errore bloccante, solo un promemoria):
-- una pagina già segnata come **Revisionata** o **Ok stampa** ma ancora **senza nessun contenuto assegnato**;
-- una pagina già segnata come **Revisionata** o **Ok stampa** ma ancora **senza un PDF caricato** — a differenza degli altri avvisi, per «Ok stampa» questo caso è anche bloccante: vedi [§7](#7-caricare-e-vedere-un-pdf);
-- un contenuto assegnato a **pagine non consecutive** (es. pagina 3 e pagina 9) — a volte è voluto, ma vale la pena ricontrollare.
-
-Il riquadro compare solo quando c'è almeno un avviso da mostrare; se il timone non ha nulla da segnalare, non si vede affatto. Il numero di pagine non multiplo di 4 ha già il suo avviso dedicato altrove nell'interfaccia. Il carico pubblicitario non ha più soglie né avvisi (dal 2026-10-27): si legge la percentuale nel riepilogo e nel cruscotto.
-
----
-
-## 12. Creare una rivista / un numero, duplicare la struttura
-
-**Nuova rivista** (solo Admin): dal riquadro "Le tue riviste", bottone "+ Nuova rivista". Nome, periodicità, colore identificativo, note. (La soglia di allarme pubblicitario non c'è più dal 2026-10-27: il carico pubblicitario si legge come semplice percentuale.) (L'opzione «il battente conta nel totale pagine» non c'è più dal 2026-10-26: la bandella è una copertina a parte e non entra mai nel totale delle pagine interne.)
-
-**Nuovo numero**: dalla pagina di una rivista, bottone "+ Nuovo numero" (visibile ad Admin e Redattori con accesso a quella rivista). Titolo, data di uscita (opzionale), **scadenza stampa** (opzionale — vedi [§12bis](#12bis-modificare-una-rivista-redattore-di-riferimento-e-scadenza-stampa)), **numero di pagine interne** (le quattro copertine I–IV si aggiungono da sole, non vanno contate; con 6 «pagine copertina» nella sezione Carta e peso il numero nasce anche con la bandella), note. Se cancelli del tutto il numero di pagine per riscriverlo, l'anteprima del peso si ferma finché non scrivi un valore valido; se provi a creare il numero con il campo vuoto compare l'errore sotto il campo (prima la pagina andava in errore). Mentre scrivi un numero (pagine, pubblicità previste, copie, bancali, grammature) le anteprime si aggiornano un attimo dopo che hai smesso di scrivere, e gli avvisi (es. «Non è un multiplo di 4», «Non ci stanno», grammatura fuori scala) compaiono **quando esci dal campo**, non a metà numero (dal 2026-10-27: prima il campo pagine poteva perdere cifre scrivendo veloce). Le note possono essere lunghe fino a 2000 caratteri.
-
-**Duplicare la struttura da un numero precedente**: nello stesso form di creazione numero, se la rivista ha già altri numeri, trovi un menu "Duplica struttura da un numero precedente". Selezionandone uno, il numero di pagine interne si pre-compila con quello del numero scelto (resta modificabile) e — dopo la creazione — ogni pagina interna e ogni copertina eredita lo stesso tipo (editoriale/pubblicità/mista/bianca) della pagina corrispondente del numero di origine. **Non vengono copiati**: i contenuti assegnati, gli stati delle pagine, i PDF caricati — solo lo schema di che tipo di pagina è cosa, per non ripartire ogni volta da un timone completamente vuoto.
-
-**Pubblicità previste** (opzionale): nel form di creazione del numero, la sezione «📢 Pubblicità previste» chiede quante pubblicità sono già previste per tipo — **pagina intera**, **2/3**, **1/2**, **piedino (1/3)**, **vetrina (1/4)**. Mentre scrivi, sotto compaiono:
-- quante pagine di pubblicità fanno in tutto (es. «7 pagine di pubblicità (8 inserzioni)»);
+- quante pagine di pubblicità fanno in tutto, per esempio «7 pagine di pubblicità (8 inserzioni)»;
 - la **percentuale sulle pagine interne** (le copertine non contano, come nel cruscotto);
 - le **posizioni** in cui andranno;
-- un **errore rosso** se non ci stanno: in quel caso il numero non viene creato finché non riduci le pubblicità o aumenti le pagine.
+- un **errore rosso** se non ci stanno: il numero non viene creato finché non riduci le pubblicità o aumenti le pagine.
 
-Alla creazione diventano pubblicità **segnaposto** già messe nel timone, con questa regola:
-1. le **prime 4 pubblicità occupano tutte le copertine**, di fila, nell'ordine **II, III, IV** e per ultima la **I** — prima le pagine intere, poi, se le pagine intere sono meno di 4, le frazioni più grandi (2/3, 1/2…). Quando viene usata la I, in cima al numero appena creato compare un avviso;
+Le posizioni si decidono **solo adesso**: dopo puoi spostare, togliere e modificare tutto a mano, e nulla viene mai ricalcolato da solo.
+
+**Dettagli**
+
+Come vengono messe:
+
+1. le **prime 4 pubblicità occupano tutte le copertine**, di fila, nell'ordine **II, III, IV** e per ultima la **I**. Prima le pagine intere; se sono meno di 4, le frazioni più grandi (2/3, 1/2…). Quando viene usata la I, in cima al numero appena creato compare un avviso;
 2. le pagine intere rimaste vanno nelle pagine interne **una sì e una no, da pagina 2** (2, 4, 6…);
 3. poi le frazioni rimaste (2/3, 1/2, 1/3, 1/4), **una per pagina**, continuando la stessa sequenza: il resto della pagina resta libero per l'editoriale;
 4. finite le pagine alterne, le pagine libere rimaste partendo **dal fondo**.
 
-Le posizioni si decidono **solo adesso**: dopo puoi spostare, togliere e modificare tutto a mano, e nulla viene mai ricalcolato da solo.
+#### Vedi anche
 
-**I segnaposto nel timone**: bordo tratteggiato ed etichetta **«Da assegnare»**, titolo automatico (es. «Pubblicità 1/2 — da assegnare»), nessun cliente né PDF. Contano nella percentuale pubblicitaria e nel contatore «Pubblicità da assegnare (segnaposto)» del cruscotto ([§8](#8-leggere-il-cruscotto-pubblicitario)). Per trasformarne uno in una **pubblicità vera**: doppio click sul nome e scrivi il cliente, oppure ✏️ e indica il cliente o carica il PDF ([§5ter](#5ter-modificare-un-contenuto-e-rinominarlo)). Cambiare solo titolo, formato, stato o spazio non basta: resta «da assegnare» (dal 2026-10-28 anche il titolo da solo non basta più). Al contrario, se togli il cliente a una pubblicità che non ha file, torna segnaposto. Un segnaposto si può creare anche a mano: «+ Nuovo contenuto» → Pubblicità, lasciando vuoto il cliente ([§5](#5-creare-assegnarerimuovere-contenuti-e-modificare-lo-spazio-occupato)). La mezza pagina nasce orizzontale: se è verticale, cambia il formato dalla ✏️.
+- [Creare un numero](resources/manuale/creare-numero.md)
+- [Pubblicità prenotate](resources/manuale/pubblicita-prenotate.md)
+- [Il cruscotto pubblicitario](resources/manuale/cruscotto-pubblicitario.md)
+- [Modificare o rinominare un contenuto](resources/manuale/modificare-contenuto.md)
 
-**Carta e peso**: nel form di creazione del numero, la sezione richiudibile "⚖️ Carta e peso" è già compilata con i valori di default della rivista: formato in mm, grammature, pagine di copertina, poi n. copie e n. bancali, e sotto "Avanzate" maggiorazione e tolleranze. Puoi cambiarli solo per questo numero; i campi diversi dalla rivista mostrano il badge "modificato" e "Ripristina default rivista" li riporta ai valori della rivista. Sotto ogni grammatura compare il peso a pagina e sotto la sezione un'anteprima del peso che si aggiorna mentre scrivi. Dettagli in [§9ter](#9ter-peso-della-rivista).
+### Pubblicità prenotate
 
----
+**In breve**
 
-## 12bis. Modificare una rivista, redattore di riferimento e scadenza stampa
+Il bottone **«📌 Pubblicità prenotate»** sopra il timone elenca **tutte** le pubblicità del numero, con uno stato calcolato da solo:
 
-**Modificare una rivista** (solo Admin): dalla pagina della rivista, bottone "Modifica rivista". Stessi campi della creazione (nome, periodicità, colore, note), più un campo nuovo:
+1. 🟠 **Prenotato**: creata, ma non ancora su nessuna pagina.
+2. 🔵 **Assegnato**: è su una pagina, ma manca il PDF pronto.
+3. 🟢 **Completo**: è su una pagina e il materiale è a posto, pronta per la stampa.
 
-- **Redattore di riferimento**: l'utente responsabile di quella rivista. Assegnarlo gli dà automaticamente accesso alla rivista (se non ce l'aveva già) — non serve anche aggiungerlo da [§13](#13-gestire-gli-utenti-solo-admin). Riceve le mail di sollecito quando la scadenza stampa di un numero si avvicina (vedi sotto). Cambiare redattore non toglie l'accesso al precedente: se serve, va rimosso a mano da §13.
+Una pubblicità creata ma non ancora assegnata è **«prenotata»**: conta comunque nel carico pubblicitario del [cruscotto](resources/manuale/cruscotto-pubblicitario.md).
 
-**Scadenza stampa di un numero**: si imposta in creazione ([§12](#12-creare-una-rivista--un-numero-duplicare-la-struttura)) o, per un numero già esistente, con il campo **"📅 Scadenza stampa"** nella barra in alto sopra il timone. Quando la scadenza si avvicina (di default 3 giorni prima — l'esatto preavviso è un'impostazione tecnica dell'installazione, non modificabile dall'interfaccia), il **redattore di riferimento della rivista** riceve automaticamente una mail con il numero, la rivista e un link diretto al timone. La mail parte **una sola volta per scadenza**: se la sposti, può ripartire per la nuova data; se il redattore l'ha già ricevuta per la scadenza attuale, vedrai una ✉️ accanto al campo data.
+**Dettagli**
 
-Se una rivista non ha un redattore assegnato, nessuna mail viene inviata per i suoi numeri finché non gliene assegni uno.
+- **Prenotato**: cliente, formato e note commerciali già inseriti, ma la pubblicità non è su nessuna pagina. Succede quando crei una pubblicità e non la trascini subito.
+- Se alla creazione hai indicato una **pagina preferita**, la vedi accanto, per esempio «posizione preferita: pagina 7». È solo un promemoria per chi compone il timone: non assegna nulla.
+- **Assegnato**: la pagina non ha ancora un PDF pronto, oppure il PDF ha un formato non conforme non ancora accettato (vedi [Caricare un PDF](resources/manuale/caricare-file.md)).
 
-**Segnature di stampa** (nella stessa pagina): pagine per segnatura e copertina inclusa o no, vedi [§9quater](#9quater-segnature-trentaduesimi). Valgono subito per tutti i numeri della rivista.
+#### Eliminare una prenotazione
 
-**Carta e peso — valori di default** (nella stessa pagina "Modifica rivista"): formato, grammature, pagine di copertina, maggiorazione, peso del bancale e tolleranze usati per il peso della rivista ([§9ter](#9ter-peso-della-rivista)). **Valgono solo per i nuovi numeri**: vengono copiati su ogni numero creato dopo, mentre i numeri già esistenti mantengono i propri valori. Anche qui le grammature vanno in g/m² (es. 80 e 170) e sotto ognuna compare il peso a pagina; l'anteprima del peso usa "Pagine totali per l'anteprima (non salvate)", proposte dall'ultimo numero della rivista.
+Bottone «🗑 Elimina», solo per le pubblicità ancora in stato «Prenotato». Se la pubblicità è già su una pagina, toglila con la ✕ sulla card ([Mettere un contenuto su una pagina](resources/manuale/assegnare-contenuto.md)).
 
----
+> **Suggerimento**
+>
+> L'eliminazione di una prenotazione si annulla con Ctrl+Z (⌘+Z su Mac), vedi [Annullare e ripetere](resources/manuale/annullare-ripetere.md).
 
-## 13. Gestire gli utenti (solo Admin)
+#### Chiudere il numero
 
-Voce **"Utenti"** in alto nel menu (visibile solo se sei Admin).
+In cima al pannello c'è il bottone «🔒 Chiudi numero»: vedi [Chiudere un numero](resources/manuale/chiudere-numero.md).
 
-- **Elenco**: tutti gli utenti, il loro ruolo, a quante riviste hanno accesso.
-- **Nuovo utente**: nome, email, password, ruolo, e le riviste a cui dargli accesso (checkbox — irrilevante se il ruolo è Admin, che vede sempre tutto).
-- **Modifica utente**: stessi campi; la password si può lasciare vuota per non cambiarla.
+#### Vedi anche
 
-- **Eliminare un utente** (dal 2026-10-28): in fondo alla pagina «Modifica utente», riquadro rosso **«Elimina l'utente»** → stessa conferma in due passaggi delle riviste e dei numeri ([§13bis](#13bis-eliminare-una-rivista-un-numero-o-un-utente-solo-admin)), scrivendo la sua **email**. Il suo lavoro resta: i file che ha caricato, gli spostamenti e la cronologia rimangono, con **«Utente eliminato»** al posto del nome. Gli vengono tolti gli accessi alle riviste e le sessioni aperte si chiudono subito. Non puoi eliminare te stesso né l'ultimo amministratore (il bottone è disattivato e il tooltip dice perché).
+- [Chiudere un numero](resources/manuale/chiudere-numero.md)
+- [Il cruscotto pubblicitario](resources/manuale/cruscotto-pubblicitario.md)
+- [Pubblicità segnaposto e previste](resources/manuale/segnaposto.md)
 
-Nessun utente può più eliminare il proprio account dalla pagina del profilo: lo fa solo un amministratore, da qui.
+### Il cruscotto pubblicitario
 
----
+**In breve**
 
-## 13bis. Eliminare una rivista, un numero o un utente (solo Admin)
+Il cruscotto pubblicitario, sopra il timone, mostra per il numero che stai guardando:
 
-Dal 2026-10-28 un **amministratore** può eliminare:
-- un **numero**: bottone **«🗑️ Elimina»** accanto al numero, nella pagina della rivista;
-- una **rivista** con tutti i suoi numeri: pagina «Modifica rivista», riquadro rosso **«Elimina la rivista»** in fondo;
-- un **utente**: vedi [§13](#13-gestire-gli-utenti-solo-admin).
+1. la **Percentuale di carico pubblicitario** (il numero grande), con il dettaglio «X già assegnate + Y prenotate»;
+2. le **Inserzioni assegnate** e le **pubblicità non ancora assegnate**;
+3. le **Pubblicità da assegnare (segnaposto)**, con il dettaglio per formato;
+4. il **Riepilogo per formato pubblicitario** e **per stato commerciale**.
 
-L'eliminazione è **definitiva** (non c'è un cestino), per questo si conferma in due passaggi:
-1. un riepilogo di cosa sparirà: pagine, contenuti, file caricati e quanto spazio occupano (MB/GB); per una rivista anche l'elenco dei suoi numeri. «Continua» per andare avanti, «Annulla» (o Esc) per tornare indietro;
-2. scrivi il **nome esatto** del numero o della rivista (l'email per un utente) e la **tua password**, poi «Elimina definitivamente». Dopo 5 password sbagliate in un minuto bisogna aspettare un minuto.
+La percentuale comprende anche le pubblicità prenotate ma non ancora su una pagina: **incluse le pubblicità prenotate ma non ancora assegnate a una pagina**. È la stessa percentuale del [riepilogo in alto](resources/manuale/riepilogo-del-numero.md), senza soglie né colori di allarme.
 
-Chi ha in quel momento il numero aperto viene riportato all'elenco delle riviste con l'avviso «Il numero che avevi aperto è stato eliminato da un amministratore». Ogni eliminazione resta registrata (chi, cosa, quando) nel registro dell'applicazione.
+**Dettagli**
 
----
+- La percentuale è esatta: tre pubblicità da 1/3 su 3 pagine fanno 1 pagina su 3, cioè 33,33%.
+- Le prenotate contano per l'occupazione indicata nel loro modulo.
+- Le copertine non entrano mai nel calcolo: né nelle pagine totali del denominatore, né un contenuto assegnato per errore su di esse.
+- I segnaposto si contano in tutto il numero, copertine comprese.
+- Il riepilogo per formato (pagina intera, mezza pagina…) e per stato commerciale (in trattativa, confermata, annullata) include anche le prenotazioni.
 
-## 14. Cosa può fare ciascun ruolo
+#### Esportare il report
 
-| Ruolo | Vede le riviste a cui ha accesso | Commenti sulle pagine | Pubblicità: crea, modifica, sposta (anche segnaposto) | Articoli; pagine con articoli; stati, blocchi, gruppi, pagine totali, scadenza | Crea numeri | Crea riviste | Gestisce ed elimina utenti; elimina riviste e numeri |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Admin** | Tutte, sempre | ✅ (elimina anche quelli altrui) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Redattore** | Solo quelle a cui è stato dato accesso | ✅ | ✅ | ✅ (solo sulle sue riviste) | ✅ (solo sulle sue riviste) | ❌ | ❌ |
-| **Commerciale** | Solo quelle a cui è stato dato accesso | ✅ | ✅ (dal 2026-10-28) | ❌ | ❌ | ❌ | ❌ |
-| **Sola lettura** | Solo quelle a cui è stato dato accesso | Solo legge | ❌ | ❌ | ❌ | ❌ | ❌ |
+I link «⬇️ CSV» e «⬇️ PDF» in alto a destra del cruscotto scaricano lo stesso riepilogo: vedi [Report delle pubblicità](resources/manuale/esporta-report-pubblicita.md).
 
-> **Commerciale (dal 2026-10-28)**: lavora **solo sulle pubblicità**. Le crea («+ Nuovo contenuto», dove il tipo è già Pubblicità, e il caricamento multiplo), le modifica (✏️, doppio click sul nome) e le sposta: trascinamento, frecce e rotazione nel menu «⋯», «Posizione nel timone» nella modale, togliere dalla pagina. Può spostare anche **pagine intere** (o gruppi di pagine), ma solo se **non contengono articoli**. Sugli articoli vede i comandi disattivati con il tooltip **«Solo la redazione può spostare questo contenuto»**; il chip dell'articolo ha il cursore 🚫 e non si trascina; una pagina con articoli non ha la maniglia ⠿. Stato e blocco delle pagine, gruppi, pagine totali e scadenza stampa restano della redazione. I controlli valgono anche lato server: un tentativo diretto viene rifiutato.
+#### Vedi anche
 
-Chi può solo consultare può comunque esportare il report del cruscotto pubblicitario in CSV/PDF ([§8](#8-leggere-il-cruscotto-pubblicitario)) e il PDF completo del timone ([§3](#3-leggere-la-griglia-del-timone)) — l'esportazione non richiede permessi di modifica.
+- [Pubblicità prenotate](resources/manuale/pubblicita-prenotate.md)
+- [Report delle pubblicità (CSV/PDF)](resources/manuale/esporta-report-pubblicita.md)
+- [Il riepilogo in alto](resources/manuale/riepilogo-del-numero.md)
+
+## Copertine e bandella
+
+### Le copertine e la bandella
+
+**In breve**
+
+**Le copertine non sono pagine del timone.** Ogni numero ha sempre quattro copertine: **I di copertina**, **II**, **III** e **IV di copertina**. Stanno in una fascia azzurra **in cima al timone, prima della pagina 1**.
+
+1. Su una copertina fai le stesse cose di una pagina: assegnare contenuti, caricare materiale, stato, blocco.
+2. Per scambiare due copertine trascina l'etichetta blu di una sopra l'altra.
+3. Per aggiungere la bandella clicca **«+ Aggiungi bandella»** nella fascia delle copertine.
+
+#### Le quattro copertine
+
+- **I di copertina**: la copertina vera e propria.
+- **II**: il suo retro, a sinistra della pagina 1.
+- **III**: la pagina interna della quarta.
+- **IV di copertina**: il retro della rivista.
+
+Sono create da sole insieme al numero, separate dalle pagine interne. Le pagine interne partono **sempre da 1** e arrivano al numero di pagine interne del numero: nessuno deve sommare o sottrarre le copertine.
+
+#### Dove sono nel timone
+
+Tutte insieme nella fascia azzurra «📘 Copertine», **in cima al timone, prima della pagina 1**, in ordine di sfoglio: I, eventuale bandella, II, III, IV. Ogni copertina ha un'etichetta blu «📘 I di copertina» al posto del numero di pagina e un contorno azzurro. C'è sempre la scritta, quindi si riconosce anche senza guardare i colori.
+
+#### Cosa si può fare su una copertina
+
+Le stesse cose di una pagina: assegnarle contenuti e pubblicità trascinandoli dal pannello Contenuti, caricarle materiale con «📎 Carica materiale», cambiarne lo stato, bloccarla, togliere un contenuto con ✕, commentarla.
+
+#### Spostare le copertine
+
+Trascina l'etichetta blu di una copertina sopra un'altra copertina: le due si **scambiano**. Per esempio la pubblicità passa dalla II alla III, con il suo stato e il suo PDF.
+
+**Dettagli**
+
+- Una copertina non si può trascinare tra le pagine interne, e una pagina interna non si può trascinare dentro una copertina.
+- Le copertine non entrano nella selezione, nella modalità scambio e negli spostamenti con le frecce.
+
+#### Una pubblicità di più pagine su una copertina
+
+Trascinata sulla **II** continua sulle pagine 1, 2…: la II e la pagina 1 sono affiancate quando si apre la rivista. Trascinata sulla **III** occupa le ultime pagine interne e poi la III. La **I** e la **IV** accolgono una sola pagina: per più pagine compare un messaggio che spiega dove partire.
+
+#### La bandella
+
+**La bandella** è il lembo ripiegato agganciato alla copertina, detto anche battente.
+
+- Bottone **«+ Aggiungi bandella»** nella fascia delle copertine per aggiungerla, **«− Togli bandella»** per toglierla.
+- Con la bandella le facciate di copertina diventano **6** invece di 4, e il [peso](resources/manuale/peso.md) si aggiorna da solo.
+- La pubblicità in formato **battente copertina** occupa la bandella, che nel timone è un solo riquadro.
+
+**Dettagli**
+
+- La bandella si toglie solo se è vuota e non bloccata.
+- Se la rivista ha 6 pagine di copertina tra le impostazioni del peso, i nuovi numeri nascono già con la bandella.
+- Aggiungere o togliere la bandella non si annulla con Ctrl+Z.
+
+#### Conteggi
+
+Il riepilogo in alto mostra «Copertine: X/4 assegnate (Y libere)». Il cruscotto pubblicitario e gli avvisi contano solo le pagine interne: una pubblicità sulla IV di copertina non cambia la percentuale delle pagine interne. Nell'esportazione PDF del timone le copertine hanno una sezione «Copertine» a sé, prima delle pagine interne.
+
+#### Vedi anche
+
+- [Mettere un contenuto su una pagina](resources/manuale/assegnare-contenuto.md)
+- [Peso della rivista](resources/manuale/peso.md)
+- [Glossario](resources/manuale/glossario.md)
+
+## Numero e rivista
+
+### Trovare una rivista e un numero
+
+**In breve**
+
+1. Dopo il login vedi **«Le tue riviste»**: solo quelle a cui hai accesso.
+2. Clic su una rivista: vedi i **Numeri attivi** e, in fondo, l'**Archivio**.
+3. Clic su un numero per aprirne il timone.
+
+- Un Admin vede tutte le riviste.
+- Ogni riquadro di «Le tue riviste» mostra il numero attualmente in lavorazione, se c'è.
+- **Numeri attivi**: i numeri in bozza o in lavorazione.
+- **Archivio**: i numeri chiusi, in fondo alla pagina della rivista.
+
+#### Vedi anche
+
+- [Creare un numero](resources/manuale/creare-numero.md)
+- [Chiudere un numero](resources/manuale/chiudere-numero.md)
+- [Chi può fare cosa](resources/manuale/ruoli.md)
+
+### Creare un numero
+
+**In breve**
+
+1. Dalla pagina della rivista clicca **«+ Nuovo numero»**.
+2. Scrivi titolo e **numero di pagine interne**. Data di uscita, scadenza stampa e note sono opzionali.
+3. Se vuoi, scegli **«Duplica struttura da un numero precedente»** e indica le **Pubblicità previste**.
+4. Clic su **«Crea»**: le quattro copertine I–IV si aggiungono da sole.
+
+Il bottone «+ Nuovo numero» lo vedono gli Admin e i Redattori con accesso alla rivista.
+
+#### I campi
+
+- Titolo.
+- Data di uscita (opzionale).
+- **scadenza stampa** (opzionale): vedi [Scadenza stampa e solleciti](resources/manuale/scadenza-stampa.md).
+- **numero di pagine interne**: le quattro copertine I–IV si aggiungono da sole, non vanno contate.
+- Note, fino a 2000 caratteri.
+
+**Dettagli**
+
+- Con 6 «pagine copertina» nella sezione «Carta e peso» il numero nasce anche con la bandella.
+- Se cancelli del tutto il numero di pagine per riscriverlo, l'anteprima del peso si ferma finché non scrivi un valore valido. Se provi a creare il numero con il campo vuoto compare l'errore sotto il campo.
+- Mentre scrivi un numero (pagine, pubblicità previste, copie, bancali, grammature) le anteprime si aggiornano un attimo dopo che hai smesso di scrivere. Gli avvisi («Non è un multiplo di 4», «Non ci stanno», grammatura fuori scala) compaiono **quando esci dal campo**, non a metà numero.
+
+#### Duplicare la struttura da un numero precedente
+
+Se la rivista ha già altri numeri, nel modulo trovi il menu «Duplica struttura da un numero precedente». Scegline uno: il numero di pagine interne si compila con quello del numero scelto (resta modificabile). Dopo la creazione ogni pagina interna e ogni copertina eredita lo stesso tipo (editoriale, pubblicità, mista, bianca) della pagina corrispondente.
+
+**Non vengono copiati**: i contenuti assegnati, gli stati delle pagine, i PDF caricati. Si copia solo lo schema, per non ripartire da un timone vuoto.
+
+#### Pubblicità previste
+
+La sezione «📢 Pubblicità previste» crea subito le pubblicità segnaposto nel timone: vedi [Pubblicità segnaposto e previste](resources/manuale/segnaposto.md).
+
+#### Carta e peso
+
+La sezione richiudibile «⚖️ Carta e peso» è già compilata con i valori di default della rivista: formato in mm, grammature, pagine di copertina, poi n. copie e n. bancali, e sotto «Avanzate» maggiorazione e tolleranze.
+
+**Dettagli**
+
+- Puoi cambiarli solo per questo numero. I campi diversi dalla rivista hanno il badge «modificato»; «Ripristina default rivista» li riporta ai valori della rivista.
+- Sotto ogni grammatura compare il peso a pagina e sotto la sezione un'anteprima del peso che si aggiorna mentre scrivi. Dettagli in [Peso della rivista](resources/manuale/peso.md).
+
+#### Vedi anche
+
+- [Pubblicità segnaposto e previste](resources/manuale/segnaposto.md)
+- [Peso della rivista](resources/manuale/peso.md)
+- [Aggiungere o togliere pagine](resources/manuale/pagine-interne.md)
+- [Creare e modificare una rivista](resources/manuale/rivista.md)
+
+### Aggiungere o togliere pagine
+
+**In breve**
+
+Il numero di pagine si cambia con il bottone **«⚙️ Pagine interne»** nella fascia dei comandi. Si cambiano solo le pagine interne: le quattro copertine restano sempre.
+
+**Per aumentare le pagine:**
+1. Scrivi il nuovo totale.
+2. Scegli se le pagine nuove vanno **in coda** o **in una posizione specifica**.
+3. Clic su **Applica**.
+
+**Per ridurre le pagine:**
+1. Scrivi il nuovo totale, più basso.
+2. Leggi il riepilogo di **cosa andrebbe perso**.
+3. Clic su **«Conferma rimozione definitiva»** e conferma.
+
+#### Aumentare
+
+Le nuove pagine sono bianche e vuote. Se scegli una posizione specifica, le pagine successive slittano da sole.
+
+#### Ridurre
+
+Vengono sempre tolte le pagine **in coda**, mai una scelta a caso. Prima di poter confermare il pannello ti mostra **cosa andrebbe perso**:
+
+- quante pagine verrebbero eliminate;
+- quali hanno già contenuti assegnati: tornano nel pannello Contenuti, scheda «Da assegnare». **Non vengono cancellati**, restano solo senza una pagina;
+- quali hanno un PDF caricato: **quello sì, va perso davvero**, perché un file non si può spostare su un'altra pagina.
+
+Solo dopo aver visto questo riepilogo puoi cliccare «Conferma rimozione definitiva». Compare anche una richiesta di conferma del browser. Senza questo secondo clic nessuna pagina viene toccata.
+
+> **Attenzione**
+>
+> Ridurre le pagine **non si annulla** con Ctrl+Z. Una pagina bloccata non può essere eliminata: se una delle pagine da togliere è bloccata, l'operazione viene rifiutata.
+
+**Dettagli**
+
+- Puoi scrivere liberamente nel campo, anche cancellarlo del tutto e riscrivere: il controllo e il ricalcolo avvengono solo quando esci dal campo (Tab o clic altrove), non a ogni carattere.
+- Se il valore lasciato non è valido (vuoto, non numerico, negativo) compare un avviso chiaro e non succede nulla.
+- I commenti delle pagine eliminate restano consultabili, vedi [Commenti](resources/manuale/commenti.md).
+- Il conteggio delle [segnature](resources/manuale/segnature.md) e il [peso](resources/manuale/peso.md) si aggiornano da soli.
+
+#### Vedi anche
+
+- [Bloccare una pagina](resources/manuale/bloccare-pagina.md)
+- [Segnature](resources/manuale/segnature.md)
+- [Peso della rivista](resources/manuale/peso.md)
+
+### Peso della rivista
+
+**In breve**
+
+Il riquadro **«⚖️ Peso»**, in cima alla pagina del numero, mostra il **peso teorico di una copia**, il **margine d'errore** (± grammi), lo **scaglione** di spedizione e il peso della **tiratura**.
+
+1. Leggi il peso, per esempio «510,7 g ± 31 g (481 – 541 g)».
+2. Guarda il colore dello scaglione: verde, giallo o rosso.
+3. Per cambiare carta o formato di questo numero clicca **«Modifica parametri»**.
+
+#### Peso copia e scaglione
+
+- **Peso copia**: per esempio «510,7 g ± 31 g (481 – 541 g)». Il peso è teorico: la carta reale e il taglio non sono mai esatti, e il «±» è lo scostamento massimo nel caso peggiore. Il riquadro «ℹ️ Come è calcolato il margine» elenca le tolleranze usate.
+- **Scaglione**: badge **verde** se la copia resta nello scaglione anche nel caso peggiore; **giallo** se il margine potrebbe farla passare allo scaglione successivo («Rischio di passare allo scaglione X g»); **rosso** se supera 1000 g (fuori scaglione).
+- Gli scaglioni sono 250, 350, 500 e 1000 g. Il limite è incluso: 500,0 g sta nello scaglione 500.
+
+**Dettagli**
+
+- Le formule sono le stesse del foglio Excel usato finora.
+- **Interno / Copertina / Maggiorazione / Tiratura**: il dettaglio del calcolo. Le **pagine interne** sono quelle del timone (per esempio 208). Le **pagine di copertina** sono le copertine che esistono: 4, oppure 6 se il numero ha la bandella.
+- Quando cambi le pagine interne o aggiungi o togli la bandella, il peso si aggiorna da solo.
+
+#### Modificare i parametri di questo numero
+
+Admin e Redattore: bottone **«Modifica parametri»**.
+
+1. In cima c'è la sezione **«Carta»**: grammatura interno, grammatura copertina e pagine copertina.
+2. **Grammatura**: scrivi quella stampata sulla carta, in g/m² (per esempio **80** per l'interno, **170** per la copertina), **non il peso di una pagina**. Il peso a pagina lo calcola il sistema e lo mostra sotto il campo.
+3. Formato in **millimetri** (210 × 270, non 21 × 27), n. copie, n. bancali.
+4. L'**anteprima** in fondo alla finestra mostra il nuovo peso, il margine e lo scaglione **prima di salvare**.
+5. **«Salva» modifica solo questo numero**, mai i valori della rivista.
+
+**Dettagli**
+
+- Per un numero già creato le **pagine copertina non si scrivono a mano** (campo grigio): sono le copertine esistenti, 4 o 6 con la bandella.
+- Il peso a pagina sotto la grammatura, per esempio «80 g/m² → 2,268 g a pagina · 208 pagine = 471,7 g».
+- Grammature sotto 30 o sopra 400 vengono rifiutate con un messaggio. Puoi usare la virgola o il punto (`80,5` o `80.5`).
+- Un formato sotto 50 viene rifiutato perché quasi certamente è in centimetri.
+- Peso reale, maggiorazione e tolleranze stanno sotto «Avanzate».
+- L'anteprima mostra la differenza dal peso salvato, per esempio «+12,4 g rispetto al valore salvato …, passa da scaglione 500 g a 1.000 g.».
+- I valori diversi da quelli della rivista hanno il badge **«modificato»**. **«Ripristina default rivista»** li riporta a quelli della rivista; poi premi comunque «Salva».
+- Le pagine interne devono essere un numero **pari**, perché un foglio ha due facciate: un numero dispari blocca il calcolo con un messaggio rosso. Se non sono un multiplo di 4 compare solo un avviso.
+- Ogni modifica resta nella [cronologia](resources/manuale/storico-e-cronologia.md). Le modifiche ai parametri del peso non si annullano con Ctrl+Z.
+
+#### Peso reale dopo la stampa
+
+1. Pesa una copia e scrivi il valore in «Peso reale misurato (g)».
+2. Il riquadro mostra la differenza dal teorico e la **maggiorazione** che avrebbe dato il peso esatto.
+3. Un Admin può salvarla con **«Copia nei default della rivista»**, dopo una conferma. Vale solo per i numeri creati da quel momento.
+
+Il suggerimento non viene mai applicato da solo.
+
+#### Simulazione
+
+Nel campo «Simula +/- pagine interne» scrivi per esempio `8` o `-4` per vedere peso e scaglione con quelle pagine in più o in meno. Non modifica nulla. Sotto, il riquadro indica quante pagine puoi ancora aggiungere restando nello scaglione attuale, a passi di 2 pagine.
+
+#### Da dove vengono i valori
+
+I valori di partenza vengono dalla rivista ([Creare e modificare una rivista](resources/manuale/rivista.md)) e si possono cambiare già quando crei il numero, nella sezione «Carta e peso» ([Creare un numero](resources/manuale/creare-numero.md)).
+
+#### Vedi anche
+
+- [Problemi frequenti](resources/manuale/problemi-frequenti.md) (messaggi del pannello Peso)
+- [Le copertine e la bandella](resources/manuale/copertine.md)
+- [Creare e modificare una rivista](resources/manuale/rivista.md)
+
+### Scadenza stampa e solleciti
+
+**In breve**
+
+1. Imposta la scadenza quando crei il numero, oppure con il campo **«📅 Scadenza stampa»** nella fascia dei comandi del timone.
+2. Qualche giorno prima (di solito 3 giorni) il **redattore di riferimento della rivista** riceve una mail di sollecito.
+3. La mail contiene il numero, la rivista e un link diretto al timone.
+
+#### Chi riceve la mail
+
+Il **Redattore di riferimento** della rivista, scelto dall'Admin in «Modifica rivista»: vedi [Creare e modificare una rivista](resources/manuale/rivista.md).
+
+**Dettagli**
+
+- La mail parte **una sola volta per scadenza**. Se sposti la scadenza può ripartire per la nuova data.
+- Se il redattore l'ha già ricevuta per la scadenza attuale, vedi una ✉️ accanto al campo data.
+- Se una rivista non ha un redattore assegnato, per i suoi numeri non parte nessuna mail finché non gliene assegni uno.
+- Quanti giorni prima parte la mail lo decide l'installazione, non si cambia dall'app: vedi [Note per l'amministratore](resources/manuale/note-amministratore.md).
+- La scadenza stampa non si annulla con Ctrl+Z.
+
+#### Vedi anche
+
+- [Creare e modificare una rivista](resources/manuale/rivista.md)
+- [Creare un numero](resources/manuale/creare-numero.md)
+- [Note per l'amministratore](resources/manuale/note-amministratore.md)
+
+### Chiudere un numero
+
+**In breve**
+
+1. Apri **«📌 Pubblicità prenotate»** sopra il timone.
+2. Clic su **«🔒 Chiudi numero»** in cima al pannello.
+3. Il numero passa nell'**Archivio** della rivista.
+
+Il numero **non può essere chiuso** finché esiste almeno una pubblicità non ancora «Completo»: compare un messaggio con i nomi dei clienti coinvolti. Per sbloccare aspetta il materiale (così la pubblicità passa a «Completo» da sola) oppure elimina la prenotazione se non serve più.
+
+> **Attenzione**
+>
+> Al momento non c'è un modo per riaprire un numero chiuso da qui, e la chiusura non si annulla con Ctrl+Z.
+
+**Dettagli**
+
+Dopo la chiusura il bottone diventa l'etichetta «🔒 Numero chiuso».
+
+#### Vedi anche
+
+- [Pubblicità prenotate](resources/manuale/pubblicita-prenotate.md)
+- [Trovare una rivista e un numero](resources/manuale/riviste-e-numeri.md)
+
+### Creare e modificare una rivista
+
+**In breve**
+
+Solo un Admin crea e modifica le riviste.
+
+1. **Nuova rivista**: da «Le tue riviste» clicca **«+ Nuova rivista»**. Scrivi nome, periodicità, colore identificativo e note.
+2. **Modificare una rivista**: dalla pagina della rivista clicca **«Modifica rivista»**.
+3. Lì scegli anche il **Redattore di riferimento**, le **Segnature di stampa** e i valori di default di carta e peso.
+
+#### Redattore di riferimento
+
+L'utente responsabile della rivista. Riceve le mail di sollecito quando la scadenza stampa di un numero si avvicina: vedi [Scadenza stampa e solleciti](resources/manuale/scadenza-stampa.md).
+
+**Dettagli**
+
+- Assegnarlo gli dà automaticamente accesso alla rivista, se non ce l'aveva già: non serve aggiungerlo anche da [Gestire gli utenti](resources/manuale/utenti.md).
+- Cambiare redattore non toglie l'accesso al precedente: se serve, toglilo a mano da Gestire gli utenti.
+
+#### Segnature di stampa
+
+Pagine per segnatura e copertina inclusa o no: vedi [Segnature](resources/manuale/segnature.md). Valgono subito per tutti i numeri della rivista.
+
+#### Carta e peso — valori di default
+
+Formato, grammature, pagine di copertina, maggiorazione, peso del bancale e tolleranze usati per il [peso della rivista](resources/manuale/peso.md). **Valgono solo per i nuovi numeri**: vengono copiati su ogni numero creato dopo, mentre i numeri già esistenti mantengono i propri valori.
+
+**Dettagli**
+
+- Anche qui le grammature vanno in g/m² (per esempio 80 e 170) e sotto ognuna compare il peso a pagina.
+- L'anteprima del peso usa «Pagine interne per l'anteprima (non salvate)», proposte dall'ultimo numero della rivista.
+- Se la rivista ha 6 pagine di copertina, i nuovi numeri nascono con la bandella.
+
+#### Vedi anche
+
+- [Scadenza stampa e solleciti](resources/manuale/scadenza-stampa.md)
+- [Eliminare una rivista, un numero o un utente](resources/manuale/eliminare.md)
+- [Peso della rivista](resources/manuale/peso.md)
+
+### Gestire gli utenti
+
+**In breve**
+
+Solo un Admin gestisce gli utenti, dalla voce **«Utenti»** nel menu in alto.
+
+1. **Nuovo utente**: nome, email, password, ruolo e le riviste a cui dargli accesso.
+2. **Modifica utente**: gli stessi campi. Lascia vuota la password per non cambiarla.
+3. **Eliminare un utente**: in fondo a «Modifica utente», riquadro rosso **«Elimina l'utente»**.
+
+- **Elenco**: tutti gli utenti, il loro ruolo e a quante riviste hanno accesso.
+- Le caselle delle riviste non contano se il ruolo è Admin: un Admin vede sempre tutto.
+
+#### Eliminare un utente
+
+Riquadro rosso «Elimina l'utente» in fondo a «Modifica utente». Si conferma in due passaggi, scrivendo la sua **email**: vedi [Eliminare una rivista, un numero o un utente](resources/manuale/eliminare.md).
+
+Il suo lavoro resta: i file che ha caricato, gli spostamenti e la cronologia rimangono, con **«Utente eliminato»** al posto del nome.
+
+**Dettagli**
+
+- Gli vengono tolti gli accessi alle riviste e le sessioni aperte si chiudono subito.
+- Non puoi eliminare te stesso né l'ultimo amministratore: il bottone è disattivato e il tooltip dice perché.
+- Nessun utente può eliminare il proprio account dalla pagina del profilo: lo fa solo un amministratore, da qui.
+
+#### Vedi anche
+
+- [Chi può fare cosa](resources/manuale/ruoli.md)
+- [Eliminare una rivista, un numero o un utente](resources/manuale/eliminare.md)
+- [Creare e modificare una rivista](resources/manuale/rivista.md)
+
+### Eliminare una rivista, un numero o un utente
+
+**In breve**
+
+Solo un **amministratore** elimina numeri, riviste e utenti.
+
+1. **Numero**: bottone **«🗑️ Elimina»** accanto al numero, nella pagina della rivista.
+2. **Rivista** (con tutti i suoi numeri): «Modifica rivista», riquadro rosso **«Elimina la rivista»** in fondo.
+3. **Utente**: vedi [Gestire gli utenti](resources/manuale/utenti.md).
+4. Conferma in due passaggi: leggi il riepilogo, poi scrivi il **nome esatto** e la **tua password**.
+
+> **Attenzione**
+>
+> L'eliminazione è **definitiva**: non c'è un cestino e non si annulla con Ctrl+Z.
+
+#### I due passaggi
+
+1. Un riepilogo di cosa sparirà: pagine, contenuti, file caricati e quanto spazio occupano (MB o GB). Per una rivista anche l'elenco dei suoi numeri. «Continua» per andare avanti, «Annulla» (o Esc) per tornare indietro.
+2. Scrivi il **nome esatto** del numero o della rivista (l'**email** per un utente) e la **tua password**, poi «Elimina definitivamente».
+
+**Dettagli**
+
+- Dopo 5 password sbagliate in un minuto bisogna aspettare un minuto.
+- Chi in quel momento ha il numero aperto torna all'elenco delle riviste con l'avviso «Il numero che avevi aperto è stato eliminato da un amministratore».
+- Ogni eliminazione resta registrata (chi, cosa, quando) nel registro dell'applicazione.
+
+#### Vedi anche
+
+- [Gestire gli utenti](resources/manuale/utenti.md)
+- [Creare e modificare una rivista](resources/manuale/rivista.md)
+- [Chi può fare cosa](resources/manuale/ruoli.md)
+
+## Esportare e stampare
+
+### Esportare il timone in PDF
+
+**In breve**
+
+**Per stampare o condividere il timone**: un foglio A4 orizzontale da appendere in redazione, come il timone di carta.
+
+1. Clic su **«📄 Esporta PDF»** nella fascia dei comandi.
+2. Scegli se includere le **miniature** e quali pagine mostrare.
+3. Clic su **«Scarica PDF»**.
+
+#### Cosa contiene
+
+- In testa: rivista, numero, data di uscita e gli stessi numeri del riepilogo (pagine piene, parziali e bianche, spazio libero, percentuale di pubblicità, pubblicità da assegnare, copertine, peso copia).
+- Poi le **copertine**, in una sezione «Copertine» a sé, e le **pagine interne**, tutte della stessa misura con le proporzioni del formato, **affiancate in doppie pagine** come sfogliando la rivista (la pagina 1 da sola a destra).
+- Dentro ogni pagina la **disposizione dei contenuti** come nel timone, con il nome di ciascuno. Accanto al numero un pallino colorato indica lo stato.
+- In fondo una legenda; a piè di pagina «Foglio N di M».
+
+#### Le opzioni
+
+- **miniature**: ogni blocco mostra l'anteprima del suo contenuto, copertine comprese. Senza miniature i blocchi sono azzurri per gli articoli e ambra per le pubblicità.
+- Solo le pagine con pubblicità.
+- Solo le pagine non ancora approvate (non in stato «Revisionata» o «Ok stampa»).
+
+**Dettagli**
+
+- Le immagini WEBP potrebbero non comparire nelle miniature.
+- Con un filtro le pagine non sono più consecutive: vengono mostrate una per una, non in doppie pagine.
+- Nella disposizione: colonne per le pubblicità verticali, righe per le altre, piedino in fondo, spazio libero tratteggiato.
+- Può esportare anche chi ha solo la sola lettura.
+
+#### Vedi anche
+
+- [PDF sfogliabile della rivista](resources/manuale/pdf-sfogliabile.md)
+- [Report delle pubblicità (CSV/PDF)](resources/manuale/esporta-report-pubblicita.md)
+- [Legenda](resources/manuale/legenda.md)
+
+### PDF sfogliabile della rivista
+
+**In breve**
+
+Il PDF sfogliabile simula la **rivista finita**: una pagina del PDF per ogni pagina della rivista, nell'ordine di stampa.
+
+1. Nel riquadro **«📖 PDF sfogliabile della rivista»** sopra il timone clicca **«Esporta PDF rivista»**.
+2. Aspetta che lo stato diventi «Pronto»: intanto puoi continuare a lavorare.
+3. Clic su **«⬇ Scarica»**.
+
+#### L'ordine delle pagine
+
+I di copertina, II di copertina, pagine interne 1…N, III e IV di copertina. La bandella, se c'è, viene dopo la I. Ogni pagina è un **A4 verticale** con dentro la pagina della rivista in scala, centrata e non deformata, e il numero di pagina in piccolo sotto.
+
+#### Cosa si vede in ogni pagina
+
+- I contenuti con un file mostrano **il loro PDF (o la loro immagine) nel loro riquadro**, con la stessa regola delle anteprime del timone: un file a pagina intera mostra solo la sua parte, un file già nel formato si vede intero.
+- I contenuti **senza file** (segnaposto, articoli ancora senza PDF) **non spariscono**: vedi un riquadro tratteggiato con titolo, tipo e «File mancante». Lo stesso se il file non si trova più sul server.
+- Lo spazio libero resta bianco. Una pagina vuota mostra «Pagina bianca».
+
+**Dettagli**
+
+- Un contenuto su più pagine usa, su ogni pagina, la pagina corrispondente del suo PDF.
+- Il PDF si apre **a coppie affiancate** come una rivista (la I di copertina da sola) e ha un segnalibro per ogni pagina.
+
+#### La generazione
+
+Il PDF si genera **in coda**. Lo stato compare nel riquadro: **In coda → In generazione → Pronto**, oppure **Errore** con il motivo. Si aggiorna da solo. Quando è pronto compare «⬇ Scarica» con il numero di pagine, il peso del file e quanti contenuti sono senza file.
+
+Con **«Bassa risoluzione per anteprima»** spuntato ottieni una versione leggera, con le immagini ricompresse, da mandare via mail. È un file a parte: non sostituisce quello a qualità piena.
+
+**Dettagli**
+
+- Ogni nuova esportazione sostituisce la precedente dello stesso tipo.
+- Può esportare chiunque veda il numero.
+
+#### Vedi anche
+
+- [Esportare il timone in PDF](resources/manuale/esporta-timone-pdf.md)
+- [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md)
+- [Le copertine e la bandella](resources/manuale/copertine.md)
+
+### Report delle pubblicità (CSV/PDF)
+
+**In breve**
+
+**Esportare il report:** i link **«⬇️ CSV»** e **«⬇️ PDF»** in alto a destra del [cruscotto pubblicitario](resources/manuale/cruscotto-pubblicitario.md) scaricano lo stesso riepilogo in un file.
+
+1. Apri il numero.
+2. Nel cruscotto pubblicitario clicca «⬇️ CSV» (per un foglio di calcolo) o «⬇️ PDF».
+
+È utile per condividerlo con chi non ha accesso al sistema. Può esportare anche chi ha solo la sola lettura: l'esportazione non richiede permessi di modifica.
+
+#### Vedi anche
+
+- [Il cruscotto pubblicitario](resources/manuale/cruscotto-pubblicitario.md)
+- [Esportare il timone in PDF](resources/manuale/esporta-timone-pdf.md)
+
+## Riferimento
+
+### Legenda
+
+**In breve**
+
+Ogni pagina ha due colori: lo **sfondo** dice il tipo di pagina, il **bordo spesso** dice lo stato.
+
+1. Sfondo blu = editoriale, ambra = pubblicità, viola = mista, grigio = bianca.
+2. Bordo grigio = da assegnare, azzurro = assegnata, giallo = in bozza, arancione = revisionata, verde = ok stampa.
+3. Le icone e le etichette sono spiegate qui sotto.
+
+[Screenshot da fare: la card di una pagina con stato, maniglia, contenuti e icone numerati]
+
+#### Colori
+
+- Sfondo blu: Pagina editoriale.
+- Sfondo ambra: Pagina di pubblicità, sempre riconoscibile a colpo d'occhio.
+- Sfondo viola: Pagina mista (metà e metà).
+- Sfondo grigio: Pagina bianca, ancora vuota.
+- Bordo grigio: Stato «Da assegnare».
+- Bordo azzurro: Stato «Assegnata».
+- Bordo giallo: Stato «In bozza».
+- Bordo arancione: Stato «Revisionata».
+- Bordo verde: Stato «Ok stampa».
+
+Nella vista Lista lo stato è una striscia colorata a sinistra della riga. Il colore si riconosce senza leggere l'etichetta, che comunque resta: è l'etichetta colorata in alto sulla card, per esempio «In bozza», e si clicca per [cambiare lo stato](resources/manuale/stato-pagina.md).
+
+#### Contorni
+
+- Contorno verde acceso: pagina selezionata (con ⌘/Ctrl+clic o la casella).
+- Contorno colorato con 🔗: pagina di un [gruppo collegato](resources/manuale/gruppi-collegati.md); ogni gruppo ha il suo colore.
+- Contorno indaco: pagina scelta in [modalità scambio](resources/manuale/scambiare-pagine.md).
+- Contorno azzurro e altre pagine attenuate: pagine evidenziate dal [riepilogo](resources/manuale/riepilogo-del-numero.md).
+- Bordo tratteggiato con «Da assegnare»: pubblicità [segnaposto](resources/manuale/segnaposto.md).
+
+#### Etichette e icone sulla card
+
+- Numero con ⠿: Numero della pagina interna, da 1 in su. È anche la maniglia per trascinarla.
+- 📘 «I di copertina» su sfondo blu: È una copertina, non una pagina interna: sta nella fascia «Copertine» prima della pagina 1.
+- 📄 Articolo: Articolo, seguito dal titolo.
+- 📢 Pubblicità: Pubblicità, seguita dal cliente.
+- «×N»: Il contenuto è su N pagine.
+- «○ Vuota»: Pagina vuota (etichetta tratteggiata).
+- «◐ Libero: 1/3»: Pagina parziale: dice quanto spazio resta (etichetta ambra).
+- «● Piena»: Pagina piena (etichetta scura).
+- «⚠ Oltre capienza»: In rosso: anomalia da sistemare, vedi [Problemi frequenti](resources/manuale/problemi-frequenti.md).
+- Pallino verde con iniziali, animato: Un collega ha in questo momento il focus su quella pagina e la sta cambiando.
+- 📤 Da caricare: Nessun PDF caricato: clic per caricarne uno.
+- ⏳ PDF: PDF caricato, anteprima in elaborazione.
+- ⚠️ PDF (rosso): Generazione dell'anteprima fallita, vedi [Problemi frequenti](resources/manuale/problemi-frequenti.md).
+- «⚠️ formato»: Il PDF non corrisponde al formato della pubblicità.
+- 🕐 Storico PDF: Storico dei PDF caricati su questa pagina con il vecchio sistema (compare solo se ce n'è almeno uno).
+- 📝 Nota: La pagina ha una nota: passa il mouse per leggerla.
+- 🔓 / 🔒 Blocco: Blocca o sblocca la pagina, vedi [Bloccare una pagina](resources/manuale/bloccare-pagina.md).
+- 💬 Commenti: Commenti della pagina; giallo se ce ne sono di non letti.
+- Casella di spunta: Compare con ☑️ Selezione: seleziona la pagina.
+- DX / SX: In Lista: pagina destra o sinistra.
+
+Le etichette «○ Vuota», «◐ Libero» e «● Piena» dicono **quanto è piena la pagina**. Hanno simbolo e testo diversi: si distinguono anche senza i colori. In Lista compare la stessa etichetta.
+
+#### Dentro la pagina
+
+Lo spazio libero è tratteggiato «libero». Un contenuto senza file ha il fondo azzurro (articolo) o ambra (pubblicità). I formati dei contenuti dentro la card (pagina intera, mezza, 1/3, piedino, vetrina, forma a L) sono spiegati in [I contenuti dentro la pagina](resources/manuale/disposizione-nella-pagina.md).
+
+#### Segnature
+
+Una fascia colorata in cima alla pagina, alternata azzurro e viola, e una linea rossa con «32° n. 2»: vedi [Segnature](resources/manuale/segnature.md).
+
+#### Stato delle pubblicità prenotate
+
+🟠 Prenotato, 🔵 Assegnato, 🟢 Completo: vedi [Pubblicità prenotate](resources/manuale/pubblicita-prenotate.md).
+
+#### Vedi anche
+
+- [Cambiare lo stato di una pagina](resources/manuale/stato-pagina.md)
+- [I contenuti dentro la pagina](resources/manuale/disposizione-nella-pagina.md)
+- [Glossario](resources/manuale/glossario.md)
+
+### Scorciatoie da tastiera
+
+**In breve**
+
+Le scorciatoie più usate:
+
+1. **Ctrl+Z** (⌘+Z su Mac): annulla.
+2. **Ctrl+click** (⌘+clic su Mac) su una pagina: aggiungila alla selezione.
+3. **Esc**: deseleziona tutte le pagine, o chiude la finestra aperta.
+4. Frecce: spostano la pagina selezionata di un posto.
+
+| Cosa fa | Windows | Mac |
+|---|---|---|
+| Annulla l'ultima azione | Ctrl+Z | ⌘+Z |
+| Ripete l'azione annullata | Ctrl+Shift+Z o Ctrl+Y | ⌘+Shift+Z |
+| Aggiunge o toglie una pagina dalla selezione | Ctrl+click sulla pagina | ⌘+clic (Cmd+click) |
+| Seleziona solo quella pagina (con la selezione attiva) | Click semplice | Click semplice |
+| Seleziona tutte le pagine | Ctrl+A | ⌘+A (Cmd+A) |
+| Collega le pagine selezionate (almeno 2), o le scollega se già collegate | Ctrl+Shift+G | ⌘+Shift+G |
+| Deseleziona tutto, o chiude la finestra aperta | Esc | Esc |
+| Sposta la pagina di un posto (Griglia, Doppia pagina) | Freccia sinistra / destra | Freccia sinistra / destra |
+| Sposta la pagina di un posto (Lista) | Freccia su / giù | Freccia su / giù |
+| Raggiunge una pagina | Tab | Tab |
+| Rinomina: salva / annulla | Invio / Esc | Invio / Esc |
+| Nel manuale: va alla ricerca | / oppure Ctrl+K | / oppure ⌘+K |
+
+> **Attenzione**
+>
+> Su un Mac si seleziona con ⌘+clic: Ctrl+clic apre il menu del tasto destro.
+
+**Dettagli**
+
+- Le scorciatoie sono uguali in tutte e tre le viste.
+- Non funzionano mentre scrivi in un campo di testo (una ricerca, un modulo in una finestra), per non entrare in conflitto con le stesse combinazioni del browser. Lì Ctrl+Z annulla il testo, come sempre.
+- Ctrl+click attiva da sola la selezione se non lo è già. Ctrl+A fa lo stesso.
+- Con Ctrl+Shift+G, se la selezione non si può collegare o scollegare (per esempio c'è una pagina bloccata, o pagine di gruppi diversi), compare lo stesso messaggio dei bottoni: mai un silenzio.
+- Con una finestra aperta (commenti, modifica contenuto), Esc chiude solo quella e la selezione resta. Ctrl+Z non agisce sul timone.
+
+#### Vedi anche
+
+- [Selezionare più pagine](resources/manuale/selezione-multipla.md)
+- [Annullare e ripetere](resources/manuale/annullare-ripetere.md)
+- [Spostare le pagine](resources/manuale/spostare-pagine.md)
+
+### Chi può fare cosa
+
+**In breve**
+
+Quello che vedi e puoi fare dipende dal tuo **ruolo**:
+
+1. **Admin**: fa tutto, su tutte le riviste.
+2. **Redattore**: lavora su tutto il timone delle riviste a cui ha accesso.
+3. **Commerciale**: lavora **solo sulle pubblicità** delle riviste a cui ha accesso.
+4. **Sola lettura**: consulta, legge i commenti, esporta.
+
+#### Tabella riassuntiva
+
+| | Admin | Redattore | Commerciale | Sola lettura |
+|---|:---:|:---:|:---:|:---:|
+| Vede le riviste | Tutte | Con accesso | Con accesso | Con accesso |
+| Commenti | ✅ | ✅ | ✅ | Solo legge |
+| Pubblicità (anche segnaposto) | ✅ | ✅ | ✅ | ❌ |
+| Articoli, pagine con articoli, stati, blocchi, gruppi, pagine interne, scadenza | ✅ | ✅ | ❌ | ❌ |
+| Crea numeri | ✅ | ✅ | ❌ | ❌ |
+| Crea riviste, gestisce utenti, elimina | ✅ | ❌ | ❌ | ❌ |
+
+#### Admin
+
+- Vede tutte le riviste, sempre.
+- Commenti: legge, scrive ed elimina anche quelli degli altri.
+- Pubblicità, articoli, pagine (stati, blocchi, gruppi, pagine interne, scadenza).
+- Crea numeri e riviste.
+- Gestisce ed elimina utenti; elimina riviste e numeri.
+
+#### Redattore
+
+- Vede solo le riviste a cui gli è stato dato accesso.
+- Commenti: legge e scrive.
+- Pubblicità, articoli e pagine, e crea numeri, solo sulle sue riviste.
+- Non crea riviste e non gestisce gli utenti.
+
+#### Commerciale
+
+Lavora **solo sulle pubblicità** delle riviste a cui ha accesso:
+
+- le crea («+ Nuovo contenuto», dove il tipo è già Pubblicità, e il caricamento multiplo);
+- le modifica (✏️, doppio click sul nome);
+- le sposta: trascinamento, frecce e rotazione nel menu «⋯», «Posizione nel timone» nella finestra, togliere dalla pagina;
+- sposta anche pagine intere o gruppi di pagine, ma solo se **non contengono articoli**;
+- legge e scrive commenti;
+- nella selezione vede solo seleziona e deseleziona.
+
+Il Commerciale non può spostare gli articoli né le pagine che contengono articoli. Stato e blocco delle pagine, gruppi, pagine interne e scadenza stampa restano della redazione.
+
+**Dettagli**
+
+- Sugli articoli vede i comandi disattivati con il tooltip **«Solo la redazione può spostare questo contenuto»**.
+- Il contenuto di un articolo nel pannello ha il cursore 🚫 e non si trascina.
+- Una pagina con articoli non ha la maniglia ⠿ (tooltip «Solo la redazione può spostare pagine che contengono articoli»).
+
+#### Sola lettura
+
+Vede solo le riviste a cui ha accesso, legge i commenti ma non li scrive, non modifica nulla.
+
+#### Per tutti
+
+- Il manuale è visibile a qualunque utente collegato: è materiale di aiuto, non un'azione che modifica dati.
+- Chi può solo consultare può comunque esportare il report del cruscotto pubblicitario in CSV/PDF, il PDF del timone e il PDF sfogliabile: l'esportazione non richiede permessi di modifica.
+
+#### Vedi anche
+
+- [Gestire gli utenti](resources/manuale/utenti.md)
+- [Commenti sulle pagine](resources/manuale/commenti.md)
+- [Problemi frequenti](resources/manuale/problemi-frequenti.md)
+
+### Problemi frequenti
+
+**In breve**
+
+Hai visto un messaggio e non sai cosa fare? Cercalo qui sotto: per ognuno trovi cosa significa e cosa fare.
+
+#### Pagine e spostamenti
+
+**«Non posso annullare: la pagina 12 è stata modificata da …»**
+
+**Significa**: dopo la tua azione un collega ha cambiato le stesse pagine o lo stesso contenuto, oppure lo spazio dove tornerebbe il contenuto è stato occupato.
+**Cosa fare**: niente è cambiato. Sistema a mano; il passo resta «non annullabile». Vedi [Annullare e ripetere](resources/manuale/annullare-ripetere.md).
+
+**Lo spostamento di una pagina viene rifiutato con un avviso**
+
+**Significa**: un collega ha spostato o scambiato delle pagine e la tua vista non era ancora aggiornata, oppure la pagina è bloccata.
+**Cosa fare**: la vista si allinea da sola: riprova. Se la pagina è bloccata (🔒), sbloccala. Vedi [Spostare le pagine](resources/manuale/spostare-pagine.md).
+
+**«⚠ Oltre capienza» in rosso sulla pagina**
+
+**Significa**: i contenuti della pagina, sommati, superano una pagina intera. Succede con dati vecchi convertiti.
+**Cosa fare**: riduci a mano lo spazio di uno dei contenuti, dal menu accanto al contenuto. Vedi [Spazio occupato](resources/manuale/spazio-occupato.md).
+
+**«Seleziona almeno 2 pagine da collegare» o «Sono già collegate in un gruppo»**
+
+**Significa**: l'azione della selezione non si può fare con le pagine scelte. Il bottone è attenuato.
+**Cosa fare**: cambia la selezione. Vedi [Selezionare più pagine](resources/manuale/selezione-multipla.md).
+
+**«Solo la redazione può spostare questo contenuto»**
+
+**Significa**: sei Commerciale e il contenuto è un articolo (o la pagina contiene articoli).
+**Cosa fare**: chiedi a un redattore. Vedi [Chi può fare cosa](resources/manuale/ruoli.md).
+
+#### Contenuti e spazio
+
+**«richiede 1/2 di pagina, ma resta libero solo 1/3 di pagina»**
+
+**Significa**: il contenuto non ci sta. Nessuna pagina è stata modificata.
+**Cosa fare**: scegli un'altra pagina di partenza o libera spazio. Vedi [Mettere un contenuto su una pagina](resources/manuale/assegnare-contenuto.md).
+
+**«Sulla pagina ci sono già «Acme» (1/2) e «Beta» (1/4): manca 1/4 di pagina.»**
+
+**Significa**: nella posizione scelta nel modulo non c'è spazio, quindi il contenuto non viene creato.
+**Cosa fare**: scegli un'altra posizione o lascia «Da assegnare». Vedi [Creare un articolo o una pubblicità](resources/manuale/creare-contenuto.md).
+
+**«Crea contenuto» segnala un errore sotto «Pagine intere» / «Frazione»**
+
+**Significa**: manca l'occupazione: almeno uno dei due campi deve essere più di zero.
+**Cosa fare**: indica quanto spazio occupa. Vedi [Spazio occupato](resources/manuale/spazio-occupato.md).
+
+#### File e PDF
+
+**«Il file non è arrivato al server…»**
+
+**Significa**: il caricamento è stato rifiutato prima ancora di controllare il file.
+**Cosa fare**: riprova. Se si ripete avvisa l'amministratore indicando l'ora del tentativo.
+
+**Messaggio rosso sotto il riquadro del file**
+
+**Significa**: il file è del tipo sbagliato o troppo grande. Per la dimensione il messaggio dice quanto pesa e qual è il massimo.
+**Cosa fare**: usa un PDF o un'immagine JPG, PNG, WEBP entro il limite indicato. Vedi [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md).
+
+**Il PDF viene rifiutato perché illeggibile**
+
+**Significa**: il PDF è danneggiato o protetto.
+**Cosa fare**: esporta di nuovo il PDF senza protezione e ricaricalo.
+
+**⚠️ PDF rossa sulla card**
+
+**Significa**: la generazione dell'anteprima è fallita; il file probabilmente è danneggiato o non è un PDF valido.
+**Cosa fare**: allega un file diverso da [Modifica contenuto](resources/manuale/modificare-contenuto.md), oppure crea un nuovo contenuto con un altro file.
+
+**«⚠️ formato» rosso**
+
+**Significa**: le dimensioni del PDF non corrispondono al formato della pubblicità. Non blocca nulla.
+**Cosa fare**: fai rifare il file, oppure clicca «accetta» se va bene comunque.
+
+**Avviso giallo dopo «📎 Carica materiale»**
+
+**Significa**: sulla pagina non c'era più spazio: il contenuto è creato ma non assegnato lì.
+**Cosa fare**: lo trovi nel pannello Contenuti; mettilo su un'altra pagina.
+
+**Non riesco a mettere «Ok stampa»**
+
+**Significa**: la pagina non ha ancora un'anteprima dal contenuto assegnato.
+**Cosa fare**: carica il PDF sul contenuto. Vedi [Cambiare lo stato di una pagina](resources/manuale/stato-pagina.md).
+
+#### Numero e peso
+
+**«Parametri peso da configurare»**
+
+**Significa**: mancano dei valori, di solito il formato o le grammature. Succede per i numeri creati prima del calcolo del peso.
+**Cosa fare**: inseriscili con «Modifica parametri». Vedi [Peso della rivista](resources/manuale/peso.md).
+
+**«Grammatura … fuori dall'intervallo ammesso» o «Formato … fuori dall'intervallo ammesso»**
+
+**Significa**: sul numero è salvato un valore con l'unità sbagliata: il peso di una pagina (per esempio 0,8) invece della grammatura (80), oppure il formato in centimetri (21) invece che in millimetri (210).
+**Cosa fare**: correggilo con «Modifica parametri».
+
+**Messaggio rosso: pagine interne dispari**
+
+**Significa**: un foglio ha due facciate, quindi il peso non si calcola con un numero dispari di pagine.
+**Cosa fare**: porta le pagine a un numero pari. Vedi [Aggiungere o togliere pagine](resources/manuale/pagine-interne.md).
+
+**«⚠️ 126 non è multiplo di 4: non stampabile così»**
+
+**Significa**: il totale delle pagine non forma quartini interi.
+**Cosa fare**: aggiungi o togli pagine come suggerito dopo la freccia. Vedi [Segnature](resources/manuale/segnature.md).
+
+**Errore rosso nelle «Pubblicità previste»: non ci stanno**
+
+**Significa**: le pubblicità previste non entrano nelle pagine del numero.
+**Cosa fare**: riduci le pubblicità o aumenta le pagine; finché non ci stanno il numero non viene creato.
+
+**Il numero non si chiude**
+
+**Significa**: c'è almeno una pubblicità non ancora «Completo»; il messaggio elenca i clienti.
+**Cosa fare**: aspetta il materiale o elimina la prenotazione. Vedi [Chiudere un numero](resources/manuale/chiudere-numero.md).
+
+**«Il numero che avevi aperto è stato eliminato da un amministratore»**
+
+**Significa**: un amministratore ha eliminato il numero mentre lo avevi aperto.
+**Cosa fare**: sei tornato all'elenco delle riviste; il numero non esiste più.
+
+#### Aggiornamenti e manuale
+
+**Avviso giallo fisso sugli aggiornamenti in tempo reale**
+
+**Significa**: per qualche minuto non arrivano aggiornamenti in tempo reale, di solito per la rete.
+**Cosa fare**: niente: la pagina controlla da sola se c'è qualcosa di nuovo e si aggiorna allo stesso modo, con un ritardo massimo di un secondo.
+
+**«Il manuale utente non è disponibile»**
+
+**Significa**: il manuale non è stato trovato sul server.
+**Cosa fare**: avvisa chi gestisce l'installazione.
+
+#### Vedi anche
+
+- [Annullare e ripetere](resources/manuale/annullare-ripetere.md)
+- [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md)
+- [Chi può fare cosa](resources/manuale/ruoli.md)
+- [Note per l'amministratore](resources/manuale/note-amministratore.md)
+
+### Glossario
+
+**In breve**
+
+Le parole del timone, in ordine alfabetico. Ogni voce rimanda alla pagina che ne parla.
+
+- **Bandella** (o **battente**): il lembo ripiegato agganciato alla copertina. Con la bandella le facciate di copertina sono 6. Vedi [Le copertine e la bandella](resources/manuale/copertine.md).
+- **Contenuto**: un articolo o una pubblicità, con il suo spazio occupato ed eventualmente il suo file. Vedi [Creare un articolo o una pubblicità](resources/manuale/creare-contenuto.md).
+- **Copertine I, II, III, IV**: I di copertina è la copertina vera e propria; II il suo retro, a sinistra della pagina 1; III la pagina interna della quarta; IV di copertina il retro della rivista. Non sono pagine interne. Vedi [Le copertine e la bandella](resources/manuale/copertine.md).
+- **Cruscotto pubblicitario**: il pannello con la percentuale di pubblicità del numero. Vedi [Il cruscotto pubblicitario](resources/manuale/cruscotto-pubblicitario.md).
+- **DX / SX**: pagina destra / sinistra. La pagina 1 è sempre a destra.
+- **Gruppo collegato**: pagine collegate (🔗) che si spostano sempre insieme. Vedi [Collegare pagine in un gruppo](resources/manuale/gruppi-collegati.md).
+- **Numero**: una singola uscita di una rivista, per esempio «Novembre 2026», con un numero di pagine deciso.
+- **Occupazione**: quanto spazio occupa un contenuto, in pagine intere più una frazione. Vedi [Spazio occupato](resources/manuale/spazio-occupato.md).
+- **Pagina interna**: una pagina del numero, numerata da 1. Le copertine sono a parte.
+- **Pagina mista**: pagina con articoli e pubblicità insieme (sfondo viola).
+- **Prenotata**: pubblicità creata ma non ancora su nessuna pagina. Vedi [Pubblicità prenotate](resources/manuale/pubblicita-prenotate.md).
+- **Quartino**: gruppo di 4 pagine, il formato di stampa più piccolo.
+- **Rivista**: la testata, per esempio «Motori Elettrici».
+- **Rubrica**: la sezione della rivista a cui appartiene un contenuto. Vedi [Creare un articolo o una pubblicità](resources/manuale/creare-contenuto.md).
+- **Scaglione**: fascia di peso postale (250, 350, 500, 1000 g). Vedi [Peso della rivista](resources/manuale/peso.md).
+- **Segnaposto**: pubblicità prevista senza cliente né PDF, che tiene il posto. Vedi [Pubblicità segnaposto e previste](resources/manuale/segnaposto.md).
+- **Segnatura**: gruppo di pagine stampate su un foglio e piegate insieme: di solito 32 (trentaduesimo), poi 16esimo, 8vo, quartino. Vedi [Segnature](resources/manuale/segnature.md).
+- **Stato della pagina**: Da assegnare, Assegnata, In bozza, Revisionata, Ok stampa. Vedi [Cambiare lo stato di una pagina](resources/manuale/stato-pagina.md).
+- **Timone**: la griglia delle pagine di un numero, dove si fa il lavoro.
+- **Tiratura**: il numero di copie stampate.
+- **Vetrina**: pubblicità da 1/4 di pagina. **Piedino**: pubblicità orizzontale da 1/3 in fondo alla pagina.
+
+#### Vedi anche
+
+- [Legenda](resources/manuale/legenda.md)
+- [Inizia qui](resources/manuale/inizia-qui.md)
+
+### Novità
+
+**In breve**
+
+Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine descrivono sempre il funzionamento di oggi.
+
+#### 29 ottobre 2026
+
+- Il manuale è diviso in pagine per argomento, con questa pagina per le novità.
+- **Chiedi al manuale**: il bottone **?** in basso a sinistra, da ogni schermata, risponde a una domanda scritta con le tue parole mostrando l'«In breve» della pagina giusta. Vedi [Chiedi al manuale](resources/manuale/chiedi-al-manuale.md).
+- **Cerca nel manuale**: ricerca mentre scrivi, in cima a ogni pagina del manuale (`/` o Ctrl+K per andarci).
+- **Doppia pagina**: più coppie per riga, pari a sinistra e dispari a destra, riquadri «II di copertina» e «III di copertina». Vedi [Le viste del timone](resources/manuale/viste-del-timone.md).
+- **Segnature**: conteggio dei trentaduesimi nella barra in alto e confini sulla griglia. Vedi [Segnature](resources/manuale/segnature.md).
+- **Commenti sulle pagine**, con avviso via mail. Vedi [Commenti sulle pagine](resources/manuale/commenti.md).
+- Con una finestra aperta, Esc chiude solo quella e la selezione resta.
+
+#### 28 ottobre 2026
+
+- **Annullare e ripetere** con Ctrl+Z. Vedi [Annullare e ripetere](resources/manuale/annullare-ripetere.md).
+- **Il pannello Contenuti (dal 2026-10-28)**: «+ Nuovo contenuto» e «Caricamento multiplo» si sono spostati lì; prima erano sopra il timone.
+- **Azioni sulle pagine selezionate (dal 2026-10-28)** nella fascia fissa in alto.
+- **Caricare più file insieme (dal 2026-10-28)**. Vedi [Caricare tanti file insieme](resources/manuale/caricamento-multiplo.md).
+- **PDF sfogliabile della rivista (dal 2026-10-28)**. Vedi [PDF sfogliabile della rivista](resources/manuale/pdf-sfogliabile.md).
+- **Commerciale (dal 2026-10-28)**: lavora sulle pubblicità (crea, modifica, sposta). Prima poteva solo consultare. Vedi [Chi può fare cosa](resources/manuale/ruoli.md).
+- **Eliminare un utente**, e un amministratore può eliminare riviste e numeri, con la conferma in due passaggi. Vedi [Eliminare una rivista, un numero o un utente](resources/manuale/eliminare.md).
+- Il contatore «Segnaposto» del riepilogo fino a questa data si chiamava «Da assegnare».
+- Per trasformare un segnaposto in una pubblicità vera non basta più cambiare il titolo: serve il cliente o il PDF.
+
+#### 27 ottobre 2026
+
+- **Disposizione dei contenuti** sulla griglia 6×6 dentro la card. Vedi [I contenuti dentro la pagina](resources/manuale/disposizione-nella-pagina.md).
+- **Posizione nel timone (opzionale, dal 2026-10-27)** nel modulo «+ Nuovo contenuto», e in «Modifica contenuto» anche **Anteprima nel riquadro**.
+- File fino a 100 MB (prima 20 MB).
+- Tolte la soglia e i colori di allarme del carico pubblicitario: resta solo la percentuale. Le voci vecchie sulla soglia restano leggibili nella cronologia.
+- Nella creazione del numero gli avvisi compaiono quando esci dal campo; prima il campo pagine poteva perdere cifre scrivendo veloce, e con il campo vuoto la pagina andava in errore.
+
+#### 26 ottobre 2026
+
+- Le copertine I–IV sono separate dalle pagine interne, che partono da 1. **Numeri creati prima del 2026-10-26**: vedi [Note per l'amministratore](resources/manuale/note-amministratore.md).
+- Tolta l'opzione della rivista «il battente conta nel totale pagine»: la bandella è una copertina a parte e non entra mai nel totale delle pagine interne.
+
+#### 2 settembre 2026
+
+- **Dal 2026-09-02 il PDF (o un'immagine) si carica sempre su un contenuto, mai più direttamente su una pagina.** **Pagine caricate prima del 2026-09-02**: vedi [Note per l'amministratore](resources/manuale/note-amministratore.md).
+
+#### Prima
+
+- L'occupazione dei contenuti è diventata obbligatoria. **Contenuti creati prima di questa versione**: vedi [Note per l'amministratore](resources/manuale/note-amministratore.md).
+
+#### Vedi anche
+
+- [Inizia qui](resources/manuale/inizia-qui.md)
+- [Note per l'amministratore](resources/manuale/note-amministratore.md)
+
+### Note per l'amministratore
+
+**In breve**
+
+Dettagli tecnici e di installazione, per chi gestisce il timone. Per avviare l'applicazione la prima volta vedi il file README.md del progetto.
+
+#### Limiti e impostazioni
+
+- **Limite dei file**: il massimo indicato nel riquadro di caricamento è il limite **reale** del server, che può essere più basso di 100 MB se il server è configurato così.
+- **«Il file non è arrivato al server…»**: nel registro del server c'è la causa; chiedi all'utente l'ora del tentativo.
+- **Preavviso della scadenza stampa**: di default 3 giorni prima; è un'impostazione tecnica dell'installazione, non modificabile dall'interfaccia.
+- **Manuale non disponibile**: se compare l'avviso giallo «Il manuale utente non è disponibile», il manuale non è stato trovato sul server (vedi il README).
+
+#### Assistente «Chiedi al manuale»
+
+- **Cosa chiedono gli utenti**: pagina per gli amministratori (link in fondo al riquadro «Chiedi al manuale» nella pagina del Manuale). Mostra le domande frequenti senza risposta, le domande imparate dai voti, le **risposte probabilmente sbagliate** (almeno 5 persone, quasi tutte «Non è questo»), l'ultimo ricalcolo e l'ultimo blocco. L'unica azione è **«Disattiva»**, su una domanda imparata o una correzione: vale subito.
+- **Correggere una risposta**: si modifica la pagina del manuale (parole chiave, sinonimi, «In breve») o il file delle domande iniziali `resources/manuale/domande.yml`, non i voti.
+- **Ricalcolo notturno** alle 3:15 (`php artisan manuale:apprendi`, si può lanciare a mano): ricalcola tutto da zero dai voti e pubblica solo se tutte le domande di prova trovano ancora la loro pagina tra le prime tre; altrimenti tiene i pesi di prima e lo scrive nel registro e nella pagina «Cosa chiedono gli utenti». Richiede che lo scheduler dell'installazione giri (servizio `scheduler`).
+- **Dati**: i voti sono salvati senza il nome di chi vota (un'impronta non reversibile) e cancellati dopo 12 mesi (`php artisan manuale:pulisci`, ogni notte).
+
+#### Aggiornamenti in tempo reale
+
+Le modifiche arrivano agli altri utenti in tempo reale. Se per qualche minuto non arrivano (la rete taglia fuori il collegamento in tempo reale, i websocket), compare l'avviso giallo: la pagina controlla da sola se c'è qualcosa di nuovo circa una volta al secondo e si aggiorna nello stesso modo, avviso «qualcosa è cambiato» compreso. L'unica differenza è un ritardo massimo di un secondo invece dell'istante.
+
+#### Controlli e calcoli
+
+- I permessi valgono anche lato server: un tentativo diretto di fare un'azione non permessa viene rifiutato.
+- Lo spazio si conta in **dodicesimi di pagina** (1/4 = 3, 1/3 = 4, 1/2 = 6, 2/3 = 8, 3/4 = 9, intera = 12), così le somme sono sempre esatte.
+
+#### Dati convertiti
+
+- **Contenuti creati prima di questa versione** (occupazione obbligatoria): lo spazio che avevano sulle pagine è stato convertito alla frazione più vicina (50% → 1/2, 33% → 1/3, 99,7% → intera). Se su una pagina la somma risulta oltre la capienza, la pagina mostra «⚠ Oltre capienza». Un contenuto vecchio ancora senza occupazione non viene mai piazzato «a caso» su una pagina: un messaggio lo segnala.
+- **Numeri creati prima del 2026-10-26**: convertiti automaticamente. Le pagine che erano copertina sono diventate le copertine I–IV (con i loro contenuti), le pagine interne sono state rinumerate da 1, e le copertine che mancavano (spesso la II e la III) sono state create vuote.
+- **Pagine caricate prima del 2026-09-02**: se una pagina ha ancora un PDF caricato con il vecchio sistema (direttamente sulla pagina), continua a funzionare come prima, con l'anteprima e lo storico 🕐, finché non verrà migrata. La migrazione è un'operazione futura, non ancora effettuata: nessun dato esistente è stato toccato.
+- Le voci vecchie della cronologia sui cambi della soglia di allarme pubblicitario restano leggibili, ma la soglia non esiste più.
+
+#### Vedi anche
+
+- [Problemi frequenti](resources/manuale/problemi-frequenti.md)
+- [Novità](resources/manuale/novita.md)
+- [Gestire gli utenti](resources/manuale/utenti.md)
+- [Chiedi al manuale](resources/manuale/chiedi-al-manuale.md)

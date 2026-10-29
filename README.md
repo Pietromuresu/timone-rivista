@@ -77,7 +77,7 @@ Il percorso è sempre: **rivista → numero → timone**.
 
 Tutto quello che fai è visibile in tempo reale anche ai colleghi collegati sullo stesso numero (un badge mostra chi sta modificando cosa), senza bisogno di ricaricare la pagina.
 
-Per la guida passo-passo di ogni funzione, vedi **[MANUALE_UTENTE.md](MANUALE_UTENTE.md)**.
+Per la guida passo-passo di ogni funzione, vedi il manuale nell'app (voce «📖 Manuale», una pagina per argomento) o **[MANUALE_UTENTE.md](MANUALE_UTENTE.md)**, che raccoglie le stesse pagine in un file unico (generato dalle pagine in `resources/manuale/`).
 
 ---
 
