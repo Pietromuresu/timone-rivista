@@ -10,6 +10,8 @@ use App\Models\Content;
 use App\Models\Issue;
 use App\Support\ActivityLogger;
 use App\Support\ContentPageAttacher;
+use App\Support\PageStatusAutomation;
+use App\Support\Timeline\TimelineSnapshot;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -34,6 +36,10 @@ final class PlaceholderAdCreator
         }
 
         DB::transaction(function () use ($issue, $plan) {
+            // Non passa da TimelineActionService (il numero sta nascendo,
+            // niente annulla): lo stato automatico si applica qui, così una
+            // pubblicità prevista da pagina intera rende la pagina «Assegnata».
+            $before = TimelineSnapshot::take($issue->id);
             $covers = $issue->covers()->get()->keyBy(fn ($cover) => $cover->cover_slot->value);
             $pages = $issue->pages()->get()->keyBy('position');
 
@@ -49,6 +55,8 @@ final class PlaceholderAdCreator
             foreach ($plan->unplaced as $kind) {
                 self::createPlaceholder($issue, $kind);
             }
+
+            PageStatusAutomation::apply($issue, $before, TimelineSnapshot::take($issue->id), 'pubblicità previste alla creazione del numero');
         });
 
         // Revisione 2, Fase 1, bug 2 (2026-10-27): la descrizione elencava

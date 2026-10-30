@@ -30,6 +30,8 @@ Spostare pagine e gruppi (un gruppo è un passo solo), scambiare pagine e copert
 
 Un contenuto eliminato resta recuperabile per 24 ore.
 
+Se l'azione ha cambiato da sola lo [stato di una pagina](manuale:stato-pagina#stato-automatico), annullandola torna anche lo stato di prima.
+
 ## Cosa non si può annullare
 
 Pagine interne, battenti di copertina, «Sposta le pagine esistenti dopo», scadenza stampa, parametri del peso, chiusura del numero, rubriche, eliminazione di riviste, numeri e utenti, export PDF e, in una modifica, la sostituzione del PDF. Quest'ultima resta in cronologia ma segnata «non annullabile».

@@ -126,6 +126,16 @@ Elenco dei task: `docker compose exec app php artisan schedule:list`. Sull'host 
   ```
   In alternativa, cambia la scadenza da UI (`Grid::updatePrintDeadline` azzera il flag).
 
+### `timone:sync-page-status {--dry-run} {--issue=}`
+
+- **File**: `app/Console/Commands/SyncPageStatus.php` (2026-10-30). Non schedulato: si lancia a mano.
+- Lo stato automatico della pagina (`PageStatusAutomation`) scatta solo quando cambia lo spazio: le pagine riempite prima restano come sono. Il comando elenca le pagine piene (≥ 12/12, contenuti eliminati esclusi) ancora `da_assegnare` e quelle `assegnata` non piene; senza `--dry-run` porta ad `assegnata` **solo le prime**, salta le bloccate, scrive `page.status_auto_changed` nel registro e aggiorna `pages_updated_at` dei numeri toccati. Le `assegnata` non piene restano un elenco da controllare a mano (tornare indietro in automatico cancellerebbe scelte manuali).
+- Quando: dopo il deploy della funzione, fuori dall'orario di lavoro della redazione. Prima `--dry-run` (anche numero per numero con `--issue=ID`), poi senza. Backup del database prima, come per ogni scrittura in massa.
+  ```bash
+  docker compose run --rm --no-deps app php artisan timone:sync-page-status --dry-run
+  docker compose run --rm --no-deps app php artisan timone:sync-page-status
+  ```
+
 ### `timone:missing-occupancy`
 
 - **File**: `app/Console/Commands/ListMissingOccupancy.php`. **Sola lettura.**

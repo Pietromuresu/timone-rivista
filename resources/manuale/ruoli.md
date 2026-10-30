@@ -54,7 +54,7 @@ Lavora **solo sulle pubblicità** delle riviste a cui ha accesso:
 - legge e scrive commenti;
 - nella selezione vede solo seleziona e deseleziona.
 
-Il Commerciale non può spostare gli articoli né le pagine che contengono articoli. Stato e blocco delle pagine, gruppi, pagine interne e scadenza stampa restano della redazione.
+Il Commerciale non può spostare gli articoli né le pagine che contengono articoli. Stato e blocco delle pagine, gruppi, pagine interne e scadenza stampa restano della redazione. Lo [stato automatico](manuale:stato-pagina#stato-automatico) vale anche per lui: una pagina che riempie con una pubblicità diventa «Assegnata».
 
 :::dettagli
 - Sugli articoli vede i comandi disattivati con il tooltip **«Solo la redazione può spostare questo contenuto»**.

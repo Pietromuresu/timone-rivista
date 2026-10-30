@@ -425,3 +425,19 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - `ContentCreate::$occupancyTouched` (messo a true da `updatedWholePages()`/`updatedFractionTwelfths()`, hook che scattano solo per modifiche dal browser); `resetFormFields()` imposta `whole_pages = 1`. Il default della proprietà nel trait `HasOccupancyFields` resta null (condiviso con `ContentEdit`).
 - Test: `ContentCreateDefaultOccupancyTest`; adeguati `ContentOccupancyRequiredTest`, `PageFillIndicatorTest`, `ContentFreeFormPdfDistributionTest`.
 
+## 2026-10-30 — Stato automatico della pagina (parte B di «occupazione predefinita e stato automatico della pagina»)
+
+### Visibili agli utenti
+- Una pagina che **diventa piena** (12/12, anche oltre capienza) passa da «Da assegnare» ad «Assegnata»; se è già più avanti non cambia. Una pagina che **smette di essere piena** torna «Da assegnare», qualunque stato avesse, con un messaggio («La pagina 12 è tornata «Da assegnare» (era «Ok stampa»).») se era «In bozza», «Revisionata» o «Ok stampa». Se resta non piena o resta piena lo stato non cambia.
+- Vale per pagine interne, copertine e battenti, ogni pagina di un contenuto su più pagine, anche quando agisce il Commerciale. Spostare/scambiare pagine, frecce e rotazione non cambiano lo stato; le pagine bloccate mai.
+- Annulla/ripeti riporta anche lo stato: il cambio automatico fa parte della stessa azione. Il Commerciale può annullare i propri passi che lo contengono.
+- Nella Cronologia: «Stato pagina 12: Da assegnare → Assegnata (automatico, dopo: Assegna «Acme» (pagina 12))».
+
+### Tecniche
+- `App\Support\PageStatusAutomation` (regola pura `decide()`, `usedByPage()` su una fotografia `TimelineSnapshot`, `apply()`, avvisi con `pullNotices()`); chiamata da `TimelineActionService::run()` fra l'azione e la fotografia «dopo» (ora anche senza utente: console e test), da `PlaceholderAdCreator::create()` e da `ContentCreate::confirmMultipageUploadWithShift()`.
+- `TimelineAuthorizer`: `status` ammesso al Commerciale sulle pagine con righe `page_content` cambiate nello stesso passo.
+- `App\Livewire\Concerns\ShowsAutomaticStatusNotices` (Grid, ContentCreate, ContentEdit): toast `timeline-result` con `duration` (10 s); `grid.blade.php` legge `duration`.
+- Evento `PageStatusUpdated` inviato dopo il commit (`DB::afterCommit`), un Reverb irraggiungibile viene registrato con `report()` senza far fallire l'operazione.
+- Comando `timone:sync-page-status {--dry-run} {--issue=}`.
+- Test: `tests/Unit/PageStatusAutomationTest.php`, `tests/Feature/Livewire/PageStatusAutomationTest.php`; `manual-assistant-queries.json`: una domanda in più nei primi 3 (15 su 20).
+

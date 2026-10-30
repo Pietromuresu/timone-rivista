@@ -3,7 +3,7 @@ titolo: Note per l'amministratore
 slug: note-amministratore
 categoria: Riferimento
 ruoli: [admin]
-parole_chiave: [amministratore, installazione, server, limite upload, websocket, aggiornamento, migrazione, configurazione, voti, assistente]
+parole_chiave: [amministratore, stato pagine, riallineamento, installazione, server, limite upload, websocket, aggiornamento, migrazione, configurazione, voti, assistente]
 sinonimi: [tecnico, admin di sistema, deploy, readme, impostazioni tecniche]
 ordine: 760
 ---
@@ -40,6 +40,7 @@ Le modifiche arrivano agli altri utenti in tempo reale. Se per qualche minuto no
 - **Contenuti creati prima di questa versione** (occupazione obbligatoria): lo spazio che avevano sulle pagine è stato convertito alla frazione più vicina (50% → 1/2, 33% → 1/3, 99,7% → intera). Se su una pagina la somma risulta oltre la capienza, la pagina mostra «⚠ Oltre capienza». Un contenuto vecchio ancora senza occupazione non viene mai piazzato «a caso» su una pagina: un messaggio lo segnala.
 - **Numeri creati prima del 2026-10-26**: convertiti automaticamente. Le pagine che erano copertina sono diventate le copertine I–IV (con i loro contenuti), le pagine interne sono state rinumerate da 1, e le copertine che mancavano (spesso la II e la III) sono state create vuote.
 - **Pagine caricate prima del 2026-09-02**: se una pagina ha ancora un PDF caricato con il vecchio sistema (direttamente sulla pagina), continua a funzionare come prima, con l'anteprima e lo storico 🕐, finché non verrà migrata. La migrazione è un'operazione futura, non ancora effettuata: nessun dato esistente è stato toccato.
+- **Stato delle pagine già piene**: lo [stato automatico](manuale:stato-pagina#stato-automatico) scatta solo quando cambia lo spazio, quindi le pagine riempite prima restano come sono. `php artisan timone:sync-page-status --dry-run` elenca le pagine piene ancora «Da assegnare» e quelle «Assegnata» non piene; lanciato senza `--dry-run` porta ad «Assegnata» **solo** le prime (mai le bloccate) e lo scrive in cronologia. Le «Assegnata» non piene restano un elenco da controllare a mano. Si può limitare a un numero con `--issue=ID`.
 - Le voci vecchie della cronologia sui cambi della soglia di allarme pubblicitario restano leggibili, ma la soglia non esiste più.
 
 ## Vedi anche

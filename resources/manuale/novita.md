@@ -14,6 +14,7 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 ## 30 ottobre 2026
 
+- **Stato automatico della pagina**: dal 2026-10-30 una pagina che diventa piena passa da «Da assegnare» ad «Assegnata», e una che non è più piena torna «Da assegnare» (con un messaggio se era più avanti, per esempio «Ok stampa»). Prima lo stato cambiava solo a mano. Vedi [Cambiare lo stato di una pagina](manuale:stato-pagina#stato-automatico).
 - **Spazio occupato già compilato**: in «+ Nuovo contenuto» e «📎 Carica materiale» l'occupazione parte da **1 pagina intera** (prima era vuota). Il formato della pubblicità la sostituisce sempre; un PDF di più pagine solo finché non l'hai cambiata a mano. Vedi [Spazio occupato](manuale:spazio-occupato).
 - **Griglia a coppie**: in Griglia le pagine sono affiancate a coppie come la rivista aperta (pari a sinistra, dispari a destra), più aperture per riga; **Doppia pagina** mostra le stesse aperture una sotto l'altra. Vedi [Le viste del timone](manuale:viste-del-timone).
 - **Shift+clic** seleziona tutte le pagine dall'ultima cliccata. Vedi [Selezionare più pagine](manuale:selezione-multipla).

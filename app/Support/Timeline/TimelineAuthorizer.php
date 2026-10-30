@@ -33,6 +33,7 @@ final class TimelineAuthorizer
 
         $contentIds = [];
         $pageIds = [];
+        $spacePageIds = self::pagesWithSpaceChanges($changes);
 
         foreach ($changes as $change) {
             $row = ($change['a'] ?? []) + ($change['b'] ?? []);
@@ -47,7 +48,16 @@ final class TimelineAuthorizer
                 default => null,
             };
 
-            if ($change['t'] === 'pages' && array_diff(array_keys($row), ['position', 'id', 'created_at', 'updated_at', 'content_type']) !== []) {
+            // Lo stato è ammesso solo dove nello stesso passo cambia lo
+            // spazio della pagina: è il cambio automatico che ne è seguito
+            // (PageStatusAutomation, 2026-10-30), non uno manuale.
+            $allowed = ['position', 'id', 'created_at', 'updated_at', 'content_type'];
+
+            if ($change['t'] === 'pages' && isset($spacePageIds[(int) $change['id']])) {
+                $allowed[] = 'status';
+            }
+
+            if ($change['t'] === 'pages' && array_diff(array_keys($row), $allowed) !== []) {
                 return false; // stato, blocco, gruppo, copertina: solo redazione
             }
         }
@@ -63,5 +73,32 @@ final class TimelineAuthorizer
         }
 
         return $pageIds === [] || $abilities->canMovePages(Page::with('contents')->whereIn('id', $pageIds)->get());
+    }
+
+    /**
+     * Pagine su cui il passo cambia righe di page_content (assegnazioni o
+     * spazio). Le righe aggiornate portano solo i campi cambiati: la
+     * pagina si cerca nel database.
+     *
+     * @param  list<array>  $changes
+     * @return array<int, true>
+     */
+    private static function pagesWithSpaceChanges(array $changes): array
+    {
+        $pages = [];
+
+        foreach ($changes as $change) {
+            if ($change['t'] !== 'page_content') {
+                continue;
+            }
+
+            $pageId = $change['a']['page_id'] ?? $change['b']['page_id'] ?? DB::table('page_content')->where('id', $change['id'])->value('page_id');
+
+            if ($pageId !== null) {
+                $pages[(int) $pageId] = true;
+            }
+        }
+
+        return $pages;
     }
 }

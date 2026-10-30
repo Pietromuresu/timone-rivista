@@ -1,7 +1,7 @@
 [
   {"domanda": "ho messo la pubblicità sulla pagina sbagliata come la levo", "pagina": "assegnare-contenuto"},
   {"domanda": "mi sono sbagliato, si può tornare a prima?", "pagina": "annullare-ripetere"},
-  {"domanda": "come faccio a far vedere al grafico che una pagina è pronta", "pagina": "stato-pagina", "fuori_dai_primi_3": true},
+  {"domanda": "come faccio a far vedere al grafico che una pagina è pronta", "pagina": "stato-pagina"},
   {"domanda": "la pagina 12 deve andare dopo la 20", "pagina": "spostare-pagine", "fuori_dai_primi_3": true},
   {"domanda": "voglio mettere in fila 30 pdf senza farlo uno per uno", "pagina": "caricamento-multiplo", "fuori_dai_primi_3": true},
   {"domanda": "quanti grammi pesa il numero", "pagina": "peso"},

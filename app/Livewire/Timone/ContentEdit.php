@@ -10,6 +10,7 @@ use App\Enums\FileFit;
 use App\Events\ContentListChanged;
 use App\Livewire\Concerns\HasOccupancyFields;
 use App\Livewire\Concerns\NormalizesEmptyNumericInput;
+use App\Livewire\Concerns\ShowsAutomaticStatusNotices;
 use App\Models\Content;
 use App\Models\Issue;
 use App\Support\ContentFormRules;
@@ -49,6 +50,7 @@ class ContentEdit extends Component
 {
     use HasOccupancyFields;
     use NormalizesEmptyNumericInput;
+    use ShowsAutomaticStatusNotices;
     use WithFileUploads {
         _uploadErrored as livewireUploadErrored;
     }
@@ -199,6 +201,8 @@ class ContentEdit extends Component
 
             $this->close();
         }, notUndoable: $notUndoable, transactional: false, scope: fn () => [$editedContentId]);
+
+        $this->showAutomaticStatusNotices();
     }
 
     private function findContent(int $contentId): Content

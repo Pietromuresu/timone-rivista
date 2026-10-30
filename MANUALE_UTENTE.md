@@ -359,7 +359,27 @@ Ogni pagina ha uno stato, mostrato dall'etichetta colorata in alto sulla card e 
 
 Gli stati sono: **Da assegnare**, **Assegnata**, **In bozza**, **Revisionata**, **Ok stampa**.
 
+Lo stato cambia anche da solo: una pagina che **diventa piena** passa da «Da assegnare» ad **«Assegnata»**; una pagina che **non è più piena** torna **«Da assegnare»**, qualunque stato avesse. Puoi sempre cambiarlo a mano.
+
 Funziona in tutte e tre le viste. Non c'è un ordine obbligato: puoi passare da uno stato all'altro liberamente, **eccetto verso «Ok stampa»**.
+
+#### Stato automatico
+
+Quando assegni, togli, estendi un contenuto o ne cambi lo spazio, il timone guarda ogni pagina coinvolta:
+
+- **diventa piena** (12/12, anche «⚠ Oltre capienza») ed è «Da assegnare» → **«Assegnata»**. Se è già più avanti («Assegnata», «In bozza», «Revisionata», «Ok stampa») resta com'è;
+- **non è più piena** → torna **«Da assegnare»**. Se era «In bozza», «Revisionata» o «Ok stampa» compare un messaggio, per esempio «La pagina 12 è tornata «Da assegnare» (era «Ok stampa»).»;
+- **resta non piena** (per esempio da 1/2 a 3/4) o **resta piena** → lo stato non cambia.
+
+**Dettagli**
+
+- Vale per pagine interne, copertine e battenti, e per ogni pagina di un contenuto su più pagine: un articolo di 2 e 1/2 pagine rende «Assegnata» le prime due, la terza (a metà) non cambia.
+- Vale anche quando l'operazione la fa il Commerciale, che a mano lo stato non lo può cambiare.
+- Spostare o scambiare pagine (anche le copertine) non cambia lo stato: la pagina se lo porta dietro. Lo stesso vale per frecce e rotazione, che non cambiano lo spazio.
+- Le pagine bloccate non cambiano mai stato.
+- Con [Annulla](resources/manuale/annullare-ripetere.md) torna anche lo stato di prima, «Ok stampa» compreso: il cambio automatico fa parte della stessa azione.
+- Nella [Cronologia](resources/manuale/storico-e-cronologia.md) il cambio compare come «Stato pagina 12: Da assegnare → Assegnata (automatico, dopo: Assegna «Acme» (pagina 12))».
+- Lo stato si controlla solo quando cambia lo spazio: le pagine riempite prima di questa funzione restano com'erano finché qualcuno non lo cambia o l'amministratore non le riallinea (vedi [Note per l'amministratore](resources/manuale/note-amministratore.md)).
 
 #### «Ok stampa» richiede il PDF
 
@@ -543,6 +563,8 @@ Passando il mouse su ↶ e ↷ vedi quale azione annullano o ripetono, per esemp
 Spostare pagine e gruppi (un gruppo è un passo solo), scambiare pagine e copertine, assegnare un contenuto (anche su più pagine) e toglierlo, frecce e rotazione, spazio sulla pagina, collega e scollega, stato e blocco delle pagine, rinomina, modifica di un contenuto, creazione (anche il caricamento multiplo, come un passo solo), archivia e ripristina, eliminazione di un contenuto o di una prenotazione.
 
 Un contenuto eliminato resta recuperabile per 24 ore.
+
+Se l'azione ha cambiato da sola lo [stato di una pagina](resources/manuale/stato-pagina.md), annullandola torna anche lo stato di prima.
 
 #### Cosa non si può annullare
 
@@ -2074,7 +2096,7 @@ Lavora **solo sulle pubblicità** delle riviste a cui ha accesso:
 - legge e scrive commenti;
 - nella selezione vede solo seleziona e deseleziona.
 
-Il Commerciale non può spostare gli articoli né le pagine che contengono articoli. Stato e blocco delle pagine, gruppi, pagine interne e scadenza stampa restano della redazione.
+Il Commerciale non può spostare gli articoli né le pagine che contengono articoli. Stato e blocco delle pagine, gruppi, pagine interne e scadenza stampa restano della redazione. Lo [stato automatico](resources/manuale/stato-pagina.md) vale anche per lui: una pagina che riempie con una pubblicità diventa «Assegnata».
 
 **Dettagli**
 
@@ -2281,6 +2303,7 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 #### 30 ottobre 2026
 
+- **Stato automatico della pagina**: dal 2026-10-30 una pagina che diventa piena passa da «Da assegnare» ad «Assegnata», e una che non è più piena torna «Da assegnare» (con un messaggio se era più avanti, per esempio «Ok stampa»). Prima lo stato cambiava solo a mano. Vedi [Cambiare lo stato di una pagina](resources/manuale/stato-pagina.md).
 - **Spazio occupato già compilato**: in «+ Nuovo contenuto» e «📎 Carica materiale» l'occupazione parte da **1 pagina intera** (prima era vuota). Il formato della pubblicità la sostituisce sempre; un PDF di più pagine solo finché non l'hai cambiata a mano. Vedi [Spazio occupato](resources/manuale/spazio-occupato.md).
 - **Griglia a coppie**: in Griglia le pagine sono affiancate a coppie come la rivista aperta (pari a sinistra, dispari a destra), più aperture per riga; **Doppia pagina** mostra le stesse aperture una sotto l'altra. Vedi [Le viste del timone](resources/manuale/viste-del-timone.md).
 - **Shift+clic** seleziona tutte le pagine dall'ultima cliccata. Vedi [Selezionare più pagine](resources/manuale/selezione-multipla.md).
@@ -2371,6 +2394,7 @@ Le modifiche arrivano agli altri utenti in tempo reale. Se per qualche minuto no
 - **Contenuti creati prima di questa versione** (occupazione obbligatoria): lo spazio che avevano sulle pagine è stato convertito alla frazione più vicina (50% → 1/2, 33% → 1/3, 99,7% → intera). Se su una pagina la somma risulta oltre la capienza, la pagina mostra «⚠ Oltre capienza». Un contenuto vecchio ancora senza occupazione non viene mai piazzato «a caso» su una pagina: un messaggio lo segnala.
 - **Numeri creati prima del 2026-10-26**: convertiti automaticamente. Le pagine che erano copertina sono diventate le copertine I–IV (con i loro contenuti), le pagine interne sono state rinumerate da 1, e le copertine che mancavano (spesso la II e la III) sono state create vuote.
 - **Pagine caricate prima del 2026-09-02**: se una pagina ha ancora un PDF caricato con il vecchio sistema (direttamente sulla pagina), continua a funzionare come prima, con l'anteprima e lo storico 🕐, finché non verrà migrata. La migrazione è un'operazione futura, non ancora effettuata: nessun dato esistente è stato toccato.
+- **Stato delle pagine già piene**: lo [stato automatico](resources/manuale/stato-pagina.md) scatta solo quando cambia lo spazio, quindi le pagine riempite prima restano come sono. `php artisan timone:sync-page-status --dry-run` elenca le pagine piene ancora «Da assegnare» e quelle «Assegnata» non piene; lanciato senza `--dry-run` porta ad «Assegnata» **solo** le prime (mai le bloccate) e lo scrive in cronologia. Le «Assegnata» non piene restano un elenco da controllare a mano. Si può limitare a un numero con `--issue=ID`.
 - Le voci vecchie della cronologia sui cambi della soglia di allarme pubblicitario restano leggibili, ma la soglia non esiste più.
 
 #### Vedi anche

@@ -81,7 +81,7 @@
     x-on:timeline-result.window="
         clearTimeout(timelineToastTimeout);
         timelineToast = $event.detail;
-        timelineToastTimeout = setTimeout(() => timelineToast = null, 4000);
+        timelineToastTimeout = setTimeout(() => timelineToast = null, $event.detail.duration ?? 4000);
     "
     x-on:remote-change.window="
         clearTimeout(remoteToastTimeout);

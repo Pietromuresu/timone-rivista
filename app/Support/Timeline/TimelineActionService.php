@@ -5,6 +5,7 @@ namespace App\Support\Timeline;
 use App\Models\Issue;
 use App\Models\TimelineAction;
 use App\Models\User;
+use App\Support\PageStatusAutomation;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Cache;
@@ -47,13 +48,21 @@ final class TimelineActionService
 
     private static int $depth = 0;
 
+    /**
+     * Stato automatico della pagina (2026-10-30): fra l'azione e la
+     * fotografia «dopo» si applica PageStatusAutomation, così il cambio di
+     * stato fa parte dello stesso passo (Ctrl+Z lo disfa insieme
+     * all'azione). Anche senza utente (console, test), dove non si registra
+     * nessun passo ma la regola vale lo stesso.
+     */
     public function run(Issue $issue, ?User $user, string $type, Closure $action, ?string $batchKey = null, ?string $notUndoable = null, bool $transactional = true, ?Closure $scope = null): mixed
     {
-        if (self::$depth > 0 || $user === null) {
+        if (self::$depth > 0) {
             return $action();
         }
 
         self::$depth++;
+        PageStatusAutomation::pullNotices();
 
         try {
             $body = function () use ($issue, $user, $type, $action, $batchKey, $notUndoable, $transactional, $scope) {
@@ -65,13 +74,29 @@ final class TimelineActionService
                 $result = $action();
                 $after = TimelineSnapshot::take($issue->id);
                 $changes = TimelineDiff::between($before, $after);
+                $contentIds = $scope !== null ? $scope() : null;
 
-                if ($scope !== null) {
-                    $changes = TimelineDiff::onlyContents($changes, $scope(), $before, $after);
+                if ($contentIds !== null) {
+                    $changes = TimelineDiff::onlyContents($changes, $contentIds, $before, $after);
                 }
 
-                if ($changes !== []) {
-                    $this->record($issue, $user, $type, $changes, TimelineLabeler::label($type, $changes, $before, $after), $batchKey, $notUndoable);
+                if ($changes === []) {
+                    return $result;
+                }
+
+                $label = TimelineLabeler::label($type, $changes, $before, $after);
+
+                if (PageStatusAutomation::apply($issue, $before, $after, $label, $contentIds) > 0) {
+                    $after = TimelineSnapshot::take($issue->id);
+                    $changes = TimelineDiff::between($before, $after);
+
+                    if ($contentIds !== null) {
+                        $changes = TimelineDiff::onlyContents($changes, $contentIds, $before, $after);
+                    }
+                }
+
+                if ($user !== null) {
+                    $this->record($issue, $user, $type, $changes, $label, $batchKey, $notUndoable);
                 }
 
                 return $result;

@@ -13,6 +13,7 @@ use App\Events\ContentCreated;
 use App\Events\PageGroupsChanged;
 use App\Livewire\Concerns\HasOccupancyFields;
 use App\Livewire\Concerns\NormalizesEmptyNumericInput;
+use App\Livewire\Concerns\ShowsAutomaticStatusNotices;
 use App\Models\Content;
 use App\Models\Issue;
 use App\Models\Page;
@@ -26,9 +27,11 @@ use App\Support\ContentPageAttacher;
 use App\Support\ContentPlacer;
 use App\Support\PageGroupLinker;
 use App\Support\PageInserter;
+use App\Support\PageStatusAutomation;
 use App\Support\Permissions\TimoneAbilities;
 use App\Support\PlacementChoice;
 use App\Support\Timeline\TimelineActionService;
+use App\Support\Timeline\TimelineSnapshot;
 use App\Support\Twelfths;
 use App\Support\Uploads\UploadEnvironmentInspector;
 use App\Support\Uploads\UploadLimits;
@@ -64,6 +67,7 @@ class ContentCreate extends Component
 {
     use HasOccupancyFields;
     use NormalizesEmptyNumericInput;
+    use ShowsAutomaticStatusNotices;
     use WithFileUploads {
         _uploadErrored as livewireUploadErrored;
     }
@@ -410,6 +414,8 @@ class ContentCreate extends Component
 
             $this->createContentAndFinish($validated, $pdfPageCount, targetPages: null, placementPage: $placementPage);
         }, transactional: false, scope: fn () => array_filter([$this->createdContentId]));
+
+        $this->showAutomaticStatusNotices();
     }
 
     /**
@@ -556,6 +562,8 @@ class ContentCreate extends Component
 
             $this->createContentAndFinish($conflict['validated'], $conflict['sourcePdfPageCount'] ?? $conflict['totalPdfPages'], $selectedPages, $file, $conflict['initiatingPosition']);
         }, transactional: false, scope: fn () => array_filter([$this->createdContentId]));
+
+        $this->showAutomaticStatusNotices();
     }
 
     /**
@@ -637,7 +645,15 @@ class ContentCreate extends Component
             return;
         }
 
+        // Questo percorso non passa da TimelineActionService (non è
+        // annullabile: cambia il numero di pagine). Stato automatico solo
+        // per il contenuto nuovo: la fotografia «prima» è presa dopo lo
+        // spostamento, che porta lo stato con i contenuti (regola: spostare
+        // pagine non cambia lo stato).
+        $before = TimelineSnapshot::take($this->issue->id);
         $this->createContentAndFinish($conflict['validated'], $conflict['sourcePdfPageCount'] ?? $conflict['totalPdfPages'], $selectedPages, $file, $conflict['initiatingPosition']);
+        PageStatusAutomation::apply($this->issue, $before, TimelineSnapshot::take($this->issue->id), 'caricamento di «'.($conflict['validated']['title'] ?? '').'»');
+        $this->showAutomaticStatusNotices();
     }
 
     /**

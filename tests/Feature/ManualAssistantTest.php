@@ -128,7 +128,7 @@ test('20 new user-style questions: the expected page is in the first three (know
         expect($found)->toBe(! ($q['fuori_dai_primi_3'] ?? false), "«{$q['domanda']}» → ".implode(', ', $top)." (attesa {$q['pagina']})");
     }
 
-    expect($inTop3)->toBe(14);
+    expect($inTop3)->toBe(15);
 });
 
 test('off-topic questions get no answer; the context bonus and corrections move pages within limits', function () {

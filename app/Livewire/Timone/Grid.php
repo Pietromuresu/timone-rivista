@@ -22,6 +22,7 @@ use App\Events\PagesSwapped;
 use App\Events\PageStatusUpdated;
 use App\Events\PageUnlocked;
 use App\Events\TimelineApplied;
+use App\Livewire\Concerns\ShowsAutomaticStatusNotices;
 use App\Models\ActivityLog;
 use App\Models\Content;
 use App\Models\ContentFile;
@@ -67,6 +68,8 @@ use Livewire\Component;
 
 class Grid extends Component
 {
+    use ShowsAutomaticStatusNotices;
+
     public Issue $issue;
 
     /**
@@ -2987,6 +2990,7 @@ class Grid extends Component
     private function recordStep(string $type, Closure $action): void
     {
         app(TimelineActionService::class)->run($this->issue, auth()->user(), $type, $action);
+        $this->showAutomaticStatusNotices();
     }
 
     /** Ctrl+Z / ↶ (2026-10-28): annulla il mio ultimo passo su questo numero. */

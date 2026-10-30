@@ -241,6 +241,7 @@ Ogni spostamento scrive `page_reorder_logs` e incrementa `issues.reorder_version
 1. `Grid::changePageStatus()` (`:1154`), oppure `bulkChangeStatus()` per la selezione multipla.
 2. Il passaggio a **`ok_stampa`** è bloccato se la pagina non ha un PDF (`Page::previewFile()`, che considera sia il `ContentFile` sia il `PageFile` legacy).
 3. `AutomaticChecks` segnala (senza bloccare): pagine `revisionata`/`ok_stampa` senza contenuti o senza PDF, contenuti su pagine non consecutive.
+4. **Stato automatico** (2026-10-30, `App\Support\PageStatusAutomation`): dopo ogni operazione che cambia lo spazio, per ogni pagina il cui spazio è cambiato (non bloccata): diventa piena (≥ 12/12) ed è `da_assegnare` → `assegnata`; smette di essere piena → `da_assegnare` qualunque fosse lo stato (avviso a chi ha agito se era `in_bozza`/`revisionata`/`ok_stampa`, toast `timeline-result`); altrimenti nulla. Si confrontano le fotografie `TimelineSnapshot` prima/dopo dentro `TimelineActionService::run()` (punto unico: il cambio fa parte del passo di annulla/ripeti); chiamata diretta in `PlaceholderAdCreator` e `ContentCreate::confirmMultipageUploadWithShift()`, che non passano da `run()`. Registro `page.status_auto_changed`, evento `PageStatusUpdated` dopo il commit. `TimelineAuthorizer` ammette `status` per il Commerciale solo sulle pagine con righe `page_content` cambiate nello stesso passo. Riallineamento dei dati vecchi: `timone:sync-page-status` ([08-job-e-scheduler.md](08-job-e-scheduler.md#timonesync-page-status---dry-run---issue)).
 
 ## Flusso 9 — Blocco pagina
 
