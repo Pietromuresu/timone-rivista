@@ -22,14 +22,17 @@
             📘 Copertine — fuori dalla numerazione delle pagine interne
         </span>
 
-        @can('update', $issue)
-            {{-- La bandella vale 2 pagine di copertina nel peso (6 invece di 4). --}}
-            @if ($hasBandella)
-                <button type="button" wire:click="removeBandella" wire:confirm="Togliere la bandella? Si può solo se è vuota." class="text-indigo-700 dark:text-indigo-300 hover:underline">− Togli bandella</button>
-            @else
-                <button type="button" wire:click="addBandella" class="text-indigo-700 dark:text-indigo-300 hover:underline">+ Aggiungi bandella</button>
-            @endif
-        @endcan
+        <span class="flex items-center gap-1.5">
+            @can('update', $issue)
+                {{-- La bandella vale 2 pagine di copertina nel peso (6 invece di 4). --}}
+                @if ($hasBandella)
+                    <button type="button" wire:click="removeBandella" wire:confirm="Togliere la bandella? Si può solo se è vuota." class="text-indigo-700 dark:text-indigo-300 hover:underline">− Togli bandella</button>
+                @else
+                    <button type="button" wire:click="addBandella" class="text-indigo-700 dark:text-indigo-300 hover:underline">+ Aggiungi bandella</button>
+                @endif
+            @endcan
+            <x-manual-help slug="copertine" anchor="la-bandella" label="Bandella" />
+        </span>
     </div>
 
     @if ($viewMode === 'lista')

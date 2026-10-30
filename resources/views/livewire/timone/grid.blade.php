@@ -487,7 +487,7 @@
 
     @if ($showPageCountEditor)
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
-            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Modifica pagine interne <span class="font-normal text-gray-400">(le copertine non cambiano)</span></h4>
+            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Modifica pagine interne <span class="font-normal text-gray-400">(le copertine non cambiano)</span> <x-manual-help slug="pagine-interne" label="Pagine interne" /></h4>
 
             <div class="flex items-end gap-3 flex-wrap">
                 <div>
@@ -698,6 +698,7 @@
             @else
                 clicca una pagina, poi un'altra: si scambiano di posto (contenuti, stato e file restano legati alla pagina).
             @endif
+            <x-manual-help slug="scambiare-pagine" label="Modalità scambio" class="ml-1" />
         </p>
     @endif
 

@@ -213,6 +213,8 @@
     .manual-help-close { @apply rounded p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700; }
     .manual-help-footer { @apply mt-4 text-sm; }
     .manual-help-footer a { @apply text-indigo-700 dark:text-indigo-300 underline; }
+    /* «?» accanto a un elemento (Fase 5): 24 px al dito sul telefono, più discreta da sm in su. */
+    .manual-context-help { @apply inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-800 align-middle text-xs font-bold not-italic leading-none text-indigo-700 dark:text-indigo-300 no-underline hover:bg-indigo-50 dark:hover:bg-indigo-900/40 focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:h-5 sm:w-5; }
     .manual-back-to-top { @apply fixed bottom-4 right-4 z-30 rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-indigo-700; }
     .manuale-content a.heading-permalink[data-copied]::after { content: ' Link copiato'; @apply ml-1 text-xs font-normal text-emerald-600; }
     .manual-flash { animation: manual-flash 1.8s ease-out; }

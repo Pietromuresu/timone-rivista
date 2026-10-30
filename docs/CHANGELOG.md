@@ -355,3 +355,16 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - Blocco `:::screenshot nome` con `alt:` e righe `N | x% | y% | testo` (`App\Support\Manual\ManualScreenshot`, `ManualScreenshotFiles`), sovrapposizione in HTML/CSS (`ManualRenderer::screenshot()`), immagini anche in `MANUALE_UTENTE.md`; config `timone.manual_images`; nginx mette in cache anche i `.webp`.
 - `data-testid` nuovi: `weight-panel`, `timone-export`.
 - Test: `tests/Feature/ManualScreenshotsTest.php`.
+
+
+## 2026-10-30 — Manuale: aiuto contestuale (fase 5 di «manuale, ricerca, assistente»)
+
+### Visibili agli utenti
+- Piccola **?** tonda accanto a: titolo del pannello ⚖️ Peso, barra delle pagine selezionate, messaggio «Modalità scambio attiva», «Modifica pagine interne», comandi della bandella nella fascia copertine, «Quanto spazio occupa» nelle finestre di creazione e modifica di un contenuto. Apre la pagina (o la sezione) del manuale in una nuova scheda: il lavoro in corso non si perde.
+- Il bottone **?** fisso in basso a sinistra con il contesto della schermata c'era già (fase 3).
+- Pagina admin «Cosa chiedono gli utenti»: non dice più di modificare `domande.yml`.
+
+### Tecniche
+- Componente anonimo `<x-manual-help slug anchor label>` (`resources/views/components/manual-help.blade.php`), stile `.manual-context-help` in `app.css`.
+- Test `tests/Feature/ManualContextHelpTest.php`: ogni `<x-manual-help>` e ogni `route('documentation.page', '…')` scritti nelle view puntano a una pagina e a una sezione esistenti (slug fissi obbligatori); i sei argomenti hanno la loro «?»; la «?» compare nelle schermate.
+- Screenshot rigenerati (le «?» compaiono in copertine, selezione multipla, peso, modifica contenuto); nessuna annotazione spostata.

@@ -12,6 +12,10 @@ ordine: 750
 Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine descrivono sempre il funzionamento di oggi.
 :::
 
+## 30 ottobre 2026
+
+- **Piccole ? accanto ai comandi** meno ovvi (Peso, selezione multipla, scambio, pagine interne, bandella, spazio occupato): aprono la pagina del manuale in una nuova scheda. Vedi [Chiedi al manuale](manuale:chiedi-al-manuale#il-punto-interrogativo-accanto-ai-comandi).
+
 ## 29 ottobre 2026
 
 - Il manuale è diviso in pagine per argomento, con questa pagina per le novità.

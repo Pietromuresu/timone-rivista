@@ -7,7 +7,7 @@
      funzione del salvataggio, non da un calcolo qui.
      $hint: testo sotto i campi, diverso per i due tipi. --}}
 <fieldset>
-    <legend class="block font-medium text-sm text-gray-700 dark:text-gray-300">Quanto spazio occupa (obbligatorio)</legend>
+    <legend class="block font-medium text-sm text-gray-700 dark:text-gray-300">Quanto spazio occupa (obbligatorio) <x-manual-help slug="spazio-occupato" label="Occupazione" class="ml-1" /></legend>
     <div class="mt-1 flex flex-wrap items-end gap-3">
         <div>
             <x-input-label for="whole_pages" value="Pagine intere" class="text-xs" />

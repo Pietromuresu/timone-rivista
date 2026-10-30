@@ -2,7 +2,7 @@
 
 Applicazione web per pianificare le pagine di una rivista: chi ci lavora vede in tempo reale, insieme ai colleghi collegati, quali pagine sono occupate da articoli o pubblicità, quali sono ancora libere, e può spostarle, assegnarci contenuti e controllare quanto spazio pubblicitario c'è in ogni numero — al posto del vecchio foglio di carta/Excel.
 
-Per l'uso quotidiano da parte della redazione (come spostare le pagine, assegnare contenuti, ecc.) vedi **[MANUALE_UTENTE.md](MANUALE_UTENTE.md)**. Lo stesso manuale si legge anche dentro l'applicazione, dalla voce **"📖 Manuale"** nel menu in alto (indirizzo `/manuale`). Da qualunque schermata, il bottone tondo **?** in basso a sinistra apre «Chiedi al manuale»: si scrive una domanda con parole proprie e compare il riquadro «In breve» della pagina che risponde. Le pagine principali del manuale hanno screenshot dell'app con i numeri che spiegano ogni parte.
+Per l'uso quotidiano da parte della redazione (come spostare le pagine, assegnare contenuti, ecc.) vedi **[MANUALE_UTENTE.md](MANUALE_UTENTE.md)**. Lo stesso manuale si legge anche dentro l'applicazione, dalla voce **"📖 Manuale"** nel menu in alto (indirizzo `/manuale`). Da qualunque schermata, il bottone tondo **?** in basso a sinistra apre «Chiedi al manuale»: si scrive una domanda con parole proprie e compare il riquadro «In breve» della pagina che risponde. Le pagine principali del manuale hanno screenshot dell'app con i numeri che spiegano ogni parte. Accanto ai comandi meno ovvi (Peso, selezione multipla, scambio, pagine interne, bandella, spazio occupato) una piccola **?** apre la pagina del manuale giusta in una nuova scheda.
 
 ---
 

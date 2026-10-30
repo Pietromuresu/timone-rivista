@@ -7,7 +7,10 @@
 
 <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 space-y-4" data-testid="weight-panel">
     <div class="flex items-center justify-between gap-4">
-        <h3 class="font-medium text-gray-700 dark:text-gray-300">⚖️ Peso</h3>
+        <div class="flex items-center gap-1.5">
+            <h3 class="font-medium text-gray-700 dark:text-gray-300">⚖️ Peso</h3>
+            <x-manual-help slug="peso" label="Peso" />
+        </div>
         @if ($canUpdate)
             <button type="button" wire:click="openEditor" class="px-3 py-1.5 rounded-lg border text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                 Modifica parametri

@@ -75,6 +75,8 @@ Scrivi la tua domanda con le tue parole: l'assistente ti mostra il riquadro «In
 3. Leggi la risposta; **«Leggi tutto →»** apre la pagina intera.
 4. Di' se è servita: **👍 Utile** o **👎 Non è questo**. Con 👎 compaiono altre tre pagine: se una è quella giusta, clicca **«👍 È questa»**.
 
+Accanto ad alcuni comandi c'è anche una piccola **?** tonda: apre la pagina del manuale su quel comando in una nuova scheda.
+
 ![Il pannello «Aiuto» aperto dal bottone ?, con la domanda «come sposto una pagina» e la risposta del manuale.](public/manuale/img/chiedi-al-manuale.webp)
 
 1. Scrivi la domanda e premi **Chiedi**.
@@ -91,6 +93,21 @@ Dalla schermata in cui sei l'assistente capisce un po' l'argomento: dal timone, 
 > **Suggerimento**
 >
 > Usa le parole che vedi sullo schermo, per esempio il nome di un bottone («Pagine interne», «Scambio»): l'assistente le riconosce meglio.
+
+#### Il punto interrogativo accanto ai comandi
+
+Accanto ai comandi meno ovvi c'è una piccola **?** tonda: apre la pagina del manuale che li spiega **in una nuova scheda**, quindi quello che stavi facendo (un modulo a metà, le pagine selezionate) resta com'era. Chiudi la scheda per tornare al timone.
+
+Le trovi accanto a:
+
+- **⚖️ Peso**, nel titolo del pannello: [Peso della rivista](resources/manuale/peso.md).
+- la barra delle pagine selezionate: [Selezionare più pagine](resources/manuale/selezione-multipla.md).
+- il messaggio «Modalità scambio attiva»: [Scambiare due pagine](resources/manuale/scambiare-pagine.md).
+- «Modifica pagine interne», dopo aver cliccato **⚙️ Pagine interne**: [Aggiungere o togliere pagine](resources/manuale/pagine-interne.md).
+- **+ Aggiungi bandella** / **− Togli bandella**, nella fascia delle copertine: [La bandella](resources/manuale/copertine.md).
+- «Quanto spazio occupa», nelle finestre di creazione e modifica di un contenuto: [Spazio occupato](resources/manuale/spazio-occupato.md).
+
+Con la tastiera ci arrivi con Tab e la apri con Invio.
 
 #### I tuoi voti
 
@@ -2225,6 +2242,10 @@ Le parole del timone, in ordine alfabetico. Ogni voce rimanda alla pagina che ne
 **In breve**
 
 Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine descrivono sempre il funzionamento di oggi.
+
+#### 30 ottobre 2026
+
+- **Piccole ? accanto ai comandi** meno ovvi (Peso, selezione multipla, scambio, pagine interne, bandella, spazio occupato): aprono la pagina del manuale in una nuova scheda. Vedi [Chiedi al manuale](resources/manuale/chiedi-al-manuale.md).
 
 #### 29 ottobre 2026
 

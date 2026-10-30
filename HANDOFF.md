@@ -2209,3 +2209,32 @@ Fase 3 approvata («ok procedi con la Fase 4»); Fasi 1–4 del manuale non comm
 ### Non verificato
 - Safari, Firefox e un telefono vero (DV-57); lo script solo su macOS con Chrome, non su Linux/Chromium.
 - Su immagini mostrate piccole (telefono) numeri vicini possono quasi toccarsi; i numeri 1–3 del timone sono stati distanziati a mano.
+
+## Sessione 2026-10-30 — Manuale utente: Fase 5 (aiuto contestuale)
+
+Fase 4 approvata («continua»); Fasi 1–5 del manuale non committate.
+
+### Fatto
+- **Bottone ? fisso con il contesto**: già fatto nella Fase 3 (`documentation.partials.help-button` in `layouts/app`, contesto da `ManualContexts::forRoute()`); nessuna modifica.
+- **Piccole «?»**: componente anonimo `<x-manual-help slug="…" anchor="…" label="…" />` (`resources/views/components/manual-help.blade.php`): un link `target="_blank" rel="noopener"` alla pagina (e sezione) del manuale, `aria-label` «Aiuto: … (si apre il manuale in una nuova scheda)», `data-manual-help` per i test. **Nuova scheda e non pannello laterale**: moduli aperti, selezione e modalità scambio restano intatti senza JS aggiuntivo, e il pannello laterale è già occupato dall'assistente. Stile `.manual-context-help` in `app.css` (24 px su telefono, 20 px da `sm`).
+- Posizioni (le «?» stanno accanto a quello che compare quando la funzione è attiva, non nella barra dei bottoni, che deve restare su una riga a 1366 px):
+  - titolo «⚖️ Peso» del pannello → `peso`;
+  - barra delle pagine selezionate, dopo l'etichetta → `selezione-multipla`;
+  - messaggio «Modalità scambio attiva» → `scambiare-pagine`;
+  - titolo «Modifica pagine interne» (dopo ⚙️ Pagine interne) → `pagine-interne`;
+  - fascia copertine, accanto a «+ Aggiungi / − Togli bandella» (visibile anche a chi non può modificare) → `copertine#la-bandella`;
+  - legenda «Quanto spazio occupa» (partial `occupancy-fields`, quindi creazione e modifica) → `spazio-occupato`.
+- **Test** `tests/Feature/ManualContextHelpTest.php` (4): ogni `<x-manual-help>` e ogni `route('documentation.page', '…')` nelle view punta a una pagina e a una sezione esistenti (slug e anchor dinamici rifiutati); i sei argomenti richiesti hanno la loro «?»; HTML del componente; le «?» compaiono nel timone (anche dopo scambio, selezione, pagine interne), nel pannello Peso e nel modulo nuovo contenuto.
+- Pagina admin «Cosa chiedono gli utenti» (`livewire/manual/questions.blade.php`): due frasi dicevano ancora di modificare `domande.yml`, ora rimandano all'«In breve» della pagina (regola della manutenzione).
+- Manuale: `chiedi-al-manuale` (In breve + sezione «Il punto interrogativo accanto ai comandi»), `novita` (30 ottobre). `manuale:genera` e `manuale:verifica` verdi. Screenshot rigenerati con `npm run build && npm run manuale:screenshot`: 10/10, nessun avviso sulle annotazioni, le «?» visibili in copertine, selezione multipla, peso e modifica contenuto (immagini guardate).
+- Documentazione: README, docs/02, CHANGELOG, DA-VERIFICARE (DV-58), docs/nextcloud.
+
+### Nota per chi aggiunge una «?»
+Scrivere slug e anchor come testo fisso (`slug="peso"`, mai `:slug=`): il test li legge dal sorgente delle view. L'anchor è l'id generato dal titolo `##` (es. `la-bandella`; un «?» nel titolo produce un doppio trattino, evitarlo).
+
+### Verificato
+- `tests/Feature/ManualContextHelpTest.php`: 4 test verdi. Suite completa: 1030 passati, 46 saltati, 0 falliti.
+- File protetti invariati (`git diff --stat` vuoto su AppServiceProvider, bootstrap/app.php, config/app.php, session, filesystems).
+
+### Non verificato
+- Le «?» non sono state provate a mano in un browser: solo nei test e negli screenshot di Chrome headless (desktop). Telefono vero, Safari, Firefox: DV-58.

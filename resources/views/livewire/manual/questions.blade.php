@@ -6,7 +6,7 @@
             <div>
                 <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Cosa chiedono gli utenti</h2>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Le domande fatte a «Chiedi al manuale» e cosa l'assistente ha imparato dai voti. Per correggere una risposta modifica la pagina del manuale o <code>resources/manuale/domande.yml</code>; qui puoi solo disattivare quello che è stato imparato.
+                    Le domande fatte a «Chiedi al manuale» e cosa l'assistente ha imparato dai voti. Per correggere una risposta modifica il riquadro «In breve» della pagina giusta del manuale; qui puoi solo disattivare quello che è stato imparato.
                 </p>
             </div>
 
@@ -50,7 +50,7 @@
             </section>
 
             @foreach ([
-                ['Risposte probabilmente sbagliate', 'Almeno 5 persone, e quasi tutte hanno detto «Non è questo». Controlla la pagina o domande.yml.', $suspects, 'correzione', 'manual-questions-suspects'],
+                ['Risposte probabilmente sbagliate', 'Almeno 5 persone, e quasi tutte hanno detto «Non è questo». Controlla il riquadro «In breve» della pagina.', $suspects, 'correzione', 'manual-questions-suspects'],
                 ['Domande imparate', 'Domande nuove (non simili a quelle di domande.yml) che più persone hanno trovato utili.', $learned, 'domanda', 'manual-questions-learned'],
                 ['Correzioni imparate', 'Spostano un po\' (al massimo del 30%) il punteggio di una pagina per una domanda.', $corrections, 'correzione', 'manual-questions-corrections'],
             ] as [$title, $help, $rows, $type, $testid])

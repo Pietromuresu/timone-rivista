@@ -46,6 +46,8 @@
             <span class="text-gray-400 dark:text-gray-500 whitespace-nowrap" data-testid="selection-label">Seleziona una o più pagine (clic, Ctrl/⌘+clic)</span>
         @endif
 
+        <x-manual-help slug="selezione-multipla" label="Selezione multipla" />
+
         <button type="button" wire:click="clearSelection" class="{{ $actionClass }} {{ $enabledClass }}" title="Deseleziona tutte (Esc)" data-action="clear">Deseleziona</button>
         <button type="button" wire:click="selectAllPages" class="{{ $actionClass }} {{ $enabledClass }}" title="Seleziona tutte le pagine interne (Ctrl/⌘+A)" data-action="all">Tutte</button>
 
