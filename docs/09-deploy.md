@@ -212,7 +212,7 @@ Le miniature dei PDF si generano in coda (job `GenerateContentFileThumbnail`, se
 ### 7. Scheduler, code, backup
 
 - Code e scheduler: già gestiti dai servizi `worker` e `scheduler`. **Niente supervisor né crontab per Laravel.**
-- Backup: **non schedulato nel repo**. Template di crontab sull'host:
+- Backup: **dal 2026-10-30 c'è il backup automatico** (servizio `backup-agent`, profilo `backup`): attivazione e uso in [OPERATIONS.md](OPERATIONS.md#backup-e-ripristino). Il template di crontab qui sotto è superato e resta solo come riferimento storico:
 
 ```cron
 # ⚠️ TEMPLATE — verificare contro il server reale

@@ -46,8 +46,13 @@ La produzione dipende da questi file. Introdotta il 2026-10-27 dal batch "revisi
 
 Se una funzionalità sembra richiedere una modifica lì, fermati e proponi un'alternativa (service provider dedicato, config locale al componente o in `config/timone.php`). Prima di ogni consegna esegui `git diff --stat` e conferma esplicitamente che questi file non sono cambiati.
 
+## 5. Backup: ogni nuovo dato va coperto
+
+Introdotta il 2026-10-30 con il backup automatico (vedi `docs/OPERATIONS.md`). Ogni **nuova tabella** finisce da sola nel dump, ma se contiene dati importanti va aggiunta ai conteggi della prova di ripristino. Ogni **nuova cartella di file caricati** fuori da `storage/app` (o dentro, ma nelle cartelle escluse `livewire-tmp`/`exports`) va aggiunta al backup (`docker/backup/timone-backup.sh`, `step_files`) e alla prova di ripristino. In entrambi i casi aggiorna «Cosa viene salvato e cosa no» in `docs/OPERATIONS.md`. Le nuove variabili del backup vanno in `backup.env.example` (mai in `.env.example`), con commento e valore finto. Regole di sicurezza da non allentare: copia remota solo rest-server append-only o S3 con Object Lock (mai cartelle/NAS montati), nessun segreto o indirizzo di destinazione nei log, nei file di stato o nella pagina admin (ogni messaggio passa da `redact`), password del repository mai nel backup né in `backup.env`.
+
 ## Riferimenti rapidi
 
 - Stato e cronologia completa del progetto: `HANDOFF.md`.
 - Spec originale (per confronto, non da seguire ciecamente se il codice reale ha già preso strade diverse e documentate): `PROMPT_DI_PARTENZA.md`.
+- Backup e ripristino: `docs/OPERATIONS.md`.
 - Avvio Docker: `DOCKER.md`. Uso funzionale per la redazione: `MANUALE_UTENTE.md`. `README.md` è il punto d'ingresso per l'utente non tecnico.

@@ -15,10 +15,12 @@ Solo un **amministratore** elimina numeri, riviste e utenti.
 2. **Rivista** (con tutti i suoi numeri): «Modifica rivista», riquadro rosso **«Elimina la rivista»** in fondo.
 3. **Utente**: vedi [Gestire gli utenti](manuale:utenti).
 4. Conferma in due passaggi: leggi il riepilogo, poi scrivi il **nome esatto** e la **tua password**.
+
+Eliminato per sbaglio? Avvisa subito il tecnico: si recupera dal backup (vedi [Note per l'amministratore](manuale:note-amministratore#backup)).
 :::
 
 :::attenzione
-L'eliminazione è **definitiva**: non c'è un cestino e non si annulla con Ctrl+Z.
+L'eliminazione è **definitiva**: non c'è un cestino e non si annulla con Ctrl+Z. Si può solo recuperare dal backup, e lo fa il tecnico.
 :::
 
 ## I due passaggi

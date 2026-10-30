@@ -116,4 +116,22 @@ return [
     // `:::screenshot nome`, generati da `npm run manuale:screenshot`
     // (App\Support\Manual\ManualScreenshotFiles). Modificabile solo nei test.
     'manual_images' => public_path('manuale/img'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Backup (2026-10-30)
+    |--------------------------------------------------------------------------
+    |
+    | Cartella in cui il servizio «backup-agent» scrive l'esito dei backup e
+    | le impostazioni senza segreti (settings.json: destinatari degli
+    | avvisi, soglie). È il volume compose `backup_status`, montato in sola
+    | lettura nei container app e scheduler. La configurazione vera sta in
+    | backup.env, che l'app di proposito non vede (contiene credenziali):
+    | vedi docs/OPERATIONS.md. Nessuna variabile d'ambiente: si cambia solo
+    | nei test.
+    |
+    */
+    'backup' => [
+        'status_path' => '/var/backup-status',
+    ],
 ];

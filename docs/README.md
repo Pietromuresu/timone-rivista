@@ -57,6 +57,7 @@
 | [07-integrazioni.md](07-integrazioni.md) | Servizi esterni/collaterali (Reverb, mail, Imagick/Ghostscript, ...) |
 | [08-job-e-scheduler.md](08-job-e-scheduler.md) | Job in coda, comandi artisan custom, scheduler |
 | [09-deploy.md](09-deploy.md) | Requisiti server, primo deploy, aggiornamento, rollback, checklist |
+| [OPERATIONS.md](OPERATIONS.md) | **Backup e ripristino** (dal 2026-10-30): cosa si salva, attivazione, copia remota, registro |
 | [10-debugging.md](10-debugging.md) | **Il più importante**: log, strumenti, sintomo → causa → soluzione |
 | [11-debito-tecnico.md](11-debito-tecnico.md) | Debito tecnico e rischi ordinati per priorità |
 | [12-glossario.md](12-glossario.md) | Termini di dominio e valori degli enum |

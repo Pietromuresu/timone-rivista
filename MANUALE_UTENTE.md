@@ -1794,9 +1794,11 @@ Solo un **amministratore** elimina numeri, riviste e utenti.
 3. **Utente**: vedi [Gestire gli utenti](resources/manuale/utenti.md).
 4. Conferma in due passaggi: leggi il riepilogo, poi scrivi il **nome esatto** e la **tua password**.
 
+Eliminato per sbaglio? Avvisa subito il tecnico: si recupera dal backup (vedi [Note per l'amministratore](resources/manuale/note-amministratore.md)).
+
 > **Attenzione**
 >
-> L'eliminazione è **definitiva**: non c'è un cestino e non si annulla con Ctrl+Z.
+> L'eliminazione è **definitiva**: non c'è un cestino e non si annulla con Ctrl+Z. Si può solo recuperare dal backup, e lo fa il tecnico.
 
 #### I due passaggi
 
@@ -2059,6 +2061,8 @@ Quello che vedi e puoi fare dipende dal tuo **ruolo**:
 3. **Commerciale**: lavora **solo sulle pubblicità** delle riviste a cui ha accesso.
 4. **Sola lettura**: consulta, legge i commenti, esporta.
 
+Hai eliminato qualcosa per sbaglio? Avvisa subito un amministratore: i dati si recuperano dal backup, e il ripristino lo fa il tecnico.
+
 #### Tabella riassuntiva
 
 | | Admin | Redattore | Commerciale | Sola lettura |
@@ -2303,6 +2307,7 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 #### 30 ottobre 2026
 
+- **Backup automatico**: dal 2026-10-30 il timone può salvare da solo database, file caricati e configurazione, sul server e in una copia fuori, con una mail di avviso se qualcosa non va. Lo attiva il tecnico. Prima esisteva solo un salvataggio del database da lanciare a mano. Vedi [Note per l'amministratore](resources/manuale/note-amministratore.md).
 - **Stato automatico della pagina**: dal 2026-10-30 una pagina che diventa piena passa da «Da assegnare» ad «Assegnata», e una che non è più piena torna «Da assegnare» (con un messaggio se era più avanti, per esempio «Ok stampa»). Prima lo stato cambiava solo a mano. Vedi [Cambiare lo stato di una pagina](resources/manuale/stato-pagina.md).
 - **Spazio occupato già compilato**: in «+ Nuovo contenuto» e «📎 Carica materiale» l'occupazione parte da **1 pagina intera** (prima era vuota). Il formato della pubblicità la sostituisce sempre; un PDF di più pagine solo finché non l'hai cambiata a mano. Vedi [Spazio occupato](resources/manuale/spazio-occupato.md).
 - **Griglia a coppie**: in Griglia le pagine sono affiancate a coppie come la rivista aperta (pari a sinistra, dispari a destra), più aperture per riga; **Doppia pagina** mostra le stesse aperture una sotto l'altra. Vedi [Le viste del timone](resources/manuale/viste-del-timone.md).
@@ -2366,6 +2371,8 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 Dettagli tecnici e di installazione, per chi gestisce il timone. Per avviare l'applicazione la prima volta vedi il file README.md del progetto.
 
+**Backup**: database, file caricati e configurazione vengono salvati in automatico (se il tecnico li ha attivati), sul server e in una copia fuori. Se qualcuno ha eliminato qualcosa per sbaglio, avvisa subito il tecnico con rivista, numero e ora: si recupera dal backup. Comandi e ripristino: `docs/OPERATIONS.md`.
+
 #### Limiti e impostazioni
 
 - **Limite dei file**: il massimo indicato nel riquadro di caricamento è il limite **reale** del server, che può essere più basso di 100 MB se il server è configurato così.
@@ -2379,6 +2386,16 @@ Dettagli tecnici e di installazione, per chi gestisce il timone. Per avviare l'a
 - **Correggere una risposta**: si modifica la pagina del manuale (parole chiave, sinonimi, «In breve»), non i voti. Le domande iniziali (`resources/manuale/domande.yml`) restano come sono: le domande nuove le impara l'assistente.
 - **Ricalcolo notturno** alle 3:15 (`php artisan manuale:apprendi`, si può lanciare a mano): ricalcola tutto da zero dai voti e pubblica solo se tutte le domande di prova trovano ancora la loro pagina tra le prime tre; altrimenti tiene i pesi di prima e lo scrive nel registro e nella pagina «Cosa chiedono gli utenti». Richiede che lo scheduler dell'installazione giri (servizio `scheduler`).
 - **Dati**: i voti sono salvati senza il nome di chi vota (un'impronta non reversibile) e cancellati dopo 12 mesi (`php artisan manuale:pulisci`, ogni notte).
+
+#### Backup
+
+- **Cosa viene salvato**: il database ogni 4 ore nei giorni lavorativi (alle 8, 12, 16 e 20) e ogni notte; ogni notte anche i file caricati (PDF, immagini, miniature) e la configurazione del server. Non vengono salvati i PDF sfogliabili (si rigenerano dal pannello del numero).
+- **Quanto si tiene**: tutti i backup delle ultime 48 ore, poi uno al giorno per 14 giorni, uno a settimana per 8 settimane, uno al mese per 12 mesi.
+- **Dove**: una copia sul server e una fuori dal server (la copia remota), più una seconda copia remota facoltativa, tutte cifrate. Il server può aggiungere backup alla copia remota ma non cancellarli: così sopravvivono anche a un attacco al server. Finché il tecnico non configura la copia remota, i backup esistono solo sul server.
+- **Controllo indipendente**: un'altra macchina dell'IT controlla ogni ora che sulla copia remota arrivino backup nuovi, e manda una mail se mancano da più di un giorno, anche quando il server è spento.
+- **Avvisi**: se un backup non riesce, o se manca da più di un giorno, arriva una mail agli indirizzi scelti dal tecnico.
+- **Eliminato per sbaglio**: un numero, una rivista o un contenuto eliminati si recuperano dal backup fatto prima dell'eliminazione: al massimo si perde il lavoro delle ore tra quel backup e l'eliminazione. Avvisa subito il tecnico dicendo rivista, numero e ora approssimativa, e nel frattempo non ricreare il numero a mano.
+- **Chi fa cosa**: attivazione, controlli e ripristini li fa il tecnico seguendo `docs/OPERATIONS.md` (sezione «Backup e ripristino»). Dall'interfaccia del timone i backup non si possono né cancellare né ripristinare.
 
 #### Aggiornamenti in tempo reale
 

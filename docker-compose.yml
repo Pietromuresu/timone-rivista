@@ -27,6 +27,8 @@ services:
       # nel frattempo il container era stato ricreato. Ora sopravvive ai
       # riavvii, coerente con storage/app.
       - storage_logs:/var/www/html/storage/logs
+      # Esito dei backup (sola lettura): timone:backup-test-alert e pagina admin.
+      - backup_status:/var/backup-status:ro
     healthcheck:
       # Verifica che php-fpm sia davvero in ascolto sulla sua porta interna
       # (9000), non solo che il container sia partito — nc fa parte di
@@ -154,6 +156,8 @@ services:
     volumes:
       - storage_data:/var/www/html/storage/app
       - storage_logs:/var/www/html/storage/logs
+      # Esito dei backup, per il controllo delle 26 ore (sola lettura).
+      - backup_status:/var/backup-status:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -230,6 +234,50 @@ services:
         condition: service_healthy
     networks: [timone]
 
+  # Backup automatico con restic (2026-10-30, docs/OPERATIONS.md «Backup e
+  # ripristino»). Parte solo con il profilo «backup»: in produzione
+  # COMPOSE_PROFILES=backup in .env, così anche i «docker compose up -d» dei
+  # deploy lo ricostruiscono. Diverso dal servizio «backup» qui sopra, che
+  # resta il dump manuale pre-deploy.
+  backup-agent:
+    build:
+      context: ./docker/backup
+      args:
+        # Ripiego per l'hash del commit se .git non fosse visibile in
+        # /project (setup.sh lo esporta; vuoto se assente).
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    profiles: ["backup"]
+    restart: unless-stopped
+    # Hostname fisso: restic riconosce come scaduti i propri lucchetti
+    # lasciati da un giro interrotto solo se l'host è lo stesso.
+    hostname: timone-backup
+    # Nessun env_file: la configurazione (backup.env, fuori da git) viene
+    # riletta da /project a ogni giro, così una modifica vale subito senza
+    # ricreare il container.
+    environment:
+      DB_HOST: mysql
+      DB_DATABASE: ${DB_DATABASE:-timone}
+    volumes:
+      # Stesso percorso che ha nel container app: i file ripristinati
+      # tornano al loro posto senza tradurre i percorsi.
+      - storage_data:/var/www/html/storage/app:ro
+      # Configurazione da salvare (.env, compose, docker/), backup.env, la
+      # password del repository e .git per l'hash del commit.
+      - ./:/project:ro
+      # Copia locale: cartella dell'host e NON volume Docker, perché
+      # «docker compose down -v» (il «reset totale» di setup.sh) cancella i
+      # volumi. Su un secondo disco: vedi docs/OPERATIONS.md.
+      - ./backups/restic:/repo
+      - backup_status:/status
+      - backup_cache:/cache
+    # Un core al massimo, oltre a nice/ionice nello script: il backup non
+    # deve rallentare chi lavora.
+    cpus: 1.0
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks: [timone]
+
 networks:
   timone:
     driver: bridge
@@ -239,3 +287,7 @@ volumes:
   redis_data:
   storage_data:
   storage_logs:
+  # Esito dei backup (JSON) e registro: scritto da backup-agent, letto in
+  # sola lettura dall'app per avvisi e pagina admin.
+  backup_status:
+  backup_cache:

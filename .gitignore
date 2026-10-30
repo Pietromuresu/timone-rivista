@@ -22,3 +22,7 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+# Backup (2026-10-30): configurazione con credenziali e password del
+# repository restic. Mai su git: un test lo controlla (BackupConfigNotTrackedTest).
+/backup.env
+/backup-secrets

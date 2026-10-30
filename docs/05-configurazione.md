@@ -15,6 +15,8 @@
 
 > Regola: **nessun valore segreto in questo documento.** Dove serve un segreto, è indicato come ottenerlo.
 
+> **Backup (dal 2026-10-30)**: la configurazione del backup automatico **non** sta in `.env`, ma in `backup.env` (fuori da git, modello commentato `backup.env.example`). In `.env` resta solo `COMPOSE_PROFILES=backup`, che lo accende. Vedi [OPERATIONS.md](OPERATIONS.md#backup-e-ripristino).
+
 ## Tabella completa
 
 Legenda colonna *Obbl.*: **Sì** = senza, l'app o lo stack non partono o una funzione chiave si rompe; *Prod* = obbligatoria da cambiare/impostare in produzione; No = opzionale.

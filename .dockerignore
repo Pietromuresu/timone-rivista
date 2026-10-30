@@ -50,3 +50,8 @@ tests
 !resources/manuale/*.md
 # Le immagini del manuale (Fase 4) stanno in public/manuale/img: non sono
 # escluse da nessuna regola sopra.
+
+# Backup (2026-10-30): credenziali e password del repository restic non
+# devono finire nell'immagine (la regola «.env.*» sopra non copre backup.env).
+backup.env
+backup-secrets

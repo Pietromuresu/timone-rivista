@@ -441,3 +441,30 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - Comando `timone:sync-page-status {--dry-run} {--issue=}`.
 - Test: `tests/Unit/PageStatusAutomationTest.php`, `tests/Feature/Livewire/PageStatusAutomationTest.php`; `manual-assistant-queries.json`: una domanda in più nei primi 3 (15 su 20).
 
+## 2026-10-30 — Backup automatico, Fase 1 (implementazione)
+
+### Visibili agli utenti
+- Nessuna schermata nuova (la pagina admin «Backup» arriva nella Fase 2). Manuale: sezione «Backup» in «Note per l'amministratore», una riga in «Chi può fare cosa» e in «Eliminare» (eliminato per sbaglio → si recupera dal backup, lo fa il tecnico), voce in «Novità».
+
+### Tecniche
+- Servizio compose **`backup-agent`** (profilo `backup`, immagine `docker/backup/`: mysql 8.4 + restic 0.19.1 + supercronic): dump del database ogni 4 ore nei giorni lavorativi e ogni notte, poi file e configurazione ogni notte, controllo di integrità, copia remota append-only, conservazione 48 h / 14 giorni / 8 settimane / 12 mesi. Copia locale in `backups/restic/`.
+- Configurazione in **`backup.env`** (fuori da git e dall'immagine, modello `backup.env.example`), password del repository in `backup-secrets/restic-password`. `./setup.sh` li crea se mancano e non li riscrive mai; crea l'utente MySQL di sola lettura `timone_backup`.
+- `./setup.sh backup-check`: prova database, copia locale, copia remota (rete, credenziali, permessi, append-only).
+- `php artisan timone:backup-test-alert`: mail di prova agli indirizzi di `BACKUP_ALERT_EMAIL`.
+- `setup.sh`: `set_env_var` non riporta più `.env` ai permessi 644 quando genera una chiave.
+- Guida: `docs/OPERATIONS.md`.
+
+## 2026-10-30 — Backup automatico, sicurezza (aggiunta alla Fase 1)
+
+### Visibili agli utenti
+- Manuale, «Note per l'amministratore»: la copia remota non è cancellabile dal server, la seconda copia è facoltativa, c'è un controllo indipendente da un'altra macchina.
+
+### Tecniche
+- Copia remota ammessa **solo** come rest-server (`rest:https://`, autenticazione, `--append-only`) o S3 (`s3:https://`, Object Lock COMPLIANCE, chiave senza permesso di cancellare gli snapshot). Cartelle e NAS montati, SFTP, `http://` e credenziali nell'indirizzo vengono rifiutati da `backup-check` e dal backup, con il motivo. Una destinazione da cui il server riesce a cancellare è un errore (❌), non più un avviso.
+- Seconda copia remota facoltativa (`BACKUP_REMOTE_2_*`, job `remote_2`, comando `remota2`). Variabili della copia remota rinominate con il prefisso `BACKUP_REMOTE_` (`…_REST_USERNAME`, `…_S3_ACCESS_KEY_ID`, `…_CACERT` per una CA interna).
+- Filtro dei segreti (`redact`) su registro, file di stato e output: indirizzi, password e chiavi delle destinazioni e password del database non compaiono mai. `scripts/backup/verifica-segreti-nei-log.sh` lo controlla.
+- La password del repository non finisce mai sulla destinazione: `backup-secrets/` escluso dal backup, `RESTIC_PASSWORD` in `backup.env` rifiutata.
+- `scripts/backup/controllo-indipendente.sh`: controllo dell'età dell'ultimo backup sulla destinazione, da un'altra macchina, senza password, con mail via curl.
+- `docs/OPERATIONS.md`: configurazione lato destinazione (rest-server, S3 con policy, firewall), pulizia annuale da un'altra macchina, controllo indipendente, «Segreti e log», «Dopo un incidente di sicurezza».
+- Immagine del backup senza client SSH.
+

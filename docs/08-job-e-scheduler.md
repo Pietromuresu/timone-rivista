@@ -114,6 +114,12 @@ Elenco dei task: `docker compose exec app php artisan schedule:list`. Sull'host 
 - **Quando**: ogni notte alle 03:05.
 - **Cosa fa**: cancella voti, domande senza risposta e giri del job più vecchi di 12 mesi.
 
+### `timone:backup-test-alert {--to=}` (backup, 2026-10-30)
+
+- **Quando**: a mano, nella checklist di attivazione del backup (`docs/OPERATIONS.md`, passo 8) e dopo ogni cambio di SMTP o di `BACKUP_ALERT_EMAIL`.
+- **Cosa fa**: accoda una mail di prova (`App\Mail\BackupAlert`) agli indirizzi di `BACKUP_ALERT_EMAIL`, letti da `settings.json` nel volume `backup_status` (lo scrive il servizio `backup-agent`), oppure a quelli di `--to`. Avvisa se `MAIL_MAILER` è `log` o `array`. Esce con errore se le impostazioni mancano, se la lista è vuota o se un indirizzo non è valido.
+- I backup veri non passano dallo scheduler di Laravel: hanno il loro scheduler (supercronic) nel container `backup-agent`.
+
 ### `timone:send-deadline-reminders`
 
 - **File**: `app/Console/Commands/SendDeadlineReminders.php`.

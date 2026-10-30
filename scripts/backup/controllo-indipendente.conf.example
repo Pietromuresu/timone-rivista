@@ -1,0 +1,40 @@
+# Configurazione del controllo indipendente del backup di Timone.
+# Copiala sull'altra macchina (NON sul server del Timone), compilala e
+# proteggila: chmod 600. Contiene solo credenziali di SOLA LETTURA e quelle
+# della mail; mai la password del backup né credenziali che cancellano.
+# Guida: docs/OPERATIONS.md, «Controllo indipendente da un'altra macchina».
+
+# Nome mostrato nell'oggetto delle mail.
+NOME="Timone"
+
+# Dopo quante ore senza un backup nuovo sulla destinazione parte la mail.
+MAX_ORE=26
+
+# Dove guardare: «cartella» (sul NAS del rest-server, accesso diretto alla
+# cartella dei dati) oppure «s3» (da qualunque macchina, chiave di sola lettura).
+MODO=cartella
+
+# MODO=cartella: cartella del repository dentro i dati del rest-server
+# (quella che contiene config, data, index, keys, snapshots).
+CARTELLA=/srv/restic/timone
+
+# MODO=s3: endpoint, bucket, prefisso (la parte dopo il bucket
+# nell'indirizzo del backup), regione e chiave con il SOLO permesso
+# s3:ListBucket su quel bucket.
+S3_ENDPOINT=https://s3.esempio.it
+S3_BUCKET=nome-bucket
+S3_PREFISSO=timone
+S3_REGIONE=eu-central-1
+S3_CHIAVE=chiave-di-sola-lettura-finta
+S3_SEGRETO=segreto-finto
+# Facoltativo: CA di un certificato interno.
+S3_CACERT=
+
+# Mail: server SMTP proprio di questa macchina o del dominio (non quello del
+# server del Timone: se il problema è il server, la mail deve partire lo stesso).
+SMTP_URL=smtp://smtp.esempio.it:587
+SMTP_TLS=si
+SMTP_UTENTE=controllo-backup@esempio.it
+SMTP_PASSWORD=password-finta
+MAIL_DA=controllo-backup@esempio.it
+MAIL_A=sistemista@esempio.it,redazione@esempio.it

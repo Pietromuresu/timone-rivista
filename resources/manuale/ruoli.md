@@ -15,6 +15,8 @@ Quello che vedi e puoi fare dipende dal tuo **ruolo**:
 2. **Redattore**: lavora su tutto il timone delle riviste a cui ha accesso.
 3. **Commerciale**: lavora **solo sulle pubblicità** delle riviste a cui ha accesso.
 4. **Sola lettura**: consulta, legge i commenti, esporta.
+
+Hai eliminato qualcosa per sbaglio? Avvisa subito un amministratore: i dati si recuperano dal backup, e il ripristino lo fa il tecnico.
 :::
 
 ## Tabella riassuntiva

@@ -27,6 +27,7 @@ services:
       # va quindi ripetuta qui).
       - storage_data:/var/www/html/storage/app
       - storage_logs:/var/www/html/storage/logs
+      - backup_status:/var/backup-status:ro
 
   # Stessa logica per i servizi che condividono lo stage "app": senza
   # bind mount qui, worker/scheduler/reverb eseguirebbero ancora la
@@ -50,6 +51,7 @@ services:
       - /var/www/html/storage/framework
       - storage_data:/var/www/html/storage/app
       - storage_logs:/var/www/html/storage/logs
+      - backup_status:/var/backup-status:ro
 
   reverb:
     # Il servizio reverb nel compose principale non persiste storage/,

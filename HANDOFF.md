@@ -67,6 +67,7 @@ Rimane da fare, sempre nel Punto 4: `AdPercentageRecalculated` — **risolto sen
 
 ## Decisioni architetturali da ricordare
 
+- **Backup automatico (2026-10-30)**: restic in un servizio compose dedicato (`backup-agent`, profilo `backup`, immagine `docker/backup/`), non `spatie/laravel-backup`: niente deduplicazione (in sviluppo 3,2 GB di file sono 125 MB nel repository restic, ogni pagina di un PDF multipagina ne salva una copia intera) e richiederebbe di toccare `config/filesystems.php`, file protetto. Scelte non ovvie: (1) immagine basata su `mysql:8.4` per avere lo stesso `mysqldump` del server (e un `mysqld` per la prova di ripristino); (2) `backup.env` **riletto a ogni giro** dal progetto montato in `/project`, non passato con `env_file`, così una destinazione remota compilata dopo vale al giro successivo senza ricreare il container; (3) l'app non vede `backup.env` (credenziali): l'agente pubblica in `settings.json` sul volume `backup_status` solo destinatari e soglie; (4) copia locale in una **cartella** (`backups/restic`), non in un volume, perché `docker compose down -v` cancella i volumi; (5) hostname fisso del container e `restic unlock` dopo `flock`: un giro ucciso a metà non blocca il successivo, e il suo stato rimasto `running` viene segnato `failed`; (6) le operazioni brevi verso la remota hanno un `timeout` di 60 s, perché con la destinazione spenta restic ritenta per molti minuti; (7) `COMPOSE_PROFILES=backup` sta in `.env` e non in `backup.env`, perché Compose legge i profili solo da lì; (8) **sicurezza (2026-10-30, seconda parte)**: copia remota solo rest-server append-only o S3 con Object Lock, perché la protezione contro un server compromesso deve stare dal lato della destinazione (il server ha per forza le credenziali di scrittura); ogni testo verso registro, file di stato e output passa da `redact`; il controllo indipendente legge la data dei file `snapshots/` sulla destinazione e così non ha bisogno della password del repository. Guida: `docs/OPERATIONS.md`.
 - **Valutazione SOLID su `App\Livewire\Timone\Grid` (2026-07-27, prima applicazione della regola permanente in `CLAUDE.md`)**: la classe è arrivata a 564 righe e 21 metodi pubblici/privati, coprendo 7 concern distinti (vista/modalità, riordino pagine + lock ottimistico, assegnazione contenuti, stato pagina, upload PDF, soglia pubblicitaria, ridimensionamento pagine totali) — una violazione di Single Responsibility reale, non solo teorica, se si guarda alla dimensione del file. **Scelta pragmatica presa**: non spacchettarla ora in componenti Livewire separati. Motivo: (1) la logica di business *pura* è già estratta correttamente in `App\Support` (PageReorderer, PagePercentageAllocator, AdLoadCalculator, PageCountResizer) — quello che resta in `Grid.php` è orchestrazione (input → chiamata al servizio → aggiornamento stato), non regole di business duplicate o difficili da testare in isolamento; (2) uno split reale romperebbe la firma pubblica usata da tutti i 175 test esistenti (`Livewire::test(Grid::class)->call('movePage', ...)` ecc.), un costo concreto e immediato contro un beneficio più che altro di leggibilità; (3) `render()` calcola `$pages` una sola volta e la riusa per griglia, cruscotto pubblicitario, storico e pannello contenuti — separare in più componenti Livewire indipendenti moltiplicherebbe quella query o richiederebbe un livello di cache/coordinamento in più, complessità sproporzionata per le dimensioni di questo progetto. **Applicato invece da qui in avanti**: ogni nuova funzionalità che non sia strettamente "far reagire il timone in tempo reale a un cambiamento" va costruita come componente Livewire *a sé*, non aggiunta dentro `Grid.php` — vedi la creazione contenuti subito sotto, primo caso applicato di questa regola.
 - **Livewire fissato a `^3.6`**, non la v4 (che composer prenderebbe di default oggi) — lo stack richiesto dall'utente è esplicitamente su Livewire 3.x semantics (wire:sortable, ecc.).
 - **Canale presence**: va registrato in `routes/channels.php` **senza** il prefisso `presence-` (es. `Broadcast::channel('issue.{issueId}', ...)`). È Echo lato client (`Echo.join(...)`) ad aggiungere il prefisso. Un test l'ha scoperto: registrarlo con `presence-` bloccava *tutti* gli utenti, anche quelli autorizzati.
@@ -2403,4 +2404,162 @@ Ok dell'utente alla Parte B. Parte A committata (`6a690b2`).
 - I due browser reali (procedura sopra, DV-66); la durata del toast a 10 secondi vista a occhio.
 - Il comando sui dati di produzione (non lanciato, apposta).
 - Una pagina oltre capienza nata da un'operazione reale (il caso è coperto dalla regola pura e dal conteggio; nessuna azione dell'interfaccia oggi supera 12/12).
+
+
+## Sessione 2026-10-30 — Backup automatico: Fase 0 (inventario) e Fase 1 (implementazione)
+
+Prompt «Timone: backup completo, automatico e verificato». Fase 0 approvata con queste scelte: restic in un container dedicato (profilo compose `backup`), frequenze e conservazione proposte, Redis escluso, miniature incluse, dump con utente MySQL di sola lettura, vecchio servizio `backup` tenuto come «dump manuale pre-deploy». Avvisi a un indirizzo fisso (`BACKUP_ALERT_EMAIL`), copia remota append-only con pulizia annuale da un'altra macchina, destinazione remota non ancora decisa.
+
+### Fase 0 — numeri misurati in sviluppo
+- Database: 3,9 MB (34 tabelle), dump non compresso 1,7 MB, compresso 55 KB, 0,4 s. Nessuna routine né trigger. L'utente applicativo `timone` ha `ALL PRIVILEGES`.
+- File (`storage_data`): 3,2 GB, 773 file, ma solo **156 file unici, 140 MB**: ogni pagina di un PDF multipagina salva una copia intera del PDF (debito già noto). Miniature 57 MB, ritagli 13 MB, `exports` 11 MB, `livewire-tmp` 0,6 MB.
+- Redis: coda vuota, cache con 73 chiavi tutte con scadenza; sessioni in MySQL.
+- Prima di questa sessione esisteva solo `docker/mysql/backup.sh` (dump manuale, non programmato, solo database). Scheduler: servizio `scheduler` (`schedule:work`), che in sviluppo gira davvero (`timone:history-prune` ogni ora nei log); in produzione non è mai stato osservato (DV-16).
+
+### Fatto
+- **Servizio `backup-agent`** (`docker-compose.yml`, profilo `backup`, `hostname: timone-backup`, `cpus: 1`). Immagine `docker/backup/Dockerfile`: `mysql:8.4` + restic 0.19.1 + supercronic v0.2.49 (binari ufficiali, checksum SHA-256 fissati per amd64 e arm64). Orari in `docker/backup/crontab` (fuso `BACKUP_TIMEZONE`): database lun–ven alle 8, 12, 16 e 20; ogni notte alle 2 database, **poi** file e configurazione, `check`, copia remota, spazio; domenica alle 4:30 `prune` e `check --read-data-subset=10%`; ogni 15 minuti `settings`.
+- **Script `docker/backup/timone-backup.sh`** (comandi `agent`, `db`, `nightly`, `weekly`, `backup-check`, `settings`, `status`, `verify-dump`, `locale …`, `remota …`). Ogni job scrive `/status/<job>.json` (ultimo giro) e `<job>.ok.json` (ultimo riuscito) sul volume `backup_status`, e una riga leggibile in `/status/backup.log` (data, durata, dimensioni, esito; rotazione a 5 MB). Dump con `--single-transaction --routines --triggers --events`, verificato prima di salvarlo (non vuoto, con tabelle, chiuso da `-- Dump completed`) e salvato non compresso, così restic lo deduplica. File esclusi: `private/livewire-tmp` e `private/exports`. Configurazione inclusa: `.env`, `backup.env`, compose, `Dockerfile`, `docker/`, più `BACKUP_EXTRA_PATHS`. Commit in `info/commit.json` dentro ogni backup.
+- **Configurazione** in `backup.env` (fuori da git e da `.dockerignore`, modello `backup.env.example` con un esempio per cartella/NAS, SFTP, rest-server e S3). Password del repository in `backup-secrets/restic-password` (600). Il servizio rilegge `backup.env` a ogni giro. Finché la destinazione è `DA_CONFIGURARE`, il job `remote` esce con `not_configured` (codice 2) senza bloccare nulla; appena è compilata, la prima copia remota parte da sola (`init --copy-chunker-params` e `copy`).
+- **`setup.sh`**:
+  - crea `backup.env` (600) e la password se mancano, e non li riscrive mai;
+  - se mancano variabili del modello, le elenca e basta;
+  - se la password manca ma esiste già una copia di backup, si ferma invece di generarne una nuova;
+  - crea o allinea l'utente MySQL `timone_backup` (SELECT, SHOW VIEW, TRIGGER, EVENT, LOCK TABLES, SHOW_ROUTINE);
+  - esporta `GIT_COMMIT`;
+  - nuova modalità `./setup.sh backup-check`;
+  - **in modalità produzione ora carica anche `docker-compose.override.yml` se esiste**. Prima `-f docker-compose.yml` esplicito lo escludeva, e `./setup.sh` sul server avrebbe rimesso nginx sulla porta 80 ignorando l'override per il proxy HTTPS proposto in `docs/09-deploy.md`, oltre ai montaggi del backup (NAS, secondo disco, `BACKUP_EXTRA_PATHS`). Difetto preesistente, emerso rileggendo l'attivazione da sistemista. La modalità `dev` è invariata.
+- **Controllo di come `setup.sh` tratta `.env`** (richiesto): non lo sovrascrive mai (lo copia da `.env.example` solo se manca e genera solo le chiavi vuote). Però `set_env_var` faceva `mv .env.tmp .env`, che riportava il file ai permessi di default (644) e faceva perdere il `chmod 600` chiesto da `docs/09-deploy.md`. Ora usa `cat > file`, che conserva i permessi.
+- **Laravel**: `App\Support\Backup\BackupSettings` (legge `settings.json`, più destinatari separati da virgola, indirizzi non validi segnalati), `App\Support\Backup\BackupStatusDirectory` (cartella `config('timone.backup.status_path')`, volume montato in sola lettura in `app` e `scheduler`), `App\Mail\BackupAlert` (in coda), comando **`timone:backup-test-alert {--to=}`** (avvisa se `MAIL_MAILER` è `log`/`array`).
+- **Documentazione**:
+  - `docs/OPERATIONS.md` (nuovo): cosa si salva e perché, frequenze, attivazione in 10 passi (il primo è la verifica dello scheduler), configurazione della copia remota con 4 esempi, append-only e pulizia annuale passo per passo, chiave di cifratura, registro e stato, dump manuale pre-deploy, commit, Redis e cosa rilanciare dopo un ripristino, ripristino rapido provato;
+  - manuale: «Note per l'amministratore» (In breve e sezione «Backup»), «Chi può fare cosa» (In breve), «Eliminare» (In breve e avviso), «Novità», `sinonimi.yml` (`backup, salvataggio, salvataggi`). `domande.yml` non toccato, come da `CLAUDE.md`;
+  - `README.md`, `DOCKER.md`, `CLAUDE.md` (regola 5), `.env.example` (`COMPOSE_PROFILES` commentato), `docs/README.md`, `docs/04`, `docs/05` (`backup.env` al posto di `.env`), `docs/08` (comando `timone:backup-test-alert`), `docs/09`, `docs/CHANGELOG.md`, `docs/DA-VERIFICARE.md` (DV-06).
+
+### Test
+- `tests/Unit/Backup/BackupSettingsTest.php` (destinatari, indirizzi non validi, lettura di `settings.json`).
+- `tests/Unit/Backup/BackupConfigNotTrackedTest.php`: fallisce se `backup.env` o `backup-secrets/` sono tracciati da git o non ignorati, se `backup.env.example` è ignorato o ha valori non finti, o se mancano da `.dockerignore`.
+- `tests/Feature/Console/BackupTestAlertTest.php` (accodata a tutti i destinatari, `--to`, nessuna impostazione, indirizzo non valido, destinatari vuoti, avviso con mailer `log`, contenuto della mail).
+- `docker/backup/tests/verify-dump.test.sh` (nell'immagine): dump vuoto, troncato, senza tabelle, completo, inesistente → 5/5.
+- `scripts/backup/verifica-setup-non-tocca-config.sh`: checksum e permessi di `backup.env`, della password e di `.env` prima e dopo più esecuzioni di `setup.sh`.
+
+### Verificato in sviluppo (2026-10-30)
+- **Primo backup completo** (`nightly`) in 46 s: dump di 1,7 MB, 789 file e 3,2 GB letti, **repository di 124,8 MB**. Giro successivo in 14 s (file: 7 s, 3,2 KB aggiunti).
+- **Copia remota** verso un rest-server di prova con `--append-only`: `backup-check` dice «Append-only attivo»; con un rest-server senza `--append-only` dice «Append-only NON attivo». Prima copia remota partita da sola al giro `db`, senza `backup-check` (7 s). Quota di 1 GB → «12% della quota».
+- **Destinazione spenta o nome inesistente**: errore in 60 s («Rete: il nome del server remoto non si trova (DNS)…»), sia nel job sia in `backup-check`. Senza il `timeout` restic ritentava per molti minuti.
+- **Backup interrotto a metà** (container ucciso durante il job `files`): lo stato restava `running`. Al giro successivo è stato segnato come fallito («il giro precedente si era interrotto a metà»), il lucchetto di restic è stato tolto e `check` è passato subito.
+- **Backup → modifica → ripristino**: creata una rivista marcatore, fatto il backup, eliminata la rivista e cancellato un PDF di 3,8 MB, poi ripristinati il database dall'ultimo dump (3,5 s) e il PDF (1,7 s), con i comandi di `docs/OPERATIONS.md` «Ripristino rapido». Rivista tornata, conteggi di riviste/numeri/pagine/contenuti/file/utenti identici (5/6/636/28/18/3), SHA-256 del PDF identico, proprietario uid 82 conservato, app in HTTP 200. Poi rivista marcatore rimossa.
+- **Password mancante con copia di backup esistente**: `setup.sh` si ferma con il messaggio e non genera nulla.
+- **`setup.sh` non tocca la configurazione**: con `scripts/backup/verifica-setup-non-tocca-config.sh dev prod dev`, `backup.env`, la password e `.env` hanno checksum e permessi (600/600/644) identici prima e dopo le tre esecuzioni (1 min 30 s in tutto). Con `BACKUP_TIMEZONE` tolta da `backup.env`, `setup.sh` l'ha solo elencata come «variabile nuova».
+- **Override e percorsi esterni**: con un `docker-compose.override.yml` che monta una cartella in `/host/etc/nginx` e `BACKUP_EXTRA_PATHS=/host/etc/nginx`, il file è nel backup e anche l'override stesso è salvato. Un percorso indicato ma non montato fa fallire il job `files` con il messaggio. `./setup.sh` in produzione stampa «docker-compose.yml + docker-compose.override.yml».
+- Durante la rilettura da sistemista è emerso che mancava la riga `*/15 … settings` nel crontab, data per presente da script e documentazione: aggiunta e verificata.
+- **Mail di prova dall'inizio alla fine** in Docker: `timone:backup-test-alert` legge i destinatari dal volume di stato, avvisa `MAIL_MAILER=log`, il worker elabora la mail (`To:` con i due indirizzi e `Subject: [Timone Rivista] Backup: mail di prova` in `laravel.log`).
+- `backup.env` e `backup-secrets/` ignorati da git (`git status` pulito su di loro), `backups/` già ignorata.
+- Suite completa sull'host: **1192 passati, 50 saltati (Imagick, come prima), 0 falliti**. Test del manuale: 64 passati dopo `manuale:genera`.
+- `backup-check` con avvisi (rest-server senza append-only, quota non indicata): l'esito dice «la copia remota funziona, ma ci sono avvisi da leggere», non più «tutto a posto».
+- Nessun file protetto (`AppServiceProvider`, `bootstrap/app.php`, `config/app.php`, `config/session.php`, `config/filesystems.php`) modificato (`git diff --stat`).
+
+### Trovato strada facendo
+- Un container `vite` di sviluppo fermo da 3 giorni (`92af465a875f_timone-rivista-vite-1`) restava agganciato a una rete Docker non più esistente: `./setup.sh dev` falliva con «network … not found» dopo 3 tentativi. Rimosso con `docker rm`. Non dipende dal backup; se ricapita: `docker ps -a | grep vite` e `docker rm` del container fermo.
+
+### Problemi aperti
+- **Scheduler in produzione (DV-16)**: il controllo delle 26 ore (Fase 2) parte da lì. Mai osservato in produzione: se non gira, **oggi non partono nemmeno le mail di sollecito della scadenza stampa**. Verifica in `docs/OPERATIONS.md`, passo 1 dell'attivazione.
+- **SMTP di produzione (DV-05)**: senza, gli avvisi del backup finiscono nel log. Prova: `timone:backup-test-alert` (passo 8).
+- **Chi custodisce la chiave di cifratura**: da decidere (persona o persone, password manager aziendale, eventuale seconda copia).
+- **Destinazione remota**: da scegliere (rest-server append-only o S3 con Object Lock). Fino ad allora i backup restano solo sul server.
+- **Numeri di produzione** non forniti (`docker system df -v`, `df -h`): la stima di spazio (circa 10 GB per copia a 12 mesi nell'esempio di 4 riviste) va rifatta con i dati veri. Tutto è configurabile in `backup.env`.
+- **Proxy e certificati sull'host**: percorsi non noti. Per salvarli: `BACKUP_EXTRA_PATHS` più un override (vedi `OPERATIONS.md`).
+- **Copia locale sullo stesso disco**: non sappiamo se il server abbia un secondo disco (vedi «Copia locale su un altro disco»).
+
+### Da fare in produzione (chi attiva)
+Seguire `docs/OPERATIONS.md` «Attivare il backup»:
+1. verifica dello scheduler;
+2. `git pull` e `./setup.sh`;
+3. password nel password manager;
+4. `BACKUP_ALERT_EMAIL`;
+5. `COMPOSE_PROFILES=backup` e `./setup.sh`;
+6. `./setup.sh backup-check`;
+7. primo `nightly`;
+8. `timone:backup-test-alert`;
+9. copia remota;
+10. controllo il giorno dopo.
+
+### Non verificato
+- Linux x86_64 (prova fatta su macOS arm64 con Docker Desktop: proprietari dei file nei bind mount diversi da Linux; il controllo «copia già esistente» di `setup.sh` è stato reso prudente apposta).
+- Destinazioni cartella/NAS montato, SFTP e S3: provato solo rest-server (append-only e no). Le altre seguono la documentazione di restic, ma qui non sono state provate.
+- Orari dei backup: l'agente in esecuzione continua (`COMPOSE_PROFILES=backup ./setup.sh dev`) è partito, ha letto il crontab e ha eseguito da solo il giro `settings` delle 17:15 nel fuso Europe/Rome. I giri `db`, `nightly` e `weekly` alle loro ore non sono stati osservati (lanciati a mano). Dopo la prova l'agente di sviluppo è stato fermato e rimosso, per non fare backup notturni sul Mac; la copia locale di prova resta in `backups/restic/` (ignorata da git).
+- Invio reale di una mail di avviso (provato con i test e `Mail::fake()`; in sviluppo `MAIL_MAILER=log`).
+- Pulizia annuale della copia remota da un'altra macchina (comandi da documentazione restic, non eseguiti).
+- Rimandato alla Fase 2: runbook dei tre scenari e prova sullo scenario 1, prova di ripristino settimanale automatica, monitor con avvisi (fallimento, 26 ore, spazio, remota non configurata una volta al giorno, `running` da troppo tempo = interrotto), pagina admin «Backup», cambio di destinazione e rotazione della chiave, checklist mensile.
+
+## Sessione 2026-10-30 — Backup: requisiti di sicurezza (aggiunta alla Fase 1)
+
+Richiesta: «Sicurezza del backup — aggiungi a quanto sopra». Niente Fase 2 in questa sessione: della pagina admin c'è solo il vincolo (mai indirizzi, utenti, percorsi o credenziali delle destinazioni), già rispettato da `settings.json`.
+
+### Fatto
+- **Solo destinazioni non cancellabili dal server**:
+  - `remote_policy_error()` in `docker/backup/timone-backup.sh` rifiuta cartelle o NAS montati (`/…`, `local:`), SFTP e ogni altro tipo diverso da `rest:` / `s3:`, oltre a `http://`, credenziali nell'indirizzo, rest-server senza utente/password e S3 senza chiavi. Ogni rifiuto ha il suo perché.
+  - Il rifiuto vale in `backup-check` (❌) e nel job `remote` (fallito, quindi avviso).
+  - `backup-check` prova a cancellare la sua scrittura di prova: se ci riesce è ❌ (prima era ⚠️), con un messaggio diverso per rest-server e S3. Per S3 ricorda con ⚠️ che Object Lock COMPLIANCE va verificato nella console del bucket, perché dal server non si può.
+  - SFTP tolto anche dall'immagine (niente `openssh-clients`).
+- **Seconda copia remota facoltativa**: variabili `BACKUP_REMOTE_2_*`, `select_remote 1|2`, job `remote_2` dopo `remote` nei giri `db` e `nightly`, comando `remota2`, controlli in `backup-check`. Se vuota non manda avvisi (`not_configured` va ignorato dal monitor della Fase 2). `settings.json` e `BackupSettings` hanno `remote_2_configured`/`remote_2_type`/`remote_2_quota_gb`.
+- **Variabili rinominate** con il prefisso per destinazione: `BACKUP_REMOTE_REST_USERNAME/PASSWORD`, `BACKUP_REMOTE_S3_ACCESS_KEY_ID/SECRET_ACCESS_KEY/REGION`, `BACKUP_REMOTE_CACERT` (CA interna, nuova). Le credenziali arrivano a restic come ambiente del solo processo e solo per la destinazione in uso (`remote_command`, con `env -u`). Nessuna installazione in produzione usava i nomi vecchi (`RESTIC_REST_*`, `AWS_*`, `BACKUP_SFTP_ARGS`): un `backup.env` creato con la prima versione va rifatto da `backup.env.example`. `setup.sh` elenca le variabili nuove mancanti.
+- **Niente segreti nei log**:
+  - `redact()` toglie da registro, file di stato e output indirizzi e host delle destinazioni, password, chiavi, password del database e qualunque URL rimasto. Gira in sottoshell; lo username non viene sostituito come testo libero («timone» rovinava «timone_backup»), e i segreti più corti di 8 caratteri non si cercano;
+  - `scripts/backup/verifica-segreti-nei-log.sh` controlla registro, stato e log Docker con i valori presi da `backup.env`.
+- **Password del repository mai sulla destinazione**: `backup-secrets/` e il file della password esclusi dal backup dei file; `RESTIC_PASSWORD`/`RESTIC_PASSWORD_COMMAND` in `backup.env` e un file della password dentro le cartelle salvate fanno fallire la configurazione con il motivo.
+- **Controllo indipendente** `scripts/backup/controllo-indipendente.sh` (+ `.conf.example`), da far girare su un'altra macchina:
+  - modalità `cartella` (sul NAS del rest-server) o `s3` (chiave di sola lettura, firma `curl --aws-sigv4`, a pagine);
+  - guarda la data dei file in `snapshots/`, quindi non serve la password;
+  - mail via `curl` SMTP per: nessun backup da `MAX_ORE`, destinazione illeggibile, nessuno snapshot;
+  - `--prova-mail`.
+- **`explain_remote_error`**: errori di certificato riconosciuti prima di quelli di rete (restic li ritenta fino al timeout, e il messaggio diceva «rete»); «Access Denied» con lo spazio riconosciuto come permessi.
+- `TIMONE_BACKUP_SOLO_FUNZIONI=1` carica le funzioni dello script senza eseguirle (per i test).
+- **Documentazione**:
+  - `docs/OPERATIONS.md`: destinazioni ammesse e perché; rest-server con TLS, htpasswd, `--append-only`, `--private-repos` e firewall `ufw` sull'IP del server; S3 con Object Lock COMPLIANCE, ciclo di vita, policy IAM senza cancellazione (salvo `locks/`), restrizione IP; seconda copia; tabella degli errori; pulizia annuale dal PC dell'IT con credenziali dal password manager; controllo indipendente; «Segreti e log»; «La chiave di cifratura»; «Dopo un incidente di sicurezza» (credenziali delle destinazioni, database, `APP_KEY`, Reverb, mail, password restic con `key add`/`remove` oppure repository nuovi se il server è stato compromesso, password degli utenti);
+  - manuale: «Note per l'amministratore»;
+  - `backup.env.example`, `CLAUDE.md` (regola 5), `docs/CHANGELOG.md`, `docs/DA-VERIFICARE.md` (DV-67).
+
+### Test
+- `docker/backup/tests/remote-policy.test.sh`: 10 casi di regole (cartella, `local:`, SFTP, http, credenziali nell'indirizzo, rest senza autenticazione, S3 senza TLS o chiavi, i due casi ammessi) e 9 di mascheramento (indirizzo, host, password, chiavi, password del DB, URL, username non mascherato) → tutti verdi.
+- `tests/Unit/Backup/BackupSettingsTest.php`: campi della seconda copia, `settings.json` vecchio ancora leggibile.
+
+### Verificato in sviluppo (2026-10-30)
+- Ambiente di prova:
+  - CA interna;
+  - rest-server 0.14.0 con `--tls`, htpasswd, `--append-only`, `--private-repos`;
+  - SeaweedFS 3.85 come S3 con TLS (MinIO non è più scaricabile senza account);
+  - Mailpit per le mail.
+- **`backup-check`**:
+  - cartella rifiutata con il motivo;
+  - rest-server: raggiungibile, autenticato, repository creato, «Append-only attivo»;
+  - S3 come seconda copia: repository creato, poi ❌ «Questa chiave S3 può cancellare gli snapshot», giusto perché SeaweedFS non separa scrittura e cancellazione;
+  - password del rest-server sbagliata → «Credenziali rifiutate»;
+  - CA non indicata → «Certificato HTTPS … non valido» (prima diceva «rete»).
+- **`nightly` verso le due destinazioni**: tutti i job OK, `remote` (rest-server, 6% della quota) e `remote_2` (S3) in 4 s ciascuno. Con S3 spento, `remote_2` fallisce dopo 60 s con il messaggio, mentre `remote` riesce.
+- **Segreti**:
+  - nessun segreto né indirizzo in 311 righe di registro e stato, nemmeno dopo un errore di rete;
+  - `verifica-segreti-nei-log.sh` lo conferma e trova una riga trapelata inserita apposta;
+  - la password del repository non compare in nessun file delle due destinazioni.
+- **Controllo indipendente**, da un container Alpine separato (curl 8.14):
+  - modalità `cartella` sui dati del rest-server: OK con 21 snapshot; con soglia 0 ore, mail;
+  - modalità `s3` con chiave di sola lettura e pagine da 2: 18 snapshot, lo stesso numero di `restic snapshots`; con soglia 0 ore, mail;
+  - `--prova-mail` arrivata;
+  - mail a due destinatari arrivate a Mailpit.
+- **Cambio della password del repository**:
+  - con la procedura di `OPERATIONS.md` (`key add` su locale, remota e remota2, sostituzione del file, `key remove` della vecchia in locale), poi `nightly` tutto OK; la password vecchia non apre più la copia locale;
+  - su copie dei repository, `key remove` dall'accesso diretto ai file: la password nuova apre tutti gli snapshot vecchi (19 e 21);
+  - attraverso il rest-server append-only `key remove` è rifiutato con 403.
+
+  In sviluppo la password del repository adesso è quella nuova (la vecchia è stata rimossa dalla copia locale; le copie remote di prova hanno entrambe le chiavi).
+
+### Non verificato
+- **S3 con Object Lock COMPLIANCE e policy senza `s3:DeleteObject`** (salvo `locks/`): il server S3 di prova non li supporta. Quindi non è provato che restic funzioni senza poter cancellare gli snapshot, né che `backup-check` dia «Append-only attivo» su S3. Da provare sul bucket vero prima di affidarsi a S3 (DV-67).
+- La policy IAM e la restrizione IP di esempio sono nella sintassi AWS; ogni fornitore va controllato.
+- Firewall `ufw` e cron del NAS: comandi standard, non eseguiti.
+- Le procedure «Dopo un incidente di sicurezza» diverse dalla password restic (database, `APP_KEY`, Reverb, mail, repository nuovi): non eseguite.
+- Controllo indipendente su un NAS vero (Synology/QNAP: versioni di `find`/`date`/`curl` da verificare; provato su Alpine/busybox).
+
+### Per la Fase 2
+- Monitor: `remote_2` con `not_configured` non deve generare avvisi; `remote` sì, una volta al giorno.
+- Pagina admin: solo stato, date, dimensioni e tipo di destinazione da `settings.json`/`*.json`. I messaggi sono già filtrati da `redact`, ma la pagina non deve mostrare altro.
 

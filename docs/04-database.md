@@ -250,6 +250,8 @@ Dal 2026-10-27 (Fase 3) l'occupazione è in `contents.occupancy_twelfths` (NOT N
 
 ## Backup e restore
 
+> **Dal 2026-10-30 il backup automatico (database + file + configurazione, cifrato, con copia remota) è descritto in [OPERATIONS.md](OPERATIONS.md#backup-e-ripristino).** Quanto segue riguarda il dump manuale pre-deploy (servizio `backup`), che resta.
+
 ### Backup (presente nel repo)
 
 ```bash

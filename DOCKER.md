@@ -65,6 +65,8 @@ rm .env
 
 ## Backup del database
 
+> Il **backup automatico** (database, file e configurazione, cifrato, con copia remota) è un'altra cosa ed è descritto in [docs/OPERATIONS.md](docs/OPERATIONS.md). Quello qui sotto è il **dump manuale pre-deploy**.
+
 Non parte in automatico con `./setup.sh` — va lanciato quando serve:
 
 ```bash

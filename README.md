@@ -28,6 +28,8 @@ Lo stesso identico comando — è sicuro rilanciarlo in qualsiasi momento, anche
 
 Tutti i dettagli (aggiornare il codice, backup, troubleshooting Docker) sono in **[DOCKER.md](DOCKER.md)**.
 
+**Backup**: esiste un backup automatico e cifrato di database, file caricati e configurazione, con una copia fuori dal server: come attivarlo, controllarlo e ripristinare è in **[docs/OPERATIONS.md](docs/OPERATIONS.md)**.
+
 ---
 
 ## Come ci accedo

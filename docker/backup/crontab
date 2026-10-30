@@ -1,0 +1,21 @@
+# Orari del backup automatico (fuso: BACKUP_TIMEZONE in backup.env).
+# Letto da supercronic nel servizio «backup-agent». Ogni job prende lo stesso
+# lucchetto (flock): se uno è ancora in corso, il successivo aspetta.
+
+# Database ogni 4 ore nell'orario di lavoro, giorni lavorativi: perdere una
+# mattina di lavoro a ridosso della chiusura di un numero è il rischio vero,
+# e il dump dura pochi secondi.
+0 8,12,16,20 * * 1-5 /usr/local/bin/timone-backup db
+
+# Ogni notte: database, poi file e configurazione, pulizia, controllo,
+# copia remota. Di notte perché il primo giro sui file legge tutto il volume.
+0 2 * * * /usr/local/bin/timone-backup nightly
+
+# Ogni domenica: pulizia vera dello spazio (prune) e rilettura di una parte
+# dei dati per controllarne l'integrità (più lenta del controllo quotidiano).
+30 4 * * 0 /usr/local/bin/timone-backup weekly
+
+# Ogni 15 minuti: impostazioni lette dall'app (destinatari degli avvisi,
+# soglie) aggiornate da backup.env, e «segno di vita» dell'agente
+# (settings.json → written_at). Non prende il lucchetto: non tocca restic.
+*/15 * * * * /usr/local/bin/timone-backup settings
