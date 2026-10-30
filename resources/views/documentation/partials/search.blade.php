@@ -11,7 +11,7 @@
             x-ref="input"
             type="search"
             autocomplete="off"
-            placeholder="Scrivi cosa vuoi fare: «spostare una pagina», «ctrl z», «bandella»…"
+            placeholder="Scrivi cosa vuoi fare: «spostare una pagina», «ctrl z», «battente»…"
             class="manual-search-input"
             x-model="query"
             x-on:input.debounce.120ms="update()"

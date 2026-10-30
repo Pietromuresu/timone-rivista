@@ -4,6 +4,7 @@ namespace App\Livewire\Timone;
 
 use App\Enums\ContentOrientation;
 use App\Enums\ContentType;
+use App\Enums\CoverFlap;
 use App\Enums\CoverSlot;
 use App\Enums\PageStatus;
 use App\Enums\ThumbnailStatus;
@@ -714,12 +715,18 @@ class Grid extends Component
         });
     }
 
-    /** Fase 2: bandella (6 pagine di copertina invece di 4). */
-    public function addBandella(): void
+    /**
+     * Battenti (2026-10-30, al posto della bandella): due pagine prima della
+     * I o dopo la IV, 2 facciate di copertina in più per il peso. Come la
+     * bandella prima: permesso «update» sul numero, non annullabile con
+     * Ctrl+Z, voce nel registro attività.
+     */
+    public function addFlap(string $flap): void
     {
         $this->authorize('update', $this->issue);
 
-        $error = IssueCovers::addBandella($this->issue);
+        $flap = CoverFlap::from($flap);
+        $error = IssueCovers::addFlap($this->issue, $flap);
 
         if ($error !== null) {
             $this->addError('covers', $error);
@@ -727,15 +734,16 @@ class Grid extends Component
             return;
         }
 
-        ActivityLogger::log(issue: $this->issue, entityType: 'Issue', entityId: $this->issue->id, action: 'cover.bandella_added', description: 'Bandella aggiunta alle copertine');
-        $this->broadcastCoversChanged('bandella_added');
+        ActivityLogger::log(issue: $this->issue, entityType: 'Issue', entityId: $this->issue->id, action: 'cover.battente_added', description: "{$flap->label()} aggiunto alle copertine", new: ['battente' => $flap->value]);
+        $this->broadcastCoversChanged('battente_added');
     }
 
-    public function removeBandella(): void
+    public function removeFlap(string $flap): void
     {
         $this->authorize('update', $this->issue);
 
-        $error = IssueCovers::removeBandella($this->issue);
+        $flap = CoverFlap::from($flap);
+        $error = IssueCovers::removeFlap($this->issue, $flap);
 
         if ($error !== null) {
             $this->addError('covers', $error);
@@ -743,13 +751,13 @@ class Grid extends Component
             return;
         }
 
-        ActivityLogger::log(issue: $this->issue, entityType: 'Issue', entityId: $this->issue->id, action: 'cover.bandella_removed', description: 'Bandella tolta dalle copertine');
-        $this->broadcastCoversChanged('bandella_removed');
+        ActivityLogger::log(issue: $this->issue, entityType: 'Issue', entityId: $this->issue->id, action: 'cover.battente_removed', description: "{$flap->label()} tolto dalle copertine", old: ['battente' => $flap->value]);
+        $this->broadcastCoversChanged('battente_removed');
     }
 
     /**
      * Avvisa gli altri utenti (Reverb + pages_updated_at per il polling) e
-     * il pannello Peso di questa pagina (la bandella cambia le pagine di
+     * il pannello Peso di questa pagina (un battente cambia le pagine di
      * copertina del peso), senza toast "da un altro utente" per noi stessi.
      */
     private function broadcastCoversChanged(string $action): void
@@ -2056,7 +2064,7 @@ class Grid extends Component
 
     /**
      * Pannello contenuti (2026-10-28): «Vai a pag.» — numero di pagina
-     * interna (es. «12») o copertina («I», «II», «III», «IV», «bandella»),
+     * interna (es. «12») o copertina («I», «II», «III», «IV», «BI1»… per i battenti),
      * poi la stessa strada del drag.
      */
     public function assignContentToTarget(int $contentId, string $target): void
@@ -2080,7 +2088,7 @@ class Grid extends Component
             };
 
             if ($page === null) {
-                $this->addError('percentage', "Pagina «{$target}» non trovata: scrivi un numero da 1 a {$this->issue->total_pages}, oppure I, II, III, IV per le copertine.");
+                $this->addError('percentage', "Pagina «{$target}» non trovata: scrivi un numero da 1 a {$this->issue->total_pages}, oppure I, II, III, IV per le copertine (BI1, BI2, BIV1, BIV2 per i battenti).");
 
                 return;
             }
@@ -2825,11 +2833,16 @@ class Grid extends Component
             'selection' => PageSelectionActions::describe($selectedPages),
             'pages' => $pages,
             // Tutte le copertine in un'unica fascia in cima, in ordine di
-            // sfoglio (I, bandella, II, III, IV) — richiesta dell'utente dopo
+            // sfoglio (battente I, I, II, III, IV, battente IV) — richiesta dell'utente dopo
             // la prima versione della Fase 2, che metteva III e IV in una
             // seconda fascia dopo l'ultima pagina (lontana su un numero lungo).
             'covers' => $covers,
-            'hasBandella' => $covers->contains(fn (Page $cover) => $cover->cover_slot === CoverSlot::Bandella),
+            // Battenti: presenti o no, e perché non si possono togliere (tooltip).
+            'flaps' => collect(CoverFlap::cases())->map(fn (CoverFlap $flap) => [
+                'flap' => $flap,
+                'present' => $covers->contains(fn (Page $cover) => $cover->cover_slot->flap() === $flap),
+                'blocker' => IssueCovers::removalBlocker($this->issue, $flap),
+            ])->all(),
             'pageAspectRatio' => $pageAspectRatio,
             // Griglia a doppia pagina (2026-10-29): coppie dalla posizione, con gli slot vuoti.
             'spreadLayout' => $this->viewMode === 'doppia' ? PageSpreadBuilder::layout($pages) : [],

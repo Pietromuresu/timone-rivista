@@ -368,3 +368,19 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - Componente anonimo `<x-manual-help slug anchor label>` (`resources/views/components/manual-help.blade.php`), stile `.manual-context-help` in `app.css`.
 - Test `tests/Feature/ManualContextHelpTest.php`: ogni `<x-manual-help>` e ogni `route('documentation.page', '…')` scritti nelle view puntano a una pagina e a una sezione esistenti (slug fissi obbligatori); i sei argomenti hanno la loro «?»; la «?» compare nelle schermate.
 - Screenshot rigenerati (le «?» compaiono in copertine, selezione multipla, peso, modifica contenuto); nessuna annotazione spostata.
+
+## 2026-10-30 — Battenti di copertina (fase A1 di «battenti, crop delle miniature, griglia accoppiata»)
+
+### Visibili agli utenti
+- La **bandella** è diventata **battente**, e i battenti sono due: **battente di I** (2 pagine prima della I di copertina) e **battente di IV** (2 pagine dopo la IV). Nella fascia «📘 Copertine»: «+ Battente I», «+ Battente IV», «− Togli battente I/IV» (grigio, con il motivo nel tooltip, se una pagina ha un contenuto o è bloccata). Pagine «📘 Battente I · 1», «· 2», ecc.
+- Ordine di sfoglio in fascia, export del timone e PDF sfogliabile: battente I, I, II, pagine interne, III, IV, battente IV. Nel PDF sfogliabile la pagina interna 1 resta sempre a destra.
+- Peso e 32esimi (con copertine incluse): 4, 6 o 8 facciate di copertina. Percentuale pubblicità e pagine interne non cambiano.
+- Formato «Battente copertina»: occupa le 2 pagine di un battente e va solo lì.
+- Impostazioni della rivista e «Nuovo numero»: «Battenti di copertina» (nessuno / I / IV / entrambi) al posto del numero «Pagine copertina».
+- Le bandelle esistenti diventano la pagina 1 del battente di I con tutto il loro contenuto; la pagina 2 nasce vuota.
+
+### Tecniche
+- `App\Enums\CoverSlot` (`BI1`, `BI2`, `I`…`IV`, `BIV1`, `BIV2`; `front()`/`back()`), nuovi `CoverFlap`, `CoverFlaps`; `IssueCovers::addFlap()/removeFlap()/removalBlocker()/flaps()`; `Grid::addFlap()/removeFlap()` (eventi `CoversChanged` `battente_added`/`battente_removed`, registro `cover.battente_*`); `ContentPlacer` (battente da pagina 1 = 2 pagine, formato battente solo su battente); `AdFormat::BattenteCopertina` 24/12.
+- Migration `2026_10_30_100000_convert_bandella_to_cover_flaps` (colonna `magazines.default_cover_flaps`, `App\Support\Covers\FlapConversion`, `down()` con controllo), comando `php artisan timone:battenti-dry-run`.
+- Componente `<x-cover-flaps-field>`; `Issue::$initialCoverFlaps` letto da `IssueObserver`.
+- Test: `tests/Feature/Livewire/TimoneCoverFlapsTest.php` più i test di copertine, export, peso, segnature e commenti aggiornati.

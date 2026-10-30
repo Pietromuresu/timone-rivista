@@ -31,14 +31,18 @@ test('suggestion: pages to add or remove to reach the nearest multiple of 32 up 
         ->and((new SignaturePlan(20, 4))->suggestion())->toBe(['add' => 12, 'addTotal' => 32, 'remove' => null, 'removeTotal' => null]);
 });
 
-test('covers included count as 4 pages at the head (6 with the bandella); excluded by default', function () {
+test('covers included count as 4 pages at the head (6 or 8 with the battenti); excluded by default', function () {
     $excluded = new SignaturePlan(60, 4);
     $included = new SignaturePlan(60, 4, 32, true);
-    $withBandella = new SignaturePlan(58, 6, 32, true);
+    $withOneFlap = new SignaturePlan(58, 6, 32, true);
+    $withTwoFlaps = new SignaturePlan(56, 8, 32, true);
 
     expect($excluded->countedPages())->toBe(60)->and($excluded->summaryLabel())->toBe('1 trentaduesimo + 28 pagine')
         ->and($included->countedPages())->toBe(64)->and($included->summaryLabel())->toBe('2 trentaduesimi')
-        ->and($withBandella->countedPages())->toBe(64)
+        ->and($withOneFlap->countedPages())->toBe(64)
+        ->and($withTwoFlaps->countedPages())->toBe(64)
+        ->and($withTwoFlaps->signatureOf(24))->toBe(1)
+        ->and($withTwoFlaps->signatureOf(25))->toBe(2)
         // Con le copertine in testa la pagina 28 è l'ultima della prima segnatura.
         ->and($included->signatureOf(28))->toBe(1)
         ->and($included->signatureOf(29))->toBe(2)

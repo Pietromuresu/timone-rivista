@@ -50,5 +50,5 @@ test('ad formats propose their occupancy', function () {
         ->and(PageOccupancy::forAdFormat(AdFormat::DueTerziPagina)->twelfths)->toBe(8)
         ->and(PageOccupancy::forAdFormat(AdFormat::PaginaIntera)->twelfths)->toBe(12)
         ->and(PageOccupancy::forAdFormat(AdFormat::DoppiaPagina)->pagesSpanned())->toBe(2)
-        ->and(PageOccupancy::forAdFormat(AdFormat::BattenteCopertina)->pagesSpanned())->toBe(1);
+        ->and(PageOccupancy::forAdFormat(AdFormat::BattenteCopertina)->pagesSpanned())->toBe(2);
 });

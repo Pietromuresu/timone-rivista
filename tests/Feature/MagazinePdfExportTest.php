@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\AdFormat;
+use App\Enums\CoverFlap;
 use App\Enums\CoverSlot;
 use App\Enums\MagazineExportStatus;
 use App\Enums\MagazineExportVariant;
@@ -16,6 +17,7 @@ use App\Models\MagazineExport;
 use App\Models\Page;
 use App\Models\User;
 use App\Support\Deletion\StoredFiles;
+use App\Support\IssueCovers;
 use App\Support\MagazineExport\MagazineExportRequester;
 use App\Support\MagazineExport\MagazinePageSequence;
 use App\Support\MagazineExport\PageBox;
@@ -128,13 +130,33 @@ test('page box: the magazine page is scaled into A4 keeping its proportions, cen
         ->and(PageBox::contain(['x' => 0, 'y' => 0, 'w' => 100, 'h' => 50], 200, 200))->toBe(['x' => 25.0, 'y' => 0.0, 'w' => 50.0, 'h' => 50.0]);
 });
 
-test('page order: I and II of cover, internal pages 1…N, III and IV (bandella after the I)', function () {
-    $issue = Issue::factory()->create(['total_pages' => 3]);
-    Page::create(['issue_id' => $issue->id, 'cover_slot' => CoverSlot::Bandella->value, 'status' => 'da_assegnare', 'content_type' => 'bianca']);
+test('page order: battente I, I and II of cover, internal pages 1…N, III, IV, battente IV', function () {
+    $issue = Issue::factory()->create(['total_pages' => 4]);
+    IssueCovers::addFlap($issue, CoverFlap::I);
+    IssueCovers::addFlap($issue, CoverFlap::IV);
 
-    expect(MagazinePageSequence::for($issue)->pluck('label')->all())->toBe([
-        'I di copertina', 'Bandella', 'II di copertina', 'Pagina 1', 'Pagina 2', 'Pagina 3', 'III di copertina', 'IV di copertina',
+    $labels = MagazinePageSequence::for($issue)->pluck('label')->all();
+
+    expect($labels)->toBe([
+        'Battente I · 1', 'Battente I · 2', 'I di copertina', 'II di copertina', 'Pagina 1', 'Pagina 2', 'Pagina 3', 'Pagina 4',
+        'III di copertina', 'IV di copertina', 'Battente IV · 1', 'Battente IV · 2',
     ]);
+
+    // Apertura a coppie con la prima pagina sola a destra (TwoPageRight):
+    // indice pari nel PDF = pagina di destra. La pagina interna 1 resta a
+    // destra accanto alla II, con o senza battenti.
+    expect(array_search('Pagina 1', $labels, true) % 2)->toBe(0)
+        ->and(array_search('II di copertina', $labels, true) % 2)->toBe(1);
+});
+
+test('page order with only the battente of IV keeps page 1 on the right', function () {
+    $issue = Issue::factory()->create(['total_pages' => 2]);
+    IssueCovers::addFlap($issue, CoverFlap::IV);
+
+    $labels = MagazinePageSequence::for($issue)->pluck('label')->all();
+
+    expect($labels)->toBe(['I di copertina', 'II di copertina', 'Pagina 1', 'Pagina 2', 'III di copertina', 'IV di copertina', 'Battente IV · 1', 'Battente IV · 2'])
+        ->and(array_search('Pagina 1', $labels, true) % 2)->toBe(0);
 });
 
 test('spec: N+4 pages, all A4, and the job does not fail with a source file missing on disk', function () {

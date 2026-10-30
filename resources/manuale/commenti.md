@@ -45,7 +45,7 @@ Il bottone **💬 N commenti non letti** in alto a destra, nella testata del num
 
 ## Le pagine si spostano, i commenti le seguono
 
-Il commento è della pagina, non del numero di pagina: se la pagina si sposta, i suoi commenti la seguono. Se una pagina viene **eliminata** (riducendo le pagine o togliendo la bandella), i suoi commenti restano nella scheda «Tutti» come «Pagina 47, eliminata».
+Il commento è della pagina, non del numero di pagina: se la pagina si sposta, i suoi commenti la seguono. Se una pagina viene **eliminata** (riducendo le pagine o togliendo un battente), i suoi commenti restano nella scheda «Tutti» come «Pagina 47, eliminata».
 
 :::dettagli
 - **Chi può**: Admin, Redattore e Commerciale leggono e scrivono su qualunque pagina dei numeri che vedono. Sola lettura legge soltanto.

@@ -44,7 +44,7 @@ Clic sul bottone **32°** all'inizio del conteggio «Segnature» nella barra in 
 Un Admin le cambia in «Modifica rivista» → **«📐 Segnature di stampa»**:
 
 - pagine per segnatura: 8, 16, 32 o 64 (di solito 32);
-- «Copertina inclusa nelle segnature»: di solito no, perché la copertina si stampa a parte. Se sì, le sue facciate (4, o 6 con la bandella) contano in testa alla prima segnatura.
+- «Copertina inclusa nelle segnature»: di solito no, perché la copertina si stampa a parte. Se sì, le sue facciate (4, più 2 per ogni battente) contano in testa alla prima segnatura.
 
 Valgono subito per tutti i numeri della rivista.
 

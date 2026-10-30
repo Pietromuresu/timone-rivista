@@ -36,7 +36,7 @@ Formato, grammature, pagine di copertina, maggiorazione, peso del bancale e toll
 :::dettagli
 - Anche qui le grammature vanno in g/m² (per esempio 80 e 170) e sotto ognuna compare il peso a pagina.
 - L'anteprima del peso usa «Pagine interne per l'anteprima (non salvate)», proposte dall'ultimo numero della rivista.
-- Se la rivista ha 6 pagine di copertina, i nuovi numeri nascono con la bandella.
+- **Battenti di copertina** (nessuno, battente I, battente IV o entrambi): i nuovi numeri nascono con questi battenti. Le pagine di copertina per il peso si calcolano da sole (4, 6 o 8).
 :::
 
 ## Vedi anche

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Magazines;
 
+use App\Enums\CoverFlaps;
 use App\Enums\Periodicity;
 use App\Enums\UserRole;
 use App\Livewire\Concerns\NormalizesEmptyNumericInput;
@@ -49,6 +50,12 @@ class Edit extends Component
     public bool $signature_includes_covers = false;
 
     /**
+     * Battenti dei nuovi numeri (2026-10-30, App\Enums\CoverFlaps): al posto
+     * del numero «Pagine copertina», che ne deriva (syncCoverPages()).
+     */
+    public string $default_cover_flaps = 'nessuno';
+
+    /**
      * Default del calcolo peso della rivista (WeightParameters::FIELDS).
      * Valgono SOLO per i numeri creati dopo il salvataggio: i numeri
      * esistenti hanno una propria copia dei parametri (Issue::weightInput()).
@@ -84,6 +91,8 @@ class Edit extends Component
         $this->signature_pages = (int) ($magazine->signature_pages ?? SignaturePlan::DEFAULT_SIZE);
         $this->signature_includes_covers = (bool) $magazine->signature_includes_covers;
         $this->weight = WeightParameters::formValuesFrom($magazine);
+        $this->default_cover_flaps = ($magazine->default_cover_flaps ?? CoverFlaps::None)->value;
+        $this->syncCoverPages();
         $this->previewTotalPages = (string) ($magazine->issues()->orderByDesc('issue_date')->value('total_pages') ?? '');
     }
 
@@ -93,8 +102,10 @@ class Edit extends Component
 
         // "80,5" → "80.5" prima di validare, così virgola e punto salvano lo stesso valore.
         $this->weight = WeightParameters::normalizeInput($this->weight);
+        $this->syncCoverPages();
 
         $validated = $this->validate(WeightParameters::prefixedRules('weight') + [
+            'default_cover_flaps' => 'required|in:'.implode(',', array_column(CoverFlaps::cases(), 'value')),
             'name' => 'required|string|max:180',
             'periodicity' => 'required|in:'.implode(',', array_column(Periodicity::cases(), 'value')),
             'color' => 'required|string|max:7',
@@ -134,6 +145,17 @@ class Edit extends Component
         }
 
         return redirect()->route('magazines.show', $this->magazine);
+    }
+
+    public function updatedDefaultCoverFlaps(): void
+    {
+        $this->syncCoverPages();
+    }
+
+    /** Le facciate di copertina del peso seguono i battenti scelti (anteprima e salvataggio). */
+    private function syncCoverPages(): void
+    {
+        $this->weight['pagine_copertina'] = (string) (CoverFlaps::tryFrom($this->default_cover_flaps) ?? CoverFlaps::None)->coverPages();
     }
 
     /**

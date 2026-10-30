@@ -54,7 +54,7 @@ Se preferisci fare una domanda, clicca il bottone tondo **?** in basso a sinistr
 - Il simbolo # accanto a un titolo copia il link a quella sezione, da mandare a un collega. Il bottone «↑ Torna su» riporta in cima. Stampando una pagina, i «Dettagli» si stampano aperti.
 - La ricerca capisce anche parole simili (togliere, rimuovere, eliminare) e qualche errore di battitura. Se non trova nulla propone parole vicine e i compiti più frequenti.
 - L'indirizzo è `/manuale`. Il vecchio indirizzo `/documentazione` ti porta comunque lì.
-- I vecchi link a una sezione del manuale (per esempio `#9bis-le-copertine-i-ii-iii-iv-e-la-bandella`) portano alla pagina nuova dello stesso argomento.
+- I vecchi link a una sezione del manuale (per esempio `#9ter-peso-della-rivista`) portano alla pagina nuova dello stesso argomento.
 - Se al posto del manuale compare un avviso giallo, vedi [Problemi frequenti](resources/manuale/problemi-frequenti.md).
 
 #### Vedi anche
@@ -104,7 +104,7 @@ Le trovi accanto a:
 - la barra delle pagine selezionate: [Selezionare più pagine](resources/manuale/selezione-multipla.md).
 - il messaggio «Modalità scambio attiva»: [Scambiare due pagine](resources/manuale/scambiare-pagine.md).
 - «Modifica pagine interne», dopo aver cliccato **⚙️ Pagine interne**: [Aggiungere o togliere pagine](resources/manuale/pagine-interne.md).
-- **+ Aggiungi bandella** / **− Togli bandella**, nella fascia delle copertine: [La bandella](resources/manuale/copertine.md).
+- **+ Battente I** / **+ Battente IV** e **− Togli battente**, nella fascia delle copertine: [I battenti](resources/manuale/copertine.md).
 - «Quanto spazio occupa», nelle finestre di creazione e modifica di un contenuto: [Spazio occupato](resources/manuale/spazio-occupato.md).
 
 Con la tastiera ci arrivi con Tab e la apri con Invio.
@@ -326,13 +326,13 @@ Funziona in tutte e tre le viste. Contenuti, stato e PDF caricati restano legati
 
 - Un secondo clic sulla stessa pagina annulla la scelta senza fare nulla.
 - La modalità scambio coinvolge solo le due pagine scelte: è il modo più pulito per spostare pagine attorno a una [pagina bloccata](resources/manuale/bloccare-pagina.md).
-- Le copertine non entrano nella modalità scambio: si scambiano trascinandole una sull'altra, vedi [Le copertine e la bandella](resources/manuale/copertine.md).
+- Le copertine non entrano nella modalità scambio: si scambiano trascinandole una sull'altra, vedi [Le copertine e i battenti](resources/manuale/copertine.md).
 
 #### Vedi anche
 
 - [Spostare le pagine](resources/manuale/spostare-pagine.md)
 - [Bloccare una pagina](resources/manuale/bloccare-pagina.md)
-- [Le copertine e la bandella](resources/manuale/copertine.md)
+- [Le copertine e i battenti](resources/manuale/copertine.md)
 
 ### Cambiare lo stato di una pagina
 
@@ -531,7 +531,7 @@ Un contenuto eliminato resta recuperabile per 24 ore.
 
 #### Cosa non si può annullare
 
-Pagine interne, bandella, «Sposta le pagine esistenti dopo», scadenza stampa, parametri del peso, chiusura del numero, rubriche, eliminazione di riviste, numeri e utenti, export PDF e, in una modifica, la sostituzione del PDF. Quest'ultima resta in cronologia ma segnata «non annullabile».
+Pagine interne, battenti di copertina, «Sposta le pagine esistenti dopo», scadenza stampa, parametri del peso, chiusura del numero, rubriche, eliminazione di riviste, numeri e utenti, export PDF e, in una modifica, la sostituzione del PDF. Quest'ultima resta in cronologia ma segnata «non annullabile».
 
 #### Perché a volte l'annulla viene rifiutato
 
@@ -594,7 +594,7 @@ Il bottone **💬 N commenti non letti** in alto a destra, nella testata del num
 
 #### Le pagine si spostano, i commenti le seguono
 
-Il commento è della pagina, non del numero di pagina: se la pagina si sposta, i suoi commenti la seguono. Se una pagina viene **eliminata** (riducendo le pagine o togliendo la bandella), i suoi commenti restano nella scheda «Tutti» come «Pagina 47, eliminata».
+Il commento è della pagina, non del numero di pagina: se la pagina si sposta, i suoi commenti la seguono. Se una pagina viene **eliminata** (riducendo le pagine o togliendo un battente), i suoi commenti restano nella scheda «Tutti» come «Pagina 47, eliminata».
 
 **Dettagli**
 
@@ -646,7 +646,7 @@ Clic sul bottone **32°** all'inizio del conteggio «Segnature» nella barra in 
 Un Admin le cambia in «Modifica rivista» → **«📐 Segnature di stampa»**:
 
 - pagine per segnatura: 8, 16, 32 o 64 (di solito 32);
-- «Copertina inclusa nelle segnature»: di solito no, perché la copertina si stampa a parte. Se sì, le sue facciate (4, o 6 con la bandella) contano in testa alla prima segnatura.
+- «Copertina inclusa nelle segnature»: di solito no, perché la copertina si stampa a parte. Se sì, le sue facciate (4, più 2 per ogni battente) contano in testa alla prima segnatura.
 
 Valgono subito per tutti i numeri della rivista.
 
@@ -796,7 +796,7 @@ Titolo, **Rubrica** (opzionale), **occupazione** (obbligatoria, vedi [Spazio occ
 - Altri campi: agenzia (opzionale), stato commerciale, note commerciali.
 - I formati del listino: pagina intera, mezza pagina orizzontale e verticale, 1/3, 1/4 (vetrina), 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale.
 - La **doppia pagina** (2 pagine intere affiancate) si trascina sulla prima delle due pagine: occupa da sola anche la successiva, ciascuna per intero, e le due pagine vengono collegate.
-- La **battente copertina** occupa la bandella, vedi [Le copertine e la bandella](resources/manuale/copertine.md).
+- Il **«Battente copertina»** occupa le 2 pagine di un battente, vedi [Le copertine e i battenti](resources/manuale/copertine.md).
 - Una pubblicità creata ma non ancora su una pagina è considerata **«prenotata»**: vedi [Pubblicità prenotate](resources/manuale/pubblicita-prenotate.md).
 
 #### Rubrica
@@ -1342,9 +1342,9 @@ I link «⬇️ CSV» e «⬇️ PDF» in alto a destra del cruscotto scaricano 
 - [Report delle pubblicità (CSV/PDF)](resources/manuale/esporta-report-pubblicita.md)
 - [Il riepilogo in alto](resources/manuale/riepilogo-del-numero.md)
 
-## Copertine e bandella
+## Copertine e battenti
 
-### Le copertine e la bandella
+### Le copertine e i battenti
 
 **In breve**
 
@@ -1352,13 +1352,13 @@ I link «⬇️ CSV» e «⬇️ PDF» in alto a destra del cruscotto scaricano 
 
 1. Su una copertina fai le stesse cose di una pagina: assegnare contenuti, caricare materiale, stato, blocco.
 2. Per scambiare due copertine trascina l'etichetta blu di una sopra l'altra.
-3. Per aggiungere la bandella clicca **«+ Aggiungi bandella»** nella fascia delle copertine.
+3. Per aggiungere un battente (2 pagine prima della I o dopo la IV) clicca **«+ Battente I»** o **«+ Battente IV»** nella fascia delle copertine.
 
 ![La fascia delle copertine del numero di esempio: la I con un articolo, la II e la IV con una pubblicità, la III libera.](public/manuale/img/copertine.webp)
 
 1. La **I di copertina**, in testa alla fascia azzurra.
 2. La **II di copertina** con una pubblicità: si usa come una pagina.
-3. **+ Aggiungi bandella**.
+3. **+ Battente I** e **+ Battente IV**: aggiungono un battente.
 
 #### Le quattro copertine
 
@@ -1371,7 +1371,7 @@ Sono create da sole insieme al numero, separate dalle pagine interne. Le pagine 
 
 #### Dove sono nel timone
 
-Tutte insieme nella fascia azzurra «📘 Copertine», **in cima al timone, prima della pagina 1**, in ordine di sfoglio: I, eventuale bandella, II, III, IV. Ogni copertina ha un'etichetta blu «📘 I di copertina» al posto del numero di pagina e un contorno azzurro. C'è sempre la scritta, quindi si riconosce anche senza guardare i colori.
+Tutte insieme nella fascia azzurra «📘 Copertine», **in cima al timone, prima della pagina 1**, in ordine di sfoglio: eventuale battente di I, I, II, III, IV, eventuale battente di IV. Ogni copertina ha un'etichetta blu «📘 I di copertina» al posto del numero di pagina e un contorno azzurro. C'è sempre la scritta, quindi si riconosce anche senza guardare i colori.
 
 #### Cosa si può fare su una copertina
 
@@ -1388,25 +1388,35 @@ Trascina l'etichetta blu di una copertina sopra un'altra copertina: le due si **
 
 #### Una pubblicità di più pagine su una copertina
 
-Trascinata sulla **II** continua sulle pagine 1, 2…: la II e la pagina 1 sono affiancate quando si apre la rivista. Trascinata sulla **III** occupa le ultime pagine interne e poi la III. La **I** e la **IV** accolgono una sola pagina: per più pagine compare un messaggio che spiega dove partire.
+Trascinata sulla **II** continua sulle pagine 1, 2…: la II e la pagina 1 sono affiancate quando si apre la rivista. Trascinata sulla **III** occupa le ultime pagine interne e poi la III. Trascinata sulla **pagina 1 di un battente** occupa le sue 2 pagine. La **I**, la **IV** e la pagina 2 di un battente accolgono una sola pagina: per più pagine compare un messaggio che spiega dove partire.
 
-#### La bandella
+#### I battenti
 
-**La bandella** è il lembo ripiegato agganciato alla copertina, detto anche battente.
+Un **battente** è un lembo di 2 pagine in più agganciato alla copertina. Ogni numero può averne nessuno, uno o due:
 
-- Bottone **«+ Aggiungi bandella»** nella fascia delle copertine per aggiungerla, **«− Togli bandella»** per toglierla.
-- Con la bandella le facciate di copertina diventano **6** invece di 4, e il [peso](resources/manuale/peso.md) si aggiorna da solo.
-- La pubblicità in formato **battente copertina** occupa la bandella, che nel timone è un solo riquadro.
+- **battente di I**: 2 pagine **prima della I di copertina**;
+- **battente di IV**: 2 pagine **dopo la IV di copertina**.
+
+L'ordine di sfoglio completo, come nella fascia e negli export:
+
+`Battente I · 1` · `Battente I · 2` · **I** · **II** · pagine interne 1…N · **III** · **IV** · `Battente IV · 1` · `Battente IV · 2`
+
+- Nella fascia delle copertine clicca **«+ Battente I»** o **«+ Battente IV»**: compaiono le sue 2 pagine, con l'etichetta «📘 Battente I · 1», «📘 Battente I · 2» e così via.
+- **«− Togli battente I»** (o IV) toglie le 2 pagine insieme.
+- Ogni battente aggiunge **2 facciate** di copertina: 4 senza battenti, 6 con uno, 8 con due. Il [peso](resources/manuale/peso.md) si aggiorna da solo.
+- La pubblicità in formato **«Battente copertina»** occupa le 2 pagine di un battente: trascinala sulla pagina 1 del battente. Su un'altra pagina non si può mettere.
+- Le pagine di battente si usano come le altre copertine: contenuti, stato, blocco, «📎 Carica materiale», scambio trascinando l'etichetta blu.
 
 **Dettagli**
 
-- La bandella si toglie solo se è vuota e non bloccata.
-- Se la rivista ha 6 pagine di copertina tra le impostazioni del peso, i nuovi numeri nascono già con la bandella.
-- Aggiungere o togliere la bandella non si annulla con Ctrl+Z.
+- Un battente si toglie solo se le sue 2 pagine sono vuote e non bloccate. Se no il bottone resta grigio: passaci sopra con il mouse per leggere il motivo (per esempio «La pagina 2 del battente I contiene «Acme»: toglila prima.»).
+- Una pagina con una pubblicità «Battente copertina» non si scambia con un'altra copertina: la pubblicità si spezzerebbe.
+- I nuovi numeri nascono con i battenti scelti nelle impostazioni della rivista (**Battenti di copertina**); nel modulo «Nuovo numero» si possono cambiare.
+- Aggiungere o togliere un battente non si annulla con Ctrl+Z.
 
 #### Conteggi
 
-Il riepilogo in alto mostra «Copertine: X/4 assegnate (Y libere)». Il cruscotto pubblicitario e gli avvisi contano solo le pagine interne: una pubblicità sulla IV di copertina non cambia la percentuale delle pagine interne. Nell'esportazione PDF del timone le copertine hanno una sezione «Copertine» a sé, prima delle pagine interne.
+Il riepilogo in alto mostra «Copertine: X/4 assegnate (Y libere)»; con i battenti il totale è 6 o 8. Il cruscotto pubblicitario e gli avvisi contano solo le pagine interne: una pubblicità sulla IV di copertina non cambia la percentuale delle pagine interne. Nell'esportazione PDF del timone le copertine hanno una sezione «Copertine» a sé, prima delle pagine interne.
 
 #### Vedi anche
 
@@ -1456,7 +1466,7 @@ Il bottone «+ Nuovo numero» lo vedono gli Admin e i Redattori con accesso alla
 
 **Dettagli**
 
-- Con 6 «pagine copertina» nella sezione «Carta e peso» il numero nasce anche con la bandella.
+- In «Carta e peso», **Battenti di copertina** dice se il numero nasce con il battente di I, di IV, entrambi o nessuno (proposto dalla rivista). Le pagine di copertina per il peso si calcolano da sole: 4, più 2 per battente.
 - Se cancelli del tutto il numero di pagine per riscriverlo, l'anteprima del peso si ferma finché non scrivi un valore valido. Se provi a creare il numero con il campo vuoto compare l'errore sotto il campo.
 - Mentre scrivi un numero (pagine, pubblicità previste, copie, bancali, grammature) le anteprime si aggiornano un attimo dopo che hai smesso di scrivere. Gli avvisi («Non è un multiplo di 4», «Non ci stanno», grammatura fuori scala) compaiono **quando esci dal campo**, non a metà numero.
 
@@ -1560,8 +1570,8 @@ Il riquadro **«⚖️ Peso»**, in cima alla pagina del numero, mostra il **pes
 **Dettagli**
 
 - Le formule sono le stesse del foglio Excel usato finora.
-- **Interno / Copertina / Maggiorazione / Tiratura**: il dettaglio del calcolo. Le **pagine interne** sono quelle del timone (per esempio 208). Le **pagine di copertina** sono le copertine che esistono: 4, oppure 6 se il numero ha la bandella.
-- Quando cambi le pagine interne o aggiungi o togli la bandella, il peso si aggiorna da solo.
+- **Interno / Copertina / Maggiorazione / Tiratura**: il dettaglio del calcolo. Le **pagine interne** sono quelle del timone (per esempio 208). Le **pagine di copertina** sono le copertine che esistono: 4, più 2 per ogni battente (6 o 8).
+- Quando cambi le pagine interne o aggiungi o togli un battente, il peso si aggiorna da solo.
 
 #### Modificare i parametri di questo numero
 
@@ -1575,7 +1585,7 @@ Admin e Redattore: bottone **«Modifica parametri»**.
 
 **Dettagli**
 
-- Per un numero già creato le **pagine copertina non si scrivono a mano** (campo grigio): sono le copertine esistenti, 4 o 6 con la bandella.
+- Per un numero già creato le **pagine copertina non si scrivono a mano** (campo grigio): sono le copertine esistenti, 4, 6 o 8 con i battenti.
 - Il peso a pagina sotto la grammatura, per esempio «80 g/m² → 2,268 g a pagina · 208 pagine = 471,7 g».
 - Grammature sotto 30 o sopra 400 vengono rifiutate con un messaggio. Puoi usare la virgola o il punto (`80,5` o `80.5`).
 - Un formato sotto 50 viene rifiutato perché quasi certamente è in centimetri.
@@ -1604,7 +1614,7 @@ I valori di partenza vengono dalla rivista ([Creare e modificare una rivista](re
 #### Vedi anche
 
 - [Problemi frequenti](resources/manuale/problemi-frequenti.md) (messaggi del pannello Peso)
-- [Le copertine e la bandella](resources/manuale/copertine.md)
+- [Le copertine e i battenti](resources/manuale/copertine.md)
 - [Creare e modificare una rivista](resources/manuale/rivista.md)
 
 ### Scadenza stampa e solleciti
@@ -1687,7 +1697,7 @@ Formato, grammature, pagine di copertina, maggiorazione, peso del bancale e toll
 
 - Anche qui le grammature vanno in g/m² (per esempio 80 e 170) e sotto ognuna compare il peso a pagina.
 - L'anteprima del peso usa «Pagine interne per l'anteprima (non salvate)», proposte dall'ultimo numero della rivista.
-- Se la rivista ha 6 pagine di copertina, i nuovi numeri nascono con la bandella.
+- **Battenti di copertina** (nessuno, battente I, battente IV o entrambi): i nuovi numeri nascono con questi battenti. Le pagine di copertina per il peso si calcolano da sole (4, 6 o 8).
 
 #### Vedi anche
 
@@ -1814,7 +1824,7 @@ Il PDF sfogliabile simula la **rivista finita**: una pagina del PDF per ogni pag
 
 #### L'ordine delle pagine
 
-I di copertina, II di copertina, pagine interne 1…N, III e IV di copertina. La bandella, se c'è, viene dopo la I. Ogni pagina è un **A4 verticale** con dentro la pagina della rivista in scala, centrata e non deformata, e il numero di pagina in piccolo sotto.
+Battente di I (se c'è, 2 pagine), I di copertina, II di copertina, pagine interne 1…N, III e IV di copertina, battente di IV (se c'è, 2 pagine). Il PDF si apre a coppie come una rivista: la pagina interna 1 è sempre a destra, accanto alla II. Ogni pagina è un **A4 verticale** con dentro la pagina della rivista in scala, centrata e non deformata, e il numero di pagina in piccolo sotto.
 
 #### Cosa si vede in ogni pagina
 
@@ -1842,7 +1852,7 @@ Con **«Bassa risoluzione per anteprima»** spuntato ottieni una versione legger
 
 - [Esportare il timone in PDF](resources/manuale/esporta-timone-pdf.md)
 - [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md)
-- [Le copertine e la bandella](resources/manuale/copertine.md)
+- [Le copertine e i battenti](resources/manuale/copertine.md)
 
 ### Report delle pubblicità (CSV/PDF)
 
@@ -2210,9 +2220,9 @@ Hai visto un messaggio e non sai cosa fare? Cercalo qui sotto: per ognuno trovi 
 
 Le parole del timone, in ordine alfabetico. Ogni voce rimanda alla pagina che ne parla.
 
-- **Bandella** (o **battente**): il lembo ripiegato agganciato alla copertina. Con la bandella le facciate di copertina sono 6. Vedi [Le copertine e la bandella](resources/manuale/copertine.md).
+- **Battente**: 2 pagine in più agganciate alla copertina, prima della I (battente di I) o dopo la IV (battente di IV). Ogni battente aggiunge 2 facciate di copertina. Vedi [Le copertine e i battenti](resources/manuale/copertine.md).
 - **Contenuto**: un articolo o una pubblicità, con il suo spazio occupato ed eventualmente il suo file. Vedi [Creare un articolo o una pubblicità](resources/manuale/creare-contenuto.md).
-- **Copertine I, II, III, IV**: I di copertina è la copertina vera e propria; II il suo retro, a sinistra della pagina 1; III la pagina interna della quarta; IV di copertina il retro della rivista. Non sono pagine interne. Vedi [Le copertine e la bandella](resources/manuale/copertine.md).
+- **Copertine I, II, III, IV**: I di copertina è la copertina vera e propria; II il suo retro, a sinistra della pagina 1; III la pagina interna della quarta; IV di copertina il retro della rivista. Non sono pagine interne. Vedi [Le copertine e i battenti](resources/manuale/copertine.md).
 - **Cruscotto pubblicitario**: il pannello con la percentuale di pubblicità del numero. Vedi [Il cruscotto pubblicitario](resources/manuale/cruscotto-pubblicitario.md).
 - **DX / SX**: pagina destra / sinistra. La pagina 1 è sempre a destra.
 - **Gruppo collegato**: pagine collegate (🔗) che si spostano sempre insieme. Vedi [Collegare pagine in un gruppo](resources/manuale/gruppi-collegati.md).
@@ -2245,6 +2255,7 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 #### 30 ottobre 2026
 
+- **Battenti di copertina**: dal 2026-10-30 la bandella è diventata **battente di I** (2 pagine prima della I) e si può aggiungere anche un **battente di IV** (2 pagine dopo la IV). Le bandelle esistenti sono diventate la pagina 1 del battente di I, con tutto il loro contenuto. Vedi [Le copertine e i battenti](resources/manuale/copertine.md).
 - **Piccole ? accanto ai comandi** meno ovvi (Peso, selezione multipla, scambio, pagine interne, bandella, spazio occupato): aprono la pagina del manuale in una nuova scheda. Vedi [Chiedi al manuale](resources/manuale/chiedi-al-manuale.md).
 
 #### 29 ottobre 2026

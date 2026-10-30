@@ -58,7 +58,7 @@ class WeightPanel extends Component
     }
 
     #[On('echo-presence:issue.{issue.id},.IssuePageCountUpdated')]
-    // Fase 2: la bandella cambia le pagine di copertina del peso.
+    // Fase 2: i battenti (prima la bandella) cambiano le pagine di copertina del peso.
     #[On('echo-presence:issue.{issue.id},.CoversChanged')]
     #[On('issue-page-count-changed')]
     public function onPageCountChanged(): void

@@ -35,6 +35,9 @@ final class ManualVerifier
         'Cambiare stato' => ['Stato', 'il menu «Cambia stato in» è diventato «Stato:» nella fascia della selezione'],
         '"📜 Storico spostamenti"' => ['📜 Storico', 'bottone «📜 Storico»; il pannello si intitola ancora «Storico spostamenti»'],
         'Modalità scambio (bottone "🔀 Modalità scambio" in barra, funziona in tutte e tre le modalità):' => ['🔀 Scambio', 'bottone «🔀 Scambio»; il banner dice «Modalità scambio attiva»'],
+        // Battenti (2026-10-30): la bandella è diventata battente di I e di IV.
+        '«+ Aggiungi bandella»' => ['«+ Battente I»', 'bottoni «+ Battente I» / «+ Battente IV» (partials/cover-band.blade.php, etichetta da CoverFlap::label())'],
+        '«− Togli bandella»' => ['− Togli battente I', 'bottoni «− Togli battente I» / «− Togli battente IV» (partials/cover-band.blade.php)'],
         '20MB' => ['100 MB', 'limite vecchio (incoerenza 2 dell\'inventario): oggi 100 MB, config/timone.php upload_max_kb; «prima 20 MB» è in Novità'],
         // Intestazioni di paragrafo diventate titoli di sezione o pagine.
         'Ogni card/riga mostra:' => [null, 'intestazione della vecchia tabella: ora è la pagina «Legenda»'],

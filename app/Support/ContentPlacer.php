@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\AdFormat;
 use App\Enums\CoverSlot;
 use App\Models\Content;
 use App\Models\Page;
@@ -48,7 +49,7 @@ final class ContentPlacer
 
         $span = $occupancy->pagesSpanned();
         $distribution = $occupancy->distribution();
-        $targetPages = self::checkedTargets($occupancy, $startPage, $content->displayLabel(), $content->id);
+        $targetPages = self::checkedTargets($occupancy, $startPage, $content->displayLabel(), $content->id, $content->advertisement?->format);
 
         if (is_string($targetPages)) {
             return $targetPages;
@@ -102,9 +103,9 @@ final class ContentPlacer
      * «Posizione» del modulo di creazione: se non ci sta, errore e nessun
      * salvataggio). null = ci sta.
      */
-    public static function check(PageOccupancy $occupancy, Page $startPage, string $label): ?string
+    public static function check(PageOccupancy $occupancy, Page $startPage, string $label, ?AdFormat $format = null): ?string
     {
-        $targets = self::checkedTargets($occupancy, $startPage, $label, null);
+        $targets = self::checkedTargets($occupancy, $startPage, $label, null, $format);
 
         return is_string($targets) ? $targets : null;
     }
@@ -113,10 +114,12 @@ final class ContentPlacer
      * Pagine da occupare dalla pagina di partenza, verificate (esistono,
      * non bloccate, con spazio per la loro quota). $ignoreContentId: il
      * contenuto stesso, se è già su quelle pagine (spostamento dalla modale).
+     * $format: il formato «Battente copertina» va solo sulle pagine di un
+     * battente (2026-10-30).
      *
      * @return Collection<int, Page>|string
      */
-    private static function checkedTargets(PageOccupancy $occupancy, Page $startPage, string $label, ?int $ignoreContentId): Collection|string
+    private static function checkedTargets(PageOccupancy $occupancy, Page $startPage, string $label, ?int $ignoreContentId, ?AdFormat $format = null): Collection|string
     {
         $span = $occupancy->pagesSpanned();
         $distribution = $occupancy->distribution();
@@ -127,6 +130,10 @@ final class ContentPlacer
 
         if (is_string($targetPages)) {
             return str_replace('{content}', $label, $targetPages);
+        }
+
+        if ($format === AdFormat::BattenteCopertina && $targetPages->contains(fn (Page $page) => $page->cover_slot?->flap() === null)) {
+            return "«{$label}» è un «Battente copertina»: va su un battente, partendo da Battente I · 1 o Battente IV · 1 (nessuna pagina è stata modificata).";
         }
 
         foreach ($targetPages->values() as $index => $page) {
@@ -189,8 +196,9 @@ final class ContentPlacer
      * - II di copertina: la II e poi le pagine 1, 2, … (l'apertura II + 1);
      * - III di copertina: le ultime pagine interne e poi la III
      *   (l'apertura ultima pagina + III), in ordine di sfoglio.
-     * I, IV e bandella accolgono una sola pagina: non hanno pagine interne
-     * accanto.
+     * - battente (2026-10-30): dalla sua pagina 1, le sue 2 pagine (è lo
+     *   spazio del formato «Battente copertina»).
+     * I, IV e la pagina 2 di un battente accolgono una sola pagina.
      *
      * @return Collection<int, Page>|string
      */
@@ -205,11 +213,14 @@ final class ContentPlacer
         $targetPages = match ($cover->cover_slot) {
             CoverSlot::II => collect([$cover])->concat($internal->where('position', '<', $span)->get()),
             CoverSlot::III => $internal->where('position', '>', $cover->issue->total_pages - ($span - 1))->get()->concat([$cover]),
+            CoverSlot::BattenteI1, CoverSlot::BattenteIV1 => $span === 2
+                ? collect([$cover, $cover->issue->covers()->where('cover_slot', $cover->cover_slot->flap()->slots()[1]->value)->first()])->filter()
+                : null,
             default => null,
         };
 
         if ($targetPages === null) {
-            return "«{content}» occupa {$span} pagine: la {$cover->label()} ne accoglie una sola. Su più pagine si può partire dalla II di copertina (continua sulle pagine 1, 2…) o dalla III (le ultime pagine interne e poi la III).";
+            return "«{content}» occupa {$span} pagine: la {$cover->label()} ne accoglie una sola. Su più pagine si può partire dalla II di copertina (continua sulle pagine 1, 2…), dalla III (le ultime pagine interne e poi la III) o dalla pagina 1 di un battente (le sue 2 pagine).";
         }
 
         if ($targetPages->count() < $span) {

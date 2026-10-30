@@ -46,6 +46,8 @@ class MagazineFactory extends Factory
             'grammatura_interno' => 80,
             'grammatura_copertina' => 170,
             'pagine_copertina' => 6,
+            // 6 facciate = un battente (2026-10-30).
+            'default_cover_flaps' => 'I',
             'maggiorazione_percentuale' => 2,
             'peso_bancale_kg' => 20,
             'tolleranza_grammatura_perc' => 4,

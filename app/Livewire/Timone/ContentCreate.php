@@ -359,7 +359,9 @@ class ContentCreate extends Component
 
                 $label = trim((string) ($validated['client'] ?? '')) !== '' ? trim($validated['client']) : $validated['title'];
 
-                if (($problem = ContentPlacer::check($occupancy, $placementPage, $label)) !== null) {
+                $format = $this->type === 'pubblicita' ? AdFormat::tryFrom((string) ($validated['format'] ?? '')) : null;
+
+                if (($problem = ContentPlacer::check($occupancy, $placementPage, $label, $format)) !== null) {
                     $this->addError('placement', $problem);
 
                     return;

@@ -53,7 +53,7 @@ Se preferisci fare una domanda, clicca il bottone tondo **?** in basso a sinistr
 - Il simbolo # accanto a un titolo copia il link a quella sezione, da mandare a un collega. Il bottone «↑ Torna su» riporta in cima. Stampando una pagina, i «Dettagli» si stampano aperti.
 - La ricerca capisce anche parole simili (togliere, rimuovere, eliminare) e qualche errore di battitura. Se non trova nulla propone parole vicine e i compiti più frequenti.
 - L'indirizzo è `/manuale`. Il vecchio indirizzo `/documentazione` ti porta comunque lì.
-- I vecchi link a una sezione del manuale (per esempio `#9bis-le-copertine-i-ii-iii-iv-e-la-bandella`) portano alla pagina nuova dello stesso argomento.
+- I vecchi link a una sezione del manuale (per esempio `#9ter-peso-della-rivista`) portano alla pagina nuova dello stesso argomento.
 - Se al posto del manuale compare un avviso giallo, vedi [Problemi frequenti](manuale:problemi-frequenti).
 :::
 

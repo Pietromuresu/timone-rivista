@@ -76,7 +76,11 @@
                         <p class="text-xs text-gray-500 dark:text-gray-400">Inserisci la grammatura scritta sulla carta (es. 80 per l'interno, 170 per la copertina): il peso di ogni pagina è calcolato automaticamente.</p>
                         <div class="grid grid-cols-2 gap-4">
                             @foreach (\App\Support\Weight\WeightParameters::PAPER_FIELDS as $field)
-                                <x-weight-field :field="$field" :model="'weight.'.$field" :paper="$weightPreview->paper[$field] ?? null" live />
+                                @if ($field === 'pagine_copertina')
+                                    <x-cover-flaps-field model="default_cover_flaps" :value="$default_cover_flaps" />
+                                @else
+                                    <x-weight-field :field="$field" :model="'weight.'.$field" :paper="$weightPreview->paper[$field] ?? null" live />
+                                @endif
                             @endforeach
                         </div>
                         <div class="grid grid-cols-2 gap-4">

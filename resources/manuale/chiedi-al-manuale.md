@@ -47,7 +47,7 @@ Le trovi accanto a:
 - la barra delle pagine selezionate: [Selezionare più pagine](manuale:selezione-multipla).
 - il messaggio «Modalità scambio attiva»: [Scambiare due pagine](manuale:scambiare-pagine).
 - «Modifica pagine interne», dopo aver cliccato **⚙️ Pagine interne**: [Aggiungere o togliere pagine](manuale:pagine-interne).
-- **+ Aggiungi bandella** / **− Togli bandella**, nella fascia delle copertine: [La bandella](manuale:copertine#la-bandella).
+- **+ Battente I** / **+ Battente IV** e **− Togli battente**, nella fascia delle copertine: [I battenti](manuale:copertine#i-battenti).
 - «Quanto spazio occupa», nelle finestre di creazione e modifica di un contenuto: [Spazio occupato](manuale:spazio-occupato).
 
 Con la tastiera ci arrivi con Tab e la apri con Invio.

@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Enums\AdFormat;
+use App\Enums\CoverFlap;
 use App\Enums\CoverSlot;
 use App\Enums\PageContentType;
 use App\Enums\PageStatus;
@@ -11,7 +13,7 @@ use App\Support\Comments\DeletedPageComments;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Le copertine di un numero (Fase 2, 2026-10-26): creazione, bandella,
+ * Le copertine di un numero (Fase 2, 2026-10-26): creazione, battenti (2026-10-30),
  * scambio tra slot, e il parametro del peso `pagine_copertina` che ne
  * deriva. Unico punto che scrive `pages.cover_slot`, così le regole
  * ("I–IV sempre presenti", "pagine_copertina = facciate reali") non si
@@ -23,12 +25,14 @@ final class IssueCovers
 {
     /**
      * Crea gli slot mancanti: I–IV sempre (prima della Fase 2 venivano
-     * create solo I e IV — bug), più la bandella se richiesta. Idempotente.
+     * create solo I e IV — bug), più i battenti richiesti. Idempotente.
+     *
+     * @param  list<CoverFlap>  $flaps
      */
-    public static function ensure(Issue $issue, bool $withBandella = false): void
+    public static function ensure(Issue $issue, array $flaps = []): void
     {
         $existing = $issue->covers()->pluck('cover_slot')->map(fn ($slot) => $slot instanceof CoverSlot ? $slot : CoverSlot::from($slot))->all();
-        $wanted = $withBandella ? [...CoverSlot::mandatory(), CoverSlot::Bandella] : CoverSlot::mandatory();
+        $wanted = [...CoverSlot::mandatory(), ...collect($flaps)->flatMap(fn (CoverFlap $flap) => $flap->slots())->all()];
 
         foreach ($wanted as $slot) {
             if (! in_array($slot, $existing, true)) {
@@ -39,48 +43,84 @@ final class IssueCovers
         self::syncPrintedPages($issue);
     }
 
-    /**
-     * Aggiunge la bandella (6 facciate di copertina invece di 4).
-     *
-     * @return string|null messaggio d'errore, null se aggiunta
-     */
-    public static function addBandella(Issue $issue): ?string
+    /** @return list<CoverFlap> I battenti presenti, in ordine di sfoglio. */
+    public static function flaps(Issue $issue): array
     {
-        if ($issue->covers()->where('cover_slot', CoverSlot::Bandella->value)->exists()) {
-            return 'Questo numero ha già la bandella.';
+        $slots = $issue->covers()->pluck('cover_slot')->all();
+
+        return array_values(array_filter(CoverFlap::cases(), fn (CoverFlap $flap) => in_array($flap->slots()[0], $slots, true)));
+    }
+
+    /**
+     * Aggiunge un battente: le sue 2 pagine, vuote (2 facciate in più per
+     * il peso).
+     *
+     * @return string|null messaggio d'errore, null se aggiunto
+     */
+    public static function addFlap(Issue $issue, CoverFlap $flap): ?string
+    {
+        if (in_array($flap, self::flaps($issue), true)) {
+            return "Questo numero ha già il battente {$flap->value}.";
         }
 
-        self::create($issue, CoverSlot::Bandella);
+        DB::transaction(function () use ($issue, $flap) {
+            foreach ($flap->slots() as $slot) {
+                self::create($issue, $slot);
+            }
+        });
         self::syncPrintedPages($issue);
 
         return null;
     }
 
     /**
-     * Toglie la bandella, solo se vuota e non bloccata: mai far sparire in
-     * silenzio un contenuto assegnato.
-     *
-     * @return string|null messaggio d'errore, null se tolta
+     * Perché un battente non si può togliere (null = si può): le sue pagine
+     * devono essere vuote e non bloccate, per non far sparire in silenzio
+     * un contenuto. Lo usa anche la fascia copertine per il tooltip del
+     * bottone disattivato, così il motivo è lo stesso del rifiuto.
      */
-    public static function removeBandella(Issue $issue): ?string
+    public static function removalBlocker(Issue $issue, CoverFlap $flap): ?string
     {
-        $bandella = $issue->covers()->where('cover_slot', CoverSlot::Bandella->value)->first();
+        $pages = $issue->covers()->whereIn('cover_slot', array_map(fn (CoverSlot $slot) => $slot->value, $flap->slots()))
+            ->with(['contents.advertisement'])->get()->sortBy(fn (Page $page) => $page->cover_slot->order());
 
-        if ($bandella === null) {
+        foreach ($pages as $page) {
+            $where = "La pagina {$page->cover_slot->flapPage()} del battente {$flap->value}";
+
+            if ($page->isLocked()) {
+                return "{$where} è bloccata: sbloccala prima.";
+            }
+
+            if (($content = $page->contents->first()) !== null) {
+                return "{$where} contiene «{$content->displayLabel()}»: toglila prima.";
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Toglie un battente intero, solo se removalBlocker() lo consente.
+     *
+     * @return string|null messaggio d'errore, null se tolto
+     */
+    public static function removeFlap(Issue $issue, CoverFlap $flap): ?string
+    {
+        $pages = $issue->covers()->whereIn('cover_slot', array_map(fn (CoverSlot $slot) => $slot->value, $flap->slots()))->get();
+
+        if ($pages->isEmpty()) {
             return null;
         }
 
-        if ($bandella->isLocked()) {
-            return 'La bandella è bloccata: sbloccala prima di toglierla.';
+        if (($blocker = self::removalBlocker($issue, $flap)) !== null) {
+            return $blocker;
         }
 
-        if ($bandella->contents()->exists()) {
-            return 'La bandella ha contenuti assegnati: rimuovili prima di toglierla.';
-        }
-
-        // Commenti (2026-10-29): restano nel numero come «bandella, eliminata».
-        DeletedPageComments::preserve(collect([$bandella]));
-        $bandella->delete();
+        DB::transaction(function () use ($pages) {
+            // Commenti (2026-10-29): restano nel numero come «Battente I · 1, eliminata».
+            DeletedPageComments::preserve($pages);
+            $pages->each->delete();
+        });
         self::syncPrintedPages($issue);
 
         return null;
@@ -110,8 +150,14 @@ final class IssueCovers
             }
         }
 
-        if ($a->cover_slot === CoverSlot::Bandella || $b->cover_slot === CoverSlot::Bandella) {
-            return 'La bandella non si scambia con le copertine: ha un formato diverso.';
+        // Una pubblicità «Battente copertina» occupa le due pagine del suo
+        // battente: scambiarne una la spezzerebbe tra due copertine.
+        foreach ([$a, $b] as $cover) {
+            $flapAd = $cover->contents()->with('advertisement')->get()->first(fn ($content) => $content->advertisement?->format === AdFormat::BattenteCopertina);
+
+            if ($flapAd !== null) {
+                return "«{$flapAd->displayLabel()}» occupa tutto il battente: non si scambia con un'altra copertina.";
+            }
         }
 
         DB::transaction(function () use ($a, $b) {

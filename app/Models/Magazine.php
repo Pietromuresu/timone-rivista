@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CoverFlaps;
 use App\Enums\IssueStatus;
 use App\Enums\Periodicity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,6 +34,8 @@ class Magazine extends Model
         'grammatura_interno',
         'grammatura_copertina',
         'pagine_copertina',
+        // Battenti dei nuovi numeri (2026-10-30): da qui deriva pagine_copertina.
+        'default_cover_flaps',
         'maggiorazione_percentuale',
         'peso_bancale_kg',
         'tolleranza_grammatura_perc',
@@ -55,6 +58,7 @@ class Magazine extends Model
             'formato_base_mm' => 'integer',
             'formato_altezza_mm' => 'integer',
             'pagine_copertina' => 'integer',
+            'default_cover_flaps' => CoverFlaps::class,
         ];
     }
 

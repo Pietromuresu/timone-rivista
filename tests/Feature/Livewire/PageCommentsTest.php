@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\CoverFlap;
+use App\Enums\CoverSlot;
 use App\Enums\UserRole;
 use App\Events\IssuePageCountUpdated;
 use App\Events\PageMoved;
@@ -119,16 +121,16 @@ test('reducing the total pages keeps the comments of the removed pages, readable
         ->assertSee('Pagina 6, eliminata')->assertSee('Questa pagina salta?');
 });
 
-test('removing the bandella keeps its comments', function () {
+test('removing a battente keeps the comments of its pages', function () {
     $issue = commentIssue();
     $user = commentUser($issue);
-    IssueCovers::addBandella($issue);
-    $bandella = $issue->covers()->where('cover_slot', 'bandella')->sole();
+    IssueCovers::addFlap($issue, CoverFlap::I);
+    $first = $issue->covers()->where('cover_slot', CoverSlot::BattenteI1->value)->sole();
 
-    postComment($issue, $user, $bandella->id, 'Testo della bandella');
-    expect(IssueCovers::removeBandella($issue))->toBeNull();
+    postComment($issue, $user, $first->id, 'Testo del battente');
+    expect(IssueCovers::removeFlap($issue, CoverFlap::I))->toBeNull();
 
-    expect(PageComment::sole()->pageName())->toBe('Bandella, eliminata');
+    expect(PageComment::sole()->pageName())->toBe('Battente I · 1, eliminata');
 });
 
 test('mail goes only to the chosen recipients and the mentioned users, never to the author, never twice', function () {

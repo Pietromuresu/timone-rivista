@@ -26,7 +26,7 @@ Il bottone «+ Nuovo numero» lo vedono gli Admin e i Redattori con accesso alla
 - Note, fino a 2000 caratteri.
 
 :::dettagli
-- Con 6 «pagine copertina» nella sezione «Carta e peso» il numero nasce anche con la bandella.
+- In «Carta e peso», **Battenti di copertina** dice se il numero nasce con il battente di I, di IV, entrambi o nessuno (proposto dalla rivista). Le pagine di copertina per il peso si calcolano da sole: 4, più 2 per battente.
 - Se cancelli del tutto il numero di pagine per riscriverlo, l'anteprima del peso si ferma finché non scrivi un valore valido. Se provi a creare il numero con il campo vuoto compare l'errore sotto il campo.
 - Mentre scrivi un numero (pagine, pubblicità previste, copie, bancali, grammature) le anteprime si aggiornano un attimo dopo che hai smesso di scrivere. Gli avvisi («Non è un multiplo di 4», «Non ci stanno», grammatura fuori scala) compaiono **quando esci dal campo**, non a metà numero.
 :::

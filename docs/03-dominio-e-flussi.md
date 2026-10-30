@@ -58,7 +58,7 @@ Fonte: `app/Policies/*`, `app/Enums/UserRole.php`, `MANUALE_UTENTE.md` §14.
    - Pubblicità previste: la voce di registro `issue.placeholder_ads_created` ha una descrizione di lunghezza fissa («N pubblicità previste create come segnaposto: X sulle copertine, Y nelle pagine interne»); l'elenco delle posizioni sta in `new_values.placed`. Prima elencava tutte le posizioni e con decine di pubblicità superava i 255 caratteri della colonna («Text too long»): ora la colonna è anche TEXT (migration `2026_10_27_500000`).
 2. **`App\Observers\IssueObserver::created()`** (registrato in `AppServiceProvider::boot`):
    - inserisce `total_pages` pagine interne in `pages` (posizioni 1…N, tipo `bianca`, stato `da_assegnare`);
-   - `App\Support\IssueCovers::ensure()` crea **sempre** le copertine I, II, III, IV (righe di `pages` con `cover_slot` e `position` NULL; prima della Fase 2 nascevano solo I e IV, come ruolo della prima/ultima pagina) e la **bandella** se `pagine_copertina` ≥ 6; poi allinea `issues.pagine_copertina` (4 o 6).
+   - `App\Support\IssueCovers::ensure()` crea **sempre** le copertine I, II, III, IV (righe di `pages` con `cover_slot` e `position` NULL; prima della Fase 2 nascevano solo I e IV, come ruolo della prima/ultima pagina) e i **battenti** scelti nel modulo (`Issue::$initialCoverFlaps`; senza scelta, da `pagine_copertina`: 6 = battente di I, 8 = entrambi); poi allinea `issues.pagine_copertina` (4, 6 o 8).
 3. Opzionale "duplica struttura": `Issue::duplicateStructureFrom($source)` copia solo `content_type` per posizione (pagine interne) e per slot (copertine). **Non** copia i contenuti.
 4. **Pubblicità previste** (Fase 5, 2026-10-27): `App\Support\AdPlacement\PlaceholderAdCreator::create($issue, $counts)` — vedi sotto. Se il piano non ci sta, `save()` si ferma prima di creare il numero (errore `plannedAds`).
 5. Redirect a `issues.show`, con gli avvisi del posizionamento in sessione (`ad-placement-warnings`).
@@ -74,13 +74,13 @@ Fonte: `app/Policies/*`, `app/Enums/UserRole.php`, `MANUALE_UTENTE.md` §14.
 
 ## Copertine (Fase 2, 2026-10-26)
 
-- **Modello**: una copertina è una riga di `pages` con `cover_slot` (`App\Enums\CoverSlot`: `I`, `II`, `III`, `IV`, `bandella`) e `position` NULL. Resta una riga di `pages` per riusare contenuti, anteprime, stato, blocco e note senza duplicazioni; esce però dalla sequenza: `Issue::pages()` restituisce **solo le interne** (1…`total_pages`), `Issue::covers()` le copertine, `Issue::allPages()` entrambe. Vincolo `unique(issue_id, cover_slot)`.
+- **Modello**: una copertina è una riga di `pages` con `cover_slot` (`App\Enums\CoverSlot`: `BI1`, `BI2`, `I`, `II`, `III`, `IV`, `BIV1`, `BIV2` — dal 2026-10-30; prima c'era `bandella`) e `position` NULL. Resta una riga di `pages` per riusare contenuti, anteprime, stato, blocco e note senza duplicazioni; esce però dalla sequenza: `Issue::pages()` restituisce **solo le interne** (1…`total_pages`), `Issue::covers()` le copertine, `Issue::allPages()` entrambe. Vincolo `unique(issue_id, cover_slot)`.
 - **Numerazione**: le pagine interne sono numerate dalla loro `position` (niente più `PageNumberer`). `total_pages` = pagine interne; `Issue::displayedTotalPages()` restituisce lo stesso valore (resta per i chiamanti esistenti).
 - **Conteggi**: cruscotto pubblicitario, avvisi, pagine bianche e percentuali usano solo le interne; le copertine hanno un conteggio a parte nell'intestazione del timone.
-- **Spostamenti**: `Grid::movePage()`/`nudgePage()` rifiutano le copertine; le copertine non sono nel contenitore Sortable, quindi una pagina interna non può finirci dentro. Tra copertine: drag nativo (`text/cover-id`) → `Grid::swapCovers()` → `IssueCovers::swap()` (bandella esclusa, copertine bloccate escluse).
-- **Contenuti su più pagine partendo da una copertina** (`ContentPlacer::coverTargets()`): dalla II la II e poi le pagine 1, 2…; dalla III le ultime pagine interne e poi la III; I, IV e bandella una sola pagina. Mai in un gruppo collegato.
-- **Bandella**: `Grid::addBandella()`/`removeBandella()` (solo se vuota e non bloccata) → `IssueCovers`; vale 2 facciate: `issues.pagine_copertina` = 4 o 6, scritto da `IssueCovers::syncPrintedPages()` e mostrato in sola lettura nella modale del Peso.
-- **Evento**: `App\Events\CoversChanged` (scambio, bandella) ascoltato da `Grid` e `WeightPanel`.
+- **Spostamenti**: `Grid::movePage()`/`nudgePage()` rifiutano le copertine; le copertine non sono nel contenitore Sortable, quindi una pagina interna non può finirci dentro. Tra copertine: drag nativo (`text/cover-id`) → `Grid::swapCovers()` → `IssueCovers::swap()` (copertine bloccate escluse; una pagina di battente con una pubblicità «Battente copertina» esclusa, la si spezzerebbe).
+- **Contenuti su più pagine partendo da una copertina** (`ContentPlacer::coverTargets()`): dalla II la II e poi le pagine 1, 2…; dalla III le ultime pagine interne e poi la III; dalla pagina 1 di un battente le sue 2 pagine; I, IV e pagina 2 di un battente una sola pagina. Il formato «Battente copertina» (24/12) va solo sulle pagine di un battente. Mai in un gruppo collegato.
+- **Battenti** (dal 2026-10-30, al posto della bandella): `Grid::addFlap('I'|'IV')`/`removeFlap()` → `IssueCovers::addFlap()`/`removeFlap()`, sempre le 2 pagine insieme; si toglie solo se `IssueCovers::removalBlocker()` è null (pagine vuote e non bloccate: lo stesso messaggio fa da tooltip al bottone disattivato). Ogni pagina di copertina è una facciata: `issues.pagine_copertina` = 4, 6 o 8, scritto da `IssueCovers::syncPrintedPages()` e mostrato in sola lettura nella modale del Peso. Permesso `update` sul numero, non annullabile, registro `cover.battente_added`/`cover.battente_removed`.
+- **Evento**: `App\Events\CoversChanged` (scambio, battente aggiunto o tolto) ascoltato da `Grid` e `WeightPanel`; più `pages_updated_at` per chi è in polling.
 - **Conversione dei numeri esistenti**: migration `2026_10_26_200002_convert_cover_pages_to_slots` (piano in `App\Support\Covers\CoverConversionPlanner`, scritture e rollback in `CoverConversion`, registro `cover_conversion_logs`); anteprima con `php artisan timone:covers-dry-run`. Vedi [04-database.md](04-database.md).
 
 ## Occupazione in dodicesimi (Fase 3, 2026-10-27)
@@ -132,7 +132,7 @@ Sostituisce la disposizione calcolata della Fase 7a/7b (sezione sotto, tenuta pe
 `Issues\Show::mount()` (`authorize('view')`) monta:
 - `Timone\Grid`: griglia o lista delle pagine, cruscotto pubblicitario, avvisi automatici (`App\Support\AutomaticChecks`), storico;
 - `Timone\ContentCreate`: form "+ Nuovo contenuto" e pannello rubriche;
-- le **copertine** non hanno più un componente a sé (il vecchio `Timone\CoverSection` è stato rimosso con la Fase 2): `Grid` le mostra tutte in un'unica fascia in cima, prima della pagina 1 (`partials/cover-band.blade.php`, ordine I, bandella, II, III, IV), con le stesse card delle pagine. Regole: vedi "Copertine" sotto;
+- le **copertine** non hanno più un componente a sé (il vecchio `Timone\CoverSection` è stato rimosso con la Fase 2): `Grid` le mostra tutte in un'unica fascia in cima, prima della pagina 1 (`partials/cover-band.blade.php`, ordine battente I, I, II, III, IV, battente IV), con le stesse card delle pagine. Regole: vedi "Copertine" sotto;
 - `Timone\AdReservations`: pubblicità prenotate e chiusura numero;
 - `ActivityLogPanel` e `PageFileHistory`.
 
@@ -169,7 +169,7 @@ File coinvolti, in ordine di esecuzione:
 ## Permessi sul timone (revisione 2, Fase 4.1, 2026-10-28)
 
 - **Chi**: Admin e Redattore (con accesso alla rivista) tutto; Commerciale solo pubblicità (segnaposto compresi) e pagine senza articoli; Sola lettura niente. Regole: `UserRole::editsTimone()`/`handlesAds()`, `App\Support\Permissions\TimoneAbilities`.
-- **Lato server**: in `Grid` le azioni su un contenuto (`assignContent`, `extendToPage`, `updateContentOccupancy`, `moveContentOnGrid`, `rotateContentOnGrid`, `unassignContent`, `renameContent`, archivia/ripristina/elimina, `confirmFormatOverride`) passano da `authorizeContent()` → `ContentPolicy::move`/`update`; gli spostamenti di pagine (`movePage` con il suo gruppo, `moveSelectedBlock`, `selectForSwap`, `swapCovers`) da `authorizePageMove()` → `IssuePolicy::movePages` sulle pagine che si spostano davvero; il resto (stati, blocchi, gruppi, pagine totali, scadenza, bandella, chiusura del numero) resta `update` sul numero. `ContentCreate::save()`/`confirmMultipageUpload()`, `BulkUpload::importUploaded()` → `ContentPolicy::create` con il tipo; «sposta le pagine dopo» (inserisce pagine) e le rubriche restano `update`. `ContentEdit`: `update` sul contenuto + `create` per il tipo inviato (niente pubblicità → articolo).
+- **Lato server**: in `Grid` le azioni su un contenuto (`assignContent`, `extendToPage`, `updateContentOccupancy`, `moveContentOnGrid`, `rotateContentOnGrid`, `unassignContent`, `renameContent`, archivia/ripristina/elimina, `confirmFormatOverride`) passano da `authorizeContent()` → `ContentPolicy::move`/`update`; gli spostamenti di pagine (`movePage` con il suo gruppo, `moveSelectedBlock`, `selectForSwap`, `swapCovers`) da `authorizePageMove()` → `IssuePolicy::movePages` sulle pagine che si spostano davvero; il resto (stati, blocchi, gruppi, pagine totali, scadenza, battenti, chiusura del numero) resta `update` sul numero. `ContentCreate::save()`/`confirmMultipageUpload()`, `BulkUpload::importUploaded()` → `ContentPolicy::create` con il tipo; «sposta le pagine dopo» (inserisce pagine) e le rubriche restano `update`. `ContentEdit`: `update` sul contenuto + `create` per il tipo inviato (niente pubblicità → articolo).
 - **Interfaccia**: `Grid::render()` passa `$abilities` e `$immovablePageIds` (pagine con articoli o in un gruppo con articoli) alle viste: maniglia ⠿ assente con tooltip, chip non trascinabile (`cursor-not-allowed`, «Solo la redazione può spostare questo contenuto»), comandi del menu «⋯» disattivati con lo stesso tooltip, niente select di stato/blocco/«Pagine interne» per chi non è redazione. Moduli: tipo fisso su Pubblicità, niente ➕/✏️ rubrica né «sposta le pagine dopo».
 
 ## Flusso 15 — Eliminazione di numero, rivista, utente (revisione 2, Fasi 4.2–4.3, 2026-10-28)
@@ -187,7 +187,7 @@ File coinvolti, in ordine di esecuzione:
 
 1. Pannello `App\Livewire\Timone\MagazineExportPanel` (in `issues/show.blade.php`, sopra il timone): «Esporta PDF rivista», casella «Bassa risoluzione per anteprima». `generate()` → `authorize('view')` → `MagazineExportRequester::request()` (riga `magazine_exports` in `queued`, job accodato, niente doppioni). Il pannello ha `wire:poll.3s` solo mentre un export è in corso.
 2. `App\Jobs\GenerateMagazinePdf` → `MagazinePdfComposer::compose()`:
-   - ordine `MagazinePageSequence`: I, (bandella), II, 1…N, III, IV;
+   - ordine `MagazinePageSequence`: (battente I · 1, · 2), I, II, 1…N, III, IV, (battente IV · 1, · 2) — `CoverSlot::front()`/`back()`. Con l'apertura `TwoPageRight` la pagina interna 1 resta a destra accanto alla II perché ogni battente ha 2 pagine (la vecchia bandella, una pagina sola, spostava tutte le coppie);
    - foglio A4 verticale, pagina del numero scalata e centrata (`PageBox::forRatio(Issue::pageAspectRatio())`), bordo grigio sottile, etichetta sotto («Pagina 5», «I di copertina»), segnalibro;
    - per ogni blocco di `Page::layout()`: file di quel contenuto per QUELLA pagina (`Page::previewFileFor()`); PDF importato con FPDI (`TrimBox`, ripiego `Ghostscript::rewriteAsPdf14()` se il parser gratuito non lo apre), immagine con `Image()`. `FileFit::FullPage` → file su tutta la pagina con clipping su ogni pezzo del contenuto (una L = più pezzi); `FileFit::Format` → `PageBox::contain()` nel rettangolo;
    - senza file / file assente o vuoto / non importabile → riquadro tratteggiato con titolo, tipo («Pubblicità (segnaposto)» ecc.) e «File mancante» (`missing_files`); pagina senza contenuti → «Pagina bianca» (o il vecchio PageFile della pagina, a pagina intera);
@@ -351,7 +351,7 @@ Per questo grammature e formato hanno un intervallo ammesso in `config/peso_rivi
 
 I campi accettano sia la virgola sia il punto decimale (`80`, `80,5`, `80.5`): `WeightParameters::normalizeInput()` converte la virgola prima di validazione, anteprima e salvataggio.
 
-Le **pagine interne** non sono un campo salvato: sono `issues.total_pages` (dalla Fase 2 le copertine non ne fanno più parte). Le **pagine di copertina** non sono più un parametro scritto a mano per il numero: sono le copertine che esistono (`Issue::coverPageCount()`: 4, o 6 con la bandella), vedi `Issue::weightInput()`. Prima della Fase 2 si calcolava `total_pages − pagine_copertina` e un avviso segnalava ruoli copertina incoerenti: l'avviso è stato tolto perché non può più scattare.
+Le **pagine interne** non sono un campo salvato: sono `issues.total_pages` (dalla Fase 2 le copertine non ne fanno più parte). Le **pagine di copertina** non sono più un parametro scritto a mano per il numero: sono le copertine che esistono (`Issue::coverPageCount()`: 4, più 2 per battente), vedi `Issue::weightInput()`. Prima della Fase 2 si calcolava `total_pages − pagine_copertina` e un avviso segnalava ruoli copertina incoerenti: l'avviso è stato tolto perché non può più scattare.
 
 **Precisione**: tutti i calcoli usano float nativi, senza bcmath. I decimal arrivano da Eloquent come stringhe e vengono convertiti in un punto solo, `MagazineWeightInput::fromArray()`. Nessun passaggio intermedio è arrotondato. L'arrotondamento avviene solo in visualizzazione (`app/Support/Weight/WeightFormatter.php`):
 
@@ -479,7 +479,7 @@ Esempio a mano, GL:
 - netto = 225,205596 × 6200 / 1000 = 1396,2746952 kg
 - lordo = 1396,2746952 + 5 × 20 = 1496,2746952 kg
 
-Nel timone, NM è un numero con `total_pages` = 208 (pagine interne) e la bandella (6 pagine di copertina). Prima della Fase 2 lo stesso numero si scriveva come 214 pagine totali.
+Nel timone, NM è un numero con `total_pages` = 208 (pagine interne) e un battente (6 pagine di copertina). Prima della Fase 2 lo stesso numero si scriveva come 214 pagine totali.
 
 ### File coinvolti, in ordine di esecuzione
 

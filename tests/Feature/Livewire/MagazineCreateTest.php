@@ -25,7 +25,7 @@ test('an admin can create a magazine', function () {
 });
 
 // Fase 2 (2026-10-26): l'opzione "il battente conta nel totale pagine" non
-// esiste più — la bandella è una copertina a parte, mai nel totale.
+// esiste più — i battenti (prima la bandella) sono copertine a parte, mai nel totale.
 
 test('the name is required', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin]);

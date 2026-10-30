@@ -54,19 +54,22 @@ final class CoverConversionPlanner
         $warnings = [];
 
         foreach ($ordered as $page) {
-            $slot = CoverSlot::fromLegacyRole($page['role'] ?? null);
+            // Il vecchio ruolo «battente» diventava la bandella (vedi
+            // CoverConversion::LEGACY_BANDELLA), poi battente di I.
+            $slot = CoverSlot::fromLegacyRole($page['role'] ?? null)?->value
+                ?? (($page['role'] ?? null) === 'battente' ? CoverConversion::LEGACY_BANDELLA : null);
 
             if ($slot === null) {
                 continue;
             }
 
-            if (isset($covers[$slot->value])) {
+            if (isset($covers[$slot])) {
                 $warnings[] = "Due pagine con ruolo «{$page['role']}»: la pagina in posizione {$page['position']} resta interna.";
 
                 continue;
             }
 
-            $covers[$slot->value] = [
+            $covers[$slot] = [
                 'page_id' => $page['id'],
                 'old_position' => $page['position'],
                 'old_role' => $page['role'],
@@ -102,7 +105,8 @@ final class CoverConversionPlanner
             $warnings[] = 'Nessuna pagina con ruolo copertina: tutte le pagine restano interne, vengono create quattro copertine vuote.';
         }
 
-        $pagineCopertina = 4 + (isset($covers[CoverSlot::Bandella->value]) ? CoverSlot::Bandella->printedPages() : 0);
+        // La bandella valeva 2 facciate (fronte e retro del lembo).
+        $pagineCopertina = 4 + (isset($covers[CoverConversion::LEGACY_BANDELLA]) ? 2 : 0);
 
         return [
             'covers' => $covers,

@@ -25,6 +25,14 @@ use Illuminate\Support\Facades\Schema;
 final class CoverConversion
 {
     /**
+     * Lo slot della vecchia «bandella» (2026-10-26 → 2026-10-30): questa
+     * conversione storica lo scrive ancora così, e la migrazione dei
+     * battenti (2026_10_30_100000) lo trasforma nel battente di I. Una
+     * stringa e non un case di CoverSlot: il modello di oggi non la conosce.
+     */
+    public const LEGACY_BANDELLA = 'bandella';
+
+    /**
      * Piano per tutti i numeri, senza scrivere nulla (dry-run). Funziona
      * anche PRIMA di eseguire le migration della Fase 2 (colonna
      * cover_slot assente).
@@ -77,7 +85,7 @@ final class CoverConversion
     {
         $legacyRoles = [
             CoverSlot::I->value => 'copertina1',
-            CoverSlot::Bandella->value => 'battente',
+            self::LEGACY_BANDELLA => 'battente',
             CoverSlot::II->value => 'copertina2',
             CoverSlot::III->value => 'copertina3',
             CoverSlot::IV->value => 'copertina4',
@@ -85,8 +93,8 @@ final class CoverConversion
         $covers = DB::table('pages')->where('issue_id', $issueId)->whereNotNull('cover_slot')->get()->keyBy('cover_slot');
         $internal = DB::table('pages')->where('issue_id', $issueId)->whereNull('cover_slot')->orderBy('position')->pluck('id');
 
-        $front = collect([CoverSlot::I, CoverSlot::Bandella, CoverSlot::II])->map(fn ($slot) => $covers->get($slot->value))->filter();
-        $back = collect([CoverSlot::III, CoverSlot::IV])->map(fn ($slot) => $covers->get($slot->value))->filter();
+        $front = collect([CoverSlot::I->value, self::LEGACY_BANDELLA, CoverSlot::II->value])->map(fn ($slot) => $covers->get($slot))->filter();
+        $back = collect([CoverSlot::III->value, CoverSlot::IV->value])->map(fn ($slot) => $covers->get($slot))->filter();
         $sequence = $front->pluck('id')->concat($internal)->concat($back->pluck('id'))->values();
 
         DB::table('pages')->whereIn('id', $sequence)->update(['position' => null]);

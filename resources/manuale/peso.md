@@ -33,8 +33,8 @@ alt: Il riquadro «⚖️ Peso» del numero di esempio: peso di una copia, scagl
 
 :::dettagli
 - Le formule sono le stesse del foglio Excel usato finora.
-- **Interno / Copertina / Maggiorazione / Tiratura**: il dettaglio del calcolo. Le **pagine interne** sono quelle del timone (per esempio 208). Le **pagine di copertina** sono le copertine che esistono: 4, oppure 6 se il numero ha la bandella.
-- Quando cambi le pagine interne o aggiungi o togli la bandella, il peso si aggiorna da solo.
+- **Interno / Copertina / Maggiorazione / Tiratura**: il dettaglio del calcolo. Le **pagine interne** sono quelle del timone (per esempio 208). Le **pagine di copertina** sono le copertine che esistono: 4, più 2 per ogni battente (6 o 8).
+- Quando cambi le pagine interne o aggiungi o togli un battente, il peso si aggiorna da solo.
 :::
 
 ## Modificare i parametri di questo numero
@@ -48,7 +48,7 @@ Admin e Redattore: bottone **«Modifica parametri»**.
 5. **«Salva» modifica solo questo numero**, mai i valori della rivista.
 
 :::dettagli
-- Per un numero già creato le **pagine copertina non si scrivono a mano** (campo grigio): sono le copertine esistenti, 4 o 6 con la bandella.
+- Per un numero già creato le **pagine copertina non si scrivono a mano** (campo grigio): sono le copertine esistenti, 4, 6 o 8 con i battenti.
 - Il peso a pagina sotto la grammatura, per esempio «80 g/m² → 2,268 g a pagina · 208 pagine = 471,7 g».
 - Grammature sotto 30 o sopra 400 vengono rifiutate con un messaggio. Puoi usare la virgola o il punto (`80,5` o `80.5`).
 - Un formato sotto 50 viene rifiutato perché quasi certamente è in centimetri.
@@ -78,5 +78,5 @@ I valori di partenza vengono dalla rivista ([Creare e modificare una rivista](ma
 ## Vedi anche
 
 - [Problemi frequenti](manuale:problemi-frequenti) (messaggi del pannello Peso)
-- [Le copertine e la bandella](manuale:copertine)
+- [Le copertine e i battenti](manuale:copertine)
 - [Creare e modificare una rivista](manuale:rivista)

@@ -58,6 +58,11 @@ class CoversDryRun extends Command
                 }
             }
 
+            // La vecchia bandella non è più uno slot di CoverSlot (2026-10-30).
+            if (isset($plan['covers'][CoverConversion::LEGACY_BANDELLA])) {
+                $this->line("   bandella: ← pagina in posizione {$plan['covers'][CoverConversion::LEGACY_BANDELLA]['old_position']}");
+            }
+
             $this->line('   rinumerazione interne: '.self::describeRenumbering($plan['renumbered']));
 
             if ($plan['ungrouped'] !== []) {

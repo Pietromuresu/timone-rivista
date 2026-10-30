@@ -11,8 +11,8 @@ use Illuminate\Queue\SerializesModels;
 
 /**
  * Fase 2 (2026-10-26): le copertine di un numero sono cambiate — due slot
- * scambiati, bandella aggiunta o tolta. Ascoltato da Grid (ridisegna la
- * fascia copertine) e da WeightPanel (la bandella cambia le pagine di
+ * scambiati, battente aggiunto o tolto. Ascoltato da Grid (ridisegna la
+ * fascia copertine) e da WeightPanel (un battente cambia le pagine di
  * copertina del peso). Le modifiche al CONTENUTO di una copertina
  * (assegnazioni, stato, blocco) usano gli eventi di sempre: una copertina
  * è una riga di `pages`. ShouldBroadcastNow come gli altri eventi del
@@ -23,7 +23,7 @@ class CoversChanged implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
-     * @param  'swapped'|'bandella_added'|'bandella_removed'  $action
+     * @param  'swapped'|'battente_added'|'battente_removed'  $action
      */
     public function __construct(
         public int $issueId,

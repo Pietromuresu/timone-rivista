@@ -60,8 +60,10 @@ enum AdFormat: string
      *   pagina 70.5% → 2/3 (8);
      * - Copertina (2ª/3ª/4ª) 52% → pagina intera (12): occupa una
      *   copertina intera, il 52% era un rapporto di listino, non spazio;
-     * - Battente copertina → 12: dalla Fase 2 la bandella è UN solo slot
-     *   (che vale 2 facciate nel peso), quindi una pagina del timone;
+     * - Battente copertina → 24 (dal 2026-10-30): le 2 pagine di un
+     *   battente (420×270 nel listino = due facciate affiancate); va solo su
+     *   un battente (ContentPlacer). Prima valeva 12, l'unico slot della
+     *   bandella;
      * - Doppia pagina → 24: due pagine intere affiancate;
      * - "1/4 di pagina" è la vetrina, "Piedino" il piedino 1/3.
      */
@@ -69,14 +71,13 @@ enum AdFormat: string
     {
         return match ($this) {
             self::PaginaIntera,
-            self::BattenteCopertina,
             self::CopertinaSecondaTerzaQuarta,
             self::PrimaRomana,
             self::Controsommario,
             self::ElencoInserzionisti,
             self::Controeditoriale,
             self::Pubbliredazionale => 12,
-            self::DoppiaPagina => 24,
+            self::DoppiaPagina, self::BattenteCopertina => 24,
             self::DueTerziPagina => 8,
             self::MezzaPaginaOrizzontale, self::MezzaPaginaVerticale => 6,
             self::UnTerzoPaginaOrizzontale, self::UnTerzoPaginaVerticale, self::Piedino => 4,

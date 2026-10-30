@@ -266,6 +266,15 @@ docker compose run --rm --no-deps app php artisan timone:occupancy-dry-run
 # immagine e PRIMA del migrate. Righe [NON ENTRA]: pagine oltre capienza da sistemare.
 docker compose run --rm --no-deps app php artisan timone:grid-dry-run
 
+# 5quinquies. (una tantum, battenti di copertina, 2026-10-30) conteggi prima/dopo della
+# conversione bandella → battente di I, senza scrivere nulla. Con la NUOVA immagine e
+# PRIMA del migrate; il backup del punto 1 è obbligatorio. Dopo il migrate del punto 6
+# rilanciarlo: «adesso» deve coincidere con il «dopo la migrazione» di questa prima
+# esecuzione. La migration 2026_10_30_100000 si annulla con un rollback di un passo
+# solo finché nessun numero usa il battente di IV o la pagina 2 del battente di I
+# (altrimenti si ferma senza modifiche e dice quali numeri sistemare).
+docker compose run --rm --no-deps app php artisan timone:battenti-dry-run
+
 # 6. Migrazioni con la nuova immagine, prima di sostituire i container
 docker compose run --rm --no-deps app php artisan migrate --force
 

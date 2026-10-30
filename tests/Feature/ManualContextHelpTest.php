@@ -22,7 +22,7 @@ const CONTEXT_HELP = [
     'Selezione multipla' => 'selezione-multipla',
     'Modalità scambio' => 'scambiare-pagine',
     'Pagine interne' => 'pagine-interne',
-    'Bandella' => 'copertine#la-bandella',
+    'Battenti' => 'copertine#i-battenti',
     'Occupazione' => 'spazio-occupato',
 ];
 

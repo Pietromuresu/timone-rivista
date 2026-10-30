@@ -12,9 +12,9 @@ ordine: 740
 Le parole del timone, in ordine alfabetico. Ogni voce rimanda alla pagina che ne parla.
 :::
 
-- **Bandella** (o **battente**): il lembo ripiegato agganciato alla copertina. Con la bandella le facciate di copertina sono 6. Vedi [Le copertine e la bandella](manuale:copertine).
+- **Battente**: 2 pagine in più agganciate alla copertina, prima della I (battente di I) o dopo la IV (battente di IV). Ogni battente aggiunge 2 facciate di copertina. Vedi [Le copertine e i battenti](manuale:copertine#i-battenti).
 - **Contenuto**: un articolo o una pubblicità, con il suo spazio occupato ed eventualmente il suo file. Vedi [Creare un articolo o una pubblicità](manuale:creare-contenuto).
-- **Copertine I, II, III, IV**: I di copertina è la copertina vera e propria; II il suo retro, a sinistra della pagina 1; III la pagina interna della quarta; IV di copertina il retro della rivista. Non sono pagine interne. Vedi [Le copertine e la bandella](manuale:copertine).
+- **Copertine I, II, III, IV**: I di copertina è la copertina vera e propria; II il suo retro, a sinistra della pagina 1; III la pagina interna della quarta; IV di copertina il retro della rivista. Non sono pagine interne. Vedi [Le copertine e i battenti](manuale:copertine).
 - **Cruscotto pubblicitario**: il pannello con la percentuale di pubblicità del numero. Vedi [Il cruscotto pubblicitario](manuale:cruscotto-pubblicitario).
 - **DX / SX**: pagina destra / sinistra. La pagina 1 è sempre a destra.
 - **Gruppo collegato**: pagine collegate (🔗) che si spostano sempre insieme. Vedi [Collegare pagine in un gruppo](manuale:gruppi-collegati).

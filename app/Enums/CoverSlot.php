@@ -13,51 +13,77 @@ namespace App\Enums;
  * pubblicità assegnati, anteprima del PDF, stato, blocco, note.
  *
  * I–IV esistono sempre (create con il numero, App\Support\IssueCovers).
- * La bandella (il "battente": lembo ripiegato agganciato alla I) è
- * facoltativa e vale due facciate nel calcolo del peso — è il caso "6
- * pagine di copertina".
+ * Battenti (2026-10-30, al posto dell'unica «bandella»): due facoltativi,
+ * di 2 pagine ciascuno — il battente di I prima della I, quello di IV
+ * dopo la IV (CoverFlap). Ogni pagina è una facciata, come le altre
+ * copertine: 4, 6 o 8 facciate di copertina per il peso.
+ *
+ * Valori brevi (BI1…BIV2): la colonna `cover_slot` è varchar(10).
  */
 enum CoverSlot: string
 {
+    case BattenteI1 = 'BI1';
+    case BattenteI2 = 'BI2';
     case I = 'I';
     case II = 'II';
     case III = 'III';
     case IV = 'IV';
-    case Bandella = 'bandella';
+    case BattenteIV1 = 'BIV1';
+    case BattenteIV2 = 'BIV2';
 
     public function label(): string
     {
         return match ($this) {
-            self::Bandella => 'Bandella',
+            self::BattenteI1, self::BattenteI2, self::BattenteIV1, self::BattenteIV2 => "Battente {$this->flap()->value} · {$this->flapPage()}",
             default => "{$this->value} di copertina",
         };
     }
 
-    /** Etichetta breve per elenchi e avvisi ("II cop."). */
+    /** Etichetta breve per elenchi e avvisi ("II cop.", "batt. I·1"). */
     public function shortLabel(): string
     {
-        return $this === self::Bandella ? 'bandella' : "{$this->value} cop.";
+        return $this->flap() !== null ? "batt. {$this->flap()->value}·{$this->flapPage()}" : "{$this->value} cop.";
+    }
+
+    /** Il battente di cui fa parte questa pagina, null per I–IV. */
+    public function flap(): ?CoverFlap
+    {
+        return match ($this) {
+            self::BattenteI1, self::BattenteI2 => CoverFlap::I,
+            self::BattenteIV1, self::BattenteIV2 => CoverFlap::IV,
+            default => null,
+        };
+    }
+
+    /** 1 o 2: pagina del battente in ordine di sfoglio; null per I–IV. */
+    public function flapPage(): ?int
+    {
+        return match ($this) {
+            self::BattenteI1, self::BattenteIV1 => 1,
+            self::BattenteI2, self::BattenteIV2 => 2,
+            default => null,
+        };
     }
 
     /**
-     * Facciate stampate, per il peso (`issues.pagine_copertina`): ogni
-     * copertina è una facciata, la bandella due (fronte e retro del lembo).
+     * Ordine fisico di sfoglio: battente di I, I, II, (pagine interne),
+     * III, IV, battente di IV. È l'ordine dei case, una sola fonte.
      */
-    public function printedPages(): int
-    {
-        return $this === self::Bandella ? 2 : 1;
-    }
-
-    /** Ordine fisico di sfoglio, usato per ordinare le copertine. */
     public function order(): int
     {
-        return match ($this) {
-            self::I => 1,
-            self::Bandella => 2,
-            self::II => 3,
-            self::III => 4,
-            self::IV => 5,
-        };
+        return array_search($this, self::cases(), true) + 1;
+    }
+
+    /** Le copertine prima delle pagine interne, in ordine di sfoglio. @return list<self> */
+    public static function front(): array
+    {
+        return [self::BattenteI1, self::BattenteI2, self::I, self::II];
+    }
+
+    /** Le copertine dopo le pagine interne, in ordine di sfoglio. @return list<self> */
+    public static function back(): array
+    {
+        return [self::III, self::IV, self::BattenteIV1, self::BattenteIV2];
     }
 
     /** @return list<self> Le quattro copertine sempre presenti. */
@@ -68,7 +94,10 @@ enum CoverSlot: string
 
     /**
      * Slot corrispondente a un vecchio ruolo pagina (`pages.role`, modello
-     * precedente alla Fase 2) — usato solo dalla conversione dei dati.
+     * precedente alla Fase 2) — usato solo dalla conversione dei dati. Il
+     * vecchio «battente» non è qui: diventava la bandella (valore
+     * CoverConversion::LEGACY_BANDELLA), che la migrazione del 2026-10-30
+     * trasforma nel battente di I.
      */
     public static function fromLegacyRole(?string $role): ?self
     {
@@ -77,7 +106,6 @@ enum CoverSlot: string
             'copertina2' => self::II,
             'copertina3' => self::III,
             'copertina4' => self::IV,
-            'battente' => self::Bandella,
             default => null,
         };
     }

@@ -48,6 +48,6 @@ test('ad formats map to twelfths as agreed in phase 3', function () {
         ->and(AdFormat::UnTerzoPaginaOrizzontale->twelfths())->toBe(4)
         ->and(AdFormat::UnQuartoPagina->twelfths())->toBe(3)
         ->and(AdFormat::CopertinaSecondaTerzaQuarta->twelfths())->toBe(12)
-        ->and(AdFormat::BattenteCopertina->twelfths())->toBe(12)
+        ->and(AdFormat::BattenteCopertina->twelfths())->toBe(24)
         ->and(AdFormat::DoppiaPagina->twelfths())->toBe(24);
 });

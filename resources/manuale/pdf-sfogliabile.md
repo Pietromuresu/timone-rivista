@@ -18,7 +18,7 @@ Il PDF sfogliabile simula la **rivista finita**: una pagina del PDF per ogni pag
 
 ## L'ordine delle pagine
 
-I di copertina, II di copertina, pagine interne 1…N, III e IV di copertina. La bandella, se c'è, viene dopo la I. Ogni pagina è un **A4 verticale** con dentro la pagina della rivista in scala, centrata e non deformata, e il numero di pagina in piccolo sotto.
+Battente di I (se c'è, 2 pagine), I di copertina, II di copertina, pagine interne 1…N, III e IV di copertina, battente di IV (se c'è, 2 pagine). Il PDF si apre a coppie come una rivista: la pagina interna 1 è sempre a destra, accanto alla II. Ogni pagina è un **A4 verticale** con dentro la pagina della rivista in scala, centrata e non deformata, e il numero di pagina in piccolo sotto.
 
 ## Cosa si vede in ogni pagina
 
@@ -46,4 +46,4 @@ Con **«Bassa risoluzione per anteprima»** spuntato ottieni una versione legger
 
 - [Esportare il timone in PDF](manuale:esporta-timone-pdf)
 - [Caricare un PDF o un'immagine](manuale:caricare-file)
-- [Le copertine e la bandella](manuale:copertine)
+- [Le copertine e i battenti](manuale:copertine)

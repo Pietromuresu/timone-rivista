@@ -1,7 +1,7 @@
 {{--
     Fase 2 (2026-10-26): fascia delle copertine, visivamente separata dalle
     pagine interne, PRIMA della pagina 1, con tutte le copertine in ordine di
-    sfoglio (I, bandella, II, III, IV). Una prima versione aveva III e IV in
+    sfoglio (battente I, I, II, III, IV, battente IV). Una prima versione aveva III e IV in
     una seconda fascia dopo l'ultima pagina: l'utente le ha volute tutte
     insieme in cima, dove si trovano subito anche su un numero lungo. Le card sono le stesse delle pagine
     (page-card / page-row con $isCover), ma stanno FUORI dal contenitore
@@ -9,7 +9,12 @@
     una pagina interna. Tra loro si scambiano col drag nativo
     (Grid::swapCovers()).
 
-    Parametri: $covers (Collection<Page>), $viewMode, più quelli che
+    Battenti (2026-10-30): un bottone per battente, «+ Battente I» o
+    «− Togli battente I». Se non si può togliere il bottone resta visibile
+    ma disattivato, con il motivo nel tooltip (IssueCovers::removalBlocker(),
+    lo stesso messaggio del rifiuto lato server).
+
+    Parametri: $covers (Collection<Page>), $flaps, $viewMode, più quelli che
     page-card/page-row si aspettano.
 --}}
 <section
@@ -22,16 +27,20 @@
             📘 Copertine — fuori dalla numerazione delle pagine interne
         </span>
 
-        <span class="flex items-center gap-1.5">
+        <span class="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
             @can('update', $issue)
-                {{-- La bandella vale 2 pagine di copertina nel peso (6 invece di 4). --}}
-                @if ($hasBandella)
-                    <button type="button" wire:click="removeBandella" wire:confirm="Togliere la bandella? Si può solo se è vuota." class="text-indigo-700 dark:text-indigo-300 hover:underline">− Togli bandella</button>
-                @else
-                    <button type="button" wire:click="addBandella" class="text-indigo-700 dark:text-indigo-300 hover:underline">+ Aggiungi bandella</button>
-                @endif
+                @foreach ($flaps as ['flap' => $flap, 'present' => $present, 'blocker' => $blocker])
+                    @if (! $present)
+                        <button type="button" wire:click="addFlap('{{ $flap->value }}')" class="text-indigo-700 dark:text-indigo-300 hover:underline" data-testid="add-flap-{{ $flap->value }}">+ {{ $flap->label() }}</button>
+                    @elseif ($blocker !== null)
+                        {{-- aria-disabled e non disabled: su un bottone disabled alcuni browser non mostrano il tooltip e la tastiera non ci arriva. --}}
+                        <button type="button" aria-disabled="true" title="{{ $blocker }}" aria-label="Togli {{ lcfirst($flap->label()) }}: {{ $blocker }}" class="text-gray-400 dark:text-gray-500 cursor-not-allowed" data-testid="remove-flap-{{ $flap->value }}">− Togli {{ lcfirst($flap->label()) }}</button>
+                    @else
+                        <button type="button" wire:click="removeFlap('{{ $flap->value }}')" wire:confirm="Togliere il {{ lcfirst($flap->label()) }}? Le sue 2 pagine sono vuote." class="text-indigo-700 dark:text-indigo-300 hover:underline" data-testid="remove-flap-{{ $flap->value }}">− Togli {{ lcfirst($flap->label()) }}</button>
+                    @endif
+                @endforeach
             @endcan
-            <x-manual-help slug="copertine" anchor="la-bandella" label="Bandella" />
+            <x-manual-help slug="copertine" anchor="i-battenti" label="Battenti" />
         </span>
     </div>
 

@@ -103,7 +103,13 @@ const PHP = process.env.PHP_BINARY ?? 'php';
 const children = [];
 function cleanup() {
     for (const child of children) child.kill('SIGTERM');
-    fs.rmSync(TMP, { recursive: true, force: true });
+    // Chrome appena terminato può ancora scrivere nel suo profilo (dentro
+    // TMP): qualche nuovo tentativo, e mai un errore dopo schermate riuscite.
+    try {
+        fs.rmSync(TMP, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    } catch (error) {
+        console.warn(`Cartella temporanea non cancellata (${TMP}): ${error.code}`);
+    }
 }
 process.on('exit', cleanup);
 process.on('SIGINT', () => process.exit(130));
@@ -281,7 +287,7 @@ const SHOTS = [
         points: {
             1: `__s.cover('I di copertina')`,
             2: `__s.cover('II di copertina')`,
-            3: `__s.leaf('[data-testid=cover-band]', 'Aggiungi bandella')`,
+            3: `__s.el('[data-testid=add-flap-I]')`,
         },
     },
     {

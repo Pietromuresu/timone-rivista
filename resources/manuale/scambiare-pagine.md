@@ -21,11 +21,11 @@ Funziona in tutte e tre le viste. Contenuti, stato e PDF caricati restano legati
 :::dettagli
 - Un secondo clic sulla stessa pagina annulla la scelta senza fare nulla.
 - La modalità scambio coinvolge solo le due pagine scelte: è il modo più pulito per spostare pagine attorno a una [pagina bloccata](manuale:bloccare-pagina).
-- Le copertine non entrano nella modalità scambio: si scambiano trascinandole una sull'altra, vedi [Le copertine e la bandella](manuale:copertine).
+- Le copertine non entrano nella modalità scambio: si scambiano trascinandole una sull'altra, vedi [Le copertine e i battenti](manuale:copertine).
 :::
 
 ## Vedi anche
 
 - [Spostare le pagine](manuale:spostare-pagine)
 - [Bloccare una pagina](manuale:bloccare-pagina)
-- [Le copertine e la bandella](manuale:copertine)
+- [Le copertine e i battenti](manuale:copertine)

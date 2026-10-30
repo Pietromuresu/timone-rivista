@@ -52,7 +52,7 @@
 | **III di copertina** | Il lato interno della quarta: la pagina a destra dell'ultima pagina interna | `CoverSlot::III` |
 | **IV di copertina** | Il retro della rivista | `CoverSlot::IV` |
 | **Copertine** | Dal 2026-10-26 sono elementi separati del numero, sempre quattro, fuori dalla numerazione e dai conteggi delle pagine interne | `Issue::covers()`, `App\Support\IssueCovers` |
-| **Bandella** (battente) | Lembo ripiegato agganciato alla I di copertina; facoltativo, vale 2 pagine di copertina nel peso (6 invece di 4) | `CoverSlot::Bandella` |
+| **Battente** (prima «bandella») | 2 pagine di copertina in più: battente di I prima della I, battente di IV dopo la IV; facoltativi, 2 facciate ciascuno nel peso (4/6/8). Dal 2026-10-30 | `CoverFlap`, `CoverSlot::BattenteI1`… |
 | **Pagine interne** | Le pagine numerate 1…N del timone, copertine escluse; il numero di pagine del numero | `issues.total_pages`, `Issue::pages()` |
 | **Pagine collegate / gruppo** | Pagine che si spostano sempre insieme | `PageGroup`, `pages.page_group_id` |
 | **Blocco pagina** | Pagina "congelata": non si sposta né si modifica | `pages.locked_at/locked_by` |
@@ -109,7 +109,7 @@
 | `IssueStatus` | `bozza`, `in_lavorazione`, `chiuso` |
 | `PageStatus` | `da_assegnare`, `assegnata`, `in_bozza`, `revisionata`, `ok_stampa` |
 | `PageContentType` | `editoriale`, `pubblicita`, `mista`, `bianca` |
-| `CoverSlot` | `I`, `II`, `III`, `IV`, `bandella` (dal 2026-10-26; il vecchio `PageRole` è stato rimosso, la colonna `pages.role` resta solo come traccia) |
+| `CoverSlot` | `BI1`, `BI2`, `I`, `II`, `III`, `IV`, `BIV1`, `BIV2` (dal 2026-10-30; prima `bandella`; dal 2026-10-26; il vecchio `PageRole` è stato rimosso, la colonna `pages.role` resta solo come traccia) |
 | `ContentType` | `articolo`, `pubblicita` |
 | `EditorialStatus` | `da_scrivere`, `in_scrittura`, `in_revisione`, `pronto` |
 | `AdFormat` | `pagina_intera`, `mezza_pagina_orizzontale`, `mezza_pagina_verticale`, `un_terzo_pagina_orizzontale`, `un_terzo_pagina_verticale`, `un_quarto_pagina`, `battente_copertina`, `doppia_pagina`, `copertina_seconda_terza_quarta`, `piedino`, `due_terzi_pagina`, `prima_romana`, `controsommario`, `elenco_inserzionisti`, `controeditoriale`, `pubbliredazionale` |

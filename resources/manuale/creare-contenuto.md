@@ -34,7 +34,7 @@ Titolo, **Rubrica** (opzionale), **occupazione** (obbligatoria, vedi [Spazio occ
 - Altri campi: agenzia (opzionale), stato commerciale, note commerciali.
 - I formati del listino: pagina intera, mezza pagina orizzontale e verticale, 1/3, 1/4 (vetrina), 2/3, battente copertina, doppia pagina, copertina 2ª/3ª/4ª, piedino, 1ª romana, controsommario, elenco inserzionisti, controeditoriale, pubbliredazionale.
 - La **doppia pagina** (2 pagine intere affiancate) si trascina sulla prima delle due pagine: occupa da sola anche la successiva, ciascuna per intero, e le due pagine vengono collegate.
-- La **battente copertina** occupa la bandella, vedi [Le copertine e la bandella](manuale:copertine).
+- Il **«Battente copertina»** occupa le 2 pagine di un battente, vedi [Le copertine e i battenti](manuale:copertine#i-battenti).
 - Una pubblicità creata ma non ancora su una pagina è considerata **«prenotata»**: vedi [Pubblicità prenotate](manuale:pubblicita-prenotate).
 :::
 

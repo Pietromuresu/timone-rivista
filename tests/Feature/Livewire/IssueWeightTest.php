@@ -31,7 +31,7 @@ function weightEditorFor(Magazine $magazine): User
  * passano davvero dalla copia dei default della rivista.
  */
 // Fase 2 (2026-10-26): $totalPages sono le pagine INTERNE (copertine a
-// parte): 208 interne + 6 di copertina (la rivista NM ha la bandella) è lo
+// parte): 208 interne + 6 di copertina (la rivista NM ha un battente) è lo
 // stesso numero NM dell'Excel che prima si scriveva come "214 totali".
 function createWeightIssue(Magazine $magazine, User $user, int $totalPages = 208, array $weightOverrides = []): Issue
 {
@@ -61,7 +61,7 @@ test('creating an issue copies the magazine weight defaults onto the issue', fun
         ->and($issue->n_copie)->toBe(8200)
         ->and($issue->n_bancali)->toBe(5);
 
-    // 208 pagine interne + 6 di copertina (I–IV e bandella, create da sole): caso NM dell'Excel.
+    // 208 pagine interne + 6 di copertina (I–IV e battente di I, create da sole): caso NM dell'Excel.
     $weight = $issue->weight();
 
     expect($weight->input->pagineInterno)->toBe(208)

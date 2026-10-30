@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Issues;
 
+use App\Enums\CoverFlaps;
 use App\Enums\IssueStatus;
 use App\Enums\PlannedAdKind;
 use App\Livewire\Concerns\NormalizesEmptyNumericInput;
@@ -63,6 +64,12 @@ class Create extends Component
     public array $weight = [];
 
     /**
+     * Battenti del nuovo numero (2026-10-30, App\Enums\CoverFlaps), proposti
+     * dalla rivista; le facciate di copertina del peso ne derivano.
+     */
+    public string $coverFlaps = 'nessuno';
+
+    /**
      * Fase 5 (2026-10-27): pubblicità previste, per tipo (chiavi =
      * PlannedAdKind). Stringhe come i campi del peso ('' = nessuna): un
      * array non tipizzato non soffre del problema "unset" delle proprietà
@@ -82,6 +89,8 @@ class Create extends Component
         $this->total_pages = '32';
         $this->weight = WeightParameters::formValuesFrom($magazine)
             + array_fill_keys(WeightParameters::ISSUE_ONLY_FIELDS, '');
+        $this->coverFlaps = ($magazine->default_cover_flaps ?? CoverFlaps::None)->value;
+        $this->syncCoverPages();
         $this->plannedAds = array_fill_keys(array_column(PlannedAdKind::cases(), 'value'), '');
     }
 
@@ -119,8 +128,10 @@ class Create extends Component
 
         // "80,5" → "80.5" prima di validare, così virgola e punto salvano lo stesso valore.
         $this->weight = WeightParameters::normalizeInput($this->weight);
+        $this->syncCoverPages();
 
         $validated = $this->validate(WeightParameters::prefixedRules('weight', includeIssueOnly: true) + [
+            'coverFlaps' => 'required|in:'.implode(',', array_column(CoverFlaps::cases(), 'value')),
             'title' => 'required|string|max:180',
             'issue_date' => 'nullable|date',
             'print_deadline_at' => 'nullable|date',
@@ -145,7 +156,7 @@ class Create extends Component
             return null;
         }
 
-        $issue = Issue::create([
+        $issue = new Issue([
             'magazine_id' => $this->magazine->id,
             'title' => $validated['title'],
             'issue_date' => $validated['issue_date'],
@@ -155,6 +166,9 @@ class Create extends Component
             'status' => IssueStatus::Bozza,
             ...WeightParameters::toDatabase($validated['weight']),
         ]);
+        // Letti da IssueObserver::created() quando crea le copertine.
+        $issue->initialCoverFlaps = CoverFlaps::from($validated['coverFlaps']);
+        $issue->save();
 
         if ($this->duplicateFromIssueId !== null) {
             $source = $this->magazine->issues()->find($this->duplicateFromIssueId);
@@ -184,6 +198,19 @@ class Create extends Component
     {
         $this->resetValidation();
         $this->weight = WeightParameters::formValuesFrom($this->magazine) + $this->weight;
+        $this->coverFlaps = ($this->magazine->default_cover_flaps ?? CoverFlaps::None)->value;
+        $this->syncCoverPages();
+    }
+
+    public function updatedCoverFlaps(): void
+    {
+        $this->syncCoverPages();
+    }
+
+    /** Le facciate di copertina del peso seguono i battenti scelti (anteprima e salvataggio). */
+    private function syncCoverPages(): void
+    {
+        $this->weight['pagine_copertina'] = (string) (CoverFlaps::tryFrom($this->coverFlaps) ?? CoverFlaps::None)->coverPages();
     }
 
     public function render(): View

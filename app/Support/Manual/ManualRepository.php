@@ -26,7 +26,7 @@ final class ManualRepository
         'Inizia qui',
         'Lavorare sul timone',
         'Contenuti e pubblicità',
-        'Copertine e bandella',
+        'Copertine e battenti',
         'Numero e rivista',
         'Esportare e stampare',
         'Riferimento',

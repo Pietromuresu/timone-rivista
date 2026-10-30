@@ -114,7 +114,7 @@
                         <summary class="cursor-pointer select-none px-4 py-3 font-medium text-gray-700 dark:text-gray-300">⚖️ Carta e peso</summary>
                         <div class="px-4 pb-4 space-y-4">
                             <p class="text-xs text-gray-500 dark:text-gray-400">
-                                Valori proposti dalla rivista: puoi cambiarli solo per questo numero. Le pagine interne sono quelle indicate sopra; le pagine di copertina sono 4 (I–IV), 6 se scrivi 6: il numero nascerà con la bandella.
+                                Valori proposti dalla rivista: puoi cambiarli solo per questo numero. Le pagine interne sono quelle indicate sopra; le copertine sono 4 (I–IV) più 2 pagine per ogni battente scelto.
                             </p>
 
                             @if ($modifiedWeightFields !== [])
@@ -128,7 +128,11 @@
                             <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Carta</p>
                             <div class="grid grid-cols-2 gap-4">
                                 @foreach (\App\Support\Weight\WeightParameters::PAPER_FIELDS as $field)
-                                    <x-weight-field :field="$field" :model="'weight.'.$field" :modified="in_array($field, $modifiedWeightFields, true)" :paper="$weightPreview->paper[$field] ?? null" live />
+                                    @if ($field === 'pagine_copertina')
+                                        <x-cover-flaps-field model="coverFlaps" :value="$coverFlaps" :modified="in_array($field, $modifiedWeightFields, true)" />
+                                    @else
+                                        <x-weight-field :field="$field" :model="'weight.'.$field" :modified="in_array($field, $modifiedWeightFields, true)" :paper="$weightPreview->paper[$field] ?? null" live />
+                                    @endif
                                 @endforeach
                             </div>
 

@@ -12,7 +12,7 @@ use App\Models\Page;
  * contenuto (revisione 2, Fase 2.5, 2026-10-27): un solo punto per le
  * scelte possibili, la loro lettura e il valore attuale di un contenuto.
  * Valori: '' = da assegnare, 'p:N' = dalla pagina interna N, 'c:I'…'c:IV'
- * (e 'c:bandella') = dalla copertina. Stringhe semplici perché finiscono
+ * (e 'c:BI1'… per i battenti) = dalla copertina. Stringhe semplici perché finiscono
  * in una proprietà Livewire e in una <select>.
  *
  * Non va confuso con Advertisement::$preferred_position (la pagina

@@ -32,7 +32,7 @@ Un contenuto eliminato resta recuperabile per 24 ore.
 
 ## Cosa non si può annullare
 
-Pagine interne, bandella, «Sposta le pagine esistenti dopo», scadenza stampa, parametri del peso, chiusura del numero, rubriche, eliminazione di riviste, numeri e utenti, export PDF e, in una modifica, la sostituzione del PDF. Quest'ultima resta in cronologia ma segnata «non annullabile».
+Pagine interne, battenti di copertina, «Sposta le pagine esistenti dopo», scadenza stampa, parametri del peso, chiusura del numero, rubriche, eliminazione di riviste, numeri e utenti, export PDF e, in una modifica, la sostituzione del PDF. Quest'ultima resta in cronologia ma segnata «non annullabile».
 
 ## Perché a volte l'annulla viene rifiutato
 

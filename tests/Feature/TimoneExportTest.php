@@ -3,6 +3,7 @@
 use App\Enums\AdConfirmationStatus;
 use App\Enums\AdFormat;
 use App\Enums\ContentType;
+use App\Enums\CoverFlap;
 use App\Enums\PageStatus;
 use App\Enums\ThumbnailStatus;
 use App\Enums\UserRole;
@@ -99,10 +100,11 @@ test('withThumbnails does not crash when a thumbnail is still processing', funct
 });
 
 test('the export renders the covers in a separate section before the internal pages', function () {
-    // Fase 2 (2026-10-26): copertine I-IV (e bandella) come slot separati.
+    // Fase 2 (2026-10-26): copertine I-IV (e battenti, 2026-10-30) come slot separati.
     $issue = reorderableIssue();
     $user = editorFor($issue);
-    IssueCovers::addBandella($issue);
+    IssueCovers::addFlap($issue, CoverFlap::I);
+    IssueCovers::addFlap($issue, CoverFlap::IV);
 
     $response = $this->actingAs($user)->get(route('issues.export.timone-pdf', [$issue->magazine, $issue]));
     $response->assertOk();
@@ -123,10 +125,15 @@ test('the export renders the covers in a separate section before the internal pa
     expect($html)
         ->toContain('Copertine')
         ->toContain('I di copertina')
-        ->toContain('Bandella')
+        ->toContain('Battente I · 1')
         ->toContain('IV di copertina')
+        ->toContain('Battente IV · 2')
         ->toContain('Pagine interne')
         ->toContain('6 pagine');
+
+    // Ordine di sfoglio: battente di I prima della I, battente di IV dopo la IV.
+    $order = array_map(fn ($label) => mb_strpos($html, $label), ['Battente I · 1', 'Battente I · 2', 'I di copertina', 'II di copertina', 'III di copertina', 'IV di copertina', 'Battente IV · 1', 'Battente IV · 2']);
+    expect($order)->toBe(collect($order)->sort()->values()->all());
 
     // Le copertine compaiono prima delle pagine interne, mai dentro.
     expect(strpos($html, 'IV di copertina'))->toBeLessThan(strpos($html, 'Pagine interne'));

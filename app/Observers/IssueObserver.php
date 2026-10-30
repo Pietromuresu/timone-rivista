@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\CoverFlaps;
 use App\Enums\PageContentType;
 use App\Enums\PageStatus;
 use App\Models\Issue;
@@ -41,8 +42,10 @@ class IssueObserver
         // Fase 2 (2026-10-26): total_pages sono le sole pagine INTERNE
         // (1…N); le copertine I–IV vengono create SEMPRE come slot separati
         // (prima nascevano solo I e IV, come ruolo della prima/ultima
-        // pagina — bug). La bandella nasce se il numero prevede 6 pagine di
-        // copertina (parametro copiato dalla rivista in Issues\Create).
-        IssueCovers::ensure($issue, withBandella: (int) ($issue->pagine_copertina ?? 4) >= 6);
+        // pagina — bug). Battenti (2026-10-30): quelli scelti nel modulo
+        // «Nuovo numero» (Issue::$initialCoverFlaps); senza scelta, dalle
+        // facciate di copertina (6 = battente di I, come la vecchia bandella).
+        $flaps = $issue->initialCoverFlaps ?? CoverFlaps::fromCoverPages($issue->pagine_copertina);
+        IssueCovers::ensure($issue, $flaps->flaps());
     }
 }

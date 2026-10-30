@@ -14,6 +14,7 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 ## 30 ottobre 2026
 
+- **Battenti di copertina**: dal 2026-10-30 la bandella è diventata **battente di I** (2 pagine prima della I) e si può aggiungere anche un **battente di IV** (2 pagine dopo la IV). Le bandelle esistenti sono diventate la pagina 1 del battente di I, con tutto il loro contenuto. Vedi [Le copertine e i battenti](manuale:copertine#i-battenti).
 - **Piccole ? accanto ai comandi** meno ovvi (Peso, selezione multipla, scambio, pagine interne, bandella, spazio occupato): aprono la pagina del manuale in una nuova scheda. Vedi [Chiedi al manuale](manuale:chiedi-al-manuale#il-punto-interrogativo-accanto-ai-comandi).
 
 ## 29 ottobre 2026

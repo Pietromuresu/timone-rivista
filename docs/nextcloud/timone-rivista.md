@@ -130,7 +130,7 @@ docker compose exec app php artisan migrate:status
 - Le pagine interne partono sempre da 1. Il numero di pagine che si scrive creando un numero è solo quello delle pagine interne: le copertine si aggiungono da sole, non vanno contate né sottratte.
 - Sulle copertine si mettono articoli e pubblicità come sulle pagine (trascinandoli dal pannello "Contenuti da assegnare" o con "📎 Carica materiale"). Una copertina si trascina solo sopra un'altra copertina, per scambiarle; non si mescola con le pagine interne.
 - Una pubblicità di due pagine messa sulla II continua sulla pagina 1; messa sulla III prende l'ultima pagina interna e la III. La I e la IV accolgono una pagina sola.
-- Bandella (battente): "+ Aggiungi bandella" nella fascia delle prime copertine. Con la bandella le pagine di copertina per il peso diventano 6.
+- Battenti (dal 2026-10-30, prima «bandella»): "+ Battente I" (2 pagine prima della I) e "+ Battente IV" (2 pagine dopo la IV) nella fascia delle copertine. Ogni battente aggiunge 2 pagine di copertina per il peso (6 o 8). "− Togli battente" solo se le 2 pagine sono vuote e non bloccate; se no il bottone è grigio e il tooltip dice perché. La pubblicità «Battente copertina» occupa le 2 pagine di un battente.
 - Percentuale di pubblicità e conteggi riguardano solo le pagine interne; le copertine hanno il loro conteggio in cima al timone ("copertine 4, X assegnate").
 - I numeri creati prima di questa modifica sono stati convertiti in automatico: le loro copertine sono diventate I–IV con i contenuti che avevano, le pagine interne sono state rinumerate da 1.
 
@@ -247,7 +247,7 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - Ctrl+Z (⌘+Z su Mac) annulla l'ultima azione fatta sul timone, Ctrl+Shift+Z o Ctrl+Y la ripete. Ci sono anche i bottoni ↶ ↷ all'inizio della barra comandi: passandoci sopra dicono cosa annullano. Dopo un annulla compare un avviso con il bottone «Ripeti».
 - Si annullano solo le proprie azioni, mai quelle dei colleghi, fino a 50 passi nelle ultime 24 ore. Mentre si scrive in un campo, Ctrl+Z annulla il testo come sempre.
 - Si può annullare: spostare pagine e gruppi, assegnare o togliere contenuti, frecce e rotazione, spazio sulla pagina, collegare/scollegare, stato e blocco delle pagine, rinominare, modificare, creare (anche più file insieme), archiviare ed eliminare un contenuto (resta recuperabile per 24 ore).
-- Non si può annullare: pagine totali, bandella, scadenza, peso, chiusura del numero, eliminazione di riviste/numeri/utenti, export, sostituzione del PDF di un contenuto.
+- Non si può annullare: pagine totali, battenti, scadenza, peso, chiusura del numero, eliminazione di riviste/numeri/utenti, export, sostituzione del PDF di un contenuto.
 - A volte l'annulla viene rifiutato: se dopo di te un collega ha cambiato le stesse pagine o lo stesso contenuto (l'avviso dice chi e a che ora), oppure se lo spazio dove tornerebbe il contenuto è stato occupato. In quel caso non cambia nulla.
 - Il bottone 🕘 mostra la cronologia delle proprie ultime azioni.
 
@@ -279,7 +279,7 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - In alto c'è «Cerca nel manuale»: si scrive cosa si vuole fare (anche con parole proprie, es. «come tolgo una pubblicità») e i risultati compaiono mentre si scrive. Tasto / o Ctrl+K per andarci.
 - Le pagine principali del manuale hanno uno screenshot con i numeri che spiegano le parti dello schermo (dati di esempio inventati).
 - Bottone tondo «?» in basso a sinistra, da ogni schermata: «Chiedi al manuale». Si scrive la domanda e compare il riquadro «In breve» della pagina giusta. Si vota 👍 Utile o 👎 Non è questo: i voti di più colleghi migliorano le risposte (un voto da solo non cambia nulla, non è legato al nome, si cancella dopo 12 mesi).
-- Piccola «?» accanto ai comandi meno ovvi (Peso, selezione multipla, scambio, pagine interne, bandella, «Quanto spazio occupa»): apre la pagina del manuale in una nuova scheda, senza perdere il lavoro.
+- Piccola «?» accanto ai comandi meno ovvi (Peso, selezione multipla, scambio, pagine interne, battenti, «Quanto spazio occupa»): apre la pagina del manuale in una nuova scheda, senza perdere il lavoro.
 - Per gli admin: «Cosa chiedono gli utenti» (link nel riquadro della pagina del Manuale) mostra le domande senza risposta e cosa è stato imparato; «Disattiva» spegne una voce imparata.
 
 ## Punti di attenzione
@@ -320,12 +320,12 @@ Il formato si inserisce in millimetri: 210 × 270, non 21 × 27. Il sistema acce
 ### Cambiare la carta di un singolo numero
 
 1. Nella pagina del numero, riquadro "Peso", premere "Modifica parametri".
-2. Nella sezione "Carta" cambiare grammatura interno o grammatura copertina. Le pagine copertina di un numero già creato sono in grigio: dipendono dalle copertine (4, o 6 con la bandella, che si aggiunge dalla fascia copertine del timone).
+2. Nella sezione "Carta" cambiare grammatura interno o grammatura copertina. Le pagine copertina di un numero già creato sono in grigio: dipendono dalle copertine (4, più 2 per ogni battente, che si aggiunge dalla fascia copertine del timone).
 3. Prima di salvare, l'anteprima in fondo mostra il nuovo peso, il margine, lo scaglione e la differenza dal peso salvato (es. "−60,1 g rispetto al valore salvato (510,7 g), passa da scaglione 1.000 g a 500 g.").
 4. I valori diversi dalla rivista hanno il badge "modificato". "Ripristina default rivista" li riporta ai valori della rivista (non salva da solo).
 5. "Salva" modifica solo questo numero, mai i valori della rivista. La modifica resta nella cronologia.
 
-Le pagine interne non si inseriscono: sono le pagine del timone (esempio: 208 pagine interne, più 6 pagine di copertina se c'è la bandella). Se si cambiano le pagine del timone o si aggiunge/toglie la bandella, il peso si aggiorna da solo.
+Le pagine interne non si inseriscono: sono le pagine del timone (esempio: 208 pagine interne, più 6 pagine di copertina se c'è un battente). Se si cambiano le pagine del timone o si aggiunge/toglie un battente, il peso si aggiorna da solo.
 
 Cambiare i valori della rivista non modifica mai i numeri già creati: ogni numero conserva i suoi.
 

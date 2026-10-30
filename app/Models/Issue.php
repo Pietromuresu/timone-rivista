@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CoverFlaps;
 use App\Enums\IssueStatus;
 use App\Support\Weight\MagazineWeightCalculator;
 use App\Support\Weight\MagazineWeightInput;
@@ -17,6 +18,14 @@ use Illuminate\Support\Facades\DB;
 class Issue extends Model
 {
     use HasFactory;
+
+    /**
+     * Battenti scelti nel modulo «Nuovo numero» (2026-10-30), letti da
+     * IssueObserver::created() quando crea le copertine. Una proprietà PHP
+     * e non una colonna: serve solo nel momento della creazione, poi i
+     * battenti sono le righe di `pages` (IssueCovers::flaps()).
+     */
+    public ?CoverFlaps $initialCoverFlaps = null;
 
     protected $fillable = [
         'magazine_id',
@@ -125,8 +134,8 @@ class Issue extends Model
     }
 
     /**
-     * Copertine del numero (I–IV sempre, bandella se presente), in ordine
-     * di sfoglio. Vedi App\Enums\CoverSlot.
+     * Copertine del numero (I–IV sempre, le pagine dei battenti se
+     * presenti). Vedi App\Enums\CoverSlot.
      */
     public function covers(): HasMany
     {
@@ -140,13 +149,14 @@ class Issue extends Model
     }
 
     /**
-     * Facciate di copertina stampate (4, o 6 con la bandella): la fonte del
+     * Facciate di copertina stampate (4, più 2 per battente): la fonte del
      * parametro `pagine_copertina` del peso, sincronizzato da
-     * App\Support\IssueCovers ogni volta che le copertine cambiano.
+     * App\Support\IssueCovers ogni volta che le copertine cambiano. Dal
+     * 2026-10-30 ogni copertina, battenti compresi, è una facciata.
      */
     public function coverPageCount(): int
     {
-        return $this->covers()->get(['cover_slot'])->sum(fn (Page $cover) => $cover->cover_slot->printedPages());
+        return $this->covers()->count();
     }
 
     /**
@@ -232,13 +242,13 @@ class Issue extends Model
      * Le pagine interne non sono un parametro salvato: sono total_pages, così
      * il peso segue il timone da solo. Le pagine di copertina non sono più il
      * parametro modificabile a mano: derivano dalle copertine che esistono
-     * (coverPageCount(), 4 o 6 con la bandella).
+     * (coverPageCount(), 4, 6 o 8 con i battenti).
      */
     public function weightInput(): MagazineWeightInput
     {
         // Fase 2 (2026-10-26): pagine interne = total_pages (le copertine
         // non ne fanno più parte), pagine di copertina = quelle che
-        // esistono davvero (4, 6 con la bandella) — nessuna sottrazione.
+        // esistono davvero (4, 6 o 8 con i battenti) — nessuna sottrazione.
         $params = $this->only([...WeightParameters::FIELDS, ...WeightParameters::ISSUE_ONLY_FIELDS]);
         $params['pagine_copertina'] = $this->coverPageCount();
 

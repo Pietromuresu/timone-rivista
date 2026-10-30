@@ -81,7 +81,7 @@ Chi le scrive:
 | Default su `magazines` | `App\Livewire\Magazines\Edit::save()`; `maggiorazione_percentuale` anche da `App\Livewire\Timone\WeightPanel::applySuggestedSurcharge()` (calibrazione, solo Admin) |
 | Parametri su `issues` | `App\Livewire\Issues\Create::save()` (copia dei default della rivista) e `WeightPanel::saveParams()` |
 
-Le pagine interne **non** sono una colonna: sono `issues.total_pages`. `pagine_copertina` sul numero è scritto da `App\Support\IssueCovers::syncPrintedPages()` (4, o 6 con la bandella) e non è più modificabile a mano (Fase 2, 2026-10-26); sulla rivista resta il default che decide se un nuovo numero nasce con la bandella (≥ 6).
+Le pagine interne **non** sono una colonna: sono `issues.total_pages`. `pagine_copertina` sul numero è scritto da `App\Support\IssueCovers::syncPrintedPages()` (4, più 2 per battente) e non è più modificabile a mano (Fase 2, 2026-10-26). Sulla rivista, dal 2026-10-30, `magazines.default_cover_flaps` (`nessuno`/`I`/`IV`/`entrambi`, `App\Enums\CoverFlaps`) dice con quali battenti nasce un nuovo numero; `magazines.pagine_copertina` ne deriva (4/6/8).
 
 Cast: solo gli interi (`formato_*_mm`, `pagine_copertina`, `n_copie`, `n_bancali`). I decimal restano grezzi, senza cast `decimal:2`, per evitare la deprecation di `brick/math` (vedi [11-debito-tecnico.md](11-debito-tecnico.md)); li converte a float `MagazineWeightInput::fromArray()`.
 
@@ -108,7 +108,7 @@ Numeri e riviste **già esistenti** al momento della migration:
 
 ### `pages`
 - **Scopo**: pagina fisica del numero.
-- **Colonne**: `position` (1..N per le pagine interne, **NULL per le copertine** dal 2026-10-26), `cover_slot` (`I`/`II`/`III`/`IV`/`bandella`, NULL per le pagine interne — `App\Enums\CoverSlot`), `content_type` (`editoriale`/`pubblicita`/`mista`/`bianca`, derivato dai contenuti), `status` (`da_assegnare`…`ok_stampa`), `role` (**non più letto dal codice** dalla Fase 2: resta come traccia e per il rollback della conversione), `locked_at`/`locked_by`, `page_group_id` (FK page_groups), `notes`.
+- **Colonne**: `position` (1..N per le pagine interne, **NULL per le copertine** dal 2026-10-26), `cover_slot` (`BI1`/`BI2`/`I`/`II`/`III`/`IV`/`BIV1`/`BIV2`, NULL per le pagine interne — `App\Enums\CoverSlot`; `bandella` fino al 2026-10-30, convertita dalla migrazione `2026_10_30_100000` nel battente di I), `content_type` (`editoriale`/`pubblicita`/`mista`/`bianca`, derivato dai contenuti), `status` (`da_assegnare`…`ok_stampa`), `role` (**non più letto dal codice** dalla Fase 2: resta come traccia e per il rollback della conversione), `locked_at`/`locked_by`, `page_group_id` (FK page_groups), `notes`.
 - **Vincoli**: **`unique(issue_id, position)`** (più NULL ammessi: le copertine): il riordino usa un offset temporaneo (vedi [02-architettura.md](02-architettura.md)); **`unique(issue_id, cover_slot)`**.
 - **Scrive**: quasi tutti i metodi di `Grid`, `IssueObserver`, `PageInserter`, `App\Support\IssueCovers` (unico punto che scrive `cover_slot`).
 
@@ -185,7 +185,7 @@ Numeri e riviste **già esistenti** al momento della migration:
 - **`page_comments`**: `issue_id` (cascade col numero), `page_id` (**nullable, nullOnDelete**: i commenti seguono la pagina come entità; se la pagina viene eliminata restano), `user_id` (nullable, nullOnDelete: restano anche se l'utente viene eliminato), `body`, `page_label` (nome della pagina al momento del commento, riscritto con il nome di quel momento da `DeletedPageComments::preserve()` prima di ogni eliminazione di pagine), `page_deleted_at`, `edited_at`, timestamp, `deleted_at` (soft delete = commento eliminato dall'autore o da un admin).
 - **`page_comment_reads`**: (`page_comment_id`, `user_id`) chiave primaria, `read_at`. Non letto = commento di un altro senza riga per me.
 - **`issues.comments_updated_at`** (timestamp con microsecondi): segnale del polling solo per i commenti, separato da `pages_updated_at`.
-- Eliminazione di pagine: `Grid::resizePages()`, `IssueCovers::removeBandella()`, `CoverConversion::revert()` chiamano `DeletedPageComments::preserve()` prima della delete. Un percorso nuovo che elimina pagine deve fare lo stesso (altrimenti la FK mette comunque `page_id` a NULL, ma resta il nome di quando il commento è stato scritto).
+- Eliminazione di pagine: `Grid::resizePages()`, `IssueCovers::removeFlap()`, `CoverConversion::revert()` chiamano `DeletedPageComments::preserve()` prima della delete. Un percorso nuovo che elimina pagine deve fare lo stesso (altrimenti la FK mette comunque `page_id` a NULL, ma resta il nome di quando il commento è stato scritto).
 
 ### `timone_azioni` (annulla/ripeti, 2026-10-28, migration `2026_10_28_310000_create_timone_azioni_table`)
 - **Scopo**: cronologia annulla/ripeti per utente e per numero (`App\Models\TimelineAction`, scritta solo da `App\Support\Timeline\TimelineActionService`).

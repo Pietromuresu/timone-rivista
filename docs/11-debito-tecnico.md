@@ -92,7 +92,7 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 |---|---|---|---|
 | 50 | Colonna `pages.role` e `magazines.battente_counted_in_total` non più usate dal codice | migration originali | Tenute di proposito: la prima serve al rollback della conversione, cancellarle sarebbe una migration distruttiva. Da togliere quando la conversione è consolidata |
 | 51 | Rollback della conversione affidabile solo subito dopo il deploy | `App\Support\Covers\CoverConversion::revertAll()` | Se nel frattempo si aggiungono pagine interne, le posizioni ripristinate possono collidere su `unique(issue_id, position)`: il rollback si ferma con un errore del database (transazione per numero, niente stati parziali) |
-| 52 | `Grid.php` cresce ancora (+ `swapCovers`, `addBandella`, `removeBandella`, guardie copertina) | `app/Livewire/Timone/Grid.php` | La logica è in `App\Support\IssueCovers`/`ContentPlacer`; in Grid solo orchestrazione. Proposta per la Fase 6: estrarre cruscotto/riepilogo in un componente dedicato |
+| 52 | `Grid.php` cresce ancora (+ `swapCovers`, `addFlap`, `removeFlap` — prima `addBandella`/`removeBandella` —, guardie copertina) | `app/Livewire/Timone/Grid.php` | La logica è in `App\Support\IssueCovers`/`ContentPlacer`; in Grid solo orchestrazione. Proposta per la Fase 6: estrarre cruscotto/riepilogo in un componente dedicato |
 | 53 | In vista doppia pagina la II di copertina non è affiancata alla pagina 1 (sta nella fascia copertine sopra) | `grid.blade.php`, `cover-band.blade.php` | Scelta: la richiesta chiede una fascia visivamente separata. Se la redazione vuole vedere l'apertura II + 1, va aggiunta come anteprima nella vista doppia |
 
 ## Fase 3 — occupazione in dodicesimi (aggiunto il 2026-10-27)
@@ -190,7 +190,7 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 - **TCPDF tiene il PDF in RAM**: con numeri di molti GB di sorgenti serve più memoria del default (1024M); il job ha un solo tentativo.
 - **Disco `local` obbligatorio per i sorgenti**: `SourceFiles::path()` usa `Storage::disk()->path()`, che c'è solo per i dischi locali (oggi tutti). Un disco S3 richiederebbe di scaricare i file in una cartella temporanea.
 - **Variante leggera lenta**: Ghostscript ricomprime tutto (80 s per 68 pagine da 72 MB nella prova).
-- **Ordine della bandella**: dopo la I di copertina (ordine di sfoglio di `CoverSlot`); la specifica non la cita.
+- **Ordine della bandella**: dopo la I di copertina (ordine di sfoglio di `CoverSlot`); la specifica non la cita. *Superato il 2026-10-30*: battente di I **prima** della I, battente di IV dopo la IV (scelta dell'utente nella Fase A0 dei battenti).
 - **Nessuna notifica a fine export**: lo stato si vede nel pannello (che si aggiorna da solo mentre è aperto), non arriva un avviso altrove.
 
 ## Annulla/ripeti (aggiunto il 2026-10-28)
