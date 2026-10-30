@@ -384,3 +384,20 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - Migration `2026_10_30_100000_convert_bandella_to_cover_flaps` (colonna `magazines.default_cover_flaps`, `App\Support\Covers\FlapConversion`, `down()` con controllo), comando `php artisan timone:battenti-dry-run`.
 - Componente `<x-cover-flaps-field>`; `Issue::$initialCoverFlaps` letto da `IssueObserver`.
 - Test: `tests/Feature/Livewire/TimoneCoverFlapsTest.php` più i test di copertine, export, peso, segnature e commenti aggiornati.
+
+## 2026-10-30 — Crop delle miniature (fasi B0–B1 di «battenti, crop delle miniature, griglia accoppiata»)
+
+### Visibili agli utenti
+- Un contenuto che occupa una parte di pagina mostra **solo la sua parte** del file a pagina intera (mezza verticale a sinistra → metà sinistra del PDF), non più tutto il file rimpicciolito. Vale nel timone, nell'export PDF del timone e nel PDF sfogliabile, con la stessa porzione.
+- Forme a L: ogni pezzo mostra la sua parte. PDF con abbondanza: ritaglio sulla pagina rifilata. Contenuti su più pagine: ogni pagina la sua pagina del PDF.
+- Un file già della misura dell'annuncio si vede intero; «Anteprima nel riquadro» permette sempre di forzare la scelta.
+- Anteprime ritagliate più nitide (miniatura da 1200 px, caricata dopo la griglia).
+- Export PDF del timone: l'anteprima non è più stirata nel riquadro.
+- Corretto: un clic nel timone (es. «☑️ Selezione») partito nello stesso istante del controllo dei commenti veniva eseguito ma la schermata non si aggiornava.
+
+### Tecniche
+- `App\Support\PageGrid\ThumbnailCrop` → `CropPlan` (sostituisce `ThumbnailFit`): regola «Automatico» nuova (intero solo con la misura del riquadro), pagina rifilata (TrimBox / formato + 3 mm / intera), finestre per pezzo, stile CSS e disegno per FPDI dalla stessa fonte.
+- `App\Support\PdfBoxes` (TrimBox con il parser FPDI), `ContentFileExtras`, `CroppedThumbnails` (PNG ritagliati con GD per dompdf, cache per file + finestra); job `CompleteContentFileThumbnail`, `WarmCroppedThumbnail`; `?size=large` sulla rotta della miniatura; `timone:file-ratios` esteso.
+- `Grid::skipRenderIfOnlyPolling()` al posto di `skipRender()` nei due polling (test `TimoneGridPollingBatchTest`).
+- Migration `2026_10_30_200000_add_crop_columns_to_content_files` (`trim_box`, `large_thumbnail_path`, solo colonne nuove).
+- Verifica: `tests/Support/CropFixtures.php` (PDF di prova a sesti colorati), `tests/Feature/ThumbnailCropReproTest.php`, `ThumbnailCropCacheTest.php`, `ThumbnailCropCardTest.php`, `tests/Unit/ThumbnailCropTest.php`; `node scripts/verifica-crop.mjs` + `Database\Seeders\CropVerificationSeeder` → immagini in `docs/verifiche/crop/`.

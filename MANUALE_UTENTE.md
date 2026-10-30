@@ -951,6 +951,8 @@ Dentro ogni card, ogni contenuto occupa un riquadro grande quanto il suo spazio.
 3. **⟳ Ruota** lo gira da verticale a orizzontale.
 4. **👁 Apri il file**, **✏️ Modifica**, **↗ Estendi a un'altra pagina** o **✕ Rimuovi dalla pagina** per le altre azioni.
 
+Se il file è una pagina intera con l'annuncio in una zona, il riquadro ne mostra **solo la parte che occupa**, non tutto il file rimpicciolito.
+
 È una rappresentazione dello spazio, non l'impaginato definitivo.
 
 ![Le pagine dalla 7 alla 18 del numero di esempio, con articoli e pubblicità in formati diversi.](public/manuale/img/formati-nella-card.webp)
@@ -1002,10 +1004,19 @@ La pagina è divisa in 6 colonne e 6 righe. Ogni contenuto occupa un rettangolo 
 
 Ogni riquadro mostra l'anteprima del **suo** file. Senza file vedi un fondo azzurro (articolo) o ambra (pubblicità).
 
+Il file viene considerato **una pagina intera**, alla scala della pagina del timone, e nel riquadro si vede **solo la parte che corrisponde al riquadro**, cioè la parte di pagina che il contenuto occupa. Il resto è tagliato, non rimpicciolito.
+
+Per esempio, una pubblicità **mezza pagina verticale a sinistra** con un PDF a pagina intera mostra la **metà sinistra** del PDF; un **piedino** mostra il terzo in basso; una **vetrina in basso a destra** il quarto in basso a destra. Se sposti o ruoti il contenuto, la parte mostrata lo segue.
+
 **Dettagli**
 
-- Se il file è un PDF a pagina intera con l'annuncio in una zona, si vede **solo la parte che corrisponde al riquadro**: una mezza verticale a sinistra mostra la metà sinistra del PDF.
-- Se il file è già della misura dell'annuncio si vede **intero**.
+- Se il file è già **della misura dell'annuncio** (per esempio un PDF grande come una mezza pagina) si vede **intero** e riempie il riquadro.
+- Anche un file più piccolo della pagina che non ha la misura del riquadro (per esempio una mezza verticale messa in un riquadro orizzontale) si vede intero: ritagliarlo mostrerebbe un pezzo a caso.
+- Un PDF con l'**abbondanza** (i 3 mm in più per lato per il taglio) è ritagliato sulla pagina rifilata, senza l'abbondanza.
+- Un PDF di più pagine mette su ogni pagina del timone la sua pagina del PDF, ciascuna ritagliata.
+- Una **forma a L** mostra in ogni suo pezzo la parte giusta del file.
+- La stessa parte si vede nell'esportazione PDF del timone e nel PDF sfogliabile.
+- Subito dopo il caricamento può comparire per qualche istante un'anteprima meno nitida: quella definitiva arriva da sola.
 - Se il sistema sbaglia, scegli tu in «Anteprima nel riquadro» nella finestra [Modifica contenuto](resources/manuale/modificare-contenuto.md).
 
 #### Vedi anche
@@ -1044,7 +1055,7 @@ Sulla pagina, **doppio click sul nome** del contenuto: diventa un campo di testo
 Contiene tutti i campi della creazione: tipo (articolo o pubblicità), titolo, rubrica, campi dell'articolo o della pubblicità, **occupazione** (pagine intere + frazione) e **Materiale di stampa** (il PDF o l'immagine allegati, che sono anche l'anteprima nel timone). In più:
 
 - **Posizione nel timone**: la prima pagina in cui si trova. Cambiandola il contenuto si sposta lì, tutto insieme. Scegliendo «Da assegnare» torna nel pannello Contenuti.
-- **Anteprima nel riquadro**: «Automatico» (il sistema guarda le proporzioni del file e dice tra parentesi cosa ha deciso), «Il file è a pagina intera» (mostra solo la parte del riquadro) o «Il file è già nel formato» (mostra il file intero).
+- **Anteprima nel riquadro**: «Automatico» (il file si vede intero solo se ha la misura del riquadro, altrimenti è trattato come pagina intera; tra parentesi c'è cosa ha deciso), «Il file è a pagina intera» (mostra solo la parte del riquadro) o «Il file è già nel formato» (mostra il file intero). Vedi [L'anteprima nel riquadro](resources/manuale/disposizione-nella-pagina.md).
 
 «Salva modifiche» applica tutto. «Annulla», ✕ o Esc chiudono senza salvare.
 
@@ -1828,7 +1839,7 @@ Battente di I (se c'è, 2 pagine), I di copertina, II di copertina, pagine inter
 
 #### Cosa si vede in ogni pagina
 
-- I contenuti con un file mostrano **il loro PDF (o la loro immagine) nel loro riquadro**, con la stessa regola delle anteprime del timone: un file a pagina intera mostra solo la sua parte, un file già nel formato si vede intero.
+- I contenuti con un file mostrano **il loro PDF (o la loro immagine) nel loro riquadro**, con la stessa regola e la stessa parte delle anteprime del timone: un file a pagina intera mostra solo la sua parte (senza l'abbondanza), un file già nel formato si vede intero. La qualità resta quella del PDF originale.
 - I contenuti **senza file** (segnaposto, articoli ancora senza PDF) **non spariscono**: vedi un riquadro tratteggiato con titolo, tipo e «File mancante». Lo stesso se il file non si trova più sul server.
 - Lo spazio libero resta bianco. Una pagina vuota mostra «Pagina bianca».
 
@@ -2255,6 +2266,7 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 #### 30 ottobre 2026
 
+- **Anteprime ritagliate**: un contenuto che occupa una parte di pagina mostra solo la sua parte del file a pagina intera, invece di tutto il file rimpicciolito; anche nelle forme a L, senza l'abbondanza, più nitida, e uguale nell'esportazione PDF del timone e nel PDF sfogliabile. Vedi [L'anteprima nel riquadro](resources/manuale/disposizione-nella-pagina.md).
 - **Battenti di copertina**: dal 2026-10-30 la bandella è diventata **battente di I** (2 pagine prima della I) e si può aggiungere anche un **battente di IV** (2 pagine dopo la IV). Le bandelle esistenti sono diventate la pagina 1 del battente di I, con tutto il loro contenuto. Vedi [Le copertine e i battenti](resources/manuale/copertine.md).
 - **Piccole ? accanto ai comandi** meno ovvi (Peso, selezione multipla, scambio, pagine interne, bandella, spazio occupato): aprono la pagina del manuale in una nuova scheda. Vedi [Chiedi al manuale](resources/manuale/chiedi-al-manuale.md).
 

@@ -307,17 +307,22 @@
                     };
                 @endphp
                 {{-- Revisione 2, Fase 2.3: forma a L (3/4, 7/12, 11/12) — i pezzi
-                     oltre a quello principale, stesso colore, senza testo. --}}
+                     oltre a quello principale, stesso colore, senza testo.
+                     2026-10-30: con un file ritagliato anche questi pezzi mostrano
+                     la loro porzione (CropPlan, un pezzo per volta). --}}
+                @php
+                    $blockImage = $block['largeImageUrl'] ?? $block['imageUrl'];
+                @endphp
                 @if ($block['kind'] === 'fluid')
                     @foreach ($block['pieces'] as $piece)
                         @continue($piece === $rect)
                         <div
                             wire:key="page-{{ $page->id }}-block-{{ $content->id }}-piece-{{ $loop->index }}"
-                            class="absolute border {{ $blockBorder }} {{ $blockTone }}"
+                            class="absolute overflow-hidden border {{ $blockBorder }} {{ $blockImage ? 'bg-gray-200 dark:bg-gray-700' : $blockTone }}"
                             style="left: {{ $piece['x'] }}%; top: {{ $piece['y'] }}%; width: {{ $piece['w'] }}%; height: {{ $piece['h'] }}%;"
                             data-testid="layout-piece"
                             aria-hidden="true"
-                        ></div>
+                        >@if ($blockImage && $block['crop']?->crops())<img src="{{ $blockImage }}" alt="" loading="lazy" decoding="async" style="{{ $block['pieceStyles'][$loop->index] }}" />@endif</div>
                     @endforeach
                 @endif
                 <div
@@ -339,11 +344,12 @@
                              seleziona la pagina come un click sulla pagina
                              (Grid::clickPage()); il file si apre dall'occhio 👁 nel
                              menu «⋯» (partials/content-controls). --}}
-                        {{-- Fase 2.4: ritaglio in base al rettangolo — file a pagina
-                             intera → solo la sua porzione, file nel formato → intero
-                             (Page::layout() → App\Support\PageGrid\ThumbnailFit). --}}
+                        {{-- Ritaglio in base al rettangolo — file a pagina intera →
+                             solo la sua porzione della pagina rifilata, file nel
+                             formato → intero (Page::layout() → ThumbnailCrop). Se
+                             ritagliato, la miniatura grande (nitida), caricata pigra. --}}
                         <div class="absolute inset-0 overflow-hidden" data-fit="{{ $block['fit']->value }}">
-                            <img src="{{ $block['imageUrl'] }}" alt="" style="{{ $block['imageStyle'] }}" />
+                            <img src="{{ $blockImage }}" alt="" @if ($block['largeImageUrl']) loading="lazy" decoding="async" @endif style="{{ $block['imageStyle'] }}" />
                         </div>
                         <div class="absolute inset-x-0 bottom-0 max-h-full overflow-hidden bg-black/60 px-0.5 py-px">
                             @include('livewire.timone.partials.page-content-entry', ['variant' => 'overlay', 'compact' => true])

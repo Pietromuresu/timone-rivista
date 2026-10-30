@@ -289,7 +289,7 @@ test('the export layout uses the same blocks as the card, converted to points', 
 
     $layout = ExportPageLayout::forPage($page->fresh()->load('contents.advertisement', 'contents.files'), 80, 100, false);
 
-    expect($layout['blocks'][0])->toMatchArray(['x' => 0.0, 'y' => 0.0, 'w' => 40.0, 'h' => 100.0, 'isAd' => true, 'src' => null])
+    expect($layout['blocks'][0])->toMatchArray(['x' => 0.0, 'y' => 0.0, 'w' => 40.0, 'h' => 100.0, 'isAd' => true, 'img' => null])
         ->and($layout['blocks'][1])->toMatchArray(['x' => 40.0, 'y' => 0.0, 'w' => 40.0, 'h' => 50.0, 'isAd' => false])
         // Revisione 2, Fase 2.3: lo spazio libero è una lista di rettangoli (griglia 6×6).
         ->and($layout['free'])->toBe([['x' => 40.0, 'y' => 50.0, 'w' => 40.0, 'h' => 50.0]])

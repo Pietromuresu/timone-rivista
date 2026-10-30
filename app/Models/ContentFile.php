@@ -45,6 +45,9 @@ class ContentFile extends Model
         'measured_height_mm',
         // Revisione 2, Fase 2.4: larghezza/altezza della pagina del file (ritaglio anteprima).
         'aspect_ratio',
+        // 2026-10-30, ritaglio delle miniature: misure della pagina e miniatura grande.
+        'trim_box',
+        'large_thumbnail_path',
         'format_override_confirmed_by',
         'format_override_confirmed_at',
     ];
@@ -59,6 +62,7 @@ class ContentFile extends Model
             'measured_width_mm' => 'decimal:1',
             'measured_height_mm' => 'decimal:1',
             'aspect_ratio' => 'float',
+            'trim_box' => 'array',
             'format_override_confirmed_at' => 'datetime',
         ];
     }

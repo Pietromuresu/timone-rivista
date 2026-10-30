@@ -3,20 +3,28 @@
 namespace App\Models;
 
 use App\Enums\CoverSlot;
+use App\Enums\FileFit;
 use App\Enums\PageContentType;
 use App\Enums\PageFillStatus;
 use App\Enums\PageStatus;
 use App\Enums\ThumbnailStatus;
+use App\Jobs\CompleteContentFileThumbnail;
+use App\Jobs\WarmCroppedThumbnail;
+use App\Support\ContentFileAspectRatio;
+use App\Support\ContentFileExtras;
+use App\Support\CroppedThumbnails;
 use App\Support\PageCapacity;
+use App\Support\PageGrid\CropPlan;
 use App\Support\PageGrid\GridRect;
 use App\Support\PageGrid\PageGridPlanner;
 use App\Support\PageGrid\PageGridPositions;
-use App\Support\PageGrid\ThumbnailFit;
+use App\Support\PageGrid\ThumbnailCrop;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 
 class Page extends Model
 {
@@ -251,9 +259,11 @@ class Page extends Model
             $content = $byId[$id];
             $file = $this->previewFileFor($content);
             $movable = $block['kind'] === 'rect';
-            // Fase 2.4: a pagina intera → solo la porzione del rettangolo; nel
-            // formato → intero senza tagli (ThumbnailFit).
-            $fit = ThumbnailFit::resolve($file?->aspect_ratio, $content->file_fit, $this->issue->pageAspectRatio());
+            // 2026-10-30: ritaglio per pezzo (ThumbnailCrop): a pagina intera
+            // ogni pezzo, L comprese, mostra la sua porzione della pagina
+            // rifilata; nel formato il file intero.
+            $pieces = $block['kind'] === 'fluid' ? $block['pieces'] : array_filter([$block['rect']]);
+            $crop = $file !== null && $pieces !== [] ? self::cropFor($file, $content, array_values($pieces), $this->issue->pageSizeMm()) : null;
 
             $blocks[] = [
                 'content' => $content,
@@ -263,8 +273,12 @@ class Page extends Model
                 'pieces' => array_map(fn ($piece) => $piece->toPercent(), $block['pieces']),
                 'file' => $file,
                 'imageUrl' => $file?->thumbnail_status === ThumbnailStatus::Ready ? route('content-files.thumbnail', $file) : null,
-                'fit' => $fit,
-                'imageStyle' => ThumbnailFit::imageStyle($fit, $block['rect']),
+                // Ritagliato: la miniatura grande, nitida anche ingrandita.
+                'largeImageUrl' => $file?->thumbnail_status === ThumbnailStatus::Ready && $file->large_thumbnail_path !== null && $crop?->crops() ? route('content-files.thumbnail', [$file, 'size' => 'large']) : null,
+                'crop' => $crop,
+                'fit' => $crop?->fit ?? FileFit::FullPage,
+                'imageStyle' => $crop !== null && $block['rect'] !== null ? $crop->imageStyle($block['rect']) : '',
+                'pieceStyles' => $crop !== null ? array_map(fn ($piece) => $crop->imageStyle($piece), $block['pieces']) : [],
                 'moves' => collect(PageGridPlanner::DIRECTIONS)
                     ->mapWithKeys(fn (string $direction) => [$direction => $movable && PageGridPlanner::moveTarget($rects, $id, $direction) !== null])
                     ->all(),
@@ -277,6 +291,38 @@ class Page extends Model
             'free' => array_map(fn ($rect) => $rect->toPercent(), $plan['free']),
             'overfull' => $plan['overfull'],
         ];
+    }
+
+    /**
+     * Piano di ritaglio di un file in questi pezzi. Un file mai misurato
+     * prende subito le proporzioni dalla sua miniatura (lettura di un PNG,
+     * istantanea) e accoda il resto (TrimBox, miniatura grande) una volta
+     * sola: la griglia non aspetta la rasterizzazione.
+     *
+     * @param  list<GridRect>  $pieces
+     */
+    private static function cropFor(ContentFile $file, Content $content, array $pieces, array $pageMm): CropPlan
+    {
+        if ($file->thumbnail_status === ThumbnailStatus::Ready && $file->aspect_ratio === null && ($ratio = ContentFileAspectRatio::measure($file)) !== null) {
+            $file->forceFill(['aspect_ratio' => $ratio])->saveQuietly();
+        }
+
+        if (ContentFileExtras::incomplete($file) && Cache::add('content-file-complete:'.$file->id, true, now()->addHour())) {
+            CompleteContentFileThumbnail::dispatch($file);
+        }
+
+        $plan = ThumbnailCrop::plan($pageMm, $pieces, $file->aspect_ratio, $file->trim_box, $content->file_fit);
+
+        // Ritagli per l'export del timone, preparati in coda (una volta per finestra).
+        if ($plan->crops() && $file->thumbnail_status === ThumbnailStatus::Ready) {
+            foreach ($plan->pieces as $piece) {
+                if (Cache::add('crop-warm:'.CroppedThumbnails::relativePath($file, $piece['window']), true, now()->addDay()) && ! CroppedThumbnails::exists($file, $piece['window'])) {
+                    WarmCroppedThumbnail::dispatch($file, $piece['window']);
+                }
+            }
+        }
+
+        return $plan;
     }
 
     /** Blocco della disposizione di un contenuto (menu dei comandi). */

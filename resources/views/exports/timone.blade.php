@@ -61,7 +61,8 @@
         .blank { position: absolute; left: 0; right: 0; top: 42%; text-align: center; color: #d1d5db; font-size: 6pt; letter-spacing: 0.5pt; text-transform: uppercase; }
 
         .block { position: absolute; overflow: hidden; }
-        .block img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+        /* Posizione e misure in pt sull'<img> (ExportPageLayout::image()). */
+        .block img { position: absolute; }
         .block-text { position: absolute; left: 1.5pt; right: 1.5pt; top: 1.2pt; font-size: 5.2pt; line-height: 1.2; color: #1f2937; }
         .block-caption { position: absolute; left: 0; right: 0; bottom: 0; background-color: #ffffff; color: #111827; font-size: 4.8pt; line-height: 1.15; padding: 0.6pt 1.2pt; }
         .fraction { color: #6b7280; }

@@ -83,7 +83,7 @@
 | **Fascia sticky** | Parte alta della pagina che resta ferma scorrendo: header dell'app e barra di riepilogo del timone (`data-sticky-top`). L'auto-scroll del trascinamento parte dal suo bordo inferiore | `layouts/app.blade.php`, `partials/summary-bar.blade.php`, `resources/js/drag-autoscroll.js` |
 | **Griglia 6×6** | La pagina divisa in 6 colonne × 6 righe: ogni contenuto è un rettangolo di celle (1 dodicesimo = 3 celle; mezza verticale 3×6, piedino 6×2, vetrina 3×3). Revisione 2, Fase 2.3 | `page_content.grid_*`, `App\Support\PageGrid` |
 | **Forma a L** | Come si disegna un contenuto da 3/4, 7/12 o 11/12 di pagina, che non è un rettangolo nella griglia: riempie lo spazio lasciato dagli altri, non ha frecce | `PageGridPlanner::resolve()` (kind `fluid`) |
-| **A pagina intera / nel formato** | Come è stato esportato il file di un annuncio: impaginato su una pagina intera con l'annuncio in una zona (si mostra solo la parte del riquadro) oppure già della misura dell'annuncio (si mostra intero) | `App\Enums\FileFit`, `ThumbnailFit` |
+| **A pagina intera / nel formato** | Come è stato esportato il file di un annuncio: impaginato su una pagina intera con l'annuncio in una zona (si mostra solo la parte del riquadro) oppure già della misura dell'annuncio (si mostra intero). «Automatico» (dal 2026-10-30): intero solo se il file ha la misura del riquadro | `App\Enums\FileFit`, `ThumbnailCrop` |
 | **Limite di upload** | Dimensione massima di un file caricato: 100 MB, in un solo punto (`upload_max_kb`). PHP e nginx devono accettare almeno 110 MB | `config/timone.php`, `ContentFormRules::maxKilobytes()`, `timone:diagnose-upload` |
 
 ## Abbreviazioni e termini tecnici

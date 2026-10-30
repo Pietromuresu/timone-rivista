@@ -1322,7 +1322,7 @@ class Grid extends Component
         $latest = $markers?->pages_updated_at;
 
         if ($latest === null || $latest === $this->lastKnownPagesUpdatedAt) {
-            $this->skipRender();
+            $this->skipRenderIfOnlyPolling();
 
             return;
         }
@@ -1351,6 +1351,33 @@ class Grid extends Component
     public function checkForCommentUpdates(): void
     {
         $this->syncComments(DB::table('issues')->where('id', $this->issue->id)->value('comments_updated_at'));
+        $this->skipRenderIfOnlyPolling();
+    }
+
+    /** I due polling: da soli non ridisegnano la griglia. */
+    private const POLLS = ['checkForUpdates', 'checkForCommentUpdates'];
+
+    /**
+     * skipRender() solo se in questa richiesta c'è soltanto il polling
+     * (2026-10-30, bug trovato con la verifica del ritaglio). Livewire
+     * spedisce insieme le chiamate partite nello stesso istante: un clic
+     * (es. «☑️ Selezione») insieme al polling dei commenti, che saltava il
+     * render, veniva eseguito sul server ma la schermata non cambiava.
+     */
+    private function skipRenderIfOnlyPolling(): void
+    {
+        foreach ((array) request()->input('components', []) as $component) {
+            $snapshot = json_decode((string) ($component['snapshot'] ?? ''), true);
+
+            if (($snapshot['memo']['id'] ?? null) !== $this->getId()) {
+                continue;
+            }
+
+            if (array_diff(array_column($component['calls'] ?? [], 'method'), self::POLLS) !== [] || ! empty($component['updates'])) {
+                return;
+            }
+        }
+
         $this->skipRender();
     }
 

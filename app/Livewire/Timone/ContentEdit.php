@@ -14,7 +14,7 @@ use App\Models\Content;
 use App\Models\Issue;
 use App\Support\ContentFormRules;
 use App\Support\ContentUpdater;
-use App\Support\PageGrid\ThumbnailFit;
+use App\Support\PageGrid\ThumbnailCrop;
 use App\Support\PageOccupancy;
 use App\Support\Permissions\TimoneAbilities;
 use App\Support\PlacementChoice;
@@ -249,11 +249,29 @@ class ContentEdit extends Component
             'uploadLimit' => UploadLimits::effective(ContentFormRules::maxKilobytes()),
             // Fase 2.4: cosa è stato rilevato dalle proporzioni del file, per
             // la voce «Automatico» dell'override.
-            'detectedFit' => ($first = $content?->files->sortBy('pdf_page_number')->first()) !== null
-                ? ThumbnailFit::resolve($first->aspect_ratio, null, $this->issue->pageAspectRatio())
-                : null,
+            'detectedFit' => $content !== null ? $this->detectedFit($content) : null,
             'fileFits' => FileFit::cases(),
             'placementOptions' => $content !== null ? PlacementChoice::options($this->issue) : [],
         ]);
+    }
+
+    /**
+     * Cosa sceglie «Automatico» (2026-10-30, ThumbnailCrop): sulla prima
+     * pagina del contenuto, con i suoi pezzi e il suo file. Un contenuto
+     * non assegnato non ha un riquadro con cui confrontare il file: null.
+     */
+    private function detectedFit(Content $content): ?FileFit
+    {
+        $page = ContentUpdater::assignedPagesInReadingOrder($content)->first();
+        $page?->load(['issue', 'contents.files', 'contents.advertisement']);
+        $block = $page?->layoutBlockFor($page->contents->firstWhere('id', $content->id));
+
+        if ($block === null || $block['crop'] === null || $block['file'] === null) {
+            return null;
+        }
+
+        $pieces = array_column($block['crop']->pieces, 'cells');
+
+        return ThumbnailCrop::plan($this->issue->pageSizeMm(), $pieces, $block['file']->aspect_ratio, $block['file']->trim_box, null)->fit;
     }
 }

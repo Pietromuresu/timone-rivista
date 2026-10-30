@@ -92,9 +92,23 @@ class Issue extends Model
     /**
      * Larghezza/altezza della pagina del numero (formato del pannello Peso),
      * 3/4 se non impostato — stesso ripiego delle card del timone. Usato
-     * per riconoscere un file "a pagina intera" (revisione 2, Fase 2.4,
-     * App\Support\PageGrid\ThumbnailFit).
+     * dalle card (proporzioni) e, prima del 2026-10-30, per riconoscere un
+     * file "a pagina intera" (ora ThumbnailCrop, con pageSizeMm()).
      */
+    /**
+     * Pagina del numero in mm (base, altezza), per il ritaglio delle
+     * miniature (ThumbnailCrop); senza formato, 210 di base con le
+     * proporzioni 3/4 di pageAspectRatio().
+     *
+     * @return array{0: float, 1: float}
+     */
+    public function pageSizeMm(): array
+    {
+        return $this->formato_base_mm && $this->formato_altezza_mm
+            ? [(float) $this->formato_base_mm, (float) $this->formato_altezza_mm]
+            : [210.0, 280.0];
+    }
+
     public function pageAspectRatio(): float
     {
         return $this->formato_base_mm && $this->formato_altezza_mm

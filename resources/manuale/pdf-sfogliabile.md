@@ -22,7 +22,7 @@ Battente di I (se c'è, 2 pagine), I di copertina, II di copertina, pagine inter
 
 ## Cosa si vede in ogni pagina
 
-- I contenuti con un file mostrano **il loro PDF (o la loro immagine) nel loro riquadro**, con la stessa regola delle anteprime del timone: un file a pagina intera mostra solo la sua parte, un file già nel formato si vede intero.
+- I contenuti con un file mostrano **il loro PDF (o la loro immagine) nel loro riquadro**, con la stessa regola e la stessa parte delle anteprime del timone: un file a pagina intera mostra solo la sua parte (senza l'abbondanza), un file già nel formato si vede intero. La qualità resta quella del PDF originale.
 - I contenuti **senza file** (segnaposto, articoli ancora senza PDF) **non spariscono**: vedi un riquadro tratteggiato con titolo, tipo e «File mancante». Lo stesso se il file non si trova più sul server.
 - Lo spazio libero resta bianco. Una pagina vuota mostra «Pagina bianca».
 

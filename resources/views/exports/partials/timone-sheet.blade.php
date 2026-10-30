@@ -19,12 +19,18 @@
                 $label = $block['placeholder'] ? \Illuminate\Support\Str::before($block['label'], \App\Support\AdPlaceholder::TITLE_SUFFIX) : $block['label'];
                 $border = $block['placeholder'] ? 'border: 0.7pt dashed #d97706;' : 'border: 0.4pt solid #ffffff;';
             @endphp
+            {{-- 2026-10-30: immagini già ritagliate per pezzo (ExportPageLayout::image()),
+                 con posizione e misure in pt: dompdf non deve ritagliare né adattare. --}}
             @foreach ($block['extra'] as $piece)
-                <div class="block" style="left: {{ $piece['x'] }}pt; top: {{ $piece['y'] }}pt; width: {{ $piece['w'] }}pt; height: {{ $piece['h'] }}pt; background-color: {{ $fill }}; {{ $border }}"></div>
+                <div class="block" style="left: {{ $piece['x'] }}pt; top: {{ $piece['y'] }}pt; width: {{ $piece['w'] }}pt; height: {{ $piece['h'] }}pt; background-color: {{ $fill }}; {{ $border }}">
+                    @if ($piece['img'])
+                        <img src="{{ $piece['img']['src'] }}" alt="" style="left: {{ $piece['img']['x'] }}pt; top: {{ $piece['img']['y'] }}pt; width: {{ $piece['img']['w'] }}pt; height: {{ $piece['img']['h'] }}pt;" />
+                    @endif
+                </div>
             @endforeach
             <div class="block" style="left: {{ $block['x'] }}pt; top: {{ $block['y'] }}pt; width: {{ $block['w'] }}pt; height: {{ $block['h'] }}pt; background-color: {{ $fill }}; {{ $border }}">
-                @if ($block['src'])
-                    <img src="{{ $block['src'] }}" alt="" />
+                @if ($block['img'])
+                    <img src="{{ $block['img']['src'] }}" alt="" style="left: {{ $block['img']['x'] }}pt; top: {{ $block['img']['y'] }}pt; width: {{ $block['img']['w'] }}pt; height: {{ $block['img']['h'] }}pt;" />
                     @if ($block['h'] >= 12)
                         <div class="block-caption">{{ \Illuminate\Support\Str::limit($label, $lineChars($block['w']), '…') }}</div>
                     @endif

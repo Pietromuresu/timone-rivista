@@ -428,6 +428,9 @@ for (const shot of SHOTS) {
         }
 
         if (!measureOnly) {
+            // Le anteprime ritagliate si caricano pigre (loading="lazy", 2026-10-30):
+            // si aspetta che quelle in vista siano arrivate.
+            await waitFor(() => evaluate(`[...document.images].filter((i) => { const r = i.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.width > 0; }).every((i) => i.complete && i.naturalWidth > 0)`), 'le immagini');
             const { data } = await send('Page.captureScreenshot', { format: 'webp', quality: QUALITY, clip });
             fs.writeFileSync(path.join(OUT, `${shot.name}.webp`), Buffer.from(data, 'base64'));
         }

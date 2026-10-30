@@ -15,6 +15,8 @@ Dentro ogni card, ogni contenuto occupa un riquadro grande quanto il suo spazio.
 2. **Posizione ← ↑ ↓ →** lo sposta di un passo dentro la pagina.
 3. **⟳ Ruota** lo gira da verticale a orizzontale.
 4. **👁 Apri il file**, **✏️ Modifica**, **↗ Estendi a un'altra pagina** o **✕ Rimuovi dalla pagina** per le altre azioni.
+
+Se il file è una pagina intera con l'annuncio in una zona, il riquadro ne mostra **solo la parte che occupa**, non tutto il file rimpicciolito.
 :::
 
 È una rappresentazione dello spazio, non l'impaginato definitivo.
@@ -69,9 +71,18 @@ La pagina è divisa in 6 colonne e 6 righe. Ogni contenuto occupa un rettangolo 
 
 Ogni riquadro mostra l'anteprima del **suo** file. Senza file vedi un fondo azzurro (articolo) o ambra (pubblicità).
 
+Il file viene considerato **una pagina intera**, alla scala della pagina del timone, e nel riquadro si vede **solo la parte che corrisponde al riquadro**, cioè la parte di pagina che il contenuto occupa. Il resto è tagliato, non rimpicciolito.
+
+Per esempio, una pubblicità **mezza pagina verticale a sinistra** con un PDF a pagina intera mostra la **metà sinistra** del PDF; un **piedino** mostra il terzo in basso; una **vetrina in basso a destra** il quarto in basso a destra. Se sposti o ruoti il contenuto, la parte mostrata lo segue.
+
 :::dettagli
-- Se il file è un PDF a pagina intera con l'annuncio in una zona, si vede **solo la parte che corrisponde al riquadro**: una mezza verticale a sinistra mostra la metà sinistra del PDF.
-- Se il file è già della misura dell'annuncio si vede **intero**.
+- Se il file è già **della misura dell'annuncio** (per esempio un PDF grande come una mezza pagina) si vede **intero** e riempie il riquadro.
+- Anche un file più piccolo della pagina che non ha la misura del riquadro (per esempio una mezza verticale messa in un riquadro orizzontale) si vede intero: ritagliarlo mostrerebbe un pezzo a caso.
+- Un PDF con l'**abbondanza** (i 3 mm in più per lato per il taglio) è ritagliato sulla pagina rifilata, senza l'abbondanza.
+- Un PDF di più pagine mette su ogni pagina del timone la sua pagina del PDF, ciascuna ritagliata.
+- Una **forma a L** mostra in ogni suo pezzo la parte giusta del file.
+- La stessa parte si vede nell'esportazione PDF del timone e nel PDF sfogliabile.
+- Subito dopo il caricamento può comparire per qualche istante un'anteprima meno nitida: quella definitiva arriva da sola.
 - Se il sistema sbaglia, scegli tu in «Anteprima nel riquadro» nella finestra [Modifica contenuto](manuale:modificare-contenuto).
 :::
 

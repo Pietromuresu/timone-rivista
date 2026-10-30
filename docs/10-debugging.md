@@ -149,7 +149,10 @@ Verifica rapida in console durante un drag: `document.dispatchEvent(new DragEven
 | Un 3/4 non ha frecce | È una forma a L: riempie lo spazio lasciato dagli altri | Spostare gli altri contenuti |
 | Striscia rossa tratteggiata in fondo alla pagina | Pagina oltre capienza (dati vecchi): quel contenuto non ci sta | Ridurre lo spazio di un contenuto |
 | «⟳ Ruota» grigio | Quadrato (vetrina, pagina intera) o ruotato non c'è posto | — |
-| Anteprima intera invece che ritagliata (o viceversa) | `content_files.aspect_ratio` vuoto (file vecchio) o proporzioni oltre il 5% da quelle del numero (formato del numero nel pannello Peso) | `php artisan timone:file-ratios --dry-run`; override nella modale «Anteprima nel riquadro» |
+| Anteprima intera invece che ritagliata (o viceversa) | Dal 2026-10-30 «Automatico» mostra intero solo un file con la misura del riquadro (±5%): controllare `content_files.trim_box` (misure del PDF) e il formato del numero nel pannello Peso; `contents.file_fit` forza la scelta | `php artisan timone:file-ratios --dry-run`; override nella modale «Anteprima nel riquadro»; `node scripts/verifica-crop.mjs` per un controllo visivo con i file di prova |
+| Un clic nel timone non cambia nulla, poi al ricaricamento è applicato | (risolto il 2026-10-30) il clic partiva nella stessa richiesta del polling dei commenti, che saltava il ridisegno | `Grid::skipRenderIfOnlyPolling()`: il polling salta il render solo se è l'unica chiamata della richiesta |
+| Ritaglio spostato di qualche mm | PDF con abbondanza senza TrimBox e con misure diverse da formato + 3 mm per lato, o PDF che il parser di FPDI non legge (`trim_box` = `{"media": null}`) | Forzare «Il file è già nel formato» o ricaricare il PDF con la TrimBox |
+| Anteprima sfocata in un riquadro piccolo ingrandito | Manca la miniatura grande (`large_thumbnail_path` null: Imagick assente o job non ancora girato) | `php artisan timone:file-ratios`; log del worker per `CompleteContentFileThumbnail` |
 | Click sull'anteprima non apre più il PDF | Voluto (Fase 2.1): il click seleziona la pagina | Menu «⋯» → 👁 Apri il file |
 
 ### Upload in produzione ("non si caricano media")

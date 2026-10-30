@@ -12,7 +12,7 @@
   {"domanda": "aggiungere un collega che non ha l'accesso", "pagina": "utenti"},
   {"domanda": "come faccio un nuovo numero di ottobre", "pagina": "creare-numero"},
   {"domanda": "dove carico il pdf dell'inserzionista", "pagina": "caricare-file"},
-  {"domanda": "una pubblicità da mezza pagina in basso", "pagina": "disposizione-nella-pagina", "fuori_dai_primi_3": true},
+  {"domanda": "una pubblicità da mezza pagina in basso", "pagina": "disposizione-nella-pagina"},
   {"domanda": "come si stampa il timone su carta", "pagina": "esporta-timone-pdf"},
   {"domanda": "chi ha mosso la pagina 7", "pagina": "storico-e-cronologia", "fuori_dai_primi_3": true},
   {"domanda": "le pagine 10 e 11 devono restare sempre insieme", "pagina": "gruppi-collegati"},

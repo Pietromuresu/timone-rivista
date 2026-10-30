@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContentFile;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -24,11 +25,17 @@ class ContentFileController extends Controller
         );
     }
 
-    public function thumbnail(ContentFile $contentFile): StreamedResponse|Response
+    public function thumbnail(Request $request, ContentFile $contentFile): StreamedResponse|Response
     {
         Gate::authorize('view', $contentFile->content->issue);
 
-        if (! $contentFile->thumbnail_path) {
+        // ?size=large (2026-10-30): la miniatura da 1200 px dei riquadri
+        // ritagliati; se non c'è ancora, quella normale.
+        $path = $request->query('size') === 'large' && $contentFile->large_thumbnail_path
+            ? $contentFile->large_thumbnail_path
+            : $contentFile->thumbnail_path;
+
+        if (! $path) {
             abort(404);
         }
 
@@ -39,7 +46,7 @@ class ContentFileController extends Controller
         $thumbnailMime = $contentFile->isImage() ? $contentFile->mime_type : 'image/png';
 
         return Storage::disk($contentFile->disk)->response(
-            $contentFile->thumbnail_path,
+            $path,
             null,
             ['Content-Type' => $thumbnailMime]
         );

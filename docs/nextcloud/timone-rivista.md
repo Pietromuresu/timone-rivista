@@ -279,6 +279,7 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 - In alto c'è «Cerca nel manuale»: si scrive cosa si vuole fare (anche con parole proprie, es. «come tolgo una pubblicità») e i risultati compaiono mentre si scrive. Tasto / o Ctrl+K per andarci.
 - Le pagine principali del manuale hanno uno screenshot con i numeri che spiegano le parti dello schermo (dati di esempio inventati).
 - Bottone tondo «?» in basso a sinistra, da ogni schermata: «Chiedi al manuale». Si scrive la domanda e compare il riquadro «In breve» della pagina giusta. Si vota 👍 Utile o 👎 Non è questo: i voti di più colleghi migliorano le risposte (un voto da solo non cambia nulla, non è legato al nome, si cancella dopo 12 mesi).
+- Anteprime ritagliate (2026-10-30): un contenuto su una parte di pagina mostra solo la sua parte del PDF a pagina intera (senza l'abbondanza), anche nelle forme a L, nell'export PDF del timone e nel PDF sfogliabile. Un file già nella misura dell'annuncio si vede intero; «Anteprima nel riquadro» in «Modifica contenuto» forza la scelta.
 - Piccola «?» accanto ai comandi meno ovvi (Peso, selezione multipla, scambio, pagine interne, battenti, «Quanto spazio occupa»): apre la pagina del manuale in una nuova scheda, senza perdere il lavoro.
 - Per gli admin: «Cosa chiedono gli utenti» (link nel riquadro della pagina del Manuale) mostra le domande senza risposta e cosa è stato imparato; «Disattiva» spegne una voce imparata.
 

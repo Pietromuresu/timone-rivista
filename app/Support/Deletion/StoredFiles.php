@@ -5,6 +5,7 @@ namespace App\Support\Deletion;
 use App\Models\ContentFile;
 use App\Models\MagazineExport;
 use App\Models\PageFile;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * File su disco legati a un insieme di numeri (content_files dei loro
@@ -31,7 +32,7 @@ final class StoredFiles
 
         $contentFiles = ContentFile::query()
             ->whereHas('content', fn ($query) => $query->withTrashed()->whereIn('issue_id', $issueIds)) // anche i contenuti eliminati da poco (annulla/ripeti)
-            ->get(['disk', 'path', 'thumbnail_path', 'size']);
+            ->get(['content_id', 'disk', 'path', 'thumbnail_path', 'large_thumbnail_path', 'size']);
 
         $pageFiles = PageFile::query()
             ->whereHas('page', fn ($query) => $query->whereIn('issue_id', $issueIds))
@@ -41,8 +42,15 @@ final class StoredFiles
         $paths = [];
 
         foreach ($all as $file) {
-            foreach (array_filter([$file->path, $file->thumbnail_path]) as $path) {
+            foreach (array_unique(array_filter([$file->path, $file->thumbnail_path, $file->large_thumbnail_path ?? null])) as $path) {
                 $paths[] = ['disk' => $file->disk, 'path' => $path];
+            }
+        }
+
+        // 2026-10-30: ritagli per l'export del timone (CroppedThumbnails), rigenerabili.
+        foreach ($contentFiles->pluck('content_id')->unique() as $contentId) {
+            foreach (Storage::disk('local')->files('contents/'.$contentId.'/crops') as $crop) {
+                $paths[] = ['disk' => 'local', 'path' => $crop];
             }
         }
 

@@ -41,7 +41,11 @@ class PruneTimelineHistory extends Command
         $files = $trashed->flatMap(fn (Content $content) => $content->files->flatMap(fn ($file) => array_filter([
             ['disk' => $file->disk, 'path' => $file->path],
             $file->thumbnail_path ? ['disk' => $file->disk, 'path' => $file->thumbnail_path] : null,
-        ])));
+            $file->large_thumbnail_path && $file->large_thumbnail_path !== $file->thumbnail_path ? ['disk' => $file->disk, 'path' => $file->large_thumbnail_path] : null,
+        ])))->concat($trashed->flatMap(fn (Content $content) => array_map(
+            fn (string $crop) => ['disk' => 'local', 'path' => $crop],
+            Storage::disk('local')->files('contents/'.$content->id.'/crops'),
+        )));
 
         if (! $dryRun) {
             $old->delete();

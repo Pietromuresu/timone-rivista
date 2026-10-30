@@ -141,3 +141,12 @@ Da **non** fare senza un piano dedicato: Livewire 4, Tailwind 4, Vite 7, Laravel
 
 Nessuna dipendenza npm o composer nuova: `npm run manuale:screenshot` usa Chrome o Chromium già installati sul computer di chi sviluppa (protocollo DevTools) e il WebSocket integrato di node ≥ 22. Scartati: Laravel Dusk (chromedriver + dipendenza composer), Browsershot/Puppeteer e Playwright (scaricano un browser di ~150 MB; Playwright non supporta l'Alpine di `node:20-alpine` del docker-compose.dev.yml). Nessuno dei due container (php-fpm Alpine, node 20 Alpine) ha un browser.
 
+
+## Ritaglio delle miniature (2026-10-30)
+
+Nessuna dipendenza nuova.
+- Misure della pagina (TrimBox/MediaBox): il parser di `setasign/fpdi`, già usato dal PDF sfogliabile (`App\Support\PdfBoxes`).
+- Miniatura grande da 1200 px: `spatie/pdf-to-image` con Imagick/Ghostscript, come quella normale.
+- Ritagli per l'export del timone: GD (estensione PHP già presente).
+- File di prova: TCPDF (`tecnickcom/tcpdf`, già dipendenza), in `tests/Support/CropFixtures.php`.
+- Verifica visiva `node scripts/verifica-crop.mjs` (solo sviluppo, sull'host): Chrome, node ≥ 22 e **poppler** (`pdftoppm`), che sostituisce Imagick per le miniature dei casi di prova e rende le pagine degli export in PNG. Non serve in produzione.

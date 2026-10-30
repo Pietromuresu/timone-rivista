@@ -10,10 +10,10 @@ namespace App\Enums;
  *   contenuto (mezza verticale a sinistra → metà sinistra del PDF);
  * - Format: il file è già nella misura del formato → intero, adattato al
  *   rettangolo senza tagli.
- * Rilevato dal rapporto larghezza/altezza della prima pagina (salvato
- * all'upload, content_files.aspect_ratio) confrontato con quello della
- * pagina del numero, tolleranza 5% (App\Support\PageGrid\ThumbnailFit);
- * la redazione può forzarlo dalla modale del contenuto (contents.file_fit).
+ * Rilevato da App\Support\PageGrid\ThumbnailCrop (dal 2026-10-30): intero
+ * solo se il file ha la misura del riquadro del contenuto (±5%), se no a
+ * pagina intera; la redazione può forzarlo dalla modale del contenuto
+ * (contents.file_fit).
  */
 enum FileFit: string
 {

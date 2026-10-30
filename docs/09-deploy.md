@@ -281,8 +281,10 @@ docker compose run --rm --no-deps app php artisan migrate --force
 # 7. Sostituzione dei container (app, nginx, worker, reverb, scheduler vengono ricreati → il worker riparte con il codice nuovo)
 docker compose up -d
 
-# 7bis. (una tantum, revisione 2, Fase 2.4) proporzioni dei file già caricati, per il
-# ritaglio delle anteprime. Facoltativo: senza, le anteprime vecchie restano intere.
+# 7bis. (una tantum, revisione 2, Fase 2.4; da rilanciare dopo il deploy del 2026-10-30)
+# proporzioni, TrimBox e miniatura grande dei file già caricati, per il ritaglio delle
+# anteprime. Facoltativo: senza, la card li completa in coda la prima volta che servono.
+# La migration 2026_10_30_200000 aggiunge solo due colonne vuote a content_files.
 docker compose exec app php artisan timone:file-ratios --dry-run
 docker compose exec app php artisan timone:file-ratios
 

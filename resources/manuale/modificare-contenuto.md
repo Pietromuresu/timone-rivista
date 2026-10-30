@@ -38,7 +38,7 @@ Sulla pagina, **doppio click sul nome** del contenuto: diventa un campo di testo
 Contiene tutti i campi della creazione: tipo (articolo o pubblicità), titolo, rubrica, campi dell'articolo o della pubblicità, **occupazione** (pagine intere + frazione) e **Materiale di stampa** (il PDF o l'immagine allegati, che sono anche l'anteprima nel timone). In più:
 
 - **Posizione nel timone**: la prima pagina in cui si trova. Cambiandola il contenuto si sposta lì, tutto insieme. Scegliendo «Da assegnare» torna nel pannello Contenuti.
-- **Anteprima nel riquadro**: «Automatico» (il sistema guarda le proporzioni del file e dice tra parentesi cosa ha deciso), «Il file è a pagina intera» (mostra solo la parte del riquadro) o «Il file è già nel formato» (mostra il file intero).
+- **Anteprima nel riquadro**: «Automatico» (il file si vede intero solo se ha la misura del riquadro, altrimenti è trattato come pagina intera; tra parentesi c'è cosa ha deciso), «Il file è a pagina intera» (mostra solo la parte del riquadro) o «Il file è già nel formato» (mostra il file intero). Vedi [L'anteprima nel riquadro](manuale:disposizione-nella-pagina#lanteprima-nel-riquadro).
 
 «Salva modifiche» applica tutto. «Annulla», ✕ o Esc chiudono senza salvare.
 

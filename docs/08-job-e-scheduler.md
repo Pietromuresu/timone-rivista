@@ -24,7 +24,7 @@ Nessun job definisce `$tries`, `$timeout`, `$backoff` o `failed()`: valgono i pa
 - **Cosa fa** (`app/Jobs/GenerateContentFileThumbnail.php`):
   1. `thumbnail_status=processing`;
   2. per un'immagine, copia il file come miniatura; per un PDF, rende la pagina `pdf_page_number` in PNG (150 dpi, larghezza 400) in `storage/app/private/contents/{content_id}/thumbnails/`;
-  3. `thumbnail_status=ready`;
+  3. `thumbnail_status=ready`, proporzioni (`aspect_ratio`) e, dal 2026-10-30, `ContentFileExtras::complete()`: misure della pagina (`trim_box`, TrimBox via FPDI) e miniatura grande da 1200 px (`large_thumbnail_path`);
   4. per le pubblicità in PDF, **controllo del formato** (`checkFormat`), che scrive `format_check_status` e le misure in mm;
   5. broadcast `ContentFileUploaded` (`:97`).
 - **Quando parte**: una volta per **ogni pagina** del PDF caricato, accodato da `App\Support\ContentCreator::storeFile()` (`app/Support/ContentCreator.php:226`).
@@ -35,6 +35,12 @@ Nessun job definisce `$tries`, `$timeout`, `$backoff` o `failed()`: valgono i pa
   docker compose exec app php artisan tinker --execute='App\Jobs\GenerateContentFileThumbnail::dispatch(App\Models\ContentFile::findOrFail(ID));'
   ```
   In UI non esiste un bottone "riprova" (`HANDOFF.md`, "Debito noto": l'unico modo lato utente è creare un nuovo contenuto con un nuovo file).
+
+### `App\Jobs\CompleteContentFileThumbnail` e `App\Jobs\WarmCroppedThumbnail` (2026-10-30)
+
+- **CompleteContentFileThumbnail**: per un file caricato prima del ritaglio, `ContentFileExtras::complete()` (TrimBox, miniatura grande) e poi `pages_updated_at` (gli altri utenti ridisegnano al polling). Accodato da `Page::layout()` la prima volta che il file serve ritagliato, al più una volta l'ora per file (`Cache::add`).
+- **WarmCroppedThumbnail**: prepara il PNG ritagliato di un pezzo per l'export del timone (`CroppedThumbnails::ensure()`, GD). Accodato da `Page::layout()` per ogni finestra non ancora in cache, al più una volta al giorno per finestra. Se all'export manca, si genera al volo.
+- **Se falliscono**: `report()` e nulla di bloccante: la card usa la miniatura normale, l'export la genera al volo.
 
 ### `App\Jobs\GenerateMagazinePdf` (revisione 2, Fase 5, 2026-10-28)
 

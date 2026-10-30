@@ -9,6 +9,7 @@ use App\Models\ContentFile;
 use App\Models\Issue;
 use App\Models\Page;
 use App\Models\PageFile;
+use App\Support\PageGrid\CropPlan;
 use setasign\Fpdi\PdfParser\PdfParserException;
 use setasign\Fpdi\PdfReader\PageBoundaries;
 use setasign\Fpdi\Tcpdf\Fpdi;
@@ -22,10 +23,11 @@ use Throwable;
  * rettangolo della griglia 6×6 (Page::layout()):
  * - PDF: la pagina del file corrispondente a QUESTA pagina del timone
  *   (Page::previewFileFor()), importata come oggetto vettoriale;
- * - stessa regola di ritaglio delle anteprime (ThumbnailFit, Fase 2.4):
- *   «a pagina intera» → il file occupa tutta la pagina e si vede solo la
- *   porzione del rettangolo (clipping, un pezzo per volta per le forme a
- *   L); «nel formato» → intero dentro il rettangolo;
+ * - stessa regola e stesse finestre di ritaglio delle anteprime
+ *   (ThumbnailCrop, dal 2026-10-30): «a pagina intera» → la pagina
+ *   rifilata del file copre la pagina, centrata, e si vede solo la porzione
+ *   di ogni pezzo (clipping vettoriale, qualità invariata); «nel formato» →
+ *   intero dentro il rettangolo;
  * - senza file, o file assente/illeggibile su disco → riquadro tratteggiato
  *   con titolo, tipo e «File mancante». Mai un'eccezione per un file: il
  *   numero si esporta comunque.
@@ -99,7 +101,7 @@ final class MagazinePdfComposer
             }
         } elseif (($legacy = $page->files->first()) !== null) {
             // PDF caricato direttamente sulla pagina prima del 2026-09-02.
-            $this->placeFile($legacy, FileFit::FullPage, [$box->full()], $box->full(), $box, null);
+            $this->placeFile($legacy, FileFit::FullPage, [$box->full()], $box->full(), $box, null, null);
         } else {
             $this->text($box->x, $box->y + $box->height / 2 - 3, $box->width, 'Pagina bianca', 8, [150, 150, 150]);
         }
@@ -107,13 +109,13 @@ final class MagazinePdfComposer
         $this->text($box->x, $box->footerY(), $box->width, $label, 7, [90, 90, 90]);
     }
 
-    /** @param  array{content: Content, kind: string, rect: array, pieces: list<array>, file: ContentFile|null, fit: FileFit}  $block */
+    /** @param  array{content: Content, kind: string, rect: array, pieces: list<array>, file: ContentFile|null, fit: FileFit, crop: CropPlan|null}  $block */
     private function drawBlock(array $block, PageBox $box): void
     {
         $rect = $box->rect($block['rect']);
         $pieces = array_map(fn (array $piece) => $box->rect($piece), $block['pieces'] ?: [$block['rect']]);
 
-        if ($block['file'] !== null && $this->placeFile($block['file'], $block['fit'], $pieces, $rect, $box, $block['content'])) {
+        if ($block['file'] !== null && $this->placeFile($block['file'], $block['fit'], $pieces, $rect, $box, $block['content'], $block['crop'] ?? null)) {
             return;
         }
 
@@ -126,7 +128,7 @@ final class MagazinePdfComposer
      *
      * @param  list<array{x: float, y: float, w: float, h: float}>  $clips  pezzi visibili (uno, o più per una L)
      */
-    private function placeFile(ContentFile|PageFile $file, FileFit $fit, array $clips, array $rect, PageBox $box, ?Content $content): bool
+    private function placeFile(ContentFile|PageFile $file, FileFit $fit, array $clips, array $rect, PageBox $box, ?Content $content, ?CropPlan $crop): bool
     {
         $path = $this->sources->path($file);
 
@@ -142,9 +144,23 @@ final class MagazinePdfComposer
         }
 
         try {
-            if ($fit === FileFit::FullPage) {
+            if ($crop !== null && $crop->crops()) {
+                // 2026-10-30: stessa finestra della card (CropPlan): per ogni
+                // pezzo la sorgente è disegnata in modo che nel pezzo cada la
+                // sua porzione, poi ritagliata. Il template FPDI è già la
+                // pagina rifilata solo se il PDF ha una TrimBox vera.
+                $trimmedSource = $template !== null && ($file->trim_box['trim'] ?? null) !== null;
+
+                foreach ($crop->pieces as $index => $piece) {
+                    $clip = $clips[$index] ?? $box->rect($piece['rect']);
+                    $this->pdf->StartTransform();
+                    $this->pdf->Rect($clip['x'], $clip['y'], $clip['w'], $clip['h'], 'CNZ');
+                    $this->drawSource($template, $path, $crop->sourceRect($clip, $piece['window'], $trimmedSource));
+                    $this->pdf->StopTransform();
+                }
+            } elseif ($fit === FileFit::FullPage) {
                 // La pagina intera del file su tutta la pagina del numero,
-                // visibile solo dentro i pezzi del contenuto.
+                // visibile solo dentro i pezzi del contenuto (vecchi file di pagina).
                 foreach ($clips as $clip) {
                     $this->pdf->StartTransform();
                     $this->pdf->Rect($clip['x'], $clip['y'], $clip['w'], $clip['h'], 'CNZ');
