@@ -14,6 +14,7 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 ## 30 ottobre 2026
 
+- **Spazio occupato già compilato**: in «+ Nuovo contenuto» e «📎 Carica materiale» l'occupazione parte da **1 pagina intera** (prima era vuota). Il formato della pubblicità la sostituisce sempre; un PDF di più pagine solo finché non l'hai cambiata a mano. Vedi [Spazio occupato](manuale:spazio-occupato).
 - **Griglia a coppie**: in Griglia le pagine sono affiancate a coppie come la rivista aperta (pari a sinistra, dispari a destra), più aperture per riga; **Doppia pagina** mostra le stesse aperture una sotto l'altra. Vedi [Le viste del timone](manuale:viste-del-timone).
 - **Shift+clic** seleziona tutte le pagine dall'ultima cliccata. Vedi [Selezionare più pagine](manuale:selezione-multipla).
 - **Anteprime ritagliate**: un contenuto che occupa una parte di pagina mostra solo la sua parte del file a pagina intera, invece di tutto il file rimpicciolito; anche nelle forme a L, senza l'abbondanza, più nitida, e uguale nell'esportazione PDF del timone e nel PDF sfogliabile. Vedi [L'anteprima nel riquadro](manuale:disposizione-nella-pagina#lanteprima-nel-riquadro).

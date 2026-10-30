@@ -790,19 +790,19 @@ Crei articoli e pubblicità dal modulo **«+ Nuovo contenuto»**, nel pannello C
 
 1. Apri **«📚 Contenuti»** nella fascia in alto e clicca **+ Nuovo contenuto**.
 2. Scegli il tipo: **Articolo** o **Pubblicità**. I campi cambiano di conseguenza.
-3. Compila i campi obbligatori: il titolo per un articolo, il formato per una pubblicità, e lo [spazio occupato](resources/manuale/spazio-occupato.md).
+3. Compila i campi obbligatori: il titolo per un articolo, il formato per una pubblicità. Lo [spazio occupato](resources/manuale/spazio-occupato.md) parte da **1 pagina intera**: cambialo se serve.
 4. Se vuoi, allega il PDF e scegli la **Posizione nel timone**.
 5. Clic su **«Crea contenuto»**.
 
 #### Articolo
 
-Titolo, **Rubrica** (opzionale), **occupazione** (obbligatoria, vedi [Spazio occupato](resources/manuale/spazio-occupato.md)), autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
+Titolo, **Rubrica** (opzionale), **occupazione** (obbligatoria, già compilata con **1 pagina intera**, vedi [Spazio occupato](resources/manuale/spazio-occupato.md)), autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
 
 #### Pubblicità
 
 - **cliente** (opzionale): **senza cliente e senza file la pubblicità è un segnaposto «da assegnare»**, come quelle previste alla creazione del numero. Vedi [Segnaposto](resources/manuale/segnaposto.md).
 - **formato (obbligatorio, nessun valore già scelto)**: accanto a ogni formato è indicato lo spazio che occupa, per esempio «(1/2 di pagina)».
-- Scelto il formato, i campi **«Pagine intere» + «Frazione»** si compilano da soli con lo spazio del formato. Puoi **correggerli**, per esempio per una mezza pagina che in questo numero occupa 2/3.
+- Scelto il formato, i campi **«Pagine intere» + «Frazione»** (che partono da 1 pagina intera) si compilano da soli con lo spazio del formato. Puoi **correggerli**, per esempio per una mezza pagina che in questo numero occupa 2/3.
 - **pagina preferita (opzionale)**: solo un promemoria di dove piazzarla, non assegna nulla. La vedi nel pannello [Pubblicità prenotate](resources/manuale/pubblicita-prenotate.md).
 
 **Dettagli**
@@ -908,13 +908,13 @@ Per un articolo che prosegue, per esempio, da pagina 5 a pagina 8: dopo averlo a
 
 Ogni contenuto dichiara **quanto spazio occupa nel timone**. L'occupazione è obbligatoria, uguale per articoli e pubblicità.
 
-1. Nel modulo del contenuto compila **Pagine intere** (0, 1, 2, 3…).
+1. Nel modulo del contenuto **Pagine intere** parte da **1**: cambiala se serve (0, 1, 2, 3…).
 2. Scegli la **Frazione**: nessuna, 1/4, 1/3, 1/2, 2/3 o 3/4 di pagina.
 3. Sotto compare il totale, per esempio **«Occupa 2 e 1/2 pagine»**.
 
 Almeno uno dei due campi deve essere più di zero.
 
-È il dato che usano il posizionamento sulle pagine, il cruscotto pubblicitario e i conteggi delle pagine. Per gli articoli non c'è un valore già scelto: finché non lo indichi, «Crea contenuto» segnala l'errore e non crea nulla.
+È il dato che usano il posizionamento sulle pagine, il cruscotto pubblicitario e i conteggi delle pagine. Nel modulo «+ Nuovo contenuto» (e in «📎 Carica materiale») parte da 1 pagina intera; se svuoti entrambi i campi, «Crea contenuto» segnala l'errore e non crea nulla. Nella finestra «Modifica contenuto» vedi invece lo spazio del contenuto.
 
 **Dettagli**
 
@@ -947,7 +947,7 @@ Una pagina contiene al massimo una pagina intera di contenuti. Una pagina può o
 
 #### Con un PDF allegato
 
-Appena scegli (o trascini) il file, il sistema ne conta le pagine. Se non hai ancora indicato l'occupazione di un articolo, **propone** tante pagine intere quante quelle del PDF e lo dice sotto i campi. Un valore già indicato non viene cambiato. Le regole per i PDF di più pagine sono in [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md).
+Appena scegli (o trascini) il file, il sistema ne conta le pagine. Se non hai ancora cambiato l'occupazione di un articolo (è ancora 1 pagina, quella di partenza), **propone** tante pagine intere quante quelle del PDF e lo dice sotto i campi. Un valore che hai scritto tu non viene cambiato. Le regole per i PDF di più pagine sono in [Caricare un PDF o un'immagine](resources/manuale/caricare-file.md).
 
 #### Vedi anche
 
@@ -2281,6 +2281,7 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 #### 30 ottobre 2026
 
+- **Spazio occupato già compilato**: in «+ Nuovo contenuto» e «📎 Carica materiale» l'occupazione parte da **1 pagina intera** (prima era vuota). Il formato della pubblicità la sostituisce sempre; un PDF di più pagine solo finché non l'hai cambiata a mano. Vedi [Spazio occupato](resources/manuale/spazio-occupato.md).
 - **Griglia a coppie**: in Griglia le pagine sono affiancate a coppie come la rivista aperta (pari a sinistra, dispari a destra), più aperture per riga; **Doppia pagina** mostra le stesse aperture una sotto l'altra. Vedi [Le viste del timone](resources/manuale/viste-del-timone.md).
 - **Shift+clic** seleziona tutte le pagine dall'ultima cliccata. Vedi [Selezionare più pagine](resources/manuale/selezione-multipla.md).
 - **Anteprime ritagliate**: un contenuto che occupa una parte di pagina mostra solo la sua parte del file a pagina intera, invece di tutto il file rimpicciolito; anche nelle forme a L, senza l'abbondanza, più nitida, e uguale nell'esportazione PDF del timone e nel PDF sfogliabile. Vedi [L'anteprima nel riquadro](resources/manuale/disposizione-nella-pagina.md).

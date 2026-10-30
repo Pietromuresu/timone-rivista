@@ -103,8 +103,18 @@ class ContentCreate extends Component
 
     // Fase 3: occupazione come "Pagine intere" ($whole_pages) + "Frazione"
     // ($fraction_twelfths), dal trait HasOccupancyFields (condiviso con
-    // ContentEdit). Per un articolo partono vuoti: nessun default
-    // silenzioso; per una pubblicità li precompila il formato.
+    // ContentEdit). Dal 2026-10-30 partono da 1 pagina intera, visibile e
+    // modificabile (resetFormFields()); per una pubblicità li riscrive il
+    // formato scelto.
+
+    /**
+     * Vero quando l'utente ha cambiato a mano "Pagine intere" o "Frazione".
+     * Il predefinito (1 pagina) non deve battere i dati reali: finché è
+     * false, la proposta dal numero di pagine del PDF lo sostituisce, come
+     * prima succedeva solo con il campo vuoto. Non si deduce dal valore
+     * (1 + nessuna) perché l'utente può aver scelto proprio 1 pagina.
+     */
+    public bool $occupancyTouched = false;
 
     /**
      * Pagine del PDF appena selezionato (null se nessun PDF), mostrate nel
@@ -218,7 +228,11 @@ class ContentCreate extends Component
             'client', 'agency', 'preferred_position', 'commercial_notes',
             'file', 'showSectionForm', 'editingSectionId', 'sectionName',
             'whole_pages', 'fraction_twelfths', 'pdfPageCount', 'pdfPageChoice', 'pdfPageFrom', 'pdfPageTo',
+            'occupancyTouched',
         ]);
+        // Impostato qui e non come default della proprietà (trait condiviso
+        // con ContentEdit, dove l'occupazione è quella del contenuto).
+        $this->whole_pages = 1;
         // Revisione 2, Fase 4.1: chi lavora solo sulle pubblicità parte da lì.
         $this->type = $this->abilities()->editsTimone() ? 'articolo' : 'pubblicita';
         $this->editorial_status = 'da_scrivere';
@@ -309,19 +323,29 @@ class ContentCreate extends Component
         $this->proposeOccupancyFromPdf();
     }
 
+    /** Hook Livewire: scatta solo per modifiche dal browser, non per le proposte scritte dal server. */
+    public function updatedWholePages(): void
+    {
+        $this->occupancyTouched = true;
+    }
+
+    public function updatedFractionTwelfths(): void
+    {
+        $this->occupancyTouched = true;
+    }
+
     /**
-     * Articolo con PDF e occupazione ancora vuota: propone tante pagine
-     * intere quante quelle del PDF (mostrato nel form come proposta).
+     * Articolo con PDF e occupazione non toccata dall'utente: propone tante
+     * pagine intere quante quelle del PDF (mostrato nel form come proposta).
      */
     private function proposeOccupancyFromPdf(): void
     {
-        if ($this->type !== ContentType::Articolo->value || $this->pdfPageCount === null) {
+        if ($this->type !== ContentType::Articolo->value || $this->pdfPageCount === null || $this->occupancyTouched) {
             return;
         }
 
-        if ($this->whole_pages === null && $this->fraction_twelfths === '0') {
-            $this->whole_pages = $this->pdfPageCount;
-        }
+        $this->whole_pages = $this->pdfPageCount;
+        $this->fraction_twelfths = '0';
     }
 
     public function save(): void

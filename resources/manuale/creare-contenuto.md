@@ -13,20 +13,20 @@ Crei articoli e pubblicità dal modulo **«+ Nuovo contenuto»**, nel pannello C
 
 1. Apri **«📚 Contenuti»** nella fascia in alto e clicca **+ Nuovo contenuto**.
 2. Scegli il tipo: **Articolo** o **Pubblicità**. I campi cambiano di conseguenza.
-3. Compila i campi obbligatori: il titolo per un articolo, il formato per una pubblicità, e lo [spazio occupato](manuale:spazio-occupato).
+3. Compila i campi obbligatori: il titolo per un articolo, il formato per una pubblicità. Lo [spazio occupato](manuale:spazio-occupato) parte da **1 pagina intera**: cambialo se serve.
 4. Se vuoi, allega il PDF e scegli la **Posizione nel timone**.
 5. Clic su **«Crea contenuto»**.
 :::
 
 ## Articolo
 
-Titolo, **Rubrica** (opzionale), **occupazione** (obbligatoria, vedi [Spazio occupato](manuale:spazio-occupato)), autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
+Titolo, **Rubrica** (opzionale), **occupazione** (obbligatoria, già compilata con **1 pagina intera**, vedi [Spazio occupato](manuale:spazio-occupato)), autore (opzionale), stato redazionale, lunghezza prevista (opzionale).
 
 ## Pubblicità
 
 - **cliente** (opzionale): **senza cliente e senza file la pubblicità è un segnaposto «da assegnare»**, come quelle previste alla creazione del numero. Vedi [Segnaposto](manuale:segnaposto).
 - **formato (obbligatorio, nessun valore già scelto)**: accanto a ogni formato è indicato lo spazio che occupa, per esempio «(1/2 di pagina)».
-- Scelto il formato, i campi **«Pagine intere» + «Frazione»** si compilano da soli con lo spazio del formato. Puoi **correggerli**, per esempio per una mezza pagina che in questo numero occupa 2/3.
+- Scelto il formato, i campi **«Pagine intere» + «Frazione»** (che partono da 1 pagina intera) si compilano da soli con lo spazio del formato. Puoi **correggerli**, per esempio per una mezza pagina che in questo numero occupa 2/3.
 - **pagina preferita (opzionale)**: solo un promemoria di dove piazzarla, non assegna nulla. La vedi nel pannello [Pubblicità prenotate](manuale:pubblicita-prenotate).
 
 :::dettagli

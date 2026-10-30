@@ -11,14 +11,14 @@ ordine: 330
 :::in-breve
 Ogni contenuto dichiara **quanto spazio occupa nel timone**. L'occupazione è obbligatoria, uguale per articoli e pubblicità.
 
-1. Nel modulo del contenuto compila **Pagine intere** (0, 1, 2, 3…).
+1. Nel modulo del contenuto **Pagine intere** parte da **1**: cambiala se serve (0, 1, 2, 3…).
 2. Scegli la **Frazione**: nessuna, 1/4, 1/3, 1/2, 2/3 o 3/4 di pagina.
 3. Sotto compare il totale, per esempio **«Occupa 2 e 1/2 pagine»**.
 
 Almeno uno dei due campi deve essere più di zero.
 :::
 
-È il dato che usano il posizionamento sulle pagine, il cruscotto pubblicitario e i conteggi delle pagine. Per gli articoli non c'è un valore già scelto: finché non lo indichi, «Crea contenuto» segnala l'errore e non crea nulla.
+È il dato che usano il posizionamento sulle pagine, il cruscotto pubblicitario e i conteggi delle pagine. Nel modulo «+ Nuovo contenuto» (e in «📎 Carica materiale») parte da 1 pagina intera; se svuoti entrambi i campi, «Crea contenuto» segnala l'errore e non crea nulla. Nella finestra «Modifica contenuto» vedi invece lo spazio del contenuto.
 
 :::dettagli
 - Esempi: un articolo di due pagine e mezza = 2 + 1/2; una vetrina = 0 + 1/4; un piedino = 0 + 1/3; un servizio di 4 pagine = 4 + nessuna.
@@ -51,7 +51,7 @@ Una pagina contiene al massimo una pagina intera di contenuti. Una pagina può o
 
 ## Con un PDF allegato
 
-Appena scegli (o trascini) il file, il sistema ne conta le pagine. Se non hai ancora indicato l'occupazione di un articolo, **propone** tante pagine intere quante quelle del PDF e lo dice sotto i campi. Un valore già indicato non viene cambiato. Le regole per i PDF di più pagine sono in [Caricare un PDF o un'immagine](manuale:caricare-file).
+Appena scegli (o trascini) il file, il sistema ne conta le pagine. Se non hai ancora cambiato l'occupazione di un articolo (è ancora 1 pagina, quella di partenza), **propone** tante pagine intere quante quelle del PDF e lo dice sotto i campi. Un valore che hai scritto tu non viene cambiato. Le regole per i PDF di più pagine sono in [Caricare un PDF o un'immagine](manuale:caricare-file).
 
 ## Vedi anche
 

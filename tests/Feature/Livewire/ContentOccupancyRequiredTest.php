@@ -15,7 +15,9 @@ use Livewire\Livewire;
 
 beforeEach(fn () => Event::fake([ContentCreated::class]));
 
-test('bug 5: an article cannot be created without choosing its page occupancy', function () {
+// Dal 2026-10-30 il modulo parte da 1 pagina intera: il caso è l'utente
+// che svuota il campo.
+test('bug 5: an article cannot be created with an empty page occupancy', function () {
     $issue = reorderableIssue();
     $user = editorFor($issue);
 
@@ -23,6 +25,7 @@ test('bug 5: an article cannot be created without choosing its page occupancy', 
         ->call('toggleForm')
         ->set('type', 'articolo')
         ->set('title', 'Articolo senza occupazione')
+        ->set('whole_pages', null)
         ->call('save')
         ->assertHasErrors('occupancy');
 

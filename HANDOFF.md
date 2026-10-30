@@ -2344,3 +2344,27 @@ Ok dell'utente («si vai») sulla strada 1 e su Shift+clic; durante il lavoro l'
 
 ### Non verificato
 - Trascinamento con il mouse vero in Griglia (stesso markup già provato via CDP per la vecchia Doppia pagina, DV-51), tablet, Safari/Firefox, due browser (DV-64).
+
+## Sessione 2026-10-30 — Occupazione predefinita e stato automatico: Fase 0 (verifica) e Parte A
+
+Prompt «occupazione predefinita a pagina intera e stato automatico della pagina». Fase 0 solo lettura; decisioni dell'utente dopo la Fase 0: (1) il formato pubblicitario continua a riscrivere sempre l'occupazione, anche dopo una modifica a mano; (2) il Commerciale potrà annullare/ripetere i passi che contengono un cambio di stato automatico (Parte B).
+
+### Fase 0 — esito (serve per la Parte B)
+- Tutti i percorsi utente che cambiano lo spazio su una pagina passano da `TimelineActionService::run()` (assegnazioni da Grid, ✕, spazio dal menu, ↗, creazione con posizione o da «📎 Carica materiale», conflitto multipagina con «Sposta le pagine esistenti dopo», modifica/ridistribuzione/conversione da segnaposto via `ContentUpdater`). Eccezioni: `PlaceholderAdCreator` (pubblicità previste alla creazione del numero) e `run()` senza utente (console/test), che oggi esegue l'azione e basta.
+- Non cambiano lo spazio: frecce e rotazione (solo celle della griglia), scambio copertine (`cover_slot`), spostamento/scambio di pagine, archivia/elimina (solo contenuti non assegnati), ridimensionamento del numero e aggiunta di un battente (pagine nuove vuote), rimozione di un battente (bloccata se ha contenuti).
+- `TimelineAuthorizer` nega oggi al Commerciale l'annulla di un passo che cambia `pages.status`; `ContentCreate::relocatePageContent()` copia lo stato con i contenuti (spostamento di pagine: da escludere dal messaggio «era Ok stampa»).
+- Database Docker locale (non produzione): 17 pagine piene in «Da assegnare» (5 copertine), 0 non piene in «Assegnata», 0 oltre capienza.
+
+### Parte A — fatto
+- `ContentCreate::resetFormFields()` (usato da «+ Nuovo contenuto» e «📎 Carica materiale», copertine comprese) imposta `whole_pages = 1`, frazione «nessuna»: il modulo mostra «Occupa 1 pagina».
+- `ContentCreate::$occupancyTouched`: true quando l'utente cambia «Pagine intere» o «Frazione» (`updatedWholePages()`/`updatedFractionTwelfths()`, hook Livewire che scattano solo per modifiche dal browser, non per le proposte scritte dal server). `proposeOccupancyFromPdf()` ora decide su questo flag invece che sul campo vuoto: il predefinito non batte il PDF, un valore scritto a mano sì. Il flag non si deduce dal valore perché l'utente può aver scelto proprio 1 pagina.
+- Il default resta fuori dal trait `HasOccupancyFields` (proprietà a null): il trait è condiviso con `ContentEdit`, dove l'occupazione è quella del contenuto. Caricamento multiplo invariato (occupazione dal file).
+- Formato pubblicitario: invariato, obbligatorio, senza preselezione, riscrive sempre i campi (decisione dell'utente). Per una pubblicità con PDF più lungo del formato decide ancora `AdPdfPagePlan`, che non legge i campi.
+- Test nuovi: `tests/Feature/Livewire/ContentCreateDefaultOccupancyTest.php` (default all'apertura e da pagina, riapertura dopo una modifica, creazione senza toccare = 12/12, formato che sostituisce il default e resta obbligatorio, «Modifica contenuto» invariata, PDF di 3 pagine non toccato → 3, PDF di 3 pagine dopo aver scritto 2 → errore di sempre; gli ultimi due richiedono Imagick). Adeguati: `ContentOccupancyRequiredTest` (ora l'errore scatta svuotando il campo), `PageFillIndicatorTest`, `ContentFreeFormPdfDistributionTest`.
+- Manuale: `creare-contenuto`, `spazio-occupato` (In breve e «Con un PDF allegato»), `novita`. Screenshot non rigenerati: nessuno mostra il modulo aperto. Documentazione: `docs/CHANGELOG.md`, `docs/DA-VERIFICARE.md` (DV-65).
+
+### Verificato
+- Suite locale completa: 1108 passati, 48 saltati (Imagick), 0 falliti. In Docker con Imagick (`docker compose run --rm --no-deps -v "$PWD":/var/www/html -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: app vendor/bin/pest --filter=…`), i test dei moduli con PDF reali. In quel container `ContentFileAttachmentTest` ha 2 fallimenti (miniatura «pending» invece di «ready») **identici anche senza questa modifica** (`git stash`): dipendono dall'ambiente del container (coda), non da questa parte.
+
+### Non verificato
+- Browser vero (DV-65).

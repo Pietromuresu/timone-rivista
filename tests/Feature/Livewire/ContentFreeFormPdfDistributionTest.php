@@ -122,7 +122,8 @@ test('bug 5: choosing a pdf proposes its page count as occupancy, visibly, witho
         ->set('title', 'Scelta esplicita')
         ->set('fraction_twelfths', '6')
         ->set('file', UploadedFile::fake()->createWithContent('servizio.pdf', threePagePdf()))
-        ->assertSet('whole_pages', null)
+        // Dal 2026-10-30 «Pagine intere» parte da 1: toccata la frazione, resta 1.
+        ->assertSet('whole_pages', 1)
         ->assertSet('fraction_twelfths', '6');
 });
 

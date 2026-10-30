@@ -413,3 +413,15 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - `grid.blade.php`: Griglia e Doppia pagina con lo stesso markup ad aperture (`PageSpreadBuilder::layout()`); `.timone-spreads--single` in `app.css` per Doppia pagina. Tolta la vecchia griglia a card singole.
 - `Grid::shiftClickPage()`, `$selectionAnchorPageId`; `x-on:click` di card e righe con Shift.
 - Test: `TimoneGridShiftSelectionTest`, test delle aperture eseguiti in Griglia e Doppia pagina (`SpreadGridTest`); `node scripts/verifica-griglia.mjs` (3 larghezze × S/M/L, coppie, scorrimento, Shift+clic) e screenshot in `docs/verifiche/griglia/`. Nuovo screenshot del manuale `griglia-aperture`.
+
+## 2026-10-30 — Occupazione predefinita a 1 pagina (parte A di «occupazione predefinita e stato automatico della pagina»)
+
+### Visibili agli utenti
+- In «+ Nuovo contenuto» e «📎 Carica materiale» l'occupazione parte da **1 pagina intera + nessuna frazione** («Occupa 1 pagina»), modificabile, per articoli e pubblicità.
+- Finché l'utente non tocca i campi, un PDF di più pagine allegato a un articolo propone ancora tante pagine intere quante quelle del PDF. Il formato della pubblicità riscrive sempre i campi, come prima. Il formato resta obbligatorio e senza valore preselezionato.
+- Invariati: «Modifica contenuto», caricamento multiplo, errore per un PDF di 3 pagine con occupazione diversa.
+
+### Tecniche
+- `ContentCreate::$occupancyTouched` (messo a true da `updatedWholePages()`/`updatedFractionTwelfths()`, hook che scattano solo per modifiche dal browser); `resetFormFields()` imposta `whole_pages = 1`. Il default della proprietà nel trait `HasOccupancyFields` resta null (condiviso con `ContentEdit`).
+- Test: `ContentCreateDefaultOccupancyTest`; adeguati `ContentOccupancyRequiredTest`, `PageFillIndicatorTest`, `ContentFreeFormPdfDistributionTest`.
+
