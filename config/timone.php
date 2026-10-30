@@ -111,4 +111,9 @@ return [
     | non manchi nulla. Non va modificata.
     */
     'manual_archive' => base_path('docs/archivio/MANUALE_UTENTE_2026-10-29.md'),
+
+    // Screenshot del manuale (2026-10-29, Fase 4): un .webp per blocco
+    // `:::screenshot nome`, generati da `npm run manuale:screenshot`
+    // (App\Support\Manual\ManualScreenshotFiles). Modificabile solo nei test.
+    'manual_images' => public_path('manuale/img'),
 ];

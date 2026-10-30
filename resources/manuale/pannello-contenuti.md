@@ -17,6 +17,15 @@ Il pannello **Contenuti** raccoglie articoli e pubblicità del numero, pronti da
 4. Trascina una voce su una pagina, oppure usa «Vai a pag.».
 :::
 
+:::screenshot pannello-contenuti
+alt: Il pannello Contenuti del numero di esempio, con tre contenuti da assegnare.
+1 | 2.8% | 2% | Le schede **Da assegnare**, **Tutti**, **Segnaposto**.
+2 | 2.5% | 5.6% | Cerca per titolo, filtra per tipo, scegli l'ordine.
+3 | 53.9% | 13.1% | **+ Nuovo contenuto**.
+4 | 59.7% | 22.5% | **⇪ Carica più file**: tanti file in una volta.
+5 | 2.5% | 30.5% | Un contenuto: trascinalo su una pagina o scrivi il numero in «Vai a pag.». 👁️ anteprima, ✏️ modifica.
+:::
+
 Il pannello si apre senza ricaricare né perdere il punto in cui sei. Sugli schermi larghi è una **colonna a destra**: il timone si stringe accanto. Sugli altri è una **tendina sotto la fascia**.
 
 ## Cosa c'è dentro

@@ -4,6 +4,8 @@ namespace App\Support;
 
 use App\Support\Manual\ManualBlocks;
 use App\Support\Manual\ManualPage;
+use App\Support\Manual\ManualScreenshot;
+use App\Support\Manual\ManualScreenshotFiles;
 use Illuminate\Support\Str;
 use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension;
 
@@ -61,17 +63,24 @@ final class ManualRenderer
      * così il testo non dipende da come sono fatti gli indirizzi (la
      * pagina web usa le route, il file unico generato i file .md).
      *
+     * $screenshot trova l'immagine di un blocco `:::screenshot nome`
+     * (Fase 4, ManualScreenshotFiles::find()); senza, o se l'immagine non
+     * c'è, il blocco resta il segnaposto «[Screenshot da fare: …]».
+     *
      * @param  callable(string): string  $pageUrl
      * @param  array<string, string>  $variables
+     * @param  (callable(string): (array{url: string, width: int, height: int}|null))|null  $screenshot
      * @return array{html: string, toc: list<array{level: int, id: string, text: string}>}
      */
-    public static function renderPage(ManualPage $page, callable $pageUrl, array $variables = []): array
+    public static function renderPage(ManualPage $page, callable $pageUrl, array $variables = [], ?callable $screenshot = null): array
     {
         $html = '';
 
         foreach (ManualBlocks::split($page->body) as $block) {
             $markdown = self::links(self::substitute($block['markdown'], $variables), $pageUrl);
-            $html .= self::block($block['type'], $block['arg'], $markdown, $pageUrl);
+            $html .= $block['type'] === 'screenshot'
+                ? self::screenshot(ManualScreenshot::parse($block['arg'], $markdown), $screenshot)
+                : self::block($block['type'], $block['arg'], $markdown, $pageUrl);
         }
 
         $html = self::labelTables($html);
@@ -134,14 +143,43 @@ final class ManualRenderer
             'in-breve' => '<section class="manual-in-breve" aria-label="In breve"><p class="manual-in-breve-title">In breve</p>'.self::markdown($markdown).'</section>',
             'dettagli' => '<details class="manual-details"><summary>Dettagli</summary><div class="manual-details-body">'.self::markdown($markdown).'</div></details>',
             'attenzione', 'suggerimento' => '<aside class="'.self::CALLOUTS[$type][0].'" role="note"><p class="manual-callout-title">'.self::CALLOUTS[$type][1].'</p>'.self::markdown($markdown).'</aside>',
-            // Fase 4: qui andrà l'immagine con le annotazioni; finché non c'è
-            // resta il segnaposto visibile «[Screenshot da fare: …]».
-            'screenshot' => '<figure class="manual-screenshot" data-screenshot="'.e($arg).'"><div class="manual-screenshot-missing">'.self::markdown($markdown).'</div></figure>',
             'compiti' => self::tasks($markdown),
             'legenda' => self::legend($markdown),
             'problema' => '<div class="manual-problem"><h3 class="manual-problem-title">'.self::inline($arg).'</h3>'.self::markdown($markdown).'</div>',
             default => self::markdown($markdown),
         };
+    }
+
+    /**
+     * Screenshot annotato (Fase 4): immagine, numeri cerchiati sovrapposti in
+     * HTML (posizione in percentuale, quindi giusti a ogni larghezza) e la
+     * loro spiegazione in un elenco sotto, che è anche ciò che legge uno
+     * screen reader (i numeri sopra l'immagine sono aria-hidden). Senza
+     * immagine: il segnaposto visibile, mai un'immagine inventata.
+     *
+     * @param  (callable(string): (array{url: string, width: int, height: int}|null))|null  $find
+     */
+    private static function screenshot(ManualScreenshot $shot, ?callable $find): string
+    {
+        $image = $find !== null ? $find($shot->name) : null;
+
+        if ($image === null) {
+            return '<figure class="manual-screenshot" data-screenshot="'.e($shot->name).'"><div class="manual-screenshot-missing"><p>[Screenshot da fare: '.e($shot->placeholder).']</p></div></figure>';
+        }
+
+        $markers = '';
+        $legend = '';
+
+        foreach ($shot->markers as $marker) {
+            // Solo numeri validati da ManualScreenshot::parse() nello style.
+            $markers .= '<span class="manual-shot-marker" style="left: '.$marker['x'].'%; top: '.$marker['y'].'%" aria-hidden="true">'.$marker['number'].'</span>';
+            $legend .= '<li value="'.$marker['number'].'"><span class="manual-shot-number" aria-hidden="true">'.$marker['number'].'</span><span>'.self::inline($marker['text']).'</span></li>';
+        }
+
+        return '<figure class="manual-screenshot" data-screenshot="'.e($shot->name).'">'
+            .'<div class="manual-shot"><img src="'.e($image['url']).'" alt="'.e($shot->alt ?? '').'" width="'.intdiv($image['width'], ManualScreenshotFiles::PIXEL_RATIO).'" height="'.intdiv($image['height'], ManualScreenshotFiles::PIXEL_RATIO).'" loading="lazy" decoding="async">'.$markers.'</div>'
+            .($legend !== '' ? '<figcaption><ol class="manual-shot-legend">'.$legend.'</ol></figcaption>' : '')
+            .'</figure>';
     }
 
     /** Riquadri «Cosa vuoi fare?»: `- [Titolo](indirizzo) — descrizione`. */

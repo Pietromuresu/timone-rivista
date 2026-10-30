@@ -17,6 +17,14 @@ Scrivi la tua domanda con le tue parole: l'assistente ti mostra il riquadro «In
 4. Di' se è servita: **👍 Utile** o **👎 Non è questo**. Con 👎 compaiono altre tre pagine: se una è quella giusta, clicca **«👍 È questa»**.
 :::
 
+:::screenshot chiedi-al-manuale
+alt: Il pannello «Aiuto» aperto dal bottone ?, con la domanda «come sposto una pagina» e la risposta del manuale.
+1 | 5.4% | 10% | Scrivi la domanda e premi **Chiedi**.
+2 | 5.4% | 16% | Oppure clicca una domanda pronta.
+3 | 9.2% | 40.3% | La risposta: il riquadro «In breve» della pagina giusta.
+4 | 32% | 75% | **👍 Utile** o **👎 Non è questo**.
+:::
+
 ## Cosa risponde
 
 La risposta è sempre il riquadro «In breve» di una pagina di questo manuale: l'assistente non scrive testi suoi, sceglie la pagina. Se non è sicuro mostra **«Non sono sicuro. Forse cercavi:»** con tre pagine; apri quella che ti sembra giusta con un clic sul titolo. Se non trova nulla ti suggerisce di riformulare e alcuni compiti da cui partire.

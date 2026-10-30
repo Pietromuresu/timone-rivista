@@ -330,3 +330,28 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - npm: `minisearch` (import dinamico), `@fontsource/figtree`.
 - Test: `tests/Unit/ItalianTextTest.php`, `tests/Feature/ManualSearchTest.php` (indice, route, cache, sinonimi, normalizzazione uguale nel browser e 15 domande reali con node), `tests/js/manual-search-check.mjs`, `tests/fixtures/manual-{text,queries}.json`.
 
+## 2026-10-29 — Manuale: assistente «Chiedi al manuale» (fase 3 di «manuale, ricerca, assistente»)
+
+### Visibili agli utenti
+- Bottone tondo **?** in basso a sinistra in ogni schermata e riquadro «Chiedi al manuale» nella pagina del Manuale: si scrive una domanda e compare il riquadro «In breve» della pagina che risponde, con «Leggi tutto →». Sei domande pronte. Dal timone l'assistente preferisce le pagine sul timone.
+- Voti **👍 Utile** / **👎 Non è questo**, una volta per risposta; dopo 👎 tre altre pagine con **«👍 È questa»**. Se non è sicuro: «Forse cercavi» con tre pagine; se non trova nulla: invito a riformulare e alcuni compiti.
+- Per gli admin: pagina «Cosa chiedono gli utenti» con domande senza risposta, domande imparate, risposte probabilmente sbagliate, ultimo ricalcolo e un'unica azione «Disattiva».
+- Nuova pagina del manuale «Chiedi al manuale» (47 pagine).
+
+### Tecniche
+- `App\Support\Manual\{SearchEngine, QuestionKey, ManualQuestions, ManualAssistant, ManualAssistantFactory, ManualAssistantDesk, AnswerToken, ManualFeedbackRecorder, ManualLearning, ManualLearningGate, ManualLearningPublisher, ManualInsights, ManualContexts, LearnedCorrections, ArrayLearnedCorrections, StoredLearnedCorrections}`, `ManualAssistantController`, `Livewire\Manual\Questions`, `resources/js/manual-assistant.js`, viste `documentation/partials/{assistant,assistant-list,help-button}`.
+- `resources/manuale/domande.yml` (61 voci, 266 domande); le 15 domande della ricerca spostate in `resources/manuale/domande-di-controllo.yml`.
+- Migrazione `2026_10_29_300000_create_manual_assistant_tables` (6 tabelle). Comandi `manuale:apprendi` (03:15) e `manuale:pulisci` (03:05).
+- Nessuna dipendenza nuova.
+- Test: `tests/Unit/ManualLearningTest.php`, `tests/Feature/ManualAssistantTest.php`, test di parità PHP/browser in `ManualSearchTest.php`, `tests/fixtures/manual-assistant-queries.json`.
+
+## 2026-10-29 — Manuale: screenshot annotati (fase 4 di «manuale, ricerca, assistente»)
+
+### Visibili agli utenti
+- Dieci pagine del manuale hanno uno screenshot dell'app con dati di esempio inventati e numeri cerchiati spiegati sotto l'immagine: timone intero, card di una pagina, formati pubblicitari, copertine, pannello Contenuti, selezione multipla, finestra «Modifica contenuto», Peso, esportazione PDF, «Chiedi al manuale».
+
+### Tecniche
+- `npm run manuale:screenshot` (`scripts/manuale-screenshot.mjs`): Chrome headless via protocollo DevTools, nessuna dipendenza nuova; `Database\Seeders\ManualScreenshotSeeder` su DB e storage temporanei; WebP 2× (4× per la card) in `public/manuale/img/`.
+- Blocco `:::screenshot nome` con `alt:` e righe `N | x% | y% | testo` (`App\Support\Manual\ManualScreenshot`, `ManualScreenshotFiles`), sovrapposizione in HTML/CSS (`ManualRenderer::screenshot()`), immagini anche in `MANUALE_UTENTE.md`; config `timone.manual_images`; nginx mette in cache anche i `.webp`.
+- `data-testid` nuovi: `weight-panel`, `timone-export`.
+- Test: `tests/Feature/ManualScreenshotsTest.php`.

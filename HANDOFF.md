@@ -2183,5 +2183,29 @@ Fase 2 approvata («ok procedi con la Fase 3»); Fasi 1–3 del manuale non comm
 - `manuale:apprendi` lanciato a mano sul DB locale: 3 voti, set verde, riga nel log `Manuale, apprendimento: pesi pubblicati.`
 
 ### Non verificato / da fare
-- Suite completa: lanciata, esito da riportare. Docs docs/02..12, CHANGELOG, DA-VERIFICARE, README e nextcloud NON ancora aggiornati per la Fase 3.
+- Suite completa: 1015 passati, 46 saltati, 0 falliti (325 s); i saltati non sono stati controllati uno per uno. Documentazione aggiornata nella sessione successiva: README, docs/02, 03, 04, 05, 08, 09, 10, 11, CHANGELOG, DA-VERIFICARE (DV-54–56), docs/nextcloud; docs/06 invariato (nessuna dipendenza nuova).
 - I 7 fallimenti delle 20 domande in stile utente (vedi fixture) non sono stati corretti: da valutare con domande vere.
+
+## Sessione 2026-10-29 — Manuale utente: Fase 4 (screenshot annotati)
+
+Fase 3 approvata («ok procedi con la Fase 4»); Fasi 1–4 del manuale non committate.
+
+### Fatto
+- **Strumento**: `scripts/manuale-screenshot.mjs` (`npm run manuale:screenshot`), Chrome headless guidato con il protocollo DevTools e il WebSocket integrato di node ≥ 22. **Nessuna dipendenza nuova.** Scelta motivata: i container non hanno un browser (php-fpm Alpine; il servizio `vite` del dev è `node:20-alpine`, che Playwright non supporta e che non ha il WebSocket globale); Dusk richiede chromedriver e un pacchetto composer, Browsershot/Puppeteer/Playwright scaricano un browser. Lo script gira sull'host di chi sviluppa, come `npm run build`.
+- **Dati demo** `Database\Seeders\ManualScreenshotSeeder`: rivista «Orto e Cortile», numero «Dicembre (numero di prova)», 24 pagine, utenti `@esempio.test`, clienti e marchi inventati; contenuti creati con `ContentCreator`/`ContentPlacer` (gruppi collegati automatici), anteprime delle pubblicità disegnate con GD. Rifiuta di girare in produzione. Il `DatabaseSeeder` esistente non è usato: contiene nomi di aziende vere.
+- **Isolamento**: SQLite e `storage/` temporanei (`LARAVEL_STORAGE_PATH`), server `php -S` sulla porta 8765, coda `sync`, broadcast `log`: database e file di sviluppo intatti (verificato: i file dei contenuti finiscono nella cartella temporanea).
+- **Immagini**: 10 WebP in `public/manuale/img/` (656 KB in tutto), viewport 1440×1000 (1440×1600 per i dettagli, così l'area sta sotto la fascia fissa senza far ridisporre la griglia), tema chiaro, zoom M, densità 2× (4× per la card singola); nella pagina si mostrano a metà dei pixel, mai allargate. Elenco: timone-intero (inizia-qui), card-pagina (legenda), formati-nella-card (disposizione-nella-pagina), copertine, pannello-contenuti, selezione-multipla, modifica-contenuto (modificare-contenuto), peso, esporta-timone-pdf, chiedi-al-manuale. **Nessun segnaposto rimasto**: tutte le schermate richieste sono riproducibili in automatico.
+- **Annotazioni** nel Markdown, non nell'immagine: blocco `:::screenshot nome` con `alt:` e righe `N | x% | y% | testo` (`App\Support\Manual\ManualScreenshot`, una riga scritta male è un errore). Il renderer (`ManualRenderer::screenshot()`, immagini da `ManualScreenshotFiles`) sovrappone numeri in HTML posizionati in percentuale (`aria-hidden`) e li spiega in un elenco sotto; senza immagine resta «[Screenshot da fare: …]». `MANUALE_UTENTE.md` riporta immagine e elenco. L'indice di ricerca usa le immagini (indicizza la spiegazione dei numeri, non il segnaposto) e ne tiene conto nell'impronta della cache.
+- **Controllo delle annotazioni**: lo script misura ogni elemento annotato e avvisa (esce con errore) se un numero del manuale non cade più sul suo elemento ±4 punti; `--misure` stampa le posizioni proposte (angolo in alto a sinistra, per non coprire il testo dei bottoni).
+- View: solo due `data-testid` nuovi (`weight-panel`, `timone-export`). nginx: `.webp` nella regola di cache dei file statici. Config: `timone.manual_images`.
+- **Allineamento alla manutenzione del prompt**: «`domande.yml` non va più toccato» → corretti CLAUDE.md (la regola della Fase 3 diceva il contrario), `docs/10-debugging.md`, la pagina «Note per l'amministratore» e l'intestazione di `domande.yml`; il comando degli screenshot è in CLAUDE.md e in `docs/01-setup-locale.md`.
+
+### Verificato
+- `tests/Feature/ManualScreenshotsTest.php` (11 test): parsing e errori del blocco, HTML con e senza immagine (escape dell'alt), tutte le schermate richieste presenti con alt e numeri in ordine, nessuna immagine orfana, < 400 KB ciascuna, pagina e indice di ricerca, seeder solo con dati inventati, rifiuto in produzione. 83 test del manuale verdi (anche le 266 domande dell'assistente e la parità PHP/browser dopo il cambio dell'indice); `manuale:verifica` verde.
+- Suite completa: 1026 passati, 46 saltati, 0 falliti; dopo le ultime modifiche alle pagine i 60 test di pagine, ricerca, assistente e screenshot rilanciati: verdi.
+- Script lanciato più volte da zero: 10/10 schermate, nessun avviso sulle annotazioni. Ogni immagine guardata.
+- Pagine del manuale in Chrome headless: immagini caricate, 7 e 6 numeri con la loro legenda, nessuna risorsa esterna, nessun errore; su telefono (390 px) nessuno scorrimento orizzontale (trovato e corretto: la legenda in flex spezzava i grassetti e allargava la pagina).
+
+### Non verificato
+- Safari, Firefox e un telefono vero (DV-57); lo script solo su macOS con Chrome, non su Linux/Chromium.
+- Su immagini mostrate piccole (telefono) numeri vicini possono quasi toccarsi; i numeri 1–3 del timone sono stati distanziati a mano.

@@ -16,6 +16,13 @@ ordine: 400
 3. Per aggiungere la bandella clicca **«+ Aggiungi bandella»** nella fascia delle copertine.
 :::
 
+:::screenshot copertine
+alt: La fascia delle copertine del numero di esempio: la I con un articolo, la II e la IV con una pubblicità, la III libera.
+1 | 2% | 14.3% | La **I di copertina**, in testa alla fascia azzurra.
+2 | 20.3% | 14.3% | La **II di copertina** con una pubblicità: si usa come una pagina.
+3 | 89.6% | 6.3% | **+ Aggiungi bandella**.
+:::
+
 ## Le quattro copertine
 
 - **I di copertina**: la copertina vera e propria.

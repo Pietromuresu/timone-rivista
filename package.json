@@ -3,7 +3,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "manuale:screenshot": "node scripts/manuale-screenshot.mjs"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",

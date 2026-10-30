@@ -20,6 +20,10 @@ ordine: 350
 Le modifiche valgono su **tutte le pagine** dove compare il contenuto.
 :::
 
+:::screenshot modifica-contenuto
+alt: La finestra «Modifica contenuto» di una pubblicità: titolo, cliente, formato, stato commerciale, spazio occupato, posizione nel timone, materiale di stampa e i bottoni «Annulla» e «Salva modifiche».
+:::
+
 ## Rinominare al volo
 
 Sulla pagina, **doppio click sul nome** del contenuto: diventa un campo di testo. **Invio** salva, **Esc** (o un clic altrove) annulla. Per un articolo cambi il titolo; per una pubblicità il **cliente**, che è il nome mostrato sulla pagina.

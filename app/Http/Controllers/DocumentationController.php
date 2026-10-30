@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\Manual\LegacyAnchors;
 use App\Support\Manual\ManualPage;
 use App\Support\Manual\ManualRepository;
+use App\Support\Manual\ManualScreenshotFiles;
 use App\Support\Manual\ManualSearchIndex;
 use App\Support\ManualRenderer;
 use Illuminate\Contracts\View\View;
@@ -99,6 +100,8 @@ class DocumentationController extends Controller
             $page,
             fn (string $slug) => route('documentation.page', $slug),
             ['APP_URL' => rtrim((string) config('app.url'), '/')],
+            // Fase 4: immagini in public/manuale/img/, segnaposto se mancano.
+            ManualScreenshotFiles::fromConfig()->find(...),
         );
     }
 }

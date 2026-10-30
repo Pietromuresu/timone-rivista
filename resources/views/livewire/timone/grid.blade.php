@@ -270,7 +270,7 @@
             {{-- Nessuna proprietà Livewire per questo pannello: è un form GET
                  puro, non serve reattività server-side, solo mostrare/
                  nascondere i filtri prima dello scaricamento diretto. --}}
-            <div x-data="{ open: false }" class="relative">
+            <div x-data="{ open: false }" class="relative" data-testid="timone-export">
                 <button
                     type="button"
                     x-on:click="open = ! open"

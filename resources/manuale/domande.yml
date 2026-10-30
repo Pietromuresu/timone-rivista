@@ -12,8 +12,10 @@
 #       - seconda domanda
 #
 # Ogni domanda di questo file deve trovare la sua pagina al primo posto
-# (tests/Feature/ManualAssistantTest.php): se aggiungi una domanda che
-# porta altrove, correggi la pagina (parole chiave, sinonimi) o la domanda.
+# (tests/Feature/ManualAssistantTest.php). Dopo la Fase 3 il file non si
+# modifica più (regola di manutenzione, CLAUDE.md): le domande nuove le
+# impara l'assistente dai voti; una risposta sbagliata si corregge nella
+# pagina (In breve, parole chiave, sinonimi).
 
 - pagina: annullare-ripetere
   domande:

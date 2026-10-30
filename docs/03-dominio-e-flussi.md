@@ -281,6 +281,14 @@ Dal 2026-10-29 il manuale è diviso in pagine, `resources/manuale/<slug>.md` (fr
 - Le pagine le legge `App\Support\Manual\ManualRepository` (cartella in `config('timone.manual_dir')`), le converte `App\Support\ManualRenderer::renderPage()` (CommonMark, HTML grezzo escapato; l'HTML dei blocchi lo scrive il renderer; link `manuale:slug` → route). Se la cartella manca: messaggio + `report()`, non un 500.
 - `MANUALE_UTENTE.md` è generato (`php artisan manuale:genera`, `App\Support\Manual\ManualCompiler`); `config('app.manual_path')` resta e punta lì (config/app.php è protetto). `php artisan manuale:verifica` (`ManualVerifier`) controlla che nessun termine del manuale archiviato `docs/archivio/MANUALE_UTENTE_2026-10-29.md` manchi.
 
+### Assistente «Chiedi al manuale» (2026-10-29)
+1. Bottone «?» (`layouts/app`, contesto dalla route con `ManualContexts`) o riquadro su `/manuale` → `POST /manuale/assistente` {domanda, contesto}.
+2. `ManualAssistantDesk::ask()`: `ManualAssistantFactory::current()` (in cache finché non cambiano pagine, sinonimi, domande.yml o domande imparate) → `ManualAssistant::answer()`: punteggio pagina = miglior documento (pagina, sezione, domanda) × 1,15 se legata al contesto × (1 + correzione imparata per la chiave, ±0,3); domanda con la stessa chiave di una nota → quella pagina × 1,5. Esito: `risposta` (≥ 60 punti, metà delle parole trovate), `forse` (≥ 12, tre pagine), `niente` (compiti di «Cosa vuoi fare?»). Se non è `risposta`, la chiave va in `manual_unanswered`.
+3. Risposta: titolo, link, «In breve» in HTML (`ManualRenderer::inBreve()`), alternative, ricevuta cifrata (`AnswerToken`, 24 h) con pagine e hash mostrati.
+4. Voto `POST /manuale/assistente/voto` {ricevuta, voto su/giu | scelta}: `ManualFeedbackRecorder` — una volta sulla risposta, una scelta tra le alternative (dopo 👎, o in «Forse cercavi»), utente come HMAC.
+5. Ogni notte `manuale:apprendi` → `ManualLearningPublisher`: `ManualLearning::compute()` da tutti i voti (ultimo voto per persona; peso posizione × decadimento 90 gg × versione; ≥ 5 voti da ≥ 3 persone; Wilson 95%; domande imparate; sospette) → `ManualLearningGate` → pubblica in transazione o tiene i pesi di prima; giro in `manual_learning_runs` + log. `manuale:pulisci` cancella oltre 12 mesi.
+6. Admin: `/manuale/amministrazione/domande` (`Livewire\Manual\Questions`): domande senza risposta, imparate, sospette, ultimo giro e blocco; «Disattiva» → `manual_disabled`, vale subito.
+
 ## Calcolo peso rivista
 
 Peso teorico di una copia del numero, con margine d'errore, scaglione di spedizione e peso della tiratura. Riproduce il foglio Excel usato in redazione. Tutto il calcolo sta in `app/Support/Weight/MagazineWeightCalculator.php`, una classe pura senza Eloquent, Livewire né `config()`: scaglioni e limiti di plausibilità di grammature e formato (`WeightLimits`) arrivano come parametri.

@@ -63,6 +63,9 @@ final class ManualSearchIndex
                 $page,
                 fn (string $slug) => route('documentation.page', $slug, false),
                 ['APP_URL' => rtrim((string) config('app.url'), '/')],
+                // Fase 4: con l'immagine nel testo indicizzato entra la
+                // spiegazione dei numeri, non il segnaposto «Screenshot da fare».
+                ManualScreenshotFiles::fromConfig()->find(...),
             )['html'];
             $common = [
                 'slug' => $page->slug,
@@ -117,7 +120,12 @@ final class ManualSearchIndex
     /** Impronta dei file del manuale: cambia appena cambia un file. */
     public function fingerprint(): string
     {
-        $files = array_merge(File::glob(config('timone.manual_dir').'/*.md') ?: [], File::exists($this->synonymsPath) ? [$this->synonymsPath] : []);
+        // Anche gli screenshot (Fase 4): un'immagine aggiunta cambia il testo indicizzato.
+        $files = array_merge(
+            File::glob(config('timone.manual_dir').'/*.md') ?: [],
+            File::exists($this->synonymsPath) ? [$this->synonymsPath] : [],
+            File::glob(config('timone.manual_images').'/*.'.ManualScreenshotFiles::EXTENSION) ?: [],
+        );
 
         return substr(sha1(implode('|', array_map(fn ($f) => $f.':'.filemtime($f).':'.filesize($f).':'.md5_file($f), $files))), 0, 16);
     }

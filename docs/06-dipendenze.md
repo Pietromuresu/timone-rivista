@@ -136,3 +136,8 @@ Quasi tutte riguardano **tooling di build e sviluppo**, che non finisce in produ
 6. Commit di `composer.lock` e `package-lock.json`, poi deploy (sezione c di [09-deploy.md](09-deploy.md)).
 
 Da **non** fare senza un piano dedicato: Livewire 4, Tailwind 4, Vite 7, Laravel 13, `laravel-echo` 2.x (cambia l'API client).
+
+## Screenshot del manuale (2026-10-29)
+
+Nessuna dipendenza npm o composer nuova: `npm run manuale:screenshot` usa Chrome o Chromium già installati sul computer di chi sviluppa (protocollo DevTools) e il WebSocket integrato di node ≥ 22. Scartati: Laravel Dusk (chromedriver + dipendenza composer), Browsershot/Puppeteer e Playwright (scaricano un browser di ~150 MB; Playwright non supporta l'Alpine di `node:20-alpine` del docker-compose.dev.yml). Nessuno dei due container (php-fpm Alpine, node 20 Alpine) ha un browser.
+

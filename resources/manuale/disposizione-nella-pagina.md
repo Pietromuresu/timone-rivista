@@ -20,7 +20,15 @@ Dentro ogni card, ogni contenuto occupa un riquadro grande quanto il suo spazio.
 È una rappresentazione dello spazio, non l'impaginato definitivo.
 
 :::screenshot formati-nella-card
-[Screenshot da fare: i formati pubblicitari dentro la card (intera, mezza, 1/3, piedino, vetrina, forma a L)]
+alt: Le pagine dalla 7 alla 18 del numero di esempio, con articoli e pubblicità in formati diversi.
+1 | 2% | 2.3% | **Forma a L**: articolo 3/4 e pubblicità 1/4 (vetrina).
+2 | 17.6% | 2.3% | Articolo 2/3 e **piedino** (1/3 in fondo).
+3 | 34.2% | 2.3% | Articolo 1/2 e **mezza pagina orizzontale**.
+4 | 50.8% | 2.3% | **Doppia pagina**: occupa due pagine collegate.
+5 | 84% | 2.3% | Pubblicità a **pagina intera**.
+6 | 2% | 51.9% | Articolo 1/2 e **mezza pagina verticale**.
+7 | 17.6% | 51.9% | Articolo 2/3 e **1/3 verticale**.
+8 | 84% | 51.9% | Un **segnaposto**: mezza pagina prevista, ancora da assegnare.
 :::
 
 ## Come è divisa la pagina

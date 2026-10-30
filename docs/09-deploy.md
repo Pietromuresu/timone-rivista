@@ -344,6 +344,8 @@ La migration `2026_10_27_100000_convert_occupancy_to_twelfths` (Fase 3) ha un `d
 - [ ] Drag&drop pagine e drop di un contenuto su una pagina.
 - [ ] Upload di un PDF di 2+ pagine → le miniature passano da "in elaborazione" a visibili (verifica worker, Imagick, Ghostscript e policy PDF).
 - [ ] Export "Timone PDF" e "Carico pubblicitario CSV/PDF".
+- [ ] Bottone «?» in basso a sinistra: la domanda «come sposto una pagina» mostra «Spostare le pagine». Il primo deploy con l'assistente richiede la migrazione `2026_10_29_300000` (`php artisan migrate`); `docker compose exec app php artisan manuale:apprendi` deve uscire con «Set di riferimento verde».
+- [ ] `/manuale/legenda` mostra lo screenshot della card con i numeri (le immagini sono in `public/manuale/img/`, copiate nell'immagine nginx con `public/`).
 - [ ] `/manuale` si apre, e una pagina come `/manuale/spostare-pagine` (le pagine di `resources/manuale/` sono nell'immagine: verificato con una build il 2026-10-29, 46 file).
 - [ ] `docker compose exec app php artisan migrate:status`: nessuna migration *Pending*.
 - [ ] `docker compose exec app php artisan queue:failed`: nessun job fallito nuovo.

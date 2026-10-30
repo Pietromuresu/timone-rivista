@@ -16,6 +16,13 @@ ordine: 600
 3. Clic su **«Scarica PDF»**.
 :::
 
+:::screenshot esporta-timone-pdf
+alt: Il bottone «📄 Esporta PDF» aperto, con le opzioni e il bottone «Scarica PDF».
+1 | 5.4% | 9.1% | **📄 Esporta PDF** nella fascia dei comandi.
+2 | 9.9% | 31.3% | Le opzioni: miniature, solo pagine con pubblicità, solo pagine non ancora approvate.
+3 | 9.9% | 72.2% | **Scarica PDF**.
+:::
+
 ## Cosa contiene
 
 - In testa: rivista, numero, data di uscita e gli stessi numeri del riepilogo (pagine piene, parziali e bianche, spazio libero, percentuale di pubblicità, pubblicità da assegnare, copertine, peso copia).

@@ -5,7 +5,7 @@
     $in = $result->input;
 @endphp
 
-<div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 space-y-4">
+<div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 space-y-4" data-testid="weight-panel">
     <div class="flex items-center justify-between gap-4">
         <h3 class="font-medium text-gray-700 dark:text-gray-300">⚖️ Peso</h3>
         @if ($canUpdate)

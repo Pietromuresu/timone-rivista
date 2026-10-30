@@ -22,7 +22,7 @@ Dettagli tecnici e di installazione, per chi gestisce il timone. Per avviare l'a
 ## Assistente «Chiedi al manuale»
 
 - **Cosa chiedono gli utenti**: pagina per gli amministratori (link in fondo al riquadro «Chiedi al manuale» nella pagina del Manuale). Mostra le domande frequenti senza risposta, le domande imparate dai voti, le **risposte probabilmente sbagliate** (almeno 5 persone, quasi tutte «Non è questo»), l'ultimo ricalcolo e l'ultimo blocco. L'unica azione è **«Disattiva»**, su una domanda imparata o una correzione: vale subito.
-- **Correggere una risposta**: si modifica la pagina del manuale (parole chiave, sinonimi, «In breve») o il file delle domande iniziali `resources/manuale/domande.yml`, non i voti.
+- **Correggere una risposta**: si modifica la pagina del manuale (parole chiave, sinonimi, «In breve»), non i voti. Le domande iniziali (`resources/manuale/domande.yml`) restano come sono: le domande nuove le impara l'assistente.
 - **Ricalcolo notturno** alle 3:15 (`php artisan manuale:apprendi`, si può lanciare a mano): ricalcola tutto da zero dai voti e pubblica solo se tutte le domande di prova trovano ancora la loro pagina tra le prime tre; altrimenti tiene i pesi di prima e lo scrive nel registro e nella pagina «Cosa chiedono gli utenti». Richiede che lo scheduler dell'installazione giri (servizio `scheduler`).
 - **Dati**: i voti sono salvati senza il nome di chi vota (un'impronta non reversibile) e cancellati dopo 12 mesi (`php artisan manuale:pulisci`, ogni notte).
 

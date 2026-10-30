@@ -288,6 +288,19 @@ docker run --rm -v timone-rivista_storage_data:/data -v "$PWD/backups":/backup a
 
 Dopo il restore dei file, conviene lanciare `php artisan pagefiles:prune-orphaned --dry-run` per vedere le incoerenze tra DB e disco (copre solo `page_files`, vedi [08-job-e-scheduler.md](08-job-e-scheduler.md)).
 
+## Assistente del manuale (2026-10-29, `2026_10_29_300000_create_manual_assistant_tables`)
+
+Nessuna FK verso le altre tabelle (voluto: i voti non dicono chi ha votato).
+
+| Tabella | Contenuto |
+|---|---|
+| `manual_feedback` | Un voto: `risposta_id`, `chiave`, `domanda`, `slug_mostrato` (null in «Forse cercavi»), `slug_scelto` (alternativa scelta), `su_alternativa`, `posizione` 1–3, `voto` ±1, `contesto`, `hash_versione`/`hash_in_breve` della pagina votata, `utente` (HMAC con `APP_KEY`), `created_at`. Unico `(risposta_id, su_alternativa)`. Cancellato oltre 12 mesi |
+| `manual_learned_boosts` | Correzioni per (chiave, pagina), con voti, persone, quota positiva, `sospetta`. Riscritta da zero a ogni giro pubblicato |
+| `manual_learned_questions` | Domande imparate (chiave unica, testo, pagina, voti, persone). Riscritta come sopra |
+| `manual_unanswered` | Domande senza risposta sicura per chiave: ultimo testo, `volte`, `ultima_volta`. Senza utente; cancellate oltre 12 mesi |
+| `manual_learning_runs` | Un giro del job: pubblicato sì/no, conteggi, `fallimenti` (JSON) se bloccato |
+| `manual_disabled` | Voci spente da un admin: `tipo` domanda/correzione, chiave, pagina |
+
 ## Query e indici rilevanti per le prestazioni
 
 - `Grid::render()` (`app/Livewire/Timone/Grid.php:2003`) carica **tutte** le pagine dell'issue con molti eager load (contenuti, file, gruppi, lock) a **ogni** render. Con il polling di fallback attivo questo avviene per ogni utente, ma `checkForUpdates()` (`:1135`) prima confronta solo `pages_updated_at`.

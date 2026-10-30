@@ -54,11 +54,34 @@ final class ManualCompiler
                 'suggerimento' => self::quote('**Suggerimento**', $markdown),
                 'problema' => '**'.$block['arg']."**\n\n".$markdown,
                 'legenda' => self::legend($markdown),
+                'screenshot' => self::screenshot(ManualScreenshot::parse($block['arg'], $markdown)),
                 default => $markdown,
             };
         }
 
         return implode("\n\n", array_filter($parts, fn ($part) => trim($part) !== ''));
+    }
+
+    /**
+     * Fase 4: l'immagine (percorso dal repository) con la spiegazione dei
+     * numeri in elenco; se l'immagine non c'è, il segnaposto come nella pagina.
+     */
+    private static function screenshot(ManualScreenshot $shot): string
+    {
+        if (! is_file(ManualScreenshotFiles::fromConfig()->path($shot->name))) {
+            return '[Screenshot da fare: '.$shot->placeholder.']';
+        }
+
+        $lines = ['!['.($shot->alt ?? '').'](public/manuale/img/'.$shot->name.'.'.ManualScreenshotFiles::EXTENSION.')'];
+
+        if ($shot->markers !== []) {
+            $lines[] = '';
+            foreach ($shot->markers as $marker) {
+                $lines[] = $marker['number'].'. '.$marker['text'];
+            }
+        }
+
+        return implode("\n", $lines);
     }
 
     private static function quote(string $title, string $markdown): string

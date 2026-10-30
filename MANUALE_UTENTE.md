@@ -32,7 +32,15 @@ Quello che vedi e puoi fare dipende dal tuo **ruolo**: vedi [Chi può fare cosa]
 
 #### La schermata del timone
 
-[Screenshot da fare: il timone intero con le parti principali numerate]
+![Il timone di un numero di esempio: in alto la fascia fissa con il riepilogo e i comandi, sotto le copertine e le pagine, a destra il pannello Contenuti.](public/manuale/img/timone-intero.webp)
+
+1. Il **riepilogo** del numero: pagine piene e libere, pubblicità, segnature, peso.
+2. La **fascia dei comandi**: annulla, scadenza stampa, **⚙️ Pagine interne**, **📚 Contenuti**, **🔀 Scambio**, **☑️ Selezione**, **📄 Esporta PDF**, zoom S/M/L.
+3. Le **viste**: Griglia, Doppia pagina, Lista.
+4. Le **copertine** I–IV, fuori dalla numerazione delle pagine interne.
+5. Una **pagina**: trascinala dalla maniglia ⠿ per spostarla.
+6. Il **pannello Contenuti**: articoli e pubblicità da mettere sulle pagine.
+7. Il bottone **?**: chiedi al manuale.
 
 #### Dove trovare questo manuale
 
@@ -66,6 +74,13 @@ Scrivi la tua domanda con le tue parole: l'assistente ti mostra il riquadro «In
 2. Scrivi la domanda e premi **Chiedi** (o Invio). Oppure clicca una delle domande pronte.
 3. Leggi la risposta; **«Leggi tutto →»** apre la pagina intera.
 4. Di' se è servita: **👍 Utile** o **👎 Non è questo**. Con 👎 compaiono altre tre pagine: se una è quella giusta, clicca **«👍 È questa»**.
+
+![Il pannello «Aiuto» aperto dal bottone ?, con la domanda «come sposto una pagina» e la risposta del manuale.](public/manuale/img/chiedi-al-manuale.webp)
+
+1. Scrivi la domanda e premi **Chiedi**.
+2. Oppure clicca una domanda pronta.
+3. La risposta: il riquadro «In breve» della pagina giusta.
+4. **👍 Utile** o **👎 Non è questo**.
 
 #### Cosa risponde
 
@@ -381,6 +396,14 @@ Seleziona più pagine per cambiare lo stato, bloccarle, collegarle o spostarle t
 3. Nella fascia in alto compare la riga «3 pagine selezionate: 12–14» con le azioni.
 4. Scegli l'azione: **Stato**, **🔗 Collega**, **✂️ Scollega**, **🔒 Blocca**, **🔓 Sblocca**.
 
+![La fascia fissa del timone con la selezione attiva: due pagine selezionate e i comandi per cambiarne lo stato, collegarle o bloccarle.](public/manuale/img/selezione-multipla.webp)
+
+1. **☑️ Selezione**: attiva o spegne la selezione.
+2. Quante pagine hai selezionato, e quali.
+3. **Stato**: cambia lo stato di tutte le pagine selezionate.
+4. **🔗 Collega** e **✂️ Scollega**: gruppi di pagine collegate.
+5. **🔒 Blocca** e **🔓 Sblocca**.
+
 #### Selezionare
 
 - Clic su **☑️ Selezione** (in elenco «selezione multipla»): su ogni card o riga compare una casella di spunta. Funziona in tutte e tre le viste e insieme alla [modalità scambio](resources/manuale/scambiare-pagine.md).
@@ -681,6 +704,14 @@ Il pannello **Contenuti** raccoglie articoli e pubblicità del numero, pronti da
 3. Cerca con **Cerca per titolo…** o filtra **Articoli/Pubblicità**.
 4. Trascina una voce su una pagina, oppure usa «Vai a pag.».
 
+![Il pannello Contenuti del numero di esempio, con tre contenuti da assegnare.](public/manuale/img/pannello-contenuti.webp)
+
+1. Le schede **Da assegnare**, **Tutti**, **Segnaposto**.
+2. Cerca per titolo, filtra per tipo, scegli l'ordine.
+3. **+ Nuovo contenuto**.
+4. **⇪ Carica più file**: tanti file in una volta.
+5. Un contenuto: trascinalo su una pagina o scrivi il numero in «Vai a pag.». 👁️ anteprima, ✏️ modifica.
+
 Il pannello si apre senza ricaricare né perdere il punto in cui sei. Sugli schermi larghi è una **colonna a destra**: il timone si stringe accanto. Sugli altri è una **tendina sotto la fascia**.
 
 #### Cosa c'è dentro
@@ -905,7 +936,16 @@ Dentro ogni card, ogni contenuto occupa un riquadro grande quanto il suo spazio.
 
 È una rappresentazione dello spazio, non l'impaginato definitivo.
 
-[Screenshot da fare: i formati pubblicitari dentro la card (intera, mezza, 1/3, piedino, vetrina, forma a L)]
+![Le pagine dalla 7 alla 18 del numero di esempio, con articoli e pubblicità in formati diversi.](public/manuale/img/formati-nella-card.webp)
+
+1. **Forma a L**: articolo 3/4 e pubblicità 1/4 (vetrina).
+2. Articolo 2/3 e **piedino** (1/3 in fondo).
+3. Articolo 1/2 e **mezza pagina orizzontale**.
+4. **Doppia pagina**: occupa due pagine collegate.
+5. Pubblicità a **pagina intera**.
+6. Articolo 1/2 e **mezza pagina verticale**.
+7. Articolo 2/3 e **1/3 verticale**.
+8. Un **segnaposto**: mezza pagina prevista, ancora da assegnare.
 
 #### Come è divisa la pagina
 
@@ -970,6 +1010,8 @@ Ogni riquadro mostra l'anteprima del **suo** file. Senza file vedi un fondo azzu
 3. Cambia quello che serve e clicca **«Salva modifiche»**.
 
 Le modifiche valgono su **tutte le pagine** dove compare il contenuto.
+
+![La finestra «Modifica contenuto» di una pubblicità: titolo, cliente, formato, stato commerciale, spazio occupato, posizione nel timone, materiale di stampa e i bottoni «Annulla» e «Salva modifiche».](public/manuale/img/modifica-contenuto.webp)
 
 #### Rinominare al volo
 
@@ -1295,6 +1337,12 @@ I link «⬇️ CSV» e «⬇️ PDF» in alto a destra del cruscotto scaricano 
 2. Per scambiare due copertine trascina l'etichetta blu di una sopra l'altra.
 3. Per aggiungere la bandella clicca **«+ Aggiungi bandella»** nella fascia delle copertine.
 
+![La fascia delle copertine del numero di esempio: la I con un articolo, la II e la IV con una pubblicità, la III libera.](public/manuale/img/copertine.webp)
+
+1. La **I di copertina**, in testa alla fascia azzurra.
+2. La **II di copertina** con una pubblicità: si usa come una pagina.
+3. **+ Aggiungi bandella**.
+
 #### Le quattro copertine
 
 - **I di copertina**: la copertina vera e propria.
@@ -1477,6 +1525,14 @@ Il riquadro **«⚖️ Peso»**, in cima alla pagina del numero, mostra il **pes
 1. Leggi il peso, per esempio «510,7 g ± 31 g (481 – 541 g)».
 2. Guarda il colore dello scaglione: verde, giallo o rosso.
 3. Per cambiare carta o formato di questo numero clicca **«Modifica parametri»**.
+
+![Il riquadro «⚖️ Peso» del numero di esempio: peso di una copia, scaglione, dettaglio del calcolo e tiratura.](public/manuale/img/peso.webp)
+
+1. **Peso di una copia**, con il margine d'errore.
+2. Lo **scaglione** di spedizione.
+3. La **tiratura**: peso di tutte le copie, con i bancali.
+4. **Modifica parametri**: carta, formato e copie di questo numero.
+5. **Simula**: quante pagine puoi aggiungere restando nello scaglione.
 
 #### Peso copia e scaglione
 
@@ -1697,6 +1753,12 @@ Solo un **amministratore** elimina numeri, riviste e utenti.
 2. Scegli se includere le **miniature** e quali pagine mostrare.
 3. Clic su **«Scarica PDF»**.
 
+![Il bottone «📄 Esporta PDF» aperto, con le opzioni e il bottone «Scarica PDF».](public/manuale/img/esporta-timone-pdf.webp)
+
+1. **📄 Esporta PDF** nella fascia dei comandi.
+2. Le opzioni: miniature, solo pagine con pubblicità, solo pagine non ancora approvate.
+3. **Scarica PDF**.
+
 #### Cosa contiene
 
 - In testa: rivista, numero, data di uscita e gli stessi numeri del riepilogo (pagine piene, parziali e bianche, spazio libero, percentuale di pubblicità, pubblicità da assegnare, copertine, peso copia).
@@ -1793,7 +1855,14 @@ Ogni pagina ha due colori: lo **sfondo** dice il tipo di pagina, il **bordo spes
 2. Bordo grigio = da assegnare, azzurro = assegnata, giallo = in bozza, arancione = revisionata, verde = ok stampa.
 3. Le icone e le etichette sono spiegate qui sotto.
 
-[Screenshot da fare: la card di una pagina con stato, maniglia, contenuti e icone numerati]
+![La card della pagina 8 del numero di esempio: numero con la maniglia, stato «In bozza», un commento, un articolo e una pubblicità a piedino, etichetta «Piena».](public/manuale/img/card-pagina.webp)
+
+1. **⠿ e numero di pagina**: trascina da qui per spostare la pagina.
+2. Lo **stato** della pagina: clic per cambiarlo. Il colore del bordo dice lo stesso.
+3. **💬 Commenti**: il numero dice quanti; in giallo se ce ne sono da leggere. Accanto, il lucchetto per bloccare la pagina.
+4. Un **articolo**: il riquadro è grande quanto lo spazio che occupa.
+5. Una **pubblicità** (qui un piedino) con la sua anteprima. **⋯** apre i comandi del contenuto.
+6. Quanto è **piena** la pagina: «Piena», «Libero: 1/2», «Vuota».
 
 #### Colori
 
@@ -2161,6 +2230,7 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 - Il manuale è diviso in pagine per argomento, con questa pagina per le novità.
 - **Chiedi al manuale**: il bottone **?** in basso a sinistra, da ogni schermata, risponde a una domanda scritta con le tue parole mostrando l'«In breve» della pagina giusta. Vedi [Chiedi al manuale](resources/manuale/chiedi-al-manuale.md).
+- **Immagini nel manuale**: le pagine principali hanno uno screenshot con i numeri che spiegano le parti (dati di esempio inventati).
 - **Cerca nel manuale**: ricerca mentre scrivi, in cima a ogni pagina del manuale (`/` o Ctrl+K per andarci).
 - **Doppia pagina**: più coppie per riga, pari a sinistra e dispari a destra, riquadri «II di copertina» e «III di copertina». Vedi [Le viste del timone](resources/manuale/viste-del-timone.md).
 - **Segnature**: conteggio dei trentaduesimi nella barra in alto e confini sulla griglia. Vedi [Segnature](resources/manuale/segnature.md).
@@ -2221,7 +2291,7 @@ Dettagli tecnici e di installazione, per chi gestisce il timone. Per avviare l'a
 #### Assistente «Chiedi al manuale»
 
 - **Cosa chiedono gli utenti**: pagina per gli amministratori (link in fondo al riquadro «Chiedi al manuale» nella pagina del Manuale). Mostra le domande frequenti senza risposta, le domande imparate dai voti, le **risposte probabilmente sbagliate** (almeno 5 persone, quasi tutte «Non è questo»), l'ultimo ricalcolo e l'ultimo blocco. L'unica azione è **«Disattiva»**, su una domanda imparata o una correzione: vale subito.
-- **Correggere una risposta**: si modifica la pagina del manuale (parole chiave, sinonimi, «In breve») o il file delle domande iniziali `resources/manuale/domande.yml`, non i voti.
+- **Correggere una risposta**: si modifica la pagina del manuale (parole chiave, sinonimi, «In breve»), non i voti. Le domande iniziali (`resources/manuale/domande.yml`) restano come sono: le domande nuove le impara l'assistente.
 - **Ricalcolo notturno** alle 3:15 (`php artisan manuale:apprendi`, si può lanciare a mano): ricalcola tutto da zero dai voti e pubblica solo se tutte le domande di prova trovano ancora la loro pagina tra le prime tre; altrimenti tiene i pesi di prima e lo scrive nel registro e nella pagina «Cosa chiedono gli utenti». Richiede che lo scheduler dell'installazione giri (servizio `scheduler`).
 - **Dati**: i voti sono salvati senza il nome di chi vota (un'impronta non reversibile) e cancellati dopo 12 mesi (`php artisan manuale:pulisci`, ogni notte).
 

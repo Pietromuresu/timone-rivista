@@ -16,6 +16,15 @@ Il riquadro **«⚖️ Peso»**, in cima alla pagina del numero, mostra il **pes
 3. Per cambiare carta o formato di questo numero clicca **«Modifica parametri»**.
 :::
 
+:::screenshot peso
+alt: Il riquadro «⚖️ Peso» del numero di esempio: peso di una copia, scaglione, dettaglio del calcolo e tiratura.
+1 | 2% | 17.8% | **Peso di una copia**, con il margine d'errore.
+2 | 2% | 23.6% | Lo **scaglione** di spedizione.
+3 | 2% | 55.3% | La **tiratura**: peso di tutte le copie, con i bancali.
+4 | 86.2% | 5.8% | **Modifica parametri**: carta, formato e copie di questo numero.
+5 | 3% | 79.6% | **Simula**: quante pagine puoi aggiungere restando nello scaglione.
+:::
+
 ## Peso copia e scaglione
 
 - **Peso copia**: per esempio «510,7 g ± 31 g (481 – 541 g)». Il peso è teorico: la carta reale e il taglio non sono mai esatti, e il «±» è lo scostamento massimo nel caso peggiore. Il riquadro «ℹ️ Come è calcolato il margine» elenca le tolleranze usate.

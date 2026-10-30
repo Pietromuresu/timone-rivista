@@ -17,6 +17,15 @@ Seleziona più pagine per cambiare lo stato, bloccarle, collegarle o spostarle t
 4. Scegli l'azione: **Stato**, **🔗 Collega**, **✂️ Scollega**, **🔒 Blocca**, **🔓 Sblocca**.
 :::
 
+:::screenshot selezione-multipla
+alt: La fascia fissa del timone con la selezione attiva: due pagine selezionate e i comandi per cambiarne lo stato, collegarle o bloccarle.
+1 | 60.7% | 41.2% | **☑️ Selezione**: attiva o spegne la selezione.
+2 | 2% | 83.8% | Quante pagine hai selezionato, e quali.
+3 | 29.8% | 83.1% | **Stato**: cambia lo stato di tutte le pagine selezionate.
+4 | 38.7% | 81.8% | **🔗 Collega** e **✂️ Scollega**: gruppi di pagine collegate.
+5 | 52.7% | 81.8% | **🔒 Blocca** e **🔓 Sblocca**.
+:::
+
 ## Selezionare
 
 - Clic su **☑️ Selezione** (in elenco «selezione multipla»): su ogni card o riga compare una casella di spunta. Funziona in tutte e tre le viste e insieme alla [modalità scambio](manuale:scambiare-pagine).

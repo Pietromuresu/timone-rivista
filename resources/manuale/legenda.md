@@ -17,7 +17,13 @@ Ogni pagina ha due colori: lo **sfondo** dice il tipo di pagina, il **bordo spes
 :::
 
 :::screenshot card-pagina
-[Screenshot da fare: la card di una pagina con stato, maniglia, contenuti e icone numerati]
+alt: La card della pagina 8 del numero di esempio: numero con la maniglia, stato «In bozza», un commento, un articolo e una pubblicità a piedino, etichetta «Piena».
+1 | 11.4% | 10.4% | **⠿ e numero di pagina**: trascina da qui per spostare la pagina.
+2 | 27% | 8.9% | Lo **stato** della pagina: clic per cambiarlo. Il colore del bordo dice lo stesso.
+3 | 70.4% | 11.2% | **💬 Commenti**: il numero dice quanti; in giallo se ce ne sono da leggere. Accanto, il lucchetto per bloccare la pagina.
+4 | 11.4% | 20.7% | Un **articolo**: il riquadro è grande quanto lo spazio che occupa.
+5 | 11.4% | 61.4% | Una **pubblicità** (qui un piedino) con la sua anteprima. **⋯** apre i comandi del contenuto.
+6 | 11.4% | 83.2% | Quanto è **piena** la pagina: «Piena», «Libero: 1/2», «Vuota».
 :::
 
 ## Colori

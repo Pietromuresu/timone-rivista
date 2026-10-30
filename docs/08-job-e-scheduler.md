@@ -79,6 +79,9 @@ Definito in `routes/console.php`:
 | Task | Quando | Cosa fa |
 |---|---|---|
 | `timone:send-deadline-reminders` | `dailyAt('07:30')`, nel fuso `APP_TIMEZONE` (default **UTC**, cioè 08:30 o 09:30 in Italia secondo l'ora legale) | Vedi sotto |
+| `timone:history-prune` | `hourly()` | Vedi sotto |
+| `manuale:pulisci` | `dailyAt('03:05')` | Vedi sotto (2026-10-29) |
+| `manuale:apprendi` | `dailyAt('03:15')` | Vedi sotto (2026-10-29) |
 
 Il servizio compose `scheduler` è l'unico "cron". Se il container è fermo, nessun sollecito parte; il comando recupera le scadenze già passate al giro successivo (`DeadlineReminderChecker::isDue` usa `<=`).
 
@@ -93,6 +96,17 @@ Elenco dei task: `docker compose exec app php artisan schedule:list`. Sull'host 
 - **Quando**: ogni ora (`routes/console.php`). Opzione `--dry-run`.
 - **Cosa fa**: toglie da `timone_azioni` i passi più vecchi di 24 ore e quelli oltre i 50 per utente e numero; elimina davvero i contenuti nel cestino da più di 24 ore (righe figlie con le cascate) e i loro file (anche le miniature) dal disco.
 - **Se non gira**: la cronologia cresce (max 50 passi per utente e numero comunque) e i contenuti eliminati restano nel cestino con i loro file.
+
+### `manuale:apprendi` (assistente del manuale, 2026-10-29)
+
+- **Quando**: ogni notte alle 03:15; si può lanciare a mano, rilanciarlo non fa danni.
+- **Cosa fa**: ricalcola da zero correzioni e domande imparate da tutti i voti (`ManualLearningPublisher`), rifà le domande di `domande.yml` e `domande-di-controllo.yml` con i pesi nuovi e li pubblica solo se ognuna trova ancora la sua pagina tra le prime tre. Scrive un giro in `manual_learning_runs` e una riga nel log (`info` se pubblicato, `warning` con le domande che non passano se bloccato). Esce con errore se bloccato. Durata misurata: ~5 s.
+- **Se non gira**: l'assistente usa i pesi dell'ultimo giro riuscito (o nessuno); le risposte restano quelle delle domande iniziali.
+
+### `manuale:pulisci` (2026-10-29)
+
+- **Quando**: ogni notte alle 03:05.
+- **Cosa fa**: cancella voti, domande senza risposta e giri del job più vecchi di 12 mesi.
 
 ### `timone:send-deadline-reminders`
 

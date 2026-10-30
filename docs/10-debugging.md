@@ -389,6 +389,21 @@ Non correggere i valori con un UPDATE alla cieca: vanno ricontrollati sulla sche
 - **«La ricerca non è disponibile»**: `/manuale/indice.json` non risponde (manuale mancante o errore): l'indice e i riquadri restano utilizzabili.
 - **Uno stile del manuale non si vede**: Tailwind tiene solo le classi scritte per intero nei file; in `ManualRenderer` non comporre i nomi delle classi (`'manual-x-'.$tipo`).
 
+## Screenshot del manuale (2026-10-29)
+
+- **Al posto dell'immagine c'è «[Screenshot da fare: …]»**: manca `public/manuale/img/<nome>.webp` (il nome è quello del blocco `:::screenshot nome`): `npm run manuale:screenshot --solo nome`.
+- **`npm run manuale:screenshot` si ferma**: «Mancano gli asset compilati» → `npm run build`; «C'è public/hot» → ferma `npm run dev`; «Chrome/Chromium non trovato» → `CHROME_PATH=…`; «Serve node 22» → aggiorna node; «Tempo scaduto aspettando …» → un elemento non c'è più (un `data-testid` rinominato nelle view): correggi il selettore nello script. Gli errori del seeder sono stampati prima.
+- **«N | x% | y% (nel manuale: …, fuori dal suo elemento)»**: l'interfaccia è cambiata e il numero indica un'altra cosa; copia la posizione proposta nel blocco della pagina (o spostalo a mano, entro 4 punti dall'elemento).
+- **L'immagine non si aggiorna nel browser**: l'indirizzo ha `?v=<data del file>`; se il file è stato copiato senza cambiare data, toccalo (`touch`).
+
+## Assistente «Chiedi al manuale»: risposta sbagliata, nessuna risposta, job bloccato (2026-10-29)
+
+- **Risposta sbagliata a una domanda**: guarda «Cosa chiedono gli utenti» (`/manuale/amministrazione/domande`); se viene da una domanda imparata o da una correzione, «Disattiva». Altrimenti correggi la pagina giusta: «In breve», parole chiave o sinonimi nel front matter, o un gruppo in `resources/manuale/sinonimi.yml`; rilancia `tests/Feature/ManualAssistantTest.php`. `resources/manuale/domande.yml` non si tocca più (regola di manutenzione del manuale): le domande nuove le impara l'assistente dai voti.
+- **Provare una domanda dal terminale**: `php artisan tinker --execute 'print_r(array_slice(App\Support\Manual\ManualAssistantFactory::fromConfig()->current()->rank("la domanda"), 0, 5));'` (punteggi; risposta da 60, «Forse cercavi» da 12). Sull'host senza Redis aggiungi `CACHE_STORE=array`; `php artisan tinker <file>` resta in attesa: usa `--execute`.
+- **`manuale:apprendi` esce con errore**: il cancello ha bloccato i pesi nuovi; le domande che non passano sono nel log (`warning`) e nella pagina admin. I pesi di prima restano: nessuna azione urgente. Di solito la causa è una domanda di riferimento con un margine stretto: rinforza la pagina attesa (parole chiave, sinonimi), non domande.yml; se i voti dicono che la risposta attesa è sbagliata, è la pagina da correggere.
+- **Voti che sembrano ignorati**: servono 5 persone diverse sulla stessa chiave e pagina; un voto su un «In breve» poi modificato vale 0, su una pagina modificata ½.
+- **Il motore PHP e la ricerca del browser divergono**: il test di parità in `ManualSearchTest.php` lo dice; le regole sono in `SearchEngine` e `manual-search-core.js` e vanno cambiate insieme.
+
 ## Doppia pagina: una pagina trascinata non si sposta o finisce altrove (2026-10-29)
 
 - **Il drag non parte**: le page-card devono essere figlie dirette di `.timone-spreads` (niente div attorno, Sortable lo verifica in silenzio).

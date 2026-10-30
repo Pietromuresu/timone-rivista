@@ -164,6 +164,18 @@ Limiti noti di questa strada:
 
 ---
 
+## Screenshot del manuale (2026-10-29)
+
+Le immagini di `public/manuale/img/` si rigenerano dall'interfaccia vera, con dati inventati, quando cambia l'interfaccia:
+
+```bash
+npm run build                 # gli screenshot usano gli asset compilati (si ferma se c'è public/hot)
+npm run manuale:screenshot    # tutte; --solo nome,nome per alcune; --misure per le posizioni dei numeri
+php artisan manuale:genera    # il file unico MANUALE_UTENTE.md cita le immagini
+```
+
+Gira sull'host, non nei container: serve Chrome o Chromium (percorso con `CHROME_PATH` se non è in un posto standard) e node ≥ 22. Usa un database SQLite e una cartella `storage` temporanei (`LARAVEL_STORAGE_PATH`) con `Database\Seeders\ManualScreenshotSeeder`: il database e i file di sviluppo non vengono toccati. Porta 8765 (`MANUALE_PORT`). Esce con errore se un numero delle annotazioni nei blocchi `:::screenshot` non indica più il suo elemento.
+
 ## Errori comuni in fase di setup
 
 | Errore / sintomo | Causa | Soluzione |

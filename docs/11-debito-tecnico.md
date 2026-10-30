@@ -210,7 +210,12 @@ Nel codice **non ci sono `TODO`/`FIXME`/`HACK`/`XXX`** (grep su `app/`, `resourc
 - **Indice di ricerca da 180 documenti**, scaricato per intero la prima volta che si usa la ricerca (~175 kB, poi in cache del browser con ETag).
 - **Front matter con un parser minimo** (`ManualPage::parse()`): solo `chiave: valore` e liste `[a, b]`, perché `symfony/yaml` è solo una dipendenza di sviluppo.
 - **I link `#` dei titoli** sono raggiungibili con Tab (rumore per chi usa la tastiera): da rivedere con il «copia link» della Fase 2.
-- **Screenshot**: segnaposto visibili `[Screenshot da fare: …]` finché non c'è la Fase 4.
+- **Screenshot** (Fase 4): 10 immagini; lo script gira solo sull'host con Chrome (non in CI né nei container) e i selettori dipendono dai `data-testid` delle view. Le «pubblicità» dei dati demo sono riquadri disegnati con GD con un testo a pixel (font interno di GD: nessun file di font nel progetto). Le annotazioni vanno riposizionate a mano se lo script le segnala.
+- **Due copie del motore di ricerca** (Fase 3): `SearchEngine` (PHP) replica MiniSearch e `manual-search-core.js`; cambiare una regola richiede di cambiarla in entrambi. Mitigato dal test di parità sui primi 5 risultati di 35 domande.
+- **Soglie dell'assistente legate ai pesi** (60 / 12 punti): misurate con i pesi di oggi su domande scritte da noi; se cambiano i pesi dei campi vanno rimisurate (lo script di misura non è nel repository).
+- **Domande in stile utente**: 13 su 20 trovano la pagina nei primi 3 senza voti; le 7 fuori sono elencate in `tests/fixtures/manual-assistant-queries.json` e non sono state corrette di proposito (spec: riportare, non abbassare le soglie).
+- **Regola «≥ 5 voti da ≥ 3 persone»**: dopo «un voto per persona» 5 voti sono sempre 5 persone, quindi la seconda condizione non aggiunge nulla. Lasciata come da specifica.
+- **Ricevuta delle risposte cifrata con `APP_KEY`**: cambiare la chiave rende invalide le ricevute aperte (24 h) e separa i voti vecchi da quelli nuovi della stessa persona.
 
 ## Griglia a doppia pagina (aggiunto il 2026-10-29)
 

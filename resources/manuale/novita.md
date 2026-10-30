@@ -16,6 +16,7 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 - Il manuale è diviso in pagine per argomento, con questa pagina per le novità.
 - **Chiedi al manuale**: il bottone **?** in basso a sinistra, da ogni schermata, risponde a una domanda scritta con le tue parole mostrando l'«In breve» della pagina giusta. Vedi [Chiedi al manuale](manuale:chiedi-al-manuale).
+- **Immagini nel manuale**: le pagine principali hanno uno screenshot con i numeri che spiegano le parti (dati di esempio inventati).
 - **Cerca nel manuale**: ricerca mentre scrivi, in cima a ogni pagina del manuale (`/` o Ctrl+K per andarci).
 - **Doppia pagina**: più coppie per riga, pari a sinistra e dispari a destra, riquadri «II di copertina» e «III di copertina». Vedi [Le viste del timone](manuale:viste-del-timone).
 - **Segnature**: conteggio dei trentaduesimi nella barra in alto e confini sulla griglia. Vedi [Segnature](manuale:segnature).
