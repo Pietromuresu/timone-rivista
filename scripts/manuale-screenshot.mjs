@@ -257,6 +257,17 @@ const SHOTS = [
         },
     },
     {
+        // Griglia a coppie (2026-10-30): le prime due righe di aperture.
+        name: 'griglia-aperture',
+        async prepare() { await openIssue({ height: TALL }); await evaluate(`__s.below(__s.el('[data-testid=spread-grid]'))`); await sleep(300); },
+        area: pad(`__s.union([__s.el('[data-testid=spread-empty]'), ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((p) => __s.card(p))])`, 8),
+        points: {
+            1: `__s.el('[data-testid=spread-empty]')`,
+            2: `__s.card(1)`,
+            3: `__s.card(2)`,
+        },
+    },
+    {
         // Una card sola è piccola: densità 4×, così nella pagina (che mostra
         // le immagini a metà dei pixel) è grande il doppio e resta nitida.
         name: 'card-pagina',
@@ -275,9 +286,10 @@ const SHOTS = [
     {
         name: 'formati-nella-card',
         async prepare() { await openIssue({ height: TALL }); await evaluate(`__s.below(__s.card(7))`); await sleep(300); },
-        area: pad(`__s.union([7, 8, 9, 10, 11, 12, 13, 14].map((p) => __s.card(p)))`),
+        // Griglia a coppie (2026-10-30): due righe intere di aperture, 6–17.
+        area: pad(`__s.union([6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((p) => __s.card(p)))`),
         points: {
-            1: `__s.card(7)`, 2: `__s.card(8)`, 3: `__s.card(9)`, 4: `__s.card(10)`, 5: `__s.card(12)`, 6: `__s.card(13)`, 7: `__s.card(14)`, 8: `__s.card(18)`,
+            1: `__s.card(7)`, 2: `__s.card(8)`, 3: `__s.card(9)`, 4: `__s.card(10)`, 5: `__s.card(12)`, 6: `__s.card(13)`, 7: `__s.card(14)`,
         },
     },
     {

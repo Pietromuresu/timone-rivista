@@ -12,7 +12,7 @@ ordine: 160
 Seleziona più pagine per cambiare lo stato, bloccarle, collegarle o spostarle tutte insieme.
 
 1. Clic su **☑️ Selezione** nella fascia dei comandi: su ogni pagina compare una casella.
-2. Spunta le pagine, oppure fai ⌘/Ctrl+clic direttamente su una pagina.
+2. Spunta le pagine, oppure fai ⌘/Ctrl+clic direttamente su una pagina; con **Shift+clic** prendi tutto l'intervallo dall'ultima cliccata.
 3. Nella fascia in alto compare la riga «3 pagine selezionate: 12–14» con le azioni.
 4. Scegli l'azione: **Stato**, **🔗 Collega**, **✂️ Scollega**, **🔒 Blocca**, **🔓 Sblocca**.
 :::
@@ -30,6 +30,7 @@ alt: La fascia fissa del timone con la selezione attiva: due pagine selezionate 
 
 - Clic su **☑️ Selezione** (in elenco «selezione multipla»): su ogni card o riga compare una casella di spunta. Funziona in tutte e tre le viste e insieme alla [modalità scambio](manuale:scambiare-pagine).
 - **Ctrl+click** sulla card o sulla riga, o **Cmd+click su Mac**, aggiunge o toglie la pagina dalla selezione e attiva da sola la selezione se non lo è già. Su un Mac si usa ⌘+clic: Ctrl+clic apre il menu del tasto destro.
+- **Shift+clic** su una pagina seleziona tutte le pagine dall'ultima che hai cliccato fino a questa, comprese (per esempio dalla 2 alla 5).
 - **Click semplice** su una pagina, con la selezione già attiva, azzera la selezione e seleziona solo quella.
 - **Tutte** (Ctrl/⌘+A) seleziona tutte le pagine del numero. **Deseleziona** (Esc) le toglie.
 

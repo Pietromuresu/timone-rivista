@@ -31,7 +31,7 @@ Il conteggio cambia da solo, anche per i colleghi, quando cambiano le pagine del
 Una fascia colorata in cima a ogni pagina, alternata azzurro e viola da una segnatura all'altra. Sulla prima pagina di ogni segnatura c'è una linea rossa con l'etichetta «32° n. 2» sul lato sinistro.
 
 :::dettagli
-- Nella vista Doppia pagina la linea cade **dentro** la coppia [32 | 33], tra le due pagine. Nella Lista è una linea sopra la riga.
+- In Griglia e in Doppia pagina la linea cade **dentro** la coppia [32 | 33], sulla piega tra le due pagine. Nella Lista è una linea sopra la riga.
 - Le copertine non hanno la fascia, salvo che la rivista le conti nelle segnature.
 :::
 

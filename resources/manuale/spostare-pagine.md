@@ -29,7 +29,7 @@ Se la pagina che ti serve è più in basso o più in alto, porta la pagina verso
 
 :::dettagli
 - Mentre trascini un gruppo collegato o una selezione, tutte le pagine coinvolte si raccolgono sotto quella che hai afferrato e si muovono insieme, con un bordo tratteggiato blu. L'immagine che segue il mouse le mostra tutte affiancate. Al rilascio le pagine scorrono fino alla loro posizione finale.
-- In Doppia pagina, mentre trascini, le coppie si ricompongono e il posto vuoto mostra dove cadrà la pagina, anche tra le due pagine di una coppia.
+- In Griglia e in Doppia pagina, mentre trascini, le coppie si ricompongono e il posto vuoto mostra dove cadrà la pagina, anche tra le due pagine di una coppia.
 :::
 
 ## Da tastiera

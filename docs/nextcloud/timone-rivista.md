@@ -262,12 +262,13 @@ La percentuale di pubblicità del cruscotto ora è esatta: tre pubblicità da 1/
 ## Segnature / trentaduesimi (2026-10-29)
 
 - Nella barra in alto «Segnature: 3 trentaduesimi + 24 pagine (16 + 8)»: quante segnature intere e come si scompone il resto. In rosso se il totale non è multiplo di 4; dopo la freccia quante pagine aggiungere o togliere per avere segnature intere.
-- Sulla griglia ogni segnatura ha una fascia colorata e la prima pagina una linea rossa con «32° n. 2». In doppia pagina la linea è tra la 32 e la 33, dentro la stessa coppia. Il bottone «32°» nella barra le nasconde o le mostra (solo per sé).
+- Sulla griglia ogni segnatura ha una fascia colorata e la prima pagina una linea rossa con «32° n. 2». In griglia e in doppia pagina la linea è tra la 32 e la 33, dentro la stessa coppia. Il bottone «32°» nella barra le nasconde o le mostra (solo per sé).
 - Le impostazioni (16 o 32 pagine, copertina inclusa o no) sono in «Modifica rivista».
 
 ## Doppia pagina (2026-10-29)
 
-- La vista «Doppia pagina» mostra la rivista aperta: pari a sinistra, dispari a destra, le due pagine di una coppia attaccate, più coppie per riga (quante dipende dallo schermo e dallo zoom S/M/L).
+- Dal 2026-10-30 la vista «Griglia» mostra la rivista aperta: pari a sinistra, dispari a destra, le due pagine di una coppia attaccate, più coppie per riga (quante dipende dallo schermo e dallo zoom S/M/L). «Doppia pagina» mostra le stesse coppie una sotto l'altra, come prima del 2026-10-29.
+- Shift+clic su una pagina seleziona tutte le pagine dall'ultima cliccata (2026-10-30).
 - Accanto alla pagina 1 c'è il riquadro tratteggiato «II di copertina» (le copertine sono nella fascia in alto); con un numero pari di pagine, dopo l'ultima c'è «III di copertina».
 - Si trascina come nella griglia, anche più pagine insieme; mentre trascini le coppie si ricompongono e si vede dove cadrà la pagina. Dopo lo spostamento le pagine che seguono cambiano lato da sole.
 

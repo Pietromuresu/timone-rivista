@@ -2317,3 +2317,30 @@ B0 approvata («si va bene tutto»): regola «Automatico» nuova, colonna `trim_
 - Upload vero con Imagick (miniatura grande dal job), PDF reali di inserzionisti, Safari/Firefox, due browser con Reverb (DV-62).
 - Doppia pagina o battente con un unico foglio largo (DV-63): ogni pagina mostra il centro del foglio.
 - Suite completa: 1091 passati, 46 saltati, 0 falliti. File protetti invariati (`git diff --stat` vuoto).
+
+## Sessione 2026-10-30 — Griglia accoppiata: Fase C0 (verifica, nessuna modifica)
+
+Parte B approvata e committata (`7cb0680`). C0: solo verifica.
+- **Stato attuale** (screenshot `docs/verifiche/griglia/c0-{griglia,doppia}-{390,1366,1920}.png`, dati di `ManualScreenshotSeeder`, zoom M): «Griglia» = card singole in fila (`grid auto-fill`); «Doppia pagina» (commit `e9cbad6`, decisione E) = aperture a colonne fisse da `PageSpreadBuilder::layout()`, già come chiede la Parte C: pagina 1 sola a destra con lo spazio della II di copertina a sinistra, coppie pari|dispari attaccate con la piega, più spazio tra le aperture, ultima pagina pari sola a sinistra (spazio della III), 1 apertura per riga a 390 px, 3 a 1366 e 1920 (il contenuto della pagina ha una larghezza massima), nessuno scorrimento orizzontale, mai una coppia spezzata, confine dei 32esimi sulla piega dell'apertura [16|17] (bordo sinistro rosso della 17).
+- La vista non è salvata nel browser (`Grid::$viewMode` riparte da «griglia» a ogni apertura): togliendo «Doppia pagina» non c'è nessuna preferenza salvata da riportare.
+- **Shift+clic** per selezionare un intervallo non esiste oggi (solo Ctrl/⌘+clic, Ctrl/⌘+A e «Tutte»).
+- Proposta all'utente: Griglia diventa la vista accoppiata (il codice di Doppia pagina) e «Doppia pagina» esce dal selettore.
+
+## Sessione 2026-10-30 — Griglia accoppiata: Fase C1
+
+Ok dell'utente («si vai») sulla strada 1 e su Shift+clic; durante il lavoro l'utente ha precisato: «in visualizzazione doppia pagina lo voglio com'era prima, le doppie una sotto l'altra; nella griglia le pagine accoppiate visivamente». Quindi tre viste restano (Griglia, Doppia pagina, Lista), non due. Non committato.
+
+### Fatto
+- **Griglia** = le aperture del 2026-10-29 (`PageSpreadBuilder::layout()`, colonne fisse in `.timone-spreads`, più aperture per riga con la container query di `.timone-spreads-wrap`). La vecchia griglia a card singole (`grid auto-fill`) è tolta.
+- **Doppia pagina** = stesso markup, un'apertura per riga, centrata e larga due pagine dello zoom (`.timone-spreads--single`, fuori da `.timone-spreads-wrap`: nessuna container query la porta a più colonne). Come prima del 2026-10-29 nell'aspetto (aperture una sotto l'altra), con in più i riquadri «II/III di copertina» accanto alla prima e all'ultima pagina, come in Griglia.
+- Stesso markup = trascinamento (anche tra le due pagine di una coppia e multi-pagina), frecce, scambio, selezione, blocco, contenuti e miniature ritagliate, commenti, 32esimi sulla piega, evidenziazioni del riepilogo e polling in pausa durante il drag identici nelle due viste (stesse page-card e stesso contenitore Sortable). La vista non è salvata nel browser: nessuna preferenza da migrare.
+- **Shift+clic**: `Grid::shiftClickPage()` seleziona l'intervallo dall'ultima pagina cliccata (`$selectionAnchorPageId`, aggiornato da clic, Ctrl/⌘+clic e casella; azzerato da Deseleziona e dall'uscita dalla selezione), avvia la selezione se serve, mai le copertine. Card e righe: `$event.shiftKey` → `shiftClickPage`, `mousedown` con Shift non seleziona il testo.
+- Manuale: «Le viste del timone» riscritta (In breve, sezione Griglia con schema `[II cop. | 1] [2 | 3] …` e screenshot annotato nuovo `griglia-aperture`, sezione Doppia pagina), «Spostare le pagine», «Segnature», «Selezionare più pagine» e «Scorciatoie» (Shift+clic), «Novità»; screenshot rigenerati, annotazioni di «formati-nella-card» (ora le pagine 6–17, due righe di aperture; tolto il numero sul segnaposto della pagina 18, fuori dall'inquadratura) e di «timone-intero» riallineate.
+- Documentazione: README, docs/02, 03, CHANGELOG, DA-VERIFICARE (DV-51 aggiornato, DV-64), docs/nextcloud.
+
+### Verificato
+- `node scripts/verifica-griglia.mjs` (dati del manuale, Chrome headless): Griglia e Doppia pagina a 390, 1366 e 1920 px con S, M e L — in ogni combinazione le due pagine di ogni apertura sulla stessa riga e attaccate (≤ 4 px), nessuna pagina fuori schermo, nessuno scorrimento orizzontale; Griglia: 1 apertura per riga a 390 px, a 1366 e 1920 px 4 (S), 3 (M), 2 (L); Doppia pagina: sempre 1. Shift+clic nel browser dalla 2 alla 5: «4 pagine selezionate: 2–5». Screenshot (zoom M) in `docs/verifiche/griglia/{griglia,doppia}-{390,1366,1920}.png`, guardati: Griglia con le aperture affiancate e la piega, Doppia pagina un'apertura per riga al centro, telefono un'apertura per riga.
+- Test: `TimoneGridShiftSelectionTest` (intervallo in avanti e indietro, senza punto di partenza, copertine escluse, cablaggio nelle tre viste); `SpreadGridTest` eseguito in Griglia e Doppia pagina (totale pari e dispari, dopo spostamento, inserimento e riduzione, selezione multi-pagina trascinata, figli diretti del contenitore, lati). Suite completa: 1102 passati, 46 saltati, 0 falliti. File protetti invariati.
+
+### Non verificato
+- Trascinamento con il mouse vero in Griglia (stesso markup già provato via CDP per la vecchia Doppia pagina, DV-51), tablet, Safari/Firefox, due browser (DV-64).

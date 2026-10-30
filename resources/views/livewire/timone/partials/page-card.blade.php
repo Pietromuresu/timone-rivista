@@ -146,7 +146,10 @@
              scambio, che ha sempre priorità sul click della card (ramo
              sopra) — così le due modalità non competono mai per lo stesso
              evento click. --}}
-        x-on:click="$event.ctrlKey || $event.metaKey ? $wire.ctrlClickPage({{ $page->id }}) : $wire.clickPage({{ $page->id }})"
+        {{-- Shift+clic (2026-10-30): l'intervallo dall'ultima pagina cliccata
+             (Grid::shiftClickPage()); mousedown evita di selezionare il testo. --}}
+        x-on:mousedown="if ($event.shiftKey) $event.preventDefault()"
+        x-on:click="$event.shiftKey ? $wire.shiftClickPage({{ $page->id }}) : ($event.ctrlKey || $event.metaKey ? $wire.ctrlClickPage({{ $page->id }}) : $wire.clickPage({{ $page->id }}))"
     @endif
     {{--
         Fase 4 (§4): due canali cromatici distinti sulla stessa card, non in

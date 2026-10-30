@@ -101,7 +101,10 @@
              completa: click semplice seleziona solo questa riga (no-op
              fuori dalla selezione multipla), Ctrl/Cmd+click la
              aggiunge/rimuove dalla selezione. --}}
-        x-on:click="$event.ctrlKey || $event.metaKey ? $wire.ctrlClickPage({{ $page->id }}) : $wire.clickPage({{ $page->id }})"
+        {{-- Shift+clic (2026-10-30): l'intervallo dall'ultima pagina cliccata
+             (Grid::shiftClickPage()); mousedown evita di selezionare il testo. --}}
+        x-on:mousedown="if ($event.shiftKey) $event.preventDefault()"
+        x-on:click="$event.shiftKey ? $wire.shiftClickPage({{ $page->id }}) : ($event.ctrlKey || $event.metaKey ? $wire.ctrlClickPage({{ $page->id }}) : $wire.clickPage({{ $page->id }}))"
     @endif
     {{--
         Fase 4 (§4): bordo sinistro spesso per lo stato, stesso principio

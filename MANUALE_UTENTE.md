@@ -159,28 +159,42 @@ Scegli il compito: ogni riquadro porta alla pagina che spiega come farlo.
 
 Il timone ha tre viste: **Griglia**, **Doppia pagina** e **Lista**. Cambiale con i bottoni in alto a destra nella fascia dei comandi.
 
-1. **Griglia**: una card per pagina, la vista principale per lavorare.
-2. **Doppia pagina**: la rivista aperta, **pari a sinistra, dispari a destra**.
+1. **Griglia**: le pagine a coppie, come la rivista aperta (**pari a sinistra, dispari a destra**), con più aperture per riga. È la vista principale per lavorare.
+2. **Doppia pagina**: le stesse aperture, **una sotto l'altra**, più grandi.
 3. **Lista**: una riga per pagina, per scorrere velocemente un numero lungo.
 4. Con i bottoni **S**, **M**, **L** rimpicciolisci o ingrandisci le pagine.
 
-#### Doppia pagina
+#### Griglia
 
-Le pagine sono affiancate come nella rivista aperta. Le due pagine di una coppia sono attaccate, con una linea sottile in mezzo. Tra una coppia e l'altra c'è più spazio.
+Le pagine sono affiancate a coppie, come nella rivista aperta. Le due pagine di una coppia (un'**apertura**) sono attaccate, con una linea sottile in mezzo: la piega. Tra un'apertura e l'altra c'è più spazio, così le coppie si riconoscono a colpo d'occhio.
 
-- La prima coppia è [II di copertina | 1]. Le copertine stanno nella fascia in alto, quindi a sinistra della pagina 1 vedi un riquadro tratteggiato «II di copertina».
+```
+[ II cop. | 1 ]   [ 2 | 3 ]   [ 4 | 5 ]   …   [ 24 | III cop. ]
+```
+
+![La Griglia del numero di esempio: le pagine a coppie, pari a sinistra e dispari a destra, tre aperture per riga.](public/manuale/img/griglia-aperture.webp)
+
+1. A sinistra della pagina 1 il posto della **II di copertina** (le copertine sono nella fascia in alto).
+2. La **pagina 1**, sempre a destra.
+3. Un'**apertura**: pagina pari a sinistra, dispari a destra, attaccate.
+
+- La prima apertura è [II di copertina | 1]: a sinistra della pagina 1 vedi un riquadro tratteggiato «II di copertina».
 - Se le pagine sono **pari**, l'ultima sta a sinistra, davanti al riquadro «III di copertina».
-- In Doppia pagina fai tutto come in Griglia: assegni e togli contenuti, cambi lo stato, commenti, trascini le pagine (anche più pagine selezionate) e usi le frecce da tastiera.
+- Una coppia non si spezza mai su due righe. Quante aperture stanno in una riga dipende dalla larghezza dello schermo e dallo zoom: con M, 3 su un monitor da computer e 1 sul telefono. Non c'è mai scorrimento orizzontale.
 - Dopo uno spostamento le pagine che seguono cambiano lato da sole.
 
 **Dettagli**
 
-- Quante coppie stanno in una riga dipende dalla larghezza dello schermo e dallo zoom. Con M: 3 su un monitor da computer, 2 su un tablet, 1 sul telefono. Non c'è mai scorrimento orizzontale.
-- I confini delle [segnature](resources/manuale/segnature.md) cadono tra le due pagine di una coppia, per esempio tra 32 e 33.
+- In Griglia fai tutto: assegni e togli contenuti, cambi lo stato, commenti, blocchi, trascini le pagine (anche più pagine selezionate, anche tra le due pagine di una coppia), usi le frecce da tastiera e la modalità scambio.
+- I confini delle [segnature](resources/manuale/segnature.md) cadono sulla piega della coppia, per esempio tra 32 e 33.
+
+#### Doppia pagina
+
+Le stesse aperture della Griglia, **una per riga**, al centro dello schermo: per guardare la rivista come la si sfoglia, un'apertura alla volta. Si lavora come in Griglia.
 
 #### Lista
 
-Ogni riga ha un'etichetta **DX** o **SX**: pagina destra o sinistra secondo la convenzione di stampa. La pagina 1 è sempre a destra, poi si alternano: è la stessa regola della Doppia pagina.
+Ogni riga ha un'etichetta **DX** o **SX**: pagina destra o sinistra secondo la convenzione di stampa. La pagina 1 è sempre a destra, poi si alternano: è la stessa regola della Griglia e della Doppia pagina.
 
 #### Dimensione delle pagine (S / M / L)
 
@@ -282,7 +296,7 @@ Se la pagina che ti serve è più in basso o più in alto, porta la pagina verso
 **Dettagli**
 
 - Mentre trascini un gruppo collegato o una selezione, tutte le pagine coinvolte si raccolgono sotto quella che hai afferrato e si muovono insieme, con un bordo tratteggiato blu. L'immagine che segue il mouse le mostra tutte affiancate. Al rilascio le pagine scorrono fino alla loro posizione finale.
-- In Doppia pagina, mentre trascini, le coppie si ricompongono e il posto vuoto mostra dove cadrà la pagina, anche tra le due pagine di una coppia.
+- In Griglia e in Doppia pagina, mentre trascini, le coppie si ricompongono e il posto vuoto mostra dove cadrà la pagina, anche tra le due pagine di una coppia.
 
 #### Da tastiera
 
@@ -409,7 +423,7 @@ Il blocco impedisce di toccare *direttamente* la pagina, ma la sua *posizione* p
 Seleziona più pagine per cambiare lo stato, bloccarle, collegarle o spostarle tutte insieme.
 
 1. Clic su **☑️ Selezione** nella fascia dei comandi: su ogni pagina compare una casella.
-2. Spunta le pagine, oppure fai ⌘/Ctrl+clic direttamente su una pagina.
+2. Spunta le pagine, oppure fai ⌘/Ctrl+clic direttamente su una pagina; con **Shift+clic** prendi tutto l'intervallo dall'ultima cliccata.
 3. Nella fascia in alto compare la riga «3 pagine selezionate: 12–14» con le azioni.
 4. Scegli l'azione: **Stato**, **🔗 Collega**, **✂️ Scollega**, **🔒 Blocca**, **🔓 Sblocca**.
 
@@ -425,6 +439,7 @@ Seleziona più pagine per cambiare lo stato, bloccarle, collegarle o spostarle t
 
 - Clic su **☑️ Selezione** (in elenco «selezione multipla»): su ogni card o riga compare una casella di spunta. Funziona in tutte e tre le viste e insieme alla [modalità scambio](resources/manuale/scambiare-pagine.md).
 - **Ctrl+click** sulla card o sulla riga, o **Cmd+click su Mac**, aggiunge o toglie la pagina dalla selezione e attiva da sola la selezione se non lo è già. Su un Mac si usa ⌘+clic: Ctrl+clic apre il menu del tasto destro.
+- **Shift+clic** su una pagina seleziona tutte le pagine dall'ultima che hai cliccato fino a questa, comprese (per esempio dalla 2 alla 5).
 - **Click semplice** su una pagina, con la selezione già attiva, azzera la selezione e seleziona solo quella.
 - **Tutte** (Ctrl/⌘+A) seleziona tutte le pagine del numero. **Deseleziona** (Esc) le toglie.
 
@@ -634,7 +649,7 @@ Una fascia colorata in cima a ogni pagina, alternata azzurro e viola da una segn
 
 **Dettagli**
 
-- Nella vista Doppia pagina la linea cade **dentro** la coppia [32 | 33], tra le due pagine. Nella Lista è una linea sopra la riga.
+- In Griglia e in Doppia pagina la linea cade **dentro** la coppia [32 | 33], sulla piega tra le due pagine. Nella Lista è una linea sopra la riga.
 - Le copertine non hanno la fascia, salvo che la rivista le conti nelle segnature.
 
 #### Mostrare o nascondere i confini
@@ -955,7 +970,7 @@ Se il file è una pagina intera con l'annuncio in una zona, il riquadro ne mostr
 
 È una rappresentazione dello spazio, non l'impaginato definitivo.
 
-![Le pagine dalla 7 alla 18 del numero di esempio, con articoli e pubblicità in formati diversi.](public/manuale/img/formati-nella-card.webp)
+![Le pagine dalla 6 alla 17 del numero di esempio in Griglia, a coppie, con articoli e pubblicità in formati diversi.](public/manuale/img/formati-nella-card.webp)
 
 1. **Forma a L**: articolo 3/4 e pubblicità 1/4 (vetrina).
 2. Articolo 2/3 e **piedino** (1/3 in fondo).
@@ -964,7 +979,6 @@ Se il file è una pagina intera con l'annuncio in una zona, il riquadro ne mostr
 5. Pubblicità a **pagina intera**.
 6. Articolo 1/2 e **mezza pagina verticale**.
 7. Articolo 2/3 e **1/3 verticale**.
-8. Un **segnaposto**: mezza pagina prevista, ancora da assegnare.
 
 #### Come è divisa la pagina
 
@@ -1984,6 +1998,7 @@ Le scorciatoie più usate:
 | Ripete l'azione annullata | Ctrl+Shift+Z o Ctrl+Y | ⌘+Shift+Z |
 | Aggiunge o toglie una pagina dalla selezione | Ctrl+click sulla pagina | ⌘+clic (Cmd+click) |
 | Seleziona solo quella pagina (con la selezione attiva) | Click semplice | Click semplice |
+| Seleziona le pagine dall'ultima cliccata a questa | Shift+clic sulla pagina | Shift+clic |
 | Seleziona tutte le pagine | Ctrl+A | ⌘+A (Cmd+A) |
 | Collega le pagine selezionate (almeno 2), o le scollega se già collegate | Ctrl+Shift+G | ⌘+Shift+G |
 | Deseleziona tutto, o chiude la finestra aperta | Esc | Esc |
@@ -2266,6 +2281,8 @@ Le modifiche al timone, dalla più recente. Le istruzioni nelle altre pagine des
 
 #### 30 ottobre 2026
 
+- **Griglia a coppie**: in Griglia le pagine sono affiancate a coppie come la rivista aperta (pari a sinistra, dispari a destra), più aperture per riga; **Doppia pagina** mostra le stesse aperture una sotto l'altra. Vedi [Le viste del timone](resources/manuale/viste-del-timone.md).
+- **Shift+clic** seleziona tutte le pagine dall'ultima cliccata. Vedi [Selezionare più pagine](resources/manuale/selezione-multipla.md).
 - **Anteprime ritagliate**: un contenuto che occupa una parte di pagina mostra solo la sua parte del file a pagina intera, invece di tutto il file rimpicciolito; anche nelle forme a L, senza l'abbondanza, più nitida, e uguale nell'esportazione PDF del timone e nel PDF sfogliabile. Vedi [L'anteprima nel riquadro](resources/manuale/disposizione-nella-pagina.md).
 - **Battenti di copertina**: dal 2026-10-30 la bandella è diventata **battente di I** (2 pagine prima della I) e si può aggiungere anche un **battente di IV** (2 pagine dopo la IV). Le bandelle esistenti sono diventate la pagina 1 del battente di I, con tutto il loro contenuto. Vedi [Le copertine e i battenti](resources/manuale/copertine.md).
 - **Piccole ? accanto ai comandi** meno ovvi (Peso, selezione multipla, scambio, pagine interne, bandella, spazio occupato): aprono la pagina del manuale in una nuova scheda. Vedi [Chiedi al manuale](resources/manuale/chiedi-al-manuale.md).

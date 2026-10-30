@@ -859,25 +859,16 @@
                 <p class="text-sm mt-1">Imposta il numero di pagine interne (⚙️ Pagine interne) per generare il timone.</p>
             </div>
         </div>
-    @elseif ($viewMode === 'griglia')
-        <div
-            x-sortable="$wire.swapMode"
-            @page-dropped="$flipAfterDrop('movePage', $event.detail.pageId, $event.detail.newPosition)"
-            @block-dropped="$flipAfterDrop('moveSelectedBlock', $event.detail.anchorPageId, $event.detail.newPosition)"
-            {{-- Fase 1, bug 7 (2026-10-26): colonne a larghezza minima
-                 variabile (--timone-page-min, impostata dallo zoom S/M/L in
-                 resources/js/timone-alpine.js) invece di 8 colonne fisse
-                 che schiacciavano il contenuto delle pagine; altezza dalle
-                 proporzioni reali del formato (page-card). --}}
-            class="grid gap-5 grid-cols-[repeat(auto-fill,minmax(var(--timone-page-min,11.5rem),1fr))]"
-        >
-            @foreach ($pages as $page)
-                @include('livewire.timone.partials.page-card', ['page' => $page, 'dropEnabled' => true, 'avgThumbnailSeconds' => $avgThumbnailSeconds, 'pageAspectRatio' => $pageAspectRatio])
-            @endforeach
-        </div>
-    @elseif ($viewMode === 'doppia')
-        {{-- Griglia a doppia pagina (2026-10-29, sostituisce la colonna di
-             aperture una sotto l'altra): più coppie per riga, le due pagine
+    @elseif ($viewMode !== 'lista')
+        {{-- Griglia e Doppia pagina, stesso markup (2026-10-30, richiesta
+             dell'utente: «nella griglia le pagine accoppiate visivamente»,
+             «doppia pagina come era prima, le doppie una sotto l'altra»):
+             - Griglia: più aperture per riga (container query, sotto);
+             - Doppia pagina: un'apertura per riga, centrata e larga due
+               pagine (`timone-spreads--single`, fuori dal contenitore della
+               container query, quindi sempre una colonna).
+             Prima (2026-10-29) questo disegno era solo la vista «Doppia
+             pagina» e la Griglia aveva card singole in fila: più coppie per riga, le due pagine
              di una coppia attaccate come una rivista aperta, più spazio tra
              una coppia e l'altra. Coppie da PageSpreadBuilder::layout()
              (dalla posizione: pari a sinistra, dispari a destra), slot vuoti
@@ -902,13 +893,14 @@
              data-spread-side è il lato secondo il server, informativo (test).
              Coppie per riga con una container query sulla larghezza e lo zoom
              S/M/L: niente scroll orizzontale. --}}
-        <div class="timone-spreads-wrap">
+        <div class="{{ $viewMode === 'doppia' ? '' : 'timone-spreads-wrap' }}">
             <div
                 x-sortable="$wire.swapMode"
                 @page-dropped="$flipAfterDrop('movePage', $event.detail.pageId, $event.detail.newPosition)"
                 @block-dropped="$flipAfterDrop('moveSelectedBlock', $event.detail.anchorPageId, $event.detail.newPosition)"
-                class="timone-spreads"
+                class="timone-spreads {{ $viewMode === 'doppia' ? 'timone-spreads--single' : '' }}"
                 data-testid="spread-grid"
+                data-view="{{ $viewMode }}"
             >
                 @foreach ($spreadLayout as $spreadIndex => $pair)
                     @foreach ($pair as $sideIndex => $page)

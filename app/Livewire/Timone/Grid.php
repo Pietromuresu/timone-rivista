@@ -70,10 +70,17 @@ class Grid extends Component
     public Issue $issue;
 
     /**
-     * griglia (flat plan a card), doppia (pagine affiancate come aperte
-     * nella rivista stampata) o lista (una riga per pagina).
+     * griglia (aperture a doppia pagina, più per riga, dal 2026-10-30),
+     * doppia (un'apertura per riga, come la rivista sfogliata) o lista (una
+     * riga per pagina).
      */
     public string $viewMode = 'griglia';
+
+    /**
+     * Ultima pagina cliccata nella selezione (2026-10-30): da qui parte
+     * l'intervallo di Shift+clic (shiftClickPage()).
+     */
+    public ?int $selectionAnchorPageId = null;
 
     /**
      * Solo un'etichetta "nascosto per ora" per il banner di avanzamento
@@ -1621,6 +1628,7 @@ class Grid extends Component
     {
         $this->selectionMode = ! $this->selectionMode;
         $this->selectedPageIds = [];
+        $this->selectionAnchorPageId = null;
         $this->bulkResultMessage = null;
     }
 
@@ -1637,6 +1645,8 @@ class Grid extends Component
             return;
         }
 
+        $this->selectionAnchorPageId = $pageId;
+
         if (in_array($pageId, $this->selectedPageIds, true)) {
             $this->selectedPageIds = array_values(array_diff($this->selectedPageIds, [$pageId]));
 
@@ -1644,6 +1654,34 @@ class Grid extends Component
         }
 
         $this->selectedPageIds[] = $pageId;
+    }
+
+    /**
+     * Shift+clic (2026-10-30): seleziona tutte le pagine interne tra
+     * l'ultima pagina cliccata e questa, comprese, e le aggiunge alla
+     * selezione (come in un file manager). Senza una pagina di partenza
+     * vale come Ctrl+clic. Avvia la selezione se non è attiva, come
+     * ctrlClickPage(). Le copertine non entrano mai nella selezione.
+     */
+    public function shiftClickPage(int $pageId): void
+    {
+        if ($this->isCoverPage($pageId)) {
+            return;
+        }
+
+        $anchor = $this->selectionAnchorPageId !== null ? $this->issue->pages()->find($this->selectionAnchorPageId) : null;
+        $target = $this->issue->pages()->find($pageId);
+
+        if (! $this->selectionMode || $anchor === null || $target === null) {
+            $this->ctrlClickPage($pageId);
+
+            return;
+        }
+
+        [$from, $to] = [min($anchor->position, $target->position), max($anchor->position, $target->position)];
+        $range = $this->issue->pages()->whereBetween('position', [$from, $to])->pluck('id')->all();
+
+        $this->selectedPageIds = array_values(array_unique([...$this->selectedPageIds, ...$range]));
     }
 
     /**
@@ -1684,6 +1722,7 @@ class Grid extends Component
         }
 
         $this->selectedPageIds = [$pageId];
+        $this->selectionAnchorPageId = $pageId;
     }
 
     /**
@@ -1703,6 +1742,7 @@ class Grid extends Component
     public function clearSelection(): void
     {
         $this->selectedPageIds = [];
+        $this->selectionAnchorPageId = null;
         $this->bulkResultMessage = null;
     }
 
@@ -2872,7 +2912,7 @@ class Grid extends Component
             ])->all(),
             'pageAspectRatio' => $pageAspectRatio,
             // Griglia a doppia pagina (2026-10-29): coppie dalla posizione, con gli slot vuoti.
-            'spreadLayout' => $this->viewMode === 'doppia' ? PageSpreadBuilder::layout($pages) : [],
+            'spreadLayout' => $this->viewMode !== 'lista' ? PageSpreadBuilder::layout($pages) : [],
             'unassignedContents' => $unassignedContents,
             // Contatore del bottone «Contenuti · N da assegnare»: la stessa
             // lista della scheda «Da assegnare», prima di filtri e ricerca.

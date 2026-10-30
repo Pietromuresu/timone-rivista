@@ -100,7 +100,11 @@ test('in doppia view mode the pair separation comes from the container (CSS), no
         expect($matches[0] ?? '')->not->toContain('border-l-2')->not->toContain('ml-auto');
     }
 
-    expect($html)->toContain('class="timone-spreads"');
+    // Doppia pagina: un'apertura per riga (2026-10-30); Griglia: più aperture per riga.
+    expect($html)->toContain('class="timone-spreads timone-spreads--single"')
+        ->and(Livewire::actingAs(editorFor($issue))->test(Grid::class, ['issue' => $issue])->html())
+        ->toContain('<div class="timone-spreads-wrap">')
+        ->toContain('class="timone-spreads "');
 });
 
 test('the swap mode banner and page highlight appear only while swap mode is active', function () {

@@ -401,3 +401,15 @@ Modifiche per fase a partire dal batch "revisione con gli utenti" (prompt del 20
 - `Grid::skipRenderIfOnlyPolling()` al posto di `skipRender()` nei due polling (test `TimoneGridPollingBatchTest`).
 - Migration `2026_10_30_200000_add_crop_columns_to_content_files` (`trim_box`, `large_thumbnail_path`, solo colonne nuove).
 - Verifica: `tests/Support/CropFixtures.php` (PDF di prova a sesti colorati), `tests/Feature/ThumbnailCropReproTest.php`, `ThumbnailCropCacheTest.php`, `ThumbnailCropCardTest.php`, `tests/Unit/ThumbnailCropTest.php`; `node scripts/verifica-crop.mjs` + `Database\Seeders\CropVerificationSeeder` → immagini in `docs/verifiche/crop/`.
+
+## 2026-10-30 — Griglia a coppie (fasi C0–C1 di «battenti, crop delle miniature, griglia accoppiata»)
+
+### Visibili agli utenti
+- **Griglia**: le pagine sono accoppiate come la rivista aperta (pagina 1 sola a destra, poi [2|3], [4|5]…, pari a sinistra), attaccate con la piega, più aperture per riga secondo schermo e zoom S/M/L; una coppia non va mai a capo a metà, niente scorrimento orizzontale.
+- **Doppia pagina**: torna come prima del 2026-10-29, le aperture una sotto l'altra (centrate, larghe due pagine).
+- **Shift+clic** su una pagina: seleziona l'intervallo dall'ultima pagina cliccata.
+
+### Tecniche
+- `grid.blade.php`: Griglia e Doppia pagina con lo stesso markup ad aperture (`PageSpreadBuilder::layout()`); `.timone-spreads--single` in `app.css` per Doppia pagina. Tolta la vecchia griglia a card singole.
+- `Grid::shiftClickPage()`, `$selectionAnchorPageId`; `x-on:click` di card e righe con Shift.
+- Test: `TimoneGridShiftSelectionTest`, test delle aperture eseguiti in Griglia e Doppia pagina (`SpreadGridTest`); `node scripts/verifica-griglia.mjs` (3 larghezze × S/M/L, coppie, scorrimento, Shift+clic) e screenshot in `docs/verifiche/griglia/`. Nuovo screenshot del manuale `griglia-aperture`.

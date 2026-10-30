@@ -37,7 +37,7 @@ alt: Il timone di un numero di esempio: in alto la fascia fissa con il riepilogo
 2 | 6.2% | 12.4% | La **fascia dei comandi**: annulla, scadenza stampa, **⚙️ Pagine interne**, **📚 Contenuti**, **🔀 Scambio**, **☑️ Selezione**, **📄 Esporta PDF**, zoom S/M/L.
 3 | 6.2% | 19.2% | Le **viste**: Griglia, Doppia pagina, Lista.
 4 | 2.2% | 21.4% | Le **copertine** I–IV, fuori dalla numerazione delle pagine interne.
-5 | 16.5% | 56.3% | Una **pagina**: trascinala dalla maniglia ⠿ per spostarla.
+5 | 38.1% | 56.7% | Una **pagina**: trascinala dalla maniglia ⠿ per spostarla.
 6 | 75% | 19% | Il **pannello Contenuti**: articoli e pubblicità da mettere sulle pagine.
 7 | 2% | 93.6% | Il bottone **?**: chiedi al manuale.
 :::

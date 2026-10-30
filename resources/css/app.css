@@ -333,6 +333,13 @@ html[data-signatures="on"] li .signature-label { position: static; border-radius
 }
 .timone-spreads > :nth-child(2n+1) { grid-column: 2; }
 .timone-spreads > :nth-child(2n+2) { grid-column: 4; }
+/* Doppia pagina (2026-10-30): un'apertura per riga, centrata, larga due
+   pagine dello zoom scelto. Non sta dentro .timone-spreads-wrap, quindi
+   nessuna container query la porta a più colonne. */
+.timone-spreads--single {
+    max-width: calc(var(--timone-page-w, 13rem) * 2 + 2px + var(--spread-gap));
+    margin-inline: auto;
+}
 
 /* Zoom S */
 @container (min-width: 33rem) {

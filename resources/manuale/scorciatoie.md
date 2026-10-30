@@ -23,6 +23,7 @@ Le scorciatoie più usate:
 | Ripete l'azione annullata | Ctrl+Shift+Z o Ctrl+Y | ⌘+Shift+Z |
 | Aggiunge o toglie una pagina dalla selezione | Ctrl+click sulla pagina | ⌘+clic (Cmd+click) |
 | Seleziona solo quella pagina (con la selezione attiva) | Click semplice | Click semplice |
+| Seleziona le pagine dall'ultima cliccata a questa | Shift+clic sulla pagina | Shift+clic |
 | Seleziona tutte le pagine | Ctrl+A | ⌘+A (Cmd+A) |
 | Collega le pagine selezionate (almeno 2), o le scollega se già collegate | Ctrl+Shift+G | ⌘+Shift+G |
 | Deseleziona tutto, o chiude la finestra aperta | Esc | Esc |
